@@ -1,0 +1,7 @@
+{
+  "name": "Celestia - Multi-System Astrology & Numerology",
+  "description": "Comprehensive client-side celestial engine calculating Western natal charts & synastry, Vedic Kundli, 10 Classical 5-Level Vedic Dasha Systems (Vimshottari, Yogini, Jaimini Chara, Ashtottari, Kalachakra, Shodashottari, Dwisaptati, Shastihayani, Sthira, Mandooka) with cross-system convergence & comparative matrix, Ashtakoota Milan (36 Gunas), Pythagorean numerology, and BaZi Four Pillars.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

@@ -1,0 +1,6 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@theme {
+  --font-serif-celestial: "Cinzel", Georgia, Cambria, "Times New Roman", serif;
+}
