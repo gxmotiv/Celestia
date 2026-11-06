@@ -266,6 +266,7 @@ export function RelationshipAstrologyView({
   person1CityName = "Birth Location",
   person1Gender: initialP1Gender = "unspecified",
   person1TimezoneOffset = 0,
+  person1UtcInstant,
 }: RelationshipAstrologyViewProps) {
   // Person 1 State
   const [person1Gender, setPerson1Gender] = useState<GenderType>(initialP1Gender);
