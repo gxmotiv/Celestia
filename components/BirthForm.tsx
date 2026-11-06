@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { searchCities } from "@/lib/astronomy/cities";
 import { resolveLocalDateTime } from "@/lib/astronomy/historicalTimezone";
 import { parseBirthClockTime } from "@/lib/astronomy/timeInput";
@@ -85,22 +85,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
       hour,
       minute,
     }, formData.ianaTimezone);
-  }, [formData.birthDate, formData.birthTime, formData.ianaTimezone, formData.timezoneMode, formData.isTimeUnknown]);
-
-  useEffect(() => {
-    if (timezoneResolution?.status !== "resolved") return;
-    const candidate = timezoneResolution.candidates[0];
-    if (!candidate) return;
-    setFormData((previous) => {
-      if (previous.timezoneMode !== "automatic" || previous.selectedUtcInstant === candidate.instant.toISOString()) return previous;
-      return {
-        ...previous,
-        selectedUtcInstant: candidate.instant.toISOString(),
-        selectedUtcOffsetSeconds: candidate.offsetSeconds,
-        timezoneOffset: candidate.offsetSeconds / 3600,
-      };
-    });
-  }, [timezoneResolution]);
+  }, [formData.birthDate, formData.birthTime, formData.ianaTimezone, formData.timezoneMode]);
 
   // Debounced search that queries Geoapify with fallback to built-in list
   const handleCitySearch = (query: string) => {
@@ -598,7 +583,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs font-semibold text-slate-200">Historical timezone resolution</p>
-              <p className="text-[11px] text-slate-400">IANA timezone rules are applied to the selected birth date, not today's standard offset.</p>
+              <p className="text-[11px] text-slate-400">IANA timezone rules are applied to the selected birth date, not today&apos;s standard offset.</p>
             </div>
             <select
               aria-label="Timezone resolution mode"
@@ -654,7 +639,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
               {timezoneResolution?.status === "nonexistent" && <p className="text-[11px] text-rose-300">This local clock time did not exist in this timezone. Change the time or choose a confirmed manual offset.</p>}
               {timezoneResolution?.status === "unsupported" && <p className="text-[11px] text-amber-300">{timezoneResolution.reason} Automatic resolution is unavailable.</p>}
               {!timezoneResolution && <p className="text-[11px] text-amber-300">Select a city with an IANA timezone and a valid birth date/time to resolve automatically.</p>}
-              <p className="text-[10px] text-slate-500">“Database-resolved” means the current runtime's IANA/ICU database supplied the rule; it is not independent proof of every historical legal time.</p>
+              <p className="text-[10px] text-slate-500">“Database-resolved” means the current runtime&apos;s IANA/ICU database supplied the rule; it is not independent proof of every historical legal time.</p>
               {formData.isTimeUnknown && <p className="text-[11px] text-amber-300">Birth time is marked unknown; 12:00 is only a placeholder, not an observed birth time.</p>}
             </div>
           ) : (
