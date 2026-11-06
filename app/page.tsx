@@ -97,7 +97,8 @@ export default function HomePage() {
     let resolutionLabel = "Manual/legacy UTC offset";
     let resolutionWarning = "";
 
-    if (formData.timezoneMode === "automatic" && formData.ianaTimezone) {
+    const timezoneMode = formData.timezoneMode ?? (formData.ianaTimezone ? "automatic" : "manual");
+    if (timezoneMode === "automatic" && formData.ianaTimezone) {
       const resolution = resolveLocalDateTime({
         year, month, day, hour, minute,
       }, formData.ianaTimezone);
