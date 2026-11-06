@@ -203,22 +203,22 @@ export class KPPredictionEngine {
       timing = `Latent timing: Neither current Mahadasha (${dashaLord}) nor Antardasha (${antardashaLord}) directly activate houses ${rule.favorableHouses.join(", ")}. Event awaits periods of ${Array.from(allFavorableSignificators).slice(0, 3).join(", ")}.`;
     }
 
-    // Probability calculation
-    let probability = 35;
-    if (isPromiseFavorable) probability += 30;
-    if (favorableMatches.length >= 2) probability += 10;
-    if (isDashaSignificator) probability += 12;
-    if (isAntardashaSignificator) probability += 13;
-    if (negationMatches.length > 0) probability -= negationMatches.length * 8;
-    probability = Math.min(95, Math.max(15, probability));
+    // Deterministic rule score; not a statistical probability.
+    let ruleScore = 35;
+    if (isPromiseFavorable) ruleScore += 30;
+    if (favorableMatches.length >= 2) ruleScore += 10;
+    if (isDashaSignificator) ruleScore += 12;
+    if (isAntardashaSignificator) ruleScore += 13;
+    if (negationMatches.length > 0) ruleScore -= negationMatches.length * 8;
+    ruleScore = Math.min(95, Math.max(15, ruleScore));
 
     // Verdict
     let verdict: KPPrediction["verdict"] = "Mixed / Moderate";
-    if (probability >= 78) {
+    if (ruleScore >= 78) {
       verdict = "Highly Favorable";
-    } else if (probability >= 60) {
+    } else if (ruleScore >= 60) {
       verdict = "Favorable";
-    } else if (probability <= 38) {
+    } else if (ruleScore <= 38) {
       verdict = "Unfavorable";
     }
 
@@ -245,7 +245,7 @@ export class KPPredictionEngine {
       cslSignifiedHouses,
       isPromiseFavorable,
       timing,
-      probability,
+      ruleScore,
       details,
       dashaAnalysis: {
         dashaLord,
