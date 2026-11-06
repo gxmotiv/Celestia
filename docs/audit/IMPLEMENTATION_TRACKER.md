@@ -1,0 +1,99 @@
+# Celestia master implementation tracker
+
+Last reviewed: 2026-11-06  
+Source of scope: `docs/audit/2026-10-31-master-audit-spec.md` and the current GitHub source tree.  
+Policy: keep changes on isolated branches; do not merge or deploy until the owner reviews the PR chain. Passing internal tests is not proof of astronomical correctness.
+
+## Status vocabulary
+
+- **Implemented / CI-passed**: code exists on the current implementation branch and the recorded GitHub Actions run passed.
+- **Partial**: some code or tests exist, but integration, benchmarks, or user-facing disclosure remain.
+- **Audit required**: source has not yet been fully traced or independently validated.
+- **Known defect**: confirmed behavior that can produce an incorrect or misleading result.
+- **Not started**: no implementation is claimed.
+
+## Workstream 1 — Time and calculation integrity
+
+| Item | Current status | Evidence / next acceptance gate |
+|---|---|---|
+| Historical local-time resolver | Partial | Resolver distinguishes resolved, ambiguous, nonexistent, unsupported. Runtime IANA/ICU output is not independent historical proof. Verify short-lived offset regimes, sampling performance, and authoritative historical sources. |
+| Built-in city IANA identifiers | Implemented on branch | All 133 built-in city records now carry explicit IANA IDs; CI validates IDs in the runner runtime. Verify every city-to-zone assignment against authoritative timezone geography, especially border/multi-zone regions. |
+| Geoapify timezone identity | Implemented on branch | Preserve provider IANA zone and remove longitude/15 offset guessing. Test provider failure, missing zone, reverse geocode, and offline-only mode. |
+| Primary birth-form timezone state | Partial | Automatic IANA and explicit manual-lock modes; ambiguous-time selection and unsupported/nonexistent warnings. Browser-level form testing remains. |
+| Partner birth-form timezone state | Partial | Partner IANA resolution, ambiguous selection, manual confirmation, shared UTC instant for partner Western/Vedic calculations. Need full browser and Davison integration tests. |
+| Shared UTC birth instant | Partial | Main Western/Vedic/BaZi paths now use one resolved UTC instant. Audit every other chart, PDF, transit and relationship path for independent reconstruction. |
+| Historical timezone verification | Audit required | IANA database values need comparison with authoritative local civil-time records; do not label them historically verified merely because Intl resolved them. |
+| BaZi clock conversion | Partial | Meeus EOT and civil/LMST/LAST helpers, explicit Pure Zi and Early/Late Zi policy. Independently benchmark formula and decide/display school convention. |
+| Solar-term crossings | Partial | 24 apparent geocentric tropical longitude crossings solved numerically. Numerical root bracket is not ephemeris accuracy. Compare dates/times with independent USNO/JPL/IMCCE references. |
+| BaZi year/month pillars | Partial | Existing longitude interval branch correction plus new crossing solver. The live year/month engine still needs to consume validated crossing instants and exact boundary tests. |
+| BaZi day-pillar epoch anchor | Audit required | Existing anchor is preserved; verify cycle epoch and calendrical convention from primary/authoritative references. |
+| Early/Late Zi hour/day semantics | Partial | Explicit option and unit tests exist. Verify traditional source convention and ensure all BaZi views/transits use the same policy. |
+
+## Workstream 2 — Astronomical engine and chart correctness
+
+| Item | Current status | Evidence / next acceptance gate |
+|---|---|---|
+| Actual ephemeris identity | Corrected disclosure | Compatibility class name remains, but implementation calls `astronomy-engine`, not native Swiss Ephemeris/libswe. Audit all claims, documentation and dependencies. |
+| Independent planetary benchmarks | Not started | Build a reproducible comparison set against a trustworthy ephemeris source for Sun, Moon and planets across dates, latitudes and boundary cases. Record time scale, coordinate frame, apparent/true settings and tolerances. |
+| Julian Day and UTC conversions | Partial / audit required | Existing suite passes; validate leap dates, seconds, pre-1972 UTC assumptions, historical offsets with seconds, and time-scale conversions. |
+| Tropical/sidereal and ayanamsa | Audit required | Verify settings, precession model, epoch, and consistency across Western/Vedic calculations. |
+| Houses and high latitudes | Known concern / audit required | Determine Placidus failure/fallback behavior, expose actual house system used, warn users, and test high-latitude boundaries. |
+| D1–D60 divisional charts | Audit required | Inspect each implemented formula, sign assignment, boundary rule, tradition, and independent examples. Do not infer correctness from D9-only tests. |
+| Vimshottari and other dashas | Partial / audit required | Existing antardasha suite passes. Verify balance at birth, year-length convention, rounding, pratyantardasha and remaining systems. |
+
+## Workstream 3 — KP and interpretive output
+
+| Item | Current status | Evidence / next acceptance gate |
+|---|---|---|
+| KP sub-lord calculations | Audit required | Verify star/sub division sequence, cusp/planet sub-lords, ayanamsa and boundary behavior. |
+| KP percentages | Known concern | Trace actual formulas and classify every score as deterministic, heuristic, empirical or display-only. Do not label unvalidated scores as probability. |
+| Interpretations | Audit required | Trace each text/score to calculated inputs and clearly separate traditional interpretation from factual calculation. |
+
+## Workstream 4 — Relationships and other chart systems
+
+| Item | Current status | Evidence / next acceptance gate |
+|---|---|---|
+| Synastry | Audit required | Verify aspect orbs, weights, house overlays, duplicated transformations and interpretation labels. |
+| Composite chart | Audit required | Independently verify midpoint conventions, circular longitude handling, time/date handling and house calculations. |
+| Davison chart | Priority audit | Verify exact UTC instants, temporal midpoint, geographic midpoint, longitude wrap, antipodal/near-antipodal handling and timezone seconds. Compare against independent examples. |
+| Numerology | Audit required | Verify name normalization, master-number rules, date conventions, and explain interpretive/non-empirical status. |
+| PDFs | Audit required | Compare every printed value with on-screen calculations; verify privacy, locale, fonts and missing-data behavior. |
+
+## Workstream 5 — Privacy, API and reliability
+
+| Item | Current status | Evidence / next acceptance gate |
+|---|---|---|
+| Saved profiles | Known concern / audit required | Prior source stores profile JSON in localStorage. Trace fields, migrations, exports, deletion, browser logs and connected providers. Do not delete existing user data. |
+| Encryption/privacy | Not started | Define realistic threat model before adding optional WebCrypto encryption. Explain that same-origin XSS and an unlocked device can still access decrypted data. Provide recovery/export path. |
+| Geocoding API | Partial | No fabricated longitude-based timezone fallback; IANA identity preserved. Audit validation, API-key handling, provider timeout, rate limits and no-key offline behavior. |
+| AI route | Audit required | Verify actual endpoint and secret requirements, error handling, timeouts and provider status. Keep AI interpretation separate from deterministic chart calculations. |
+| PDF API | Audit required | Verify validation, response errors, privacy and parity with live calculations. |
+| Runtime HTTP 200/404 discrepancy | Known concern / audit required | Reproduce route by route and distinguish hosting rewrite, Next.js route, API status and browser UI behavior. |
+| Mobile/browser UI | Not yet verified | Test real browser interactions at phone viewport, form errors, loading, state synchronization, accessibility and offline behavior. |
+
+## Workstream 6 — AI and prediction research
+
+| Item | Current status | Evidence / next acceptance gate |
+|---|---|---|
+| AI interpretation | Audit required | Mark operational vs unavailable routes; AI must not replace ephemeris values. |
+| Prediction research platform | Not started | Separate from the consumer chart app. Define pre-registered questions, fixed outcome criteria, blind evaluation, leakage prevention, baselines, failures, sample-size limits and reproducible logs. No predictive-validity claims without evidence. |
+
+## Workstream 7 — Runtime, deployment and repository hygiene
+
+| Item | Current status | Evidence / next acceptance gate |
+|---|---|---|
+| TypeScript archived snapshots exclusion | Implemented on PR #3 | Archive remains; inspect every excluded path to ensure no active module was excluded. |
+| Duplicate/unused modules | Audit required | Identify duplicates before cleanup; do not delete historical files during audit. |
+| Production build | Partial / CI-gated | PR chain has a green build at earlier commits; rerun on latest head after all integration changes. |
+| Browser deployment | Not started | Choose GitHub Pages only if the app can be exported without server routes. Otherwise use a zero-cost GitHub-triggered deployment target with server/API support. Never expose API secrets in static client bundles. |
+| Public link | Not created | Publish only after full calculation, privacy and UI acceptance gates; provide the exact verified deployment URL. |
+
+## Current PR chain
+
+1. PR #1 — prior Phase 1C audit evidence; open draft; do not overwrite.
+2. PR #2 — BaZi solar-month branch fix; open draft.
+3. PR #3 — historical timezone resolver, midnight parser and CI; open draft.
+4. PR #4 — EOT/LMST/LAST, Zi policies and solar-term solver; open draft, stacked on PR #3.
+5. PR #5 — IANA city/geocoding and birth-form timezone integration; open draft, stacked on PR #4.
+
+Do not merge the chain automatically. Review each diff and rerun the full workflow on the final head before merge/deployment.
