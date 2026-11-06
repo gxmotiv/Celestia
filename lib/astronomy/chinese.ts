@@ -44,7 +44,7 @@ export interface BaZiProfile {
     stem: StemData;
     symbol: string;
     nature: string;
-    strength: "Strong" | "Balanced" | "Weak";
+    strength: "Strong" | "Slightly Strong" | "Balanced" | "Slightly Weak" | "Weak";
     favorableElements: string[];
     unfavorableElements: string[];
   };
@@ -66,6 +66,13 @@ export interface BaZiProfile {
     liuHeFriend: string; // Secret friend
     clashSign: string; // Opposing clash
     description: string;
+  };
+  calculationContext?: {
+    timeBasis: "civil-clock" | "local-mean-solar" | "local-apparent-solar";
+    dayBoundaryPolicy: "pure-zi" | "early-late-zi";
+    solarClockIso: string;
+    longitudeDegrees: number;
+    equationOfTimeMinutes: number;
   };
 }
 
@@ -222,7 +229,7 @@ function calculateHourPillar(dayStemIdx: number, hour: number): { stemIdx: numbe
   return { stemIdx, branchIdx };
 }
 
-const ANIMAL_PROFILES: Record<string, string> = {
+export const ANIMAL_PROFILES: Record<string, string> = {
   Rat: "Quick-witted, resourceful, charming, and highly perceptive. Masters of opportunity and social dexterity.",
   Ox: "Steadfast, patient, methodical, and deeply trustworthy. Unwavering integrity with heroic endurance.",
   Tiger: "Courageous, charismatic, rebellious, and fiercely independent. Natural leaders driven by heroic conviction.",
@@ -237,7 +244,7 @@ const ANIMAL_PROFILES: Record<string, string> = {
   Pig: "Generous, sincere, warmhearted, and deeply cultured. Genuine seekers of joy, harmony, and compassionate fellowship.",
 };
 
-const COMPATIBILITY_TABLE: Record<
+export const COMPATIBILITY_TABLE: Record<
   string,
   { trines: string[]; secretFriend: string; clash: string }
 > = {
@@ -255,7 +262,7 @@ const COMPATIBILITY_TABLE: Record<
   Pig: { trines: ["Rabbit", "Goat"], secretFriend: "Tiger", clash: "Snake" },
 };
 
-const DAY_MASTER_NATURE: Record<string, { symbol: string; nature: string }> = {
+export const DAY_MASTER_NATURE: Record<string, { symbol: string; nature: string }> = {
   Jia: {
     symbol: "Yang Wood (Giant Oak / Pine)",
     nature: "Upright, ambitious, principled, deeply rooted, and protective of others. Seeks towering growth and shelter for those in its shade.",
