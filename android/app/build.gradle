@@ -29,3 +29,8 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 }
+
+dependencies {
+    // Stable release supporting the app's existing minSdk 23.
+    implementation "androidx.webkit:webkit:1.15.0"
+}
