@@ -593,18 +593,18 @@ export class WesternBenchmarkRunner {
     // Test 25: J2000.0 Epoch Reference Solar Longitude (~280.46° at 2000-01-01 12:00 TT)
     const j2000Chart = calculateWesternChart(2000, 1, 1, 12, 0, 51.4769, 0.0, 0, "Placidus");
     const sunJ2000 = j2000Chart.planets.find((p) => p.name === "Sun")!;
-    // Exact VSOP87 Sun at J2000.0 is ~280.4606° (10°27' Capricorn)
+    // Rounded J2000 solar-longitude reference (~280.46°); coarse sanity check only.
     const expectedSunJ2000 = 280.46;
     const diffJ2000 = Math.abs(sunJ2000.longitude - expectedSunJ2000);
     results.push({
       id: "W-BENCH-01",
       name: "J2000.0 Epoch Astronomical Calibration (Greenwich 12:00)",
       category: "Classical Benchmark Verification",
-      standardReference: "IAU / VSOP87 / JPL DE405 Standard Epoch",
+      standardReference: "Rounded J2000 solar-longitude sanity reference (not an independent DE405 comparison)",
       expected: `Sun at ~280.46° (10°27' Capricorn)`,
       actual: `Sun at ${sunJ2000.longitude.toFixed(2)}° (${sunJ2000.signDegreeFormatted}, diff ${diffJ2000.toFixed(2)}°)`,
       passed: diffJ2000 < 0.25,
-      details: "Validates the underlying Swiss Ephemeris engine against international astronomical calibration benchmarks.",
+      details: "Checks a broad epoch/sign value only; this does not certify planetary ephemeris accuracy.",
     });
 
     // Test 26: Historical Leonardo da Vinci Classical Chart (April 15, 1452, Vinci, Italy)
