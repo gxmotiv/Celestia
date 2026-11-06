@@ -1047,6 +1047,11 @@ export function RelationshipAstrologyView({
                     </div>
                   )}
                   <p className="text-[10px] text-amber-300">{partnerTimezoneWarning}</p>
+                  {partnerChart.houseSystemFallback && (
+                    <p className="text-[10px] text-rose-300">
+                      Requested Placidus, but {partnerChart.houseSystem} houses were used: {partnerChart.houseSystemFallbackReason}
+                    </p>
+                  )}
                 </div>
 
                 {/* Active Selected Location Confirmation Pill */}
