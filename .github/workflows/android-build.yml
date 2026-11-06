@@ -64,6 +64,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p android/app/src/main/assets/offline
+          test -s android/app/src/main/assets/offline/index.html
           npx --yes esbuild@0.25.11 android/offline/offline.ts \
             --bundle \
             --platform=browser \
