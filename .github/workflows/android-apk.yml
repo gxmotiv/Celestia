@@ -1,36 +1,23 @@
 name: Celestia Android APKs
 
 on:
-  pull_request:
-    paths:
-      - "android/**"
-      - ".github/workflows/android-apk.yml"
   push:
     branches:
-      - feat/android-apk-wrapper
       - deploy/cloudflare-workers-free
     paths:
       - "android/**"
       - ".github/workflows/android-apk.yml"
   workflow_dispatch:
-    inputs:
-      publish_release:
-        description: "Create a GitHub Release with the APK files (test/debug-signed build)"
-        required: true
-        default: false
-        type: boolean
 
 permissions:
-  contents: write
-
-concurrency:
-  group: celestia-android-apks
-  cancel-in-progress: false
+  contents: read
+  actions: write
 
 jobs:
   build:
     name: Build ARM32 and ARM64 APKs
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -71,21 +58,3 @@ jobs:
           path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 30
-
-      - name: Publish GitHub Release (optional)
-        if: github.event_name == 'workflow_dispatch' && inputs.publish_release == true
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: android-v0.1.0-build-${{ github.run_number }}
-          target_commitish: ${{ github.sha }}
-          name: Celestia Android v0.1.0 (build ${{ github.run_number }})
-          body: |
-            Celestia Android WebView wrapper for:
-            https://celestia.gagandeep-hwr.workers.dev/
-
-            Test build signed with the Android debug certificate. Do not treat this as a production signing setup.
-            ARM64: arm64-v8a
-            ARM32: armeabi-v7a
-          files: android/app/build/outputs/apk/debug/*.apk
-          prerelease: true
-          make_latest: false
