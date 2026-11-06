@@ -7,8 +7,9 @@ export interface GeocodeResult {
   formatted: string;
   lat: number;
   lng: number;
-  tz: number; // in hours, e.g. 5.5, -4, 1
+  tz?: number; // Provider standard offset only; not date-specific
   tzName?: string;
+  ianaTimezone?: string;
   source: "geoapify" | "built-in";
 }
 
@@ -97,13 +98,10 @@ export async function GET(req: NextRequest) {
               const country = props.country || "";
               const formatted = props.formatted || `${city}, ${country}`;
 
-              let tzOffsetHours = 0;
-              let tzName = "";
-              if (props.timezone) {
-                tzName = props.timezone.name || "";
-                if (typeof props.timezone.offset_STD_seconds === "number") {
-                  tzOffsetHours = props.timezone.offset_STD_seconds / 3600;
-                }
+              let tzOffsetHours: number | undefined;
+              const tzName = typeof props.timezone?.name === "string" ? props.timezone.name : "";
+              if (typeof props.timezone?.offset_STD_seconds === "number") {
+                tzOffsetHours = props.timezone.offset_STD_seconds / 3600;
               }
 
               const result: GeocodeResult = {
@@ -112,8 +110,9 @@ export async function GET(req: NextRequest) {
                 formatted,
                 lat: Math.round(lat * 10000) / 10000,
                 lng: Math.round(lon * 10000) / 10000,
-                tz: tzOffsetHours,
+                ...(tzOffsetHours !== undefined ? { tz: tzOffsetHours } : {}),
                 tzName,
+                ianaTimezone: tzName || undefined,
                 source: "geoapify",
               };
               return NextResponse.json({ results: [result] });
@@ -139,6 +138,7 @@ export async function GET(req: NextRequest) {
         lat: matchedCity.lat,
         lng: matchedCity.lng,
         tz: matchedCity.tz,
+        ianaTimezone: matchedCity.ianaTimezone,
         source: "built-in",
       };
       return NextResponse.json({ results: [result] });
@@ -159,6 +159,7 @@ export async function GET(req: NextRequest) {
       lat: c.lat,
       lng: c.lng,
       tz: c.tz,
+      ianaTimezone: c.ianaTimezone,
       source: "built-in" as const,
     }));
     return NextResponse.json({ results: fallbackList });
@@ -218,15 +219,10 @@ export async function GET(req: NextRequest) {
             const formatted =
               props.formatted || `${city}${state}, ${country}`;
 
-            let tzOffset = 0;
-            let tzName = "";
-            if (props.timezone) {
-              tzName = props.timezone.name || "";
-              if (typeof props.timezone.offset_STD_seconds === "number") {
-                tzOffset = props.timezone.offset_STD_seconds / 3600;
-              }
-            } else if (typeof props.lon === "number") {
-              tzOffset = Math.round((props.lon / 15) * 2) / 2;
+            let tzOffset: number | undefined;
+            const tzName = typeof props.timezone?.name === "string" ? props.timezone.name : "";
+            if (typeof props.timezone?.offset_STD_seconds === "number") {
+              tzOffset = props.timezone.offset_STD_seconds / 3600;
             }
 
             return {
@@ -235,8 +231,9 @@ export async function GET(req: NextRequest) {
               formatted,
               lat: typeof props.lat === "number" ? Math.round(props.lat * 10000) / 10000 : 0,
               lng: typeof props.lon === "number" ? Math.round(props.lon * 10000) / 10000 : 0,
-              tz: tzOffset,
+              ...(tzOffset !== undefined ? { tz: tzOffset } : {}),
               tzName,
+              ianaTimezone: tzName || undefined,
               source: "geoapify" as const,
             };
           });
