@@ -415,6 +415,7 @@ export default function HomePage() {
                 person1Lon={formData.longitude}
                 person1CityName={formData.cityName}
                 person1TimezoneOffset={formData.timezoneOffset}
+                person1UtcInstant={birthTimeContext.utcInstant}
               />
             )}
 
