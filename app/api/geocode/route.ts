@@ -176,6 +176,7 @@ export async function GET(req: NextRequest) {
     lat: c.lat,
     lng: c.lng,
     tz: c.tz,
+    ianaTimezone: c.ianaTimezone,
     source: "built-in",
   }));
 
