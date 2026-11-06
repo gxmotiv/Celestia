@@ -25,6 +25,8 @@ test("Invalid hour uses fallback", show("24:00") === "12:00", "12:00", show("24:
 test("Invalid minute uses fallback", show("12:60") === "12:00", "12:00", show("12:60"));
 test("Missing value uses fallback", show("") === "12:00", "12:00", show(""));
 test("Malformed one-digit hour uses fallback", show("9:05") === "12:00", "12:00", show("9:05"));
+const nonString = parseBirthClockTime(null as unknown as string);
+test("Non-string legacy value uses fallback", nonString.hour === 12 && nonString.minute === 0, "12:00", nonString.hour.toString().padStart(2, "0") + ":" + nonString.minute.toString().padStart(2, "0"));
 
 let passed = 0;
 let failed = 0;
