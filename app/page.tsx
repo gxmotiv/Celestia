@@ -195,11 +195,20 @@ export default function HomePage() {
   }, [formData]);
 
   const handleFormSubmit = (data: BirthFormData) => {
+    if (!data.isTimeUnknown && parseBirthClockTime(data.birthTime).usedFallback) {
+      window.alert("Enter a valid birth time in HH:mm format, or mark the birth time as unknown.");
+      return;
+    }
     setFormData(data);
     setIsFormCollapsed(true);
   };
 
   const handleProfileSelect = (data: BirthFormData) => {
+    if (!data.isTimeUnknown && parseBirthClockTime(data.birthTime).usedFallback) {
+      window.alert("This saved profile has an invalid or missing birth time. Review it in the birth form before calculating.");
+      setIsFormCollapsed(false);
+      return;
+    }
     const mode = data.timezoneMode ?? (data.ianaTimezone ? "automatic" : "manual");
     if (mode === "automatic") {
       if (!data.ianaTimezone) {
