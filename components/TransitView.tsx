@@ -1403,7 +1403,7 @@ export function TransitView({
               </div>
 
               <div className="pt-3 border-t border-slate-800 text-[11px] text-slate-400 text-center">
-                System: <strong className="text-slate-300">{systemResults.config.name}</strong> · Ephemeris 0.001° Accuracy
+                System: <strong className="text-slate-300">{systemResults.config.name}</strong> · astronomy-engine model (accuracy varies; see calculation notes)
               </div>
             </div>
           </div>
