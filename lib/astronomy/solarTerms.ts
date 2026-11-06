@@ -40,13 +40,15 @@ function bisectCrossing(
   startMs: number,
   endMs: number,
   startLongitude: number,
+  startUnwrappedLongitude: number,
   targetUnwrapped: number
 ): SolarLongitudeCrossing {
   let low = startMs;
   let high = endMs;
+  const targetInBracket = startLongitude + (targetUnwrapped - startUnwrappedLongitude);
   const evaluate = (instantMs: number) => {
     const longitude = sunLongitudeAt(instantMs);
-    return startLongitude + unwrappedDifference(longitude, startLongitude) - targetUnwrapped;
+    return startLongitude + unwrappedDifference(longitude, startLongitude) - targetInBracket;
   };
 
   let lowValue = evaluate(low);
@@ -104,7 +106,7 @@ export function calculateSolarTermsForUtcYear(year: number): SolarLongitudeCross
     for (let boundaryIndex = firstBoundary; boundaryIndex * 15 <= nextUnwrapped + 1e-12; boundaryIndex++) {
       const targetUnwrapped = boundaryIndex * 15;
       crossings.push(
-        bisectCrossing(previousMs, currentMs, previousLongitude, targetUnwrapped)
+        bisectCrossing(previousMs, currentMs, previousLongitude, unwrappedLongitude, targetUnwrapped)
       );
     }
 
