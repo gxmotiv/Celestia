@@ -119,10 +119,20 @@ export class SwissEphemerisEngine {
    * and is not independently certified as an exact value for every epoch.
    */
   public getAyanamsa(julianDay: number): number {
+    if (!Number.isFinite(julianDay)) {
+      throw new RangeError("Julian Day must be finite.");
+    }
     const T = (julianDay - 2451545.0) / 36525.0;
-    // J2000 reference constant for this application's Lahiri-style approximation; independently validate the full epoch model.
-    const ayanamsa = 23.85709 + 1.396971 * T - 0.0003086 * T * T;
-    return ayanamsa;
+    // IAE 1989 precession polynomial relative to J2000, applied to this app's
+    // Lahiri-style J2000 zero point. Coefficients are arcseconds per century
+    // (and higher powers thereof). This is an approximation, not native
+    // Swiss Ephemeris SE_SIDM_LAHIRI and does not add a full nutation model.
+    const ayanamsaArcseconds =
+      85885.53 +
+      5029.0966 * T +
+      1.11161 * T * T -
+      0.000113 * T * T * T;
+    return ayanamsaArcseconds / 3600.0;
   }
 
   /**
