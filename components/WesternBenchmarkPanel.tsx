@@ -190,12 +190,12 @@ Not an independent ephemeris accuracy certification. Planetary positions use ast
         <div className="p-4 bg-slate-950/60 border border-slate-800/80 rounded-xl space-y-1">
           <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1.5">
             <Award className="w-3.5 h-3.5 text-purple-400" />
-            Astrological Authority
+            Tradition references
           </span>
           <div className="flex items-baseline gap-2">
-            <span className="text-xl font-bold font-mono text-purple-400">14 Engines</span>
+            <span className="text-xl font-bold font-mono text-purple-400">14 systems</span>
           </div>
-          <span className="text-[10px] text-slate-400 block">Ptolemy, Kepler, Valens, Ebertin</span>
+          <span className="text-[10px] text-slate-400 block">Interpretive references; not scientific validation</span>
         </div>
       </div>
 
