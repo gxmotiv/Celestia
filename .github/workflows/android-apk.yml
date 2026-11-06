@@ -1,6 +1,10 @@
 name: Celestia Android APKs
 
 on:
+  pull_request:
+    paths:
+      - "android/**"
+      - ".github/workflows/android-apk.yml"
   push:
     branches:
       - feat/android-apk-wrapper
