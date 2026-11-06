@@ -22,7 +22,8 @@ import { swissEphemeris } from "@/lib/astronomy/swissEphemeris";
 import { calculateWesternChart } from "@/lib/astronomy/ephemeris";
 import { calculateVedicChart } from "@/lib/astronomy/vedic";
 import { calculateNumerologyProfile } from "@/lib/astronomy/numerology";
-import { calculateBaZiProfile } from "@/lib/astronomy/chinese";
+import { calculateBaZiProfileFromInstant } from "@/lib/astronomy/baziProfileAdapter";
+import { resolveLocalDateTime } from "@/lib/astronomy/historicalTimezone";
 import { parseBirthClockTime } from "@/lib/astronomy/timeInput";
 
 import {
@@ -68,6 +69,11 @@ export default function HomePage() {
     latitude: 43.7844,
     longitude: 10.9253,
     timezoneOffset: 1,
+    ianaTimezone: "Europe/Rome",
+    timezoneMode: "manual",
+    manualOffsetConfirmed: true,
+    baziTimeBasis: "local-mean-solar",
+    baziDayBoundaryPolicy: "pure-zi",
     houseSystem: "Placidus",
   });
 
@@ -78,37 +84,66 @@ export default function HomePage() {
   const [isCopiedShare, setIsCopiedShare] = useState(false);
   const isMounted = useIsMounted();
 
-  // High-precision client-side calculations
-  const { westernData, vedicData, numerologyData, baziData } = useMemo(() => {
-    const [yStr, mStr, dStr] = formData.birthDate.split("-");
-    const year = parseInt(yStr, 10) || 1990;
-    const month = parseInt(mStr, 10) || 1;
-    const day = parseInt(dStr, 10) || 1;
-
+  // All chart systems share one resolved UTC birth instant.
+  const { westernData, vedicData, numerologyData, baziData, birthTimeContext } = useMemo(() => {
+    const [year, month, day] = formData.birthDate.split("-").map(Number);
+    if (![year, month, day].every(Number.isInteger) || year < 1 || month < 1 || month > 12 || day < 1 || day > 31) {
+      throw new RangeError("Birth date must be a valid Gregorian date.");
+    }
+    const calendarCheck = new Date(Date.UTC(year, month - 1, day));
+    if (calendarCheck.getUTCFullYear() !== year || calendarCheck.getUTCMonth() !== month - 1 || calendarCheck.getUTCDate() !== day) {
+      throw new RangeError("Birth date is not a valid Gregorian calendar date.");
+    }
     const { hour, minute } = parseBirthClockTime(formData.birthTime);
 
-    // Unambiguously normalize local birth date/time and timezone offset to true UTC instant
-    const birthDateObj = swissEphemeris.createUTCDate(
-      year,
-      month,
-      day,
-      hour,
-      minute,
-      0,
-      formData.timezoneOffset
-    );
+    let birthDateObj: Date;
+    let offsetSeconds: number;
+    let resolutionLabel = "Manual/legacy UTC offset";
+    let resolutionWarning = "";
 
-    // 1. Western Astrology
+    const timezoneMode = formData.timezoneMode ?? (formData.ianaTimezone ? "automatic" : "manual");
+    if (timezoneMode === "automatic" && formData.ianaTimezone) {
+      const resolution = resolveLocalDateTime({
+        year, month, day, hour, minute,
+      }, formData.ianaTimezone);
+      const selectedCandidate =
+        resolution.status === "resolved"
+          ? resolution.candidates[0]
+          : resolution.status === "ambiguous"
+            ? resolution.candidates.find((candidate) => candidate.instant.toISOString() === formData.selectedUtcInstant)
+            : undefined;
+
+      if (selectedCandidate) {
+        birthDateObj = selectedCandidate.instant;
+        offsetSeconds = selectedCandidate.offsetSeconds;
+        resolutionLabel = "IANA database-resolved";
+        resolutionWarning = "The instant and offset come from the runtime IANA/ICU database. Historical civil-time details still require source verification.";
+      } else {
+        offsetSeconds = Number.isFinite(formData.timezoneOffset) ? formData.timezoneOffset * 3600 : 0;
+        birthDateObj = swissEphemeris.createUTCDate(year, month, day, hour, minute, 0, offsetSeconds / 3600);
+        resolutionLabel = "Automatic resolution unavailable; legacy offset fallback";
+        resolutionWarning = resolution.status === "nonexistent"
+          ? "The entered local time did not exist in this IANA timezone. The displayed charts are using the saved numeric offset only; correct the time or explicitly confirm a manual offset."
+          : resolution.status === "ambiguous"
+            ? "This local time occurs twice and no candidate was selected. The displayed charts are using the saved numeric offset only; select the intended UTC instant."
+            : resolution.reason + " The displayed charts are using the saved numeric offset only.";
+      }
+    } else {
+      offsetSeconds = Number.isFinite(formData.timezoneOffset) ? formData.timezoneOffset * 3600 : 0;
+      birthDateObj = swissEphemeris.createUTCDate(year, month, day, hour, minute, 0, offsetSeconds / 3600);
+      resolutionLabel = formData.manualOffsetConfirmed ? "User-confirmed manual offset" : "Legacy numeric offset";
+      resolutionWarning = formData.manualOffsetConfirmed
+        ? "The UTC offset is manually supplied; it is not independently verified as historical civil time."
+        : "This saved profile has no verified IANA timezone. Its legacy numeric offset is retained for compatibility and should be reviewed.";
+    }
+
+    const offsetHours = offsetSeconds / 3600;
+
+    // 1. Western Astrology — same UTC instant/offset as the other systems.
     const wData = calculateWesternChart(
-      year,
-      month,
-      day,
-      hour,
-      minute,
-      formData.latitude,
-      formData.longitude,
-      formData.timezoneOffset,
-      formData.houseSystem
+      year, month, day, hour, minute,
+      formData.latitude, formData.longitude,
+      offsetHours, formData.houseSystem
     );
 
     // 2. Vedic Astrology (Lahiri Ayanamsa)
@@ -117,14 +152,31 @@ export default function HomePage() {
     // 3. Pythagorean Numerology
     const nData = calculateNumerologyProfile(formData.fullName, year, month, day);
 
-    // 4. Chinese BaZi (Four Pillars)
-    const bData = calculateBaZiProfile(year, month, day, hour);
+    // 4. Chinese BaZi — explicit solar clock and day-boundary convention.
+    const bData = calculateBaZiProfileFromInstant(
+      birthDateObj,
+      {
+        clock: {
+          timeBasis: formData.baziTimeBasis ?? "local-mean-solar",
+          longitudeDegrees: formData.longitude,
+          civilUtcOffsetSeconds: offsetSeconds,
+        },
+        dayBoundaryPolicy: formData.baziDayBoundaryPolicy ?? "pure-zi",
+      }
+    );
 
     return {
       westernData: wData,
       vedicData: vData,
       numerologyData: nData,
       baziData: bData,
+      birthTimeContext: {
+        label: resolutionLabel,
+        warning: resolutionWarning,
+        ianaTimezone: formData.ianaTimezone ?? null,
+        offsetSeconds,
+        utcInstant: birthDateObj.toISOString(),
+      },
     };
   }, [formData]);
 
@@ -215,6 +267,13 @@ export default function HomePage() {
 
       {/* Main Content Viewport */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-1 space-y-6 no-print">
+        {birthTimeContext.warning && (
+          <div role="status" className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 space-y-1">
+            <p className="text-xs font-semibold text-amber-300">{birthTimeContext.label}</p>
+            <p className="text-[11px] text-slate-300">{birthTimeContext.warning}</p>
+            <p className="text-[10px] text-slate-500">UTC instant used by the current charts: {birthTimeContext.utcInstant} · Offset: {birthTimeContext.offsetSeconds} seconds</p>
+          </div>
+        )}
         {/* 2. Compact Spacetime Inception Strip & Smooth Accordion Drawer */}
         <section className="bg-slate-950/70 border border-slate-800 rounded-xl overflow-hidden transition-all shadow-md">
           {/* Collapsed Horizontal Quick-Summary Bar */}
@@ -356,6 +415,7 @@ export default function HomePage() {
                 person1Lon={formData.longitude}
                 person1CityName={formData.cityName}
                 person1TimezoneOffset={formData.timezoneOffset}
+                person1UtcInstant={birthTimeContext.utcInstant}
               />
             )}
 
