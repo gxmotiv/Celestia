@@ -44,6 +44,20 @@ jobs:
         env:
           CI: "true"
 
+
+  lint:
+    name: ESLint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+        env:
+          CI: "true"
+
   production-build:
     name: Production build
     runs-on: ubuntu-latest
