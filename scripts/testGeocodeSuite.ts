@@ -13,6 +13,7 @@
 
 import { NextRequest } from "next/server";
 import { GET } from "../app/api/geocode/route";
+import { GLOBAL_CITIES } from "../lib/astronomy/cities";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -38,6 +39,20 @@ async function runGeocodeTests() {
   const originalFetch = global.fetch;
 
   try {
+    // ---------------------------------------------------------
+    // TEST 0: Built-in city IANA database identifiers
+    // ---------------------------------------------------------
+    console.log("[Suite 0: Built-in IANA timezone identifiers]");
+    const allZonesValid = GLOBAL_CITIES.length === 133 && GLOBAL_CITIES.every((city) => {
+      try {
+        new Intl.DateTimeFormat("en-US", { timeZone: city.ianaTimezone });
+        return true;
+      } catch {
+        return false;
+      }
+    });
+    assert(allZonesValid, "0.1 All 133 built-in cities have valid runtime IANA timezone identifiers");
+
     // ---------------------------------------------------------
     // TEST 1: Source code secret inspection
     // ---------------------------------------------------------
