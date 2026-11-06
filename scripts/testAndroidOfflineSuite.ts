@@ -126,7 +126,7 @@ assert(
 );
 assert(
   "Offline page does not use fetch requests",
-  !/\\bfetch\\s*\\(/.test(offlineHtml),
+  !offlineHtml.includes("fetch("),
   "A fetch() call was found in the bundled offline page."
 );
 
