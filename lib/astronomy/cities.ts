@@ -10,7 +10,8 @@ export interface CityData {
   state?: string;
   lat: number;
   lng: number;
-  tz: number; // UTC offset in hours (standard)
+  tz: number; // Legacy/default offset in hours; not date-specific
+  ianaTimezone: string; // IANA zone used for date-specific historical resolution
 }
 
 export const GLOBAL_CITIES: CityData[] = [
