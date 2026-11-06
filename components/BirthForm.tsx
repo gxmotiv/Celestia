@@ -441,7 +441,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
             }`}
           />
           <p className="text-[11px] text-slate-400">
-            {formData.isTimeUnknown ? "Using Solar Noon standard" : "24-hour local standard time"}
+            {formData.isTimeUnknown ? "12:00 placeholder only — not an observed time or true solar noon" : "24-hour local standard time"}
           </p>
         </div>
 
