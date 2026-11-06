@@ -10,6 +10,7 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
+// Android WebView entry point for the live Celestia site.
 public class MainActivity extends Activity {
     private static final String START_URL = "https://celestia.gagandeep-hwr.workers.dev/";
     private static final String APP_HOST = "celestia.gagandeep-hwr.workers.dev";
