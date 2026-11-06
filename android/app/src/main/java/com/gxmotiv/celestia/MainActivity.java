@@ -11,17 +11,23 @@ import android.os.Bundle;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+
+import androidx.webkit.WebViewAssetLoader;
 
 // Online Celestia remains the primary experience. A bundled calculator is used
 // whenever Android has no validated internet connection or the site cannot load.
 public class MainActivity extends Activity {
     private static final String START_URL = "https://celestia.gagandeep-hwr.workers.dev/";
     private static final String APP_HOST = "celestia.gagandeep-hwr.workers.dev";
-    private static final String OFFLINE_URL = "file:///android_asset/offline/index.html";
+    private static final String OFFLINE_HOST = "appassets.androidplatform.net";
+    private static final String OFFLINE_URL =
+        "https://appassets.androidplatform.net/assets/offline/index.html";
 
     private WebView webView;
+    private WebViewAssetLoader assetLoader;
     private boolean offlinePageVisible = false;
 
     @Override
@@ -30,18 +36,39 @@ public class MainActivity extends Activity {
         webView = new WebView(this);
         setContentView(webView);
 
+        assetLoader = new WebViewAssetLoader.Builder()
+            .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
+            .build();
+
         webView.getSettings().setJavaScriptEnabled(true);
         webView.getSettings().setDomStorageEnabled(true);
         webView.getSettings().setDatabaseEnabled(true);
-        webView.getSettings().setAllowFileAccess(true);
+        // The offline page is served by WebViewAssetLoader over its reserved
+        // local HTTPS origin, so direct file/content access is not necessary.
+        webView.getSettings().setAllowFileAccess(false);
         webView.getSettings().setAllowFileAccessFromFileURLs(false);
         webView.getSettings().setAllowUniversalAccessFromFileURLs(false);
+        webView.getSettings().setAllowContentAccess(false);
         webView.getSettings().setJavaScriptCanOpenWindowsAutomatically(false);
         webView.getSettings().setSupportMultipleWindows(false);
         webView.getSettings().setMediaPlaybackRequiresUserGesture(true);
         webView.setWebChromeClient(new WebChromeClient());
 
         webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public WebResourceResponse shouldInterceptRequest(
+                WebView view,
+                WebResourceRequest request
+            ) {
+                return assetLoader.shouldInterceptRequest(request.getUrl());
+            }
+
+            @Override
+            @SuppressWarnings("deprecation")
+            public WebResourceResponse shouldInterceptRequest(WebView view, String url) {
+                return assetLoader.shouldInterceptRequest(Uri.parse(url));
+            }
+
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 return routeUrl(request.getUrl());
@@ -55,8 +82,10 @@ public class MainActivity extends Activity {
             private boolean routeUrl(Uri uri) {
                 String scheme = uri.getScheme();
                 String host = uri.getHost();
-                if ("file".equalsIgnoreCase(scheme) &&
-                    uri.toString().startsWith("file:///android_asset/offline/")) {
+                if ("https".equalsIgnoreCase(scheme) &&
+                    OFFLINE_HOST.equalsIgnoreCase(host) &&
+                    uri.getPath() != null &&
+                    uri.getPath().startsWith("/assets/offline/")) {
                     return false;
                 }
                 if ("https".equalsIgnoreCase(scheme) && APP_HOST.equalsIgnoreCase(host)) {
@@ -74,7 +103,7 @@ public class MainActivity extends Activity {
 
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
-                offlinePageVisible = url != null && url.startsWith("file:///android_asset/offline/");
+                offlinePageVisible = isOfflineUrl(Uri.parse(url));
                 super.onPageStarted(view, url, favicon);
             }
 
@@ -98,7 +127,7 @@ public class MainActivity extends Activity {
                 String failingUrl
             ) {
                 super.onReceivedError(view, errorCode, description, failingUrl);
-                if (failingUrl != null && !failingUrl.startsWith("file:///android_asset/offline/")) {
+                if (failingUrl != null && !isOfflineUrl(Uri.parse(failingUrl))) {
                     showOfflinePage();
                 }
             }
@@ -107,7 +136,7 @@ public class MainActivity extends Activity {
             public void onReceivedHttpError(
                 WebView view,
                 WebResourceRequest request,
-                android.webkit.WebResourceResponse response
+                WebResourceResponse response
             ) {
                 super.onReceivedHttpError(view, request, response);
                 if (request.isForMainFrame() &&
@@ -115,10 +144,6 @@ public class MainActivity extends Activity {
                     response.getStatusCode() >= 400) {
                     showOfflinePage();
                 }
-            }
-
-            private boolean isOfflineUrl(Uri uri) {
-                return uri != null && uri.toString().startsWith("file:///android_asset/offline/");
             }
         });
 
@@ -133,6 +158,14 @@ public class MainActivity extends Activity {
         } else {
             showOfflinePage();
         }
+    }
+
+    private boolean isOfflineUrl(Uri uri) {
+        return uri != null
+            && "https".equalsIgnoreCase(uri.getScheme())
+            && OFFLINE_HOST.equalsIgnoreCase(uri.getHost())
+            && uri.getPath() != null
+            && uri.getPath().startsWith("/assets/offline/");
     }
 
     private boolean hasValidatedInternet() {
