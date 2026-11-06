@@ -206,6 +206,7 @@ const POPULAR_QUICK_CITIES: CityOption[] = [
     lat: 28.6139,
     lng: 77.209,
     tz: 5.5,
+    ianaTimezone: "Asia/Kolkata",
   },
   {
     city: "Mumbai",
@@ -215,6 +216,7 @@ const POPULAR_QUICK_CITIES: CityOption[] = [
     lat: 19.076,
     lng: 72.8777,
     tz: 5.5,
+    ianaTimezone: "Asia/Kolkata",
   },
   {
     city: "London",
