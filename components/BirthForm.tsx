@@ -32,6 +32,8 @@ export interface BirthFormData {
   manualOffsetConfirmed?: boolean;
   selectedUtcInstant?: string;
   selectedUtcOffsetSeconds?: number;
+  baziTimeBasis?: "civil-clock" | "local-mean-solar" | "local-apparent-solar";
+  baziDayBoundaryPolicy?: "pure-zi" | "early-late-zi";
   houseSystem: "Placidus" | "Equal" | "WholeSign";
 }
 
@@ -678,6 +680,32 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
               </label>
             </div>
           )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-800">
+            <div>
+              <label className="text-[11px] font-medium text-slate-300 block mb-1">BaZi clock convention</label>
+              <select
+                value={formData.baziTimeBasis ?? "local-mean-solar"}
+                onChange={(e) => setFormData({ ...formData, baziTimeBasis: e.target.value as BirthFormData["baziTimeBasis"] })}
+                className="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded text-xs text-slate-100"
+              >
+                <option value="civil-clock">Civil clock time</option>
+                <option value="local-mean-solar">Local mean solar time (LMST)</option>
+                <option value="local-apparent-solar">Local apparent solar time (LAST)</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[11px] font-medium text-slate-300 block mb-1">Zi-hour day rollover</label>
+              <select
+                value={formData.baziDayBoundaryPolicy ?? "pure-zi"}
+                onChange={(e) => setFormData({ ...formData, baziDayBoundaryPolicy: e.target.value as BirthFormData["baziDayBoundaryPolicy"] })}
+                className="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded text-xs text-slate-100"
+              >
+                <option value="pure-zi">Pure Zi: day changes at 23:00</option>
+                <option value="early-late-zi">Early/Late Zi: day changes at 00:00</option>
+              </select>
+            </div>
+          </div>
+          <p className="text-[10px] text-slate-500">These are selectable calculation conventions, not a claim that one BaZi school is universally authoritative.</p>
           {timezoneError && <p role="alert" className="text-[11px] text-rose-300">{timezoneError}</p>}
         </div>
 
