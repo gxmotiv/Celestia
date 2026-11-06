@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import { GLOBAL_CITIES, CityData, searchCities } from "@/lib/astronomy/cities";
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import { searchCities } from "@/lib/astronomy/cities";
+import { resolveLocalDateTime } from "@/lib/astronomy/historicalTimezone";
+import { parseBirthClockTime } from "@/lib/astronomy/timeInput";
 import {
   Compass,
   MapPin,
@@ -24,7 +26,12 @@ export interface BirthFormData {
   country: string;
   latitude: number;
   longitude: number;
-  timezoneOffset: number; // hours from UTC
+  timezoneOffset: number; // legacy/manual hours from UTC; automatic mode resolves date-specific offset
+  ianaTimezone?: string;
+  timezoneMode?: "automatic" | "manual";
+  manualOffsetConfirmed?: boolean;
+  selectedUtcInstant?: string;
+  selectedUtcOffsetSeconds?: number;
   houseSystem: "Placidus" | "Equal" | "WholeSign";
 }
 
@@ -34,8 +41,9 @@ interface LocationOption {
   formatted: string;
   lat: number;
   lng: number;
-  tz: number;
+  tz?: number;
   tzName?: string;
+  ianaTimezone?: string;
   source?: "geoapify" | "built-in";
 }
 
@@ -46,7 +54,11 @@ interface BirthFormProps {
 }
 
 export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFormProps) {
-  const [formData, setFormData] = useState<BirthFormData>(initialData);
+  const [formData, setFormData] = useState<BirthFormData>(() => ({
+    ...initialData,
+    timezoneMode: initialData.timezoneMode ?? (initialData.ianaTimezone ? "automatic" : "manual"),
+    manualOffsetConfirmed: initialData.manualOffsetConfirmed ?? !initialData.ianaTimezone,
+  }));
   const [citySearchQuery, setCitySearchQuery] = useState(
     initialData.cityName ? `${initialData.cityName}, ${initialData.country}` : ""
   );
@@ -56,7 +68,37 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
   const [showCustomCoords, setShowCustomCoords] = useState(false);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsError, setGpsError] = useState("");
+  const [timezoneError, setTimezoneError] = useState("");
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const timezoneResolution = useMemo(() => {
+    if (formData.timezoneMode !== "automatic" || !formData.ianaTimezone || formData.isTimeUnknown) return null;
+    const dateParts = formData.birthDate.split("-").map(Number);
+    if (dateParts.length !== 3 || dateParts.some((value) => !Number.isInteger(value))) return null;
+    const { hour, minute } = parseBirthClockTime(formData.birthTime);
+    return resolveLocalDateTime({
+      year: dateParts[0],
+      month: dateParts[1],
+      day: dateParts[2],
+      hour,
+      minute,
+    }, formData.ianaTimezone);
+  }, [formData.birthDate, formData.birthTime, formData.ianaTimezone, formData.timezoneMode, formData.isTimeUnknown]);
+
+  useEffect(() => {
+    if (timezoneResolution?.status !== "resolved") return;
+    const candidate = timezoneResolution.candidates[0];
+    if (!candidate) return;
+    setFormData((previous) => {
+      if (previous.timezoneMode !== "automatic" || previous.selectedUtcInstant === candidate.instant.toISOString()) return previous;
+      return {
+        ...previous,
+        selectedUtcInstant: candidate.instant.toISOString(),
+        selectedUtcOffsetSeconds: candidate.offsetSeconds,
+        timezoneOffset: candidate.offsetSeconds / 3600,
+      };
+    });
+  }, [timezoneResolution]);
 
   // Debounced search that queries Geoapify with fallback to built-in list
   const handleCitySearch = (query: string) => {
@@ -84,6 +126,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
       lat: c.lat,
       lng: c.lng,
       tz: c.tz,
+      ianaTimezone: c.ianaTimezone,
       source: "built-in",
     }));
     if (immediateMatches.length > 0) {
@@ -113,6 +156,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
         lat: c.lat,
         lng: c.lng,
         tz: c.tz,
+        ianaTimezone: c.ianaTimezone,
         source: "built-in",
       }));
       setCityResults(fallbacks);
@@ -127,8 +171,14 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
       country: c.country,
       latitude: c.lat,
       longitude: c.lng,
-      timezoneOffset: c.tz,
+      timezoneOffset: c.tz ?? prev.timezoneOffset,
+      ianaTimezone: c.ianaTimezone,
+      timezoneMode: c.ianaTimezone ? "automatic" : "manual",
+      manualOffsetConfirmed: false,
+      selectedUtcInstant: undefined,
+      selectedUtcOffsetSeconds: undefined,
     }));
+    setTimezoneError("");
     setCitySearchQuery(c.formatted || `${c.city}, ${c.country}`);
     setShowCityDropdown(false);
   };
@@ -148,7 +198,8 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
         const lng = Math.round(position.coords.longitude * 10000) / 10000;
         let detectedCity = "Current Location";
         let detectedCountry = "GPS";
-        let detectedTz = -new Date().getTimezoneOffset() / 60;
+        let detectedTz: number | undefined;
+        let detectedIanaTimezone: string | undefined;
         let formattedLabel = `GPS (${lat}°, ${lng}°)`;
 
         try {
@@ -161,6 +212,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
               detectedCity = r.city;
               detectedCountry = r.country;
               detectedTz = r.tz;
+              detectedIanaTimezone = r.ianaTimezone;
               formattedLabel = r.formatted || `${r.city}, ${r.country}`;
             }
           }
@@ -174,8 +226,14 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
           country: detectedCountry,
           latitude: lat,
           longitude: lng,
-          timezoneOffset: detectedTz,
+          timezoneOffset: detectedTz ?? prev.timezoneOffset,
+          ianaTimezone: detectedIanaTimezone,
+          timezoneMode: detectedIanaTimezone ? "automatic" : "manual",
+          manualOffsetConfirmed: false,
+          selectedUtcInstant: undefined,
+          selectedUtcOffsetSeconds: undefined,
         }));
+        setTimezoneError("");
         setCitySearchQuery(formattedLabel);
         setGpsLoading(false);
         setShowCustomCoords(true);
@@ -200,6 +258,9 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
         latitude: 48.4011,
         longitude: 9.9876,
         timezoneOffset: 0.6658,
+        ianaTimezone: "Europe/Berlin",
+        timezoneMode: "manual",
+        manualOffsetConfirmed: true,
         houseSystem: "Placidus",
       };
       setFormData(sample);
@@ -216,6 +277,9 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
         latitude: 43.7844,
         longitude: 10.9253,
         timezoneOffset: 1,
+        ianaTimezone: "Europe/Rome",
+        timezoneMode: "manual",
+        manualOffsetConfirmed: true,
         houseSystem: "Placidus",
       };
       setFormData(sample);
@@ -232,6 +296,9 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
         latitude: 47.6006,
         longitude: 9.3174,
         timezoneOffset: 1,
+        ianaTimezone: "Europe/Zurich",
+        timezoneMode: "manual",
+        manualOffsetConfirmed: true,
         houseSystem: "Placidus",
       };
       setFormData(sample);
@@ -248,6 +315,9 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
         latitude: 52.8089,
         longitude: -0.6293,
         timezoneOffset: 0,
+        ianaTimezone: "Europe/London",
+        timezoneMode: "manual",
+        manualOffsetConfirmed: true,
         houseSystem: "Placidus",
       };
       setFormData(sample);
@@ -258,7 +328,61 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    setTimezoneError("");
+    if (formData.timezoneMode === "automatic") {
+      if (!formData.ianaTimezone || !timezoneResolution) {
+        setTimezoneError("An IANA timezone is required for automatic historical-time resolution. Select a supported city or use a confirmed manual offset.");
+        return;
+      }
+      if (timezoneResolution.status === "nonexistent") {
+        setTimezoneError("This local birth time did not occur in the selected timezone because the clock changed. Correct the time or explicitly use a manual offset.");
+        return;
+      }
+      if (timezoneResolution.status === "unsupported") {
+        setTimezoneError(timezoneResolution.reason || "This date/time cannot be reliably resolved by the current timezone database. Use a confirmed manual offset.");
+        return;
+      }
+      if (timezoneResolution.status === "ambiguous") {
+        const selected = timezoneResolution.candidates.find((candidate) => candidate.instant.toISOString() === formData.selectedUtcInstant);
+        if (!selected) {
+          setTimezoneError("This local time occurs twice. Select which UTC instant you mean before generating the chart.");
+          return;
+        }
+        onSubmit({
+          ...formData,
+          selectedUtcInstant: selected.instant.toISOString(),
+          selectedUtcOffsetSeconds: selected.offsetSeconds,
+          timezoneOffset: selected.offsetSeconds / 3600,
+        });
+        return;
+      }
+      const resolved = timezoneResolution.candidates[0];
+      if (!resolved) {
+        setTimezoneError("The timezone resolver did not return a valid UTC candidate.");
+        return;
+      }
+      onSubmit({
+        ...formData,
+        selectedUtcInstant: resolved.instant.toISOString(),
+        selectedUtcOffsetSeconds: resolved.offsetSeconds,
+        timezoneOffset: resolved.offsetSeconds / 3600,
+      });
+      return;
+    }
+
+    if (!formData.manualOffsetConfirmed) {
+      setTimezoneError("Confirm that you are manually locking this UTC offset. It will not be labelled as historically verified.");
+      return;
+    }
+    if (!Number.isFinite(formData.timezoneOffset) || formData.timezoneOffset < -14 || formData.timezoneOffset > 14) {
+      setTimezoneError("Manual UTC offset must be between -14 and +14 hours.");
+      return;
+    }
+    onSubmit({
+      ...formData,
+      selectedUtcInstant: undefined,
+      selectedUtcOffsetSeconds: formData.timezoneOffset * 3600,
+    });
   };
 
   return (
@@ -291,7 +415,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
             type="date"
             required
             value={formData.birthDate}
-            onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
+            onChange={(e) => setFormData({ ...formData, birthDate: e.target.value, selectedUtcInstant: undefined, selectedUtcOffsetSeconds: undefined })}
             className="w-full px-3.5 py-2.5 bg-slate-900/90 border border-slate-700/80 rounded-lg text-sm text-slate-100 focus:outline-none focus:border-amber-500/80 focus:ring-1 focus:ring-amber-500/80 transition-colors"
           />
           <p className="text-[11px] text-slate-400">Gregorian or Historical Date (1800-2100)</p>
@@ -324,7 +448,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
             type="time"
             disabled={formData.isTimeUnknown}
             value={formData.birthTime}
-            onChange={(e) => setFormData({ ...formData, birthTime: e.target.value })}
+            onChange={(e) => setFormData({ ...formData, birthTime: e.target.value, selectedUtcInstant: undefined, selectedUtcOffsetSeconds: undefined })}
             className={`w-full px-3.5 py-2.5 bg-slate-900/90 border border-slate-700/80 rounded-lg text-sm text-slate-100 focus:outline-none focus:border-amber-500/80 focus:ring-1 focus:ring-amber-500/80 transition-colors ${
               formData.isTimeUnknown ? "opacity-50 cursor-not-allowed" : ""
             }`}
@@ -466,6 +590,94 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
               Newton
             </button>
           </div>
+        </div>
+
+        <div className="mt-3 p-4 bg-slate-900/60 border border-slate-800 rounded-lg space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold text-slate-200">Historical timezone resolution</p>
+              <p className="text-[11px] text-slate-400">IANA timezone rules are applied to the selected birth date, not today's standard offset.</p>
+            </div>
+            <select
+              aria-label="Timezone resolution mode"
+              value={formData.timezoneMode ?? "manual"}
+              onChange={(e) => {
+                const mode = e.target.value as "automatic" | "manual";
+                setFormData({
+                  ...formData,
+                  timezoneMode: mode,
+                  manualOffsetConfirmed: mode === "manual" ? false : formData.manualOffsetConfirmed,
+                  selectedUtcInstant: undefined,
+                  selectedUtcOffsetSeconds: undefined,
+                });
+                setTimezoneError("");
+              }}
+              className="px-3 py-1.5 bg-slate-950 border border-slate-700 rounded text-xs text-slate-100"
+            >
+              <option value="automatic" disabled={!formData.ianaTimezone}>Automatic (IANA timezone)</option>
+              <option value="manual">Manual UTC offset lock</option>
+            </select>
+          </div>
+          {formData.timezoneMode === "automatic" ? (
+            <div className="space-y-2">
+              <p className="text-[11px] text-slate-300">IANA zone: <span className="font-mono text-amber-300">{formData.ianaTimezone || "Not available"}</span></p>
+              {timezoneResolution?.status === "resolved" && timezoneResolution.candidates[0] && (
+                <p className="text-[11px] text-emerald-300">One database-resolved instant: {timezoneResolution.candidates[0].instant.toISOString()} · {timezoneResolution.candidates[0].offsetLabel}</p>
+              )}
+              {timezoneResolution?.status === "ambiguous" && (
+                <div className="space-y-1">
+                  <p className="text-[11px] text-amber-300">This local time occurs more than once. Choose the intended instant:</p>
+                  <select
+                    value={formData.selectedUtcInstant ?? ""}
+                    onChange={(e) => {
+                      const candidate = timezoneResolution.candidates.find((item) => item.instant.toISOString() === e.target.value);
+                      setFormData({
+                        ...formData,
+                        selectedUtcInstant: candidate?.instant.toISOString(),
+                        selectedUtcOffsetSeconds: candidate?.offsetSeconds,
+                        timezoneOffset: candidate ? candidate.offsetSeconds / 3600 : formData.timezoneOffset,
+                      });
+                    }}
+                    className="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded text-xs text-slate-100"
+                  >
+                    <option value="">Select UTC instant</option>
+                    {timezoneResolution.candidates.map((candidate) => (
+                      <option key={candidate.instant.toISOString()} value={candidate.instant.toISOString()}>
+                        {candidate.instant.toISOString()} · {candidate.offsetLabel}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {timezoneResolution?.status === "nonexistent" && <p className="text-[11px] text-rose-300">This local clock time did not exist in this timezone. Change the time or choose a confirmed manual offset.</p>}
+              {timezoneResolution?.status === "unsupported" && <p className="text-[11px] text-amber-300">{timezoneResolution.reason} Automatic resolution is unavailable.</p>}
+              {!timezoneResolution && <p className="text-[11px] text-amber-300">Select a city with an IANA timezone and a valid birth date/time to resolve automatically.</p>}
+              <p className="text-[10px] text-slate-500">“Database-resolved” means the current runtime's IANA/ICU database supplied the rule; it is not independent proof of every historical legal time.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <label className="text-[11px] font-medium text-slate-300 block">Manual UTC offset (hours, east-positive)</label>
+              <input
+                type="number"
+                step="any"
+                min="-14"
+                max="14"
+                value={formData.timezoneOffset}
+                onChange={(e) => setFormData({ ...formData, timezoneOffset: Number(e.target.value), manualOffsetConfirmed: false })}
+                className="w-full max-w-xs px-3 py-1.5 bg-slate-950 border border-slate-700 rounded text-xs text-slate-100 tabular-nums"
+              />
+              <label className="flex items-start gap-2 text-[11px] text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={!!formData.manualOffsetConfirmed}
+                  onChange={(e) => setFormData({ ...formData, manualOffsetConfirmed: e.target.checked })}
+                  className="mt-0.5"
+                />
+                I am explicitly locking this numeric UTC offset. I understand it is user-supplied and not independently historically verified.
+              </label>
+            </div>
+          )}
+          {timezoneError && <p role="alert" className="text-[11px] text-rose-300">{timezoneError}</p>}
         </div>
 
         {showCustomCoords && (
