@@ -13,6 +13,7 @@
 
 import { swissEphemeris } from "./swissEphemeris";
 import { calculateJulianDay, normalizeDegrees } from "./ephemeris";
+import { createBaZiClock, BaZiClockOptions, BaZiTimeBasis } from "./timeEngine";
 
 // ============================================================
 // 1. DATA TYPES & INTERFACES
@@ -134,9 +135,23 @@ export interface AnnualInfluence {
   cautions: string[];
 }
 
+export type BaZiDayBoundaryPolicy = "pure-zi" | "early-late-zi";
+
+export interface BaZiCalculationOptions {
+  clock: BaZiClockOptions;
+  dayBoundaryPolicy?: BaZiDayBoundaryPolicy;
+}
+
 export interface BaZiChart {
   birthDate: Date;
   gender: "Male" | "Female";
+  calculationContext?: {
+    timeBasis: BaZiTimeBasis;
+    dayBoundaryPolicy: BaZiDayBoundaryPolicy;
+    solarClockIso: string;
+    longitudeDegrees: number;
+    equationOfTimeMinutes: number;
+  };
   pillars: {
     year: Pillar;
     month: Pillar;
@@ -621,11 +636,23 @@ export class SolarTermCalculator {
    * Calculate Day Pillar based on unbroken 60-day sexagenary cycle
    * Astronomical reference: JD 2451545.0 (Jan 1, 2000 @ 12:00 UTC) was Wu Wu (Stem 4, Branch 6 -> Index 54)
    */
-  public calculateDayPillar(date: Date): Pillar {
-    const jd = calculateJulianDay(
+  public calculateDayPillar(
+    date: Date,
+    dayBoundaryPolicy: BaZiDayBoundaryPolicy = "pure-zi"
+  ): Pillar {
+    const dayDate = new Date(Date.UTC(
       date.getUTCFullYear(),
-      date.getUTCMonth() + 1,
+      date.getUTCMonth(),
       date.getUTCDate(),
+      12, 0, 0, 0
+    ));
+    if (dayBoundaryPolicy === "pure-zi" && date.getUTCHours() >= 23) {
+      dayDate.setUTCDate(dayDate.getUTCDate() + 1);
+    }
+    const jd = calculateJulianDay(
+      dayDate.getUTCFullYear(),
+      dayDate.getUTCMonth() + 1,
+      dayDate.getUTCDate(),
       12, 0, 0
     );
 
@@ -658,7 +685,7 @@ export class SolarTermCalculator {
    * 23:00 - 00:59 = Zi (Rat, 0), 01:00 - 02:59 = Chou (Ox, 1), etc.
    */
   public calculateHourPillar(date: Date, dayStemIndex: number): Pillar {
-    const hour = date.getUTCHours() + date.getUTCMinutes() / 60.0;
+    const hour = date.getUTCHours() + date.getUTCMinutes() / 60.0 + date.getUTCSeconds() / 3600.0 + date.getUTCMilliseconds() / 3_600_000.0;
 
     // 2-hour branch division
     let branchIndex: number;
@@ -1137,13 +1164,23 @@ export class CompleteBaZiEngine {
   public generateBaZiChart(
     birthDate: Date,
     gender: "Male" | "Female" = "Male",
-    targetDate: Date = new Date()
+    targetDate: Date = new Date(),
+    options?: BaZiCalculationOptions
   ): BaZiChart {
-    // 1. Calculate Four Pillars
+    if (!Number.isFinite(birthDate.getTime())) {
+      throw new RangeError("Birth date must be a valid UTC instant.");
+    }
+    // Solar-year and solar-month boundaries use the true UTC birth instant.
     const yearPillar = this.solarCalc.calculateYearPillar(birthDate);
     const monthPillar = this.solarCalc.calculateMonthPillar(birthDate, yearPillar.heavenlyStem.index);
-    const dayPillar = this.solarCalc.calculateDayPillar(birthDate);
-    const hourPillar = this.solarCalc.calculateHourPillar(birthDate, dayPillar.heavenlyStem.index);
+
+    // Day/hour pillars use the explicitly selected civil/mean/apparent local clock.
+    // Legacy callers retain their previous UTC-clock behavior until the UI is migrated.
+    const clockResult = options ? createBaZiClock(birthDate, options.clock) : null;
+    const pillarClockDate = clockResult?.clockDate ?? birthDate;
+    const dayBoundaryPolicy = options?.dayBoundaryPolicy ?? "pure-zi";
+    const dayPillar = this.solarCalc.calculateDayPillar(pillarClockDate, dayBoundaryPolicy);
+    const hourPillar = this.solarCalc.calculateHourPillar(pillarClockDate, dayPillar.heavenlyStem.index);
 
     const pillars = [yearPillar, monthPillar, dayPillar, hourPillar];
 
@@ -1197,6 +1234,15 @@ export class CompleteBaZiEngine {
     return {
       birthDate,
       gender,
+      ...(clockResult ? {
+        calculationContext: {
+          timeBasis: clockResult.timeBasis,
+          dayBoundaryPolicy,
+          solarClockIso: clockResult.clockDate.toISOString(),
+          longitudeDegrees: clockResult.longitudeDegrees,
+          equationOfTimeMinutes: clockResult.equationOfTimeMinutes,
+        },
+      } : {}),
       pillars: {
         year: yearPillar,
         month: monthPillar,

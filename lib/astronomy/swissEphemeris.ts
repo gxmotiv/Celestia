@@ -1,7 +1,8 @@
 /**
- * Swiss Ephemeris High-Precision Astronomical Engine
- * Computes planetary coordinates with 0.001° accuracy based on JPL DE405 / VSOP87
- * and IAU standards. Provides full compatibility with the Swiss Ephemeris API.
+ * Compatibility facade for the application's historical Swiss Ephemeris-shaped API.
+ * The actual planetary implementation in this repository uses astronomy-engine;
+ * it is not the native Swiss Ephemeris/libswe library. See the project audit notes
+ * for the underlying model and its validation limits.
  */
 
 import * as Astronomy from "astronomy-engine";
@@ -351,7 +352,7 @@ export class SwissEphemerisEngine {
       lon = ((lon - ayanamsa) % 360 + 360) % 360;
     }
 
-    // Rounding to 0.0001° gives true 0.001° accuracy while avoiding float jitter
+    // Display/API output is rounded to 0.0001°; this is not a universal accuracy guarantee.
     const round4 = (v: number) => Math.round(v * 10000) / 10000;
 
     return {
@@ -364,6 +365,20 @@ export class SwissEphemerisEngine {
       degree: round4(lon % 30),
       house: null,
     };
+  }
+
+  /**
+   * Unrounded apparent geocentric tropical solar longitude from astronomy-engine.
+   * This is deliberately separate from the rounded display-oriented planet result.
+   */
+  public getApparentSunLongitude(julianDay: number): number {
+    if (!Number.isFinite(julianDay)) {
+      throw new RangeError("Julian Day must be finite.");
+    }
+    const time = new Astronomy.AstroTime(julianDay - 2451545.0);
+    const vector = Astronomy.GeoVector(Astronomy.Body.Sun, time, true);
+    const ecliptic = Astronomy.Ecliptic(vector);
+    return ((ecliptic.elon % 360) + 360) % 360;
   }
 
   /**
