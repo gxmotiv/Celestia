@@ -119,14 +119,12 @@ export default function HomePage() {
         resolutionLabel = "IANA database-resolved";
         resolutionWarning = "The instant and offset come from the runtime IANA/ICU database. Historical civil-time details still require source verification.";
       } else {
-        offsetSeconds = Number.isFinite(formData.timezoneOffset) ? formData.timezoneOffset * 3600 : 0;
-        birthDateObj = swissEphemeris.createUTCDate(year, month, day, hour, minute, 0, offsetSeconds / 3600);
-        resolutionLabel = "Automatic resolution unavailable; legacy offset fallback";
-        resolutionWarning = resolution.status === "nonexistent"
-          ? "The entered local time did not exist in this IANA timezone. The displayed charts are using the saved numeric offset only; correct the time or explicitly confirm a manual offset."
+        const reason = resolution.status === "nonexistent"
+          ? "The entered local time did not exist in this IANA timezone."
           : resolution.status === "ambiguous"
-            ? "This local time occurs twice and no candidate was selected. The displayed charts are using the saved numeric offset only; select the intended UTC instant."
-            : resolution.reason + " The displayed charts are using the saved numeric offset only.";
+            ? "This local time occurs more than once; an exact UTC candidate must be selected."
+            : resolution.reason || "The IANA timezone could not resolve this birth time.";
+        throw new RangeError("Chart calculation stopped: " + reason + " Switch to manual mode and explicitly confirm a UTC offset only if you have a defensible source for it.");
       }
     } else {
       offsetSeconds = Number.isFinite(formData.timezoneOffset) ? formData.timezoneOffset * 3600 : 0;
@@ -172,7 +170,9 @@ export default function HomePage() {
       baziData: bData,
       birthTimeContext: {
         label: resolutionLabel,
-        warning: resolutionWarning,
+        warning: formData.isTimeUnknown
+          ? [resolutionWarning, "Birth time is unknown. 12:00 is only a calculation placeholder, not a recorded birth time or true solar noon; Ascendant, houses, Moon-sensitive timing, and BaZi time pillars must be treated as uncertain."].filter(Boolean).join(" ")
+          : resolutionWarning,
         ianaTimezone: formData.ianaTimezone ?? null,
         offsetSeconds,
         utcInstant: birthDateObj.toISOString(),
@@ -183,6 +183,54 @@ export default function HomePage() {
   const handleFormSubmit = (data: BirthFormData) => {
     setFormData(data);
     setIsFormCollapsed(true);
+  };
+
+  const handleProfileSelect = (data: BirthFormData) => {
+    const mode = data.timezoneMode ?? (data.ianaTimezone ? "automatic" : "manual");
+    if (mode === "automatic") {
+      if (!data.ianaTimezone) {
+        window.alert("This saved profile has no IANA timezone. Open the birth form and explicitly confirm a manual UTC offset before calculating.");
+        setIsFormCollapsed(false);
+        return;
+      }
+      const [profileYear, profileMonth, profileDay] = data.birthDate.split("-").map(Number);
+      let resolution;
+      try {
+        const clock = parseBirthClockTime(data.birthTime);
+        resolution = resolveLocalDateTime({
+          year: profileYear, month: profileMonth, day: profileDay,
+          hour: clock.hour, minute: clock.minute,
+        }, data.ianaTimezone);
+      } catch {
+        window.alert("This saved profile has an invalid birth date or time. Review it in the birth form before calculating.");
+        setIsFormCollapsed(false);
+        return;
+      }
+      const selected = resolution.status === "resolved"
+        ? resolution.candidates[0]
+        : resolution.status === "ambiguous"
+          ? resolution.candidates.find((candidate) =>
+              candidate.instant.toISOString() === data.selectedUtcInstant &&
+              candidate.offsetSeconds === data.selectedUtcOffsetSeconds)
+          : undefined;
+      if (!selected) {
+        const message = resolution.status === "ambiguous"
+          ? "This saved profile has an ambiguous local time and no matching UTC candidate selected."
+          : resolution.status === "nonexistent"
+            ? "This saved profile's local birth time did not exist in its IANA timezone."
+            : resolution.reason || "This saved profile's timezone cannot be resolved.";
+        window.alert(message + " Review the birth time or explicitly switch to manual offset mode.");
+        setIsFormCollapsed(false);
+        return;
+      }
+    } else if (!data.manualOffsetConfirmed ||
+      !Number.isFinite(data.timezoneOffset) ||
+      data.timezoneOffset < -14 || data.timezoneOffset > 14) {
+      window.alert("This saved profile has an unconfirmed or invalid manual UTC offset. Confirm it in the birth form before calculating.");
+      setIsFormCollapsed(false);
+      return;
+    }
+    setFormData(data);
   };
 
   const handleShareSummary = () => {
@@ -233,7 +281,7 @@ export default function HomePage() {
 
           {/* Zone 3: Functional Affordances */}
           <div className="flex items-center gap-2 shrink-0">
-            <ProfilesManager currentData={formData} onSelectProfile={setFormData} />
+            <ProfilesManager currentData={formData} onSelectProfile={handleProfileSelect} />
 
             <button
               onClick={() => setIsPrintModalOpen(true)}
