@@ -1,5 +1,6 @@
 import { calculateOfflineAstrology, type OfflineBirthInput } from "../lib/android/offlineCalculation";
 import { calculateWesternChart } from "../lib/astronomy/ephemeris";
+import { readFileSync } from "node:fs";
 
 let passed = 0;
 let failed = 0;
@@ -107,3 +108,26 @@ assert("Invalid birth clock time is rejected", invalidTimeRejected, "Invalid bir
 
 console.log("ANDROID OFFLINE CALCULATION TESTS: " + passed + " passed, " + failed + " failed");
 if (failed > 0) process.exitCode = 1;
+
+
+const offlineHtml = readFileSync("android/app/src/main/assets/offline/index.html", "utf8");
+assert(
+  "Offline page references the bundled calculation engine",
+  offlineHtml.includes('<script src="./celestia-offline.js"></script>'),
+  "The local calculation bundle is not referenced."
+);
+assert(
+  "Offline page blocks network connections through CSP",
+  offlineHtml.includes("connect-src 'none'"),
+  "Offline Content Security Policy does not block connections."
+);
+assert(
+  "Offline page stores profiles in local browser storage",
+  offlineHtml.includes("localStorage") && offlineHtml.includes("celestia_android_offline_profiles_v1"),
+  "Local profile storage key or API is missing."
+);
+assert(
+  "Offline page does not use fetch requests",
+  !/\\bfetch\\s*\\(/.test(offlineHtml),
+  "A fetch() call was found in the bundled offline page."
+);
