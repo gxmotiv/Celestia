@@ -11,13 +11,15 @@ on:
 
 permissions:
   contents: read
-  actions: write
 
 jobs:
   build:
     name: Build ARM32 and ARM64 APKs
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -28,16 +30,19 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Gradle
+      - name: Set up Gradle 8.9
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android SDK packages
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Install Android SDK packages from runner SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
+          test -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          sdkmanager --licenses < <(yes)
+          sdkmanager --install "platforms;android-35" "build-tools;35.0.0"
 
       - name: Build split APKs
         working-directory: android
@@ -48,8 +53,8 @@ jobs:
         run: |
           set -euo pipefail
           find android/app/build/outputs/apk/debug -maxdepth 1 -type f -name '*.apk' -print
-          test -f android/app/build/outputs/apk/debug/app-arm64-v8a-debug.apk
-          test -f android/app/build/outputs/apk/debug/app-armeabi-v7a-debug.apk
+          test -s android/app/build/outputs/apk/debug/app-arm64-v8a-debug.apk
+          test -s android/app/build/outputs/apk/debug/app-armeabi-v7a-debug.apk
 
       - name: Upload APK build artifacts
         uses: actions/upload-artifact@v4
