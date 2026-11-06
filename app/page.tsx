@@ -274,6 +274,12 @@ export default function HomePage() {
             <p className="text-[10px] text-slate-500">UTC instant used by the current charts: {birthTimeContext.utcInstant} · Offset: {birthTimeContext.offsetSeconds} seconds</p>
           </div>
         )}
+        {westernData.houseSystemFallback && (
+          <div role="alert" className="rounded-lg border border-rose-500/40 bg-rose-500/5 px-4 py-3 space-y-1">
+            <p className="text-xs font-semibold text-rose-300">Requested {westernData.requestedHouseSystem} houses; {westernData.houseSystem} houses were actually used.</p>
+            <p className="text-[11px] text-slate-300">{westernData.houseSystemFallbackReason || "The requested house system could not be calculated at this latitude/time."}</p>
+          </div>
+        )}
         {/* 2. Compact Spacetime Inception Strip & Smooth Accordion Drawer */}
         <section className="bg-slate-950/70 border border-slate-800 rounded-xl overflow-hidden transition-all shadow-md">
           {/* Collapsed Horizontal Quick-Summary Bar */}
