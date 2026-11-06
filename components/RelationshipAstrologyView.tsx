@@ -19,7 +19,10 @@ import { calculateVedicChart, VedicChartData } from "@/lib/astronomy/vedic";
 import { KundliMilanEngine, KundliMilanReport } from "@/lib/vedic/kundliMilanEngine";
 import { MasterKundliMilanOrchestrator, MasterKundliReport } from "@/lib/vedic/masterKundliMilan";
 import { VedicKundliMilanDashboard } from "@/components/VedicKundliMilanDashboard";
-import { searchCities, CityData } from "@/lib/astronomy/cities";
+import { searchCities } from "@/lib/astronomy/cities";
+import { parseBirthClockTime } from "@/lib/astronomy/timeInput";
+import { resolveLocalDateTime } from "@/lib/astronomy/historicalTimezone";
+import { swissEphemeris } from "@/lib/astronomy/swissEphemeris";
 import {
   Heart,
   Users,
@@ -57,6 +60,7 @@ interface RelationshipAstrologyViewProps {
   person1CityName?: string;
   person1Gender?: GenderType;
   person1TimezoneOffset?: number;
+  person1UtcInstant?: string;
 }
 
 interface CityOption {
@@ -66,7 +70,8 @@ interface CityOption {
   formatted: string;
   lat: number;
   lng: number;
-  tz: number;
+  tz?: number;
+  ianaTimezone?: string;
 }
 
 const RELATIONSHIP_CATEGORIES: {
@@ -191,6 +196,7 @@ const POPULAR_QUICK_CITIES: CityOption[] = [
     lat: 29.964,
     lng: 77.546,
     tz: 5.5,
+    ianaTimezone: "Asia/Kolkata",
   },
   {
     city: "New Delhi",
@@ -200,6 +206,7 @@ const POPULAR_QUICK_CITIES: CityOption[] = [
     lat: 28.6139,
     lng: 77.209,
     tz: 5.5,
+    ianaTimezone: "Asia/Kolkata",
   },
   {
     city: "Mumbai",
@@ -209,6 +216,7 @@ const POPULAR_QUICK_CITIES: CityOption[] = [
     lat: 19.076,
     lng: 72.8777,
     tz: 5.5,
+    ianaTimezone: "Asia/Kolkata",
   },
   {
     city: "London",
@@ -217,6 +225,7 @@ const POPULAR_QUICK_CITIES: CityOption[] = [
     lat: 51.5074,
     lng: -0.1278,
     tz: 0,
+    ianaTimezone: "Europe/London",
   },
   {
     city: "New York",
@@ -225,6 +234,7 @@ const POPULAR_QUICK_CITIES: CityOption[] = [
     lat: 40.7128,
     lng: -74.006,
     tz: -5,
+    ianaTimezone: "America/New_York",
   },
   {
     city: "Tokyo",
@@ -233,6 +243,7 @@ const POPULAR_QUICK_CITIES: CityOption[] = [
     lat: 35.6762,
     lng: 139.6503,
     tz: 9,
+    ianaTimezone: "Asia/Tokyo",
   },
   {
     city: "Florence",
@@ -241,6 +252,7 @@ const POPULAR_QUICK_CITIES: CityOption[] = [
     lat: 43.7696,
     lng: 11.2558,
     tz: 1,
+    ianaTimezone: "Europe/Rome",
   },
 ];
 
@@ -254,6 +266,7 @@ export function RelationshipAstrologyView({
   person1CityName = "Birth Location",
   person1Gender: initialP1Gender = "unspecified",
   person1TimezoneOffset = 0,
+  person1UtcInstant,
 }: RelationshipAstrologyViewProps) {
   // Person 1 State
   const [person1Gender, setPerson1Gender] = useState<GenderType>(initialP1Gender);
@@ -271,6 +284,10 @@ export function RelationshipAstrologyView({
     latitude: number;
     longitude: number;
     timezoneOffset: number;
+    ianaTimezone?: string;
+    timezoneMode: "automatic" | "manual";
+    manualOffsetConfirmed: boolean;
+    selectedUtcInstant?: string;
   }>({
     name: "Partner / Relative / Friend",
     gender: "female",
@@ -280,6 +297,9 @@ export function RelationshipAstrologyView({
     latitude: 29.964,
     longitude: 77.546,
     timezoneOffset: 5.5,
+    ianaTimezone: "Asia/Kolkata",
+    timezoneMode: "automatic",
+    manualOffsetConfirmed: false,
   });
 
   // UI States
@@ -295,6 +315,48 @@ export function RelationshipAstrologyView({
   const [showCityDropdown, setShowCityDropdown] = useState<boolean>(false);
   const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
+
+  const partnerTimeResolution = useMemo(() => {
+    if (partnerProfile.timezoneMode !== "automatic" || !partnerProfile.ianaTimezone) return null;
+    const [year, month, day] = partnerProfile.birthDate.split("-").map(Number);
+    if (![year, month, day].every(Number.isInteger)) return null;
+    const { hour, minute } = parseBirthClockTime(partnerProfile.birthTime);
+    return resolveLocalDateTime({ year, month, day, hour, minute }, partnerProfile.ianaTimezone);
+  }, [partnerProfile.birthDate, partnerProfile.birthTime, partnerProfile.ianaTimezone, partnerProfile.timezoneMode]);
+
+  const partnerResolvedCandidate = useMemo(() => {
+    if (partnerTimeResolution?.status === "resolved") return partnerTimeResolution.candidates[0];
+    if (partnerTimeResolution?.status === "ambiguous") {
+      return partnerTimeResolution.candidates.find((candidate) => candidate.instant.toISOString() === partnerProfile.selectedUtcInstant);
+    }
+    return undefined;
+  }, [partnerTimeResolution, partnerProfile.selectedUtcInstant]);
+
+  const partnerUtcInstant = useMemo(() => {
+    const [year, month, day] = partnerProfile.birthDate.split("-").map(Number);
+    const { hour, minute } = parseBirthClockTime(partnerProfile.birthTime);
+    if (partnerResolvedCandidate) return partnerResolvedCandidate.instant;
+    return swissEphemeris.createUTCDate(year || 1994, month || 1, day || 1, hour, minute, 0,
+      Number.isFinite(partnerProfile.timezoneOffset) ? partnerProfile.timezoneOffset : 0);
+  }, [partnerProfile.birthDate, partnerProfile.birthTime, partnerProfile.timezoneOffset, partnerResolvedCandidate]);
+
+  const partnerResolvedOffsetHours = partnerResolvedCandidate
+    ? partnerResolvedCandidate.offsetSeconds / 3600
+    : partnerProfile.timezoneOffset;
+
+  const partnerTimezoneWarning = partnerProfile.timezoneMode === "automatic"
+    ? partnerTimeResolution?.status === "nonexistent"
+      ? "This local birth time did not occur in the selected IANA timezone. The partner chart currently falls back to the saved numeric offset."
+      : partnerTimeResolution?.status === "ambiguous" && !partnerResolvedCandidate
+        ? "This local time occurs twice. Select the intended UTC instant; until then the chart uses the saved numeric offset."
+        : partnerTimeResolution?.status === "unsupported"
+          ? (partnerTimeResolution.reason + " The partner chart uses the saved numeric offset until corrected.")
+          : !partnerTimeResolution
+            ? "Select a supported IANA timezone to resolve this local time."
+            : "IANA/ICU database-resolved; historical rules still require independent verification."
+    : partnerProfile.manualOffsetConfirmed
+      ? "Using an explicitly user-confirmed manual UTC offset; not independently historically verified."
+      : "Manual offset is not confirmed. The current partner chart is provisional.";
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -331,6 +393,7 @@ export function RelationshipAstrologyView({
       lat: c.lat,
       lng: c.lng,
       tz: c.tz,
+      ianaTimezone: c.ianaTimezone,
     }));
     setCityResults(instantLocal);
 
@@ -350,6 +413,7 @@ export function RelationshipAstrologyView({
               lat: r.lat,
               lng: r.lng,
               tz: r.tz,
+              ianaTimezone: r.ianaTimezone,
             }));
 
             // Merge avoiding duplicates
@@ -377,7 +441,11 @@ export function RelationshipAstrologyView({
       cityName: opt.formatted,
       latitude: opt.lat,
       longitude: opt.lng,
-      timezoneOffset: opt.tz,
+      timezoneOffset: opt.tz ?? prev.timezoneOffset,
+      ianaTimezone: opt.ianaTimezone,
+      timezoneMode: opt.ianaTimezone ? "automatic" : "manual",
+      manualOffsetConfirmed: false,
+      selectedUtcInstant: undefined,
     }));
     setCityQuery("");
     setShowCityDropdown(false);
@@ -386,19 +454,13 @@ export function RelationshipAstrologyView({
   // Calculate Partner's Western Chart
   const partnerChart: WesternChartData = useMemo(() => {
     const [y, m, d] = partnerProfile.birthDate.split("-").map(Number);
-    const [h, min] = partnerProfile.birthTime.split(":").map(Number);
+    const { hour, minute } = parseBirthClockTime(partnerProfile.birthTime);
     return calculateWesternChart(
-      y || 1994,
-      m || 1,
-      d || 1,
-      h || 12,
-      min || 0,
-      partnerProfile.latitude,
-      partnerProfile.longitude,
-      partnerProfile.timezoneOffset,
-      "Placidus"
+      y || 1994, m || 1, d || 1, hour, minute,
+      partnerProfile.latitude, partnerProfile.longitude,
+      partnerResolvedOffsetHours, "Placidus"
     );
-  }, [partnerProfile]);
+  }, [partnerProfile, partnerResolvedOffsetHours]);
 
   // Synastry Engine
   const synastryReport: SynastryReport = useMemo(() => {
@@ -444,31 +506,35 @@ export function RelationshipAstrologyView({
         birthTime: partnerProfile.birthTime,
         latitude: partnerProfile.latitude,
         longitude: partnerProfile.longitude,
-        timezoneOffset: partnerProfile.timezoneOffset,
+        timezoneOffset: partnerResolvedOffsetHours,
       }
     );
-  }, [person1Date, person1Time, person1Lat, person1Lon, person1TimezoneOffset, partnerProfile]);
+  }, [person1Date, person1Time, person1Lat, person1Lon, person1TimezoneOffset, partnerProfile, partnerResolvedOffsetHours]);
 
   // Vedic Jyotish Charts & Kundli Milan Engine
   const person1VedicChart = useMemo(() => {
     try {
-      const bDate = new Date(`${person1Date}T${person1Time || "12:00"}:00Z`);
+      const [p1Year, p1Month, p1Day] = person1Date.split("-").map(Number);
+      const { hour: p1Hour, minute: p1Minute } = parseBirthClockTime(person1Time);
+      const bDate = person1UtcInstant
+        ? new Date(person1UtcInstant)
+        : swissEphemeris.createUTCDate(p1Year, p1Month, p1Day, p1Hour, p1Minute, 0, person1TimezoneOffset);
       return calculateVedicChart(person1Chart, bDate);
     } catch (e) {
       console.error("Person 1 Vedic Chart Error", e);
       return null;
     }
-  }, [person1Chart, person1Date, person1Time]);
+  }, [person1Chart, person1Date, person1Time, person1UtcInstant, person1TimezoneOffset]);
 
   const partnerVedicChart = useMemo(() => {
     try {
-      const bDate = new Date(`${partnerProfile.birthDate}T${partnerProfile.birthTime || "12:00"}:00Z`);
+      const bDate = partnerUtcInstant;
       return calculateVedicChart(partnerChart, bDate);
     } catch (e) {
       console.error("Partner Vedic Chart Error", e);
       return null;
     }
-  }, [partnerChart, partnerProfile.birthDate, partnerProfile.birthTime]);
+  }, [partnerChart, partnerUtcInstant]);
 
   const kundliMilanReport: KundliMilanReport | null = useMemo(() => {
     if (!person1VedicChart || !partnerVedicChart) return null;
@@ -743,7 +809,7 @@ export function RelationshipAstrologyView({
                     type="date"
                     value={partnerProfile.birthDate}
                     onChange={(e) =>
-                      setPartnerProfile({ ...partnerProfile, birthDate: e.target.value })
+                      setPartnerProfile({ ...partnerProfile, birthDate: e.target.value, selectedUtcInstant: undefined })
                     }
                     className="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded text-slate-200 text-xs focus:outline-none focus:border-rose-500/50"
                   />
@@ -754,7 +820,7 @@ export function RelationshipAstrologyView({
                     type="time"
                     value={partnerProfile.birthTime}
                     onChange={(e) =>
-                      setPartnerProfile({ ...partnerProfile, birthTime: e.target.value })
+                      setPartnerProfile({ ...partnerProfile, birthTime: e.target.value, selectedUtcInstant: undefined })
                     }
                     className="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded text-slate-200 text-xs focus:outline-none focus:border-rose-500/50"
                   />
@@ -845,7 +911,7 @@ export function RelationshipAstrologyView({
                               {opt.lng > 0 ? `${opt.lng.toFixed(2)}°E` : `${Math.abs(opt.lng).toFixed(2)}°W`}
                             </div>
                             <div className="text-amber-400/90">
-                              UTC {opt.tz >= 0 ? `+${opt.tz}` : opt.tz}h
+                              {typeof opt.tz === "number" ? `UTC ${opt.tz >= 0 ? "+" : ""}${opt.tz}h` : "Timezone unavailable"}
                             </div>
                           </div>
                         </button>
@@ -903,15 +969,19 @@ export function RelationshipAstrologyView({
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] text-slate-500 block mb-0.5">Timezone Offset (h)</label>
+                      <label className="text-[10px] text-slate-500 block mb-0.5">Manual UTC Offset (h)</label>
                       <input
                         type="number"
-                        step="0.5"
+                        step="any"
+                        min="-14"
+                        max="14"
                         value={partnerProfile.timezoneOffset}
                         onChange={(e) =>
                           setPartnerProfile({
                             ...partnerProfile,
-                            timezoneOffset: parseFloat(e.target.value) || 0,
+                            timezoneMode: "manual",
+                            timezoneOffset: Number(e.target.value),
+                            manualOffsetConfirmed: false,
                           })
                         }
                         className="w-full px-2 py-1 bg-slate-900 border border-slate-800 rounded text-slate-200 text-xs"
@@ -919,6 +989,65 @@ export function RelationshipAstrologyView({
                     </div>
                   </div>
                 )}
+
+                <div className="p-2.5 bg-slate-950/70 border border-slate-800 rounded-lg space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-semibold text-slate-300">Historical timezone handling</span>
+                    <select
+                      value={partnerProfile.timezoneMode}
+                      onChange={(e) => setPartnerProfile({
+                        ...partnerProfile,
+                        timezoneMode: e.target.value as "automatic" | "manual",
+                        manualOffsetConfirmed: false,
+                        selectedUtcInstant: undefined,
+                      })}
+                      className="px-2 py-1 bg-slate-900 border border-slate-700 rounded text-[10px] text-slate-200"
+                    >
+                      <option value="automatic" disabled={!partnerProfile.ianaTimezone}>Automatic IANA zone</option>
+                      <option value="manual">Manual UTC offset</option>
+                    </select>
+                  </div>
+                  {partnerProfile.timezoneMode === "automatic" ? (
+                    <div className="space-y-1">
+                      <p className="text-[10px] text-slate-400">IANA zone: <span className="font-mono text-amber-300">{partnerProfile.ianaTimezone || "Unavailable"}</span></p>
+                      {partnerTimeResolution?.status === "resolved" && partnerTimeResolution.candidates[0] && (
+                        <p className="text-[10px] text-emerald-300">Resolved: {partnerTimeResolution.candidates[0].instant.toISOString()} · {partnerTimeResolution.candidates[0].offsetLabel}</p>
+                      )}
+                      {partnerTimeResolution?.status === "ambiguous" && (
+                        <div className="space-y-1">
+                          <p className="text-[10px] text-amber-300">This local time occurs twice. Select the intended UTC instant:</p>
+                          <select
+                            value={partnerProfile.selectedUtcInstant ?? ""}
+                            onChange={(e) => setPartnerProfile({ ...partnerProfile, selectedUtcInstant: e.target.value || undefined })}
+                            className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-[10px] text-slate-200"
+                          >
+                            <option value="">Choose UTC instant</option>
+                            {partnerTimeResolution.candidates.map((candidate) => (
+                              <option key={candidate.instant.toISOString()} value={candidate.instant.toISOString()}>
+                                {candidate.instant.toISOString()} · {candidate.offsetLabel}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                      {partnerTimeResolution?.status === "nonexistent" && <p className="text-[10px] text-rose-300">This local clock time did not exist in this timezone.</p>}
+                      {partnerTimeResolution?.status === "unsupported" && <p className="text-[10px] text-amber-300">{partnerTimeResolution.reason}</p>}
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <p className="text-[10px] text-slate-400">The manual offset is user-supplied, not historically verified.</p>
+                      <label className="flex items-center gap-2 text-[10px] text-slate-300">
+                        <input
+                          type="checkbox"
+                          checked={partnerProfile.manualOffsetConfirmed}
+                          onChange={(e) => setPartnerProfile({ ...partnerProfile, manualOffsetConfirmed: e.target.checked })}
+                        />
+                        Confirm manual offset lock
+                      </label>
+                    </div>
+                  )}
+                  <p className="text-[10px] text-amber-300">{partnerTimezoneWarning}</p>
+                </div>
 
                 {/* Active Selected Location Confirmation Pill */}
                 <div className="flex items-center justify-between text-[10px] text-slate-400 bg-slate-950/40 px-2 py-1 rounded border border-slate-800/60 font-mono">
@@ -928,9 +1057,9 @@ export function RelationshipAstrologyView({
                   </span>
                   <span>
                     {partnerProfile.latitude.toFixed(2)}°N, {partnerProfile.longitude.toFixed(2)}°E · UTC
-                    {partnerProfile.timezoneOffset >= 0
-                      ? `+${partnerProfile.timezoneOffset}`
-                      : partnerProfile.timezoneOffset}
+                    {partnerResolvedOffsetHours >= 0
+                      ? `+${partnerResolvedOffsetHours}`
+                      : partnerResolvedOffsetHours}
                     h
                   </span>
                 </div>

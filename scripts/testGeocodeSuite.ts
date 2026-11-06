@@ -13,6 +13,7 @@
 
 import { NextRequest } from "next/server";
 import { GET } from "../app/api/geocode/route";
+import { GLOBAL_CITIES } from "../lib/astronomy/cities";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -38,6 +39,20 @@ async function runGeocodeTests() {
   const originalFetch = global.fetch;
 
   try {
+    // ---------------------------------------------------------
+    // TEST 0: Built-in city IANA database identifiers
+    // ---------------------------------------------------------
+    console.log("[Suite 0: Built-in IANA timezone identifiers]");
+    const allZonesValid = GLOBAL_CITIES.length === 133 && GLOBAL_CITIES.every((city) => {
+      try {
+        new Intl.DateTimeFormat("en-US", { timeZone: city.ianaTimezone });
+        return true;
+      } catch {
+        return false;
+      }
+    });
+    assert(allZonesValid, "0.1 All 133 built-in cities have valid runtime IANA timezone identifiers");
+
     // ---------------------------------------------------------
     // TEST 1: Source code secret inspection
     // ---------------------------------------------------------
@@ -70,6 +85,7 @@ async function runGeocodeTests() {
     assert(Array.isArray(dataParis.results) && dataParis.results.length > 0, "2.1.2 Returns non-empty results for 'Paris'");
     assert(dataParis.results[0].city === "Paris" && dataParis.results[0].source === "built-in", "2.1.3 Resolved with source='built-in'");
     assert(dataParis.results[0].lat === 48.8566 && dataParis.results[0].lng === 2.3522, "2.1.4 Verified Paris coordinates");
+    assert(dataParis.results[0].ianaTimezone === "Europe/Paris", "2.1.5 Built-in Paris result includes IANA timezone");
 
     // 2.2 Supported offline city (Tokyo)
     const reqTokyo = new NextRequest("http://localhost:3000/api/geocode?q=Tokyo");
@@ -162,7 +178,33 @@ async function runGeocodeTests() {
     assert(resLyon.status === 200, "4.1 HTTP 200 with key configured");
     const lyonGeoapify = dataLyon.results?.find((r: any) => r.city === "Lyon" && r.source === "geoapify");
     assert(!!lyonGeoapify, "4.2 Successfully returned external result with source='geoapify'");
-    assert(lyonGeoapify?.tz === 1, "4.3 Correct timezone offset parsed from provider response");
+    assert(lyonGeoapify?.tz === 1, "4.3 Provider standard offset parsed from provider response");
+    assert(lyonGeoapify?.ianaTimezone === "Europe/Paris", "4.4 Provider IANA timezone preserved");
+
+    // ---------------------------------------------------------
+    // TEST 4B: Missing provider timezone must not be guessed from longitude
+    // ---------------------------------------------------------
+    global.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+      const urlStr = input.toString();
+      if (urlStr.includes("api.geoapify.com/v1/geocode/autocomplete")) {
+        return new Response(JSON.stringify({
+          features: [{ properties: {
+            city: "No Zone Test",
+            country: "Nowhere",
+            formatted: "No Zone Test",
+            lat: 0.25,
+            lon: 1.25,
+          } }],
+        }), { status: 200, headers: { "Content-Type": "application/json" } });
+      }
+      return originalFetch(input, init);
+    };
+    const reqNoZone = new NextRequest("http://localhost:3000/api/geocode?q=NoZoneTest");
+    const resNoZone = await GET(reqNoZone);
+    const dataNoZone = await resNoZone.json();
+    const noZone = dataNoZone.results?.find((r: any) => r.city === "No Zone Test" && r.source === "geoapify");
+    assert(!!noZone, "4B.1 Provider result without timezone is retained");
+    assert(noZone?.tz === undefined && noZone?.ianaTimezone === undefined, "4B.2 No UTC offset or IANA zone is fabricated from longitude");
 
     // ---------------------------------------------------------
     // TEST 5: Key Configured - Reverse Geocoding
@@ -199,6 +241,7 @@ async function runGeocodeTests() {
     assert(resRevMarseille.status === 200, "5.1 HTTP 200 for external reverse lookup");
     assert(dataRevMarseille.results?.[0]?.city === "Marseille", "5.2 Resolved Marseille from external provider");
     assert(dataRevMarseille.results?.[0]?.source === "geoapify", "5.3 Correctly labeled source='geoapify'");
+    assert(dataRevMarseille.results?.[0]?.ianaTimezone === "Europe/Paris", "5.4 Reverse provider IANA timezone preserved");
 
     // ---------------------------------------------------------
     // TEST 6: Provider HTTP Error Resilience (500 Status)
