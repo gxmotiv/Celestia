@@ -127,6 +127,13 @@ export function ChineseView({ baziData }: ChineseViewProps) {
           <span className="text-xs text-slate-400">Hour · Day · Month · Year</span>
         </div>
 
+        {baziData.calculationContext && (
+          <p className="text-[11px] text-slate-400">
+            Clock: <span className="text-amber-300">{baziData.calculationContext.timeBasis}</span>
+            {" · "}Zi rollover: <span className="text-amber-300">{baziData.calculationContext.dayBoundaryPolicy}</span>
+            {" · "}Solar clock: <span className="font-mono">{baziData.calculationContext.solarClockIso}</span>
+          </p>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {renderPillarCard(baziData.hourPillar)}
           {renderPillarCard(baziData.dayPillar, true)}
