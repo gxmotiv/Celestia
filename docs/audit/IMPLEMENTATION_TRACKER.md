@@ -16,7 +16,7 @@ Policy: keep changes on isolated branches; do not merge or deploy until the owne
 
 | Item | Current status | Evidence / next acceptance gate |
 |---|---|---|
-| Historical local-time resolver | Partial | Resolver distinguishes resolved, ambiguous, nonexistent, unsupported. Runtime IANA/ICU output is not independent historical proof. Verify short-lived offset regimes, sampling performance, and authoritative historical sources. |
+| Historical local-time resolver | Partial | Resolver distinguishes resolved, ambiguous, nonexistent, unsupported. Runtime IANA/ICU output is not independent historical proof. IANA warns that pre-1970 coverage is incomplete and not authoritative everywhere. Verify short-lived offset regimes, sampling performance, and primary civil-time sources. |
 | Built-in city IANA identifiers | Implemented on branch | All 133 built-in city records now carry explicit IANA IDs; CI validates IDs in the runner runtime. Verify every city-to-zone assignment against authoritative timezone geography, especially border/multi-zone regions. |
 | Geoapify timezone identity | Implemented on branch | Preserve provider IANA zone and remove longitude/15 offset guessing. Test provider failure, missing zone, reverse geocode, and offline-only mode. |
 | Primary birth-form timezone state | Partial | Automatic IANA and explicit manual-lock modes; ambiguous-time selection and unsupported/nonexistent warnings. Browser-level form testing remains. |
@@ -28,16 +28,18 @@ Policy: keep changes on isolated branches; do not merge or deploy until the owne
 | BaZi year/month pillars | Partial | Existing longitude interval branch correction plus new crossing solver. The live year/month engine still needs to consume validated crossing instants and exact boundary tests. |
 | BaZi day-pillar epoch anchor | Audit required | Existing anchor is preserved; verify cycle epoch and calendrical convention from primary/authoritative references. |
 | Early/Late Zi hour/day semantics | Partial | Explicit option and unit tests exist. Verify traditional source convention and ensure all BaZi views/transits use the same policy. |
+| Invalid/missing birth-time handling | Implemented on audit branch; CI pending | Parser reports `usedFallback`; known times with invalid/missing values are rejected. An explicitly unknown time uses 12:00 only as a warned placeholder. Browser-level testing and all saved-profile paths still need review. |
 
 ## Workstream 2 — Astronomical engine and chart correctness
 
 | Item | Current status | Evidence / next acceptance gate |
 |---|---|---|
-| Actual ephemeris identity | Corrected disclosure | Compatibility class name remains, but implementation calls `astronomy-engine`, not native Swiss Ephemeris/libswe. Audit all claims, documentation and dependencies. |
-| Independent planetary benchmarks | Not started | Build a reproducible comparison set against a trustworthy ephemeris source for Sun, Moon and planets across dates, latitudes and boundary cases. Record time scale, coordinate frame, apparent/true settings and tolerances. |
-| Julian Day and UTC conversions | Partial / audit required | Existing suite passes; validate leap dates, seconds, pre-1972 UTC assumptions, historical offsets with seconds, and time-scale conversions. |
-| Tropical/sidereal and ayanamsa | Audit required | Verify settings, precession model, epoch, and consistency across Western/Vedic calculations. |
-| Houses and high latitudes | Known concern / audit required | Determine Placidus failure/fallback behavior, expose actual house system used, warn users, and test high-latitude boundaries. |
+| Actual ephemeris identity | Corrected disclosure on audit branch | The compatibility facade calls `astronomy-engine`, not native Swiss Ephemeris/libswe. Reviewed chart, transit, benchmark and PDF labels now disclose this. Upstream documents an approximately ±1 arcminute design target; this is not a Celestia-wide accuracy certificate. |
+| Independent planetary benchmarks | Not started | A stored Sun/Moon date is only a regression spot check; its full source query settings are not stored. Build a reproducible comparison set against JPL Horizons or another trustworthy source for Sun, Moon and planets. Record time scale, coordinate frame, apparent/astrometric settings, ephemeris, center and tolerances. |
+| Julian Day and UTC conversions | Partial / audit required | Existing suite covers selected UTC/JD and date rollover cases. Validate leap dates, seconds, pre-1972 civil-time assumptions, historical offsets with seconds, and explicit UTC/UT1/TT/Delta-T handling. |
+| Tropical/sidereal and ayanamsa | Audit required | The current Lahiri-style ayanamsa is a local polynomial approximation, not a native Swiss Ephemeris value. Verify the selected Lahiri convention, coefficients, time scale, epoch and parity across Western/Vedic calculations. |
+| Houses and high latitudes | Known concern / audit required | Current houses use custom formulas and an approximate mean-obliquity polynomial; the native Swiss Ephemeris house APIs are not called. Determine Placidus failure/fallback behavior, expose actual house system used, warn users, and compare ASC/MC/cusps against an independent reference at high latitudes. |
+| Lunar node pair consistency | Implemented on audit branch; CI pending | `calculateAllPlanets` now defaults to a mean-node pair and supports explicit mean/true selection; Ketu is 180° opposite the same selected Rahu. Regression tests cover tropical/sidereal and several dates. Independent longitude/speed accuracy for mean and true node models remains unverified. |
 | D1–D60 divisional charts | Audit required | Inspect each implemented formula, sign assignment, boundary rule, tradition, and independent examples. Do not infer correctness from D9-only tests. |
 | Vimshottari and other dashas | Partial / audit required | Existing antardasha suite passes. Verify balance at birth, year-length convention, rounding, pratyantardasha and remaining systems. |
 
@@ -84,7 +86,7 @@ Policy: keep changes on isolated branches; do not merge or deploy until the owne
 |---|---|---|
 | TypeScript archived snapshots exclusion | Implemented on PR #3 | Archive remains; inspect every excluded path to ensure no active module was excluded. |
 | Duplicate/unused modules | Audit required | Identify duplicates before cleanup; do not delete historical files during audit. |
-| Production build | Partial / CI-gated | PR chain has a green build at earlier commits; rerun on latest head after all integration changes. |
+| Production build | Partial / CI-gated | Earlier commits passed; rerun on the latest audit branch after all integration changes. |
 | Browser deployment | Not started | Choose GitHub Pages only if the app can be exported without server routes. Otherwise use a zero-cost GitHub-triggered deployment target with server/API support. Never expose API secrets in static client bundles. |
 | Public link | Not created | Publish only after full calculation, privacy and UI acceptance gates; provide the exact verified deployment URL. |
 
