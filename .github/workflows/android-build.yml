@@ -6,6 +6,28 @@ on:
       - deploy/cloudflare-workers-free
     paths:
       - "android/**"
+      - "lib/android/**"
+      - "lib/astronomy/**"
+      - "lib/vedic/**"
+      - "lib/numerology/**"
+      - "scripts/testAndroidOfflineSuite.ts"
+      - "tsconfig.json"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/android-build.yml"
+  pull_request:
+    branches:
+      - deploy/cloudflare-workers-free
+    paths:
+      - "android/**"
+      - "lib/android/**"
+      - "lib/astronomy/**"
+      - "lib/vedic/**"
+      - "lib/numerology/**"
+      - "scripts/testAndroidOfflineSuite.ts"
+      - "tsconfig.json"
+      - "package.json"
+      - "package-lock.json"
       - ".github/workflows/android-build.yml"
   workflow_dispatch:
 
@@ -14,15 +36,43 @@ permissions:
 
 jobs:
   build:
-    name: Build ARM32 and ARM64 APKs
+    name: Test offline calculations and build ARM APKs
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 35
     env:
       ANDROID_HOME: /usr/local/lib/android/sdk
       ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
     steps:
       - name: Check out source
         uses: actions/checkout@v7
+
+      - name: Set up Node.js for the offline calculation bundle
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install JavaScript dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Verify offline calculation pipeline
+        run: npx --yes tsx@4.20.6 scripts/testAndroidOfflineSuite.ts
+
+      - name: Build bundled offline calculation engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p android/app/src/main/assets/offline
+          npx --yes esbuild@0.25.11 android/offline/offline.ts \
+            --bundle \
+            --platform=browser \
+            --format=iife \
+            --target=es2020 \
+            --tsconfig=tsconfig.json \
+            --minify \
+            --outfile=android/app/src/main/assets/offline/celestia-offline.js
+          test -s android/app/src/main/assets/offline/celestia-offline.js
+          ls -lh android/app/src/main/assets/offline/celestia-offline.js
 
       - name: Set up Java 17
         uses: actions/setup-java@v6
@@ -78,6 +128,16 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "Celestia Android v0.1.0 (build ${GITHUB_RUN_NUMBER})" \
-            --notes "Celestia Android WebView test build.\n\nWebsite: https://celestia.gagandeep-hwr.workers.dev/\n\nARM64: arm64-v8a\nARM32: armeabi-v7a\n\nThis is a debug-signed test build, not a production-signed release." \
+            --notes "Celestia Android offline-capable test build.
+
+Online website: https://celestia.gagandeep-hwr.workers.dev/
+
+Offline mode: local Western, Vedic, numerology and BaZi natal calculations and profiles stored on-device.
+Online-only: AI readings, live research, external geocoding and cloud features.
+
+ARM64: arm64-v8a
+ARM32: armeabi-v7a
+
+This is a debug-signed test build, not a production-signed release." \
             --prerelease \
             --latest=false
