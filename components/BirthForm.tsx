@@ -59,7 +59,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
   const [formData, setFormData] = useState<BirthFormData>(() => ({
     ...initialData,
     timezoneMode: initialData.timezoneMode ?? (initialData.ianaTimezone ? "automatic" : "manual"),
-    manualOffsetConfirmed: initialData.manualOffsetConfirmed ?? !initialData.ianaTimezone,
+    manualOffsetConfirmed: initialData.manualOffsetConfirmed ?? false,
   }));
   const [citySearchQuery, setCitySearchQuery] = useState(
     initialData.cityName ? `${initialData.cityName}, ${initialData.country}` : ""
