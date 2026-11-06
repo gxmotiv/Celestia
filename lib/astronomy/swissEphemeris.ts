@@ -38,6 +38,10 @@ export interface SwissHouseResult {
   midheaven: number;
   houseCusps: number[]; // Array of 12 house cusps (1-indexed semantics: [0..11] or 12 items)
   vertex: number;
+  requestedSystem: "P" | "W" | "E";
+  actualSystem: "P" | "W" | "E";
+  fallbackApplied: boolean;
+  fallbackReason?: string;
 }
 
 export interface SwissAspect {
@@ -410,6 +414,12 @@ export class SwissEphemerisEngine {
     longitude: number,
     system: "P" | "W" | "E" = "P"
   ): SwissHouseResult {
+    if (!Number.isFinite(julianDay) || !Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      throw new RangeError("House calculation requires finite Julian Day and coordinates.");
+    }
+    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+      throw new RangeError("House calculation latitude/longitude is outside valid geographic bounds.");
+    }
     const time = new Astronomy.AstroTime(julianDay - 2451545.0);
 
     // Greenwich Apparent Sidereal Time (GST) in hours
@@ -444,6 +454,8 @@ export class SwissEphemerisEngine {
     if (vertex < 0) vertex += 360.0;
 
     const cusps: number[] = new Array(12);
+    let actualSystem: "P" | "W" | "E" = system;
+    let fallbackReason: string | undefined;
 
     if (system === "W") {
       // Whole Sign System: House 1 begins at 0° of Ascendant sign
@@ -469,8 +481,15 @@ export class SwissEphemerisEngine {
         for (let iter = 0; iter < 10; iter++) {
           const sinDec = Math.sin(eps) * Math.sin(r);
           const cosDec = Math.cos(Math.asin(Math.max(-1, Math.min(1, sinDec))));
-          const tanDec = sinDec / (cosDec || 0.0001);
-          const semiArcRatio = Math.asin(Math.max(-1, Math.min(1, Math.tan(phi) * tanDec))) * f;
+          if (Math.abs(cosDec) < 1e-12) {
+            throw new RangeError("Placidus semi-arc is singular at this latitude/declination.");
+          }
+          const tanDec = sinDec / cosDec;
+          const semiArcArgument = Math.tan(phi) * tanDec;
+          if (!Number.isFinite(semiArcArgument) || Math.abs(semiArcArgument) > 1) {
+            throw new RangeError("Placidus semi-arc is not defined for this latitude/declination.");
+          }
+          const semiArcRatio = Math.asin(semiArcArgument) * f;
           r = (ramc + ramcOffset) * (Math.PI / 180.0) + semiArcRatio;
         }
         let cusp = Math.atan2(Math.sin(r), Math.cos(r) * Math.cos(eps)) * (180.0 / Math.PI);
@@ -488,12 +507,18 @@ export class SwissEphemerisEngine {
         cusps[5] = (cusps[11] + 180.0) % 360.0; // 6th house
         cusps[7] = (cusps[1] + 180.0) % 360.0;  // 8th house
         cusps[8] = (cusps[2] + 180.0) % 360.0;  // 9th house
-      } catch {
-        // Fallback for extreme polar latitudes
+      } catch (error) {
+        // Explicitly disclose the fallback; do not report Equal cusps as Placidus.
+        actualSystem = "E";
+        fallbackReason = error instanceof Error ? error.message : "Placidus calculation failed at this location/time.";
         for (let i = 0; i < 12; i++) {
           cusps[i] = (asc + i * 30.0) % 360.0;
         }
       }
+    }
+
+    if (cusps.length !== 12 || cusps.some((cusp) => !Number.isFinite(cusp))) {
+      throw new Error("House calculation produced invalid cusp values.");
     }
 
     const round4 = (v: number) => Math.round(v * 10000) / 10000;
@@ -503,6 +528,10 @@ export class SwissEphemerisEngine {
       midheaven: round4(mc),
       houseCusps: cusps.map(round4),
       vertex: round4(vertex),
+      requestedSystem: system,
+      actualSystem,
+      fallbackApplied: actualSystem !== system,
+      ...(fallbackReason ? { fallbackReason } : {}),
     };
   }
 
