@@ -40,7 +40,7 @@ function partsMap(formatter:Intl.DateTimeFormat,instant:Date):Record<string,stri
 }
 function parseOffsetSeconds(label:string|undefined):number|null{
   if(!label||label==="GMT"||label==="UTC")return 0;
-  const match=/^GMT([+-])(\\d{1,2})(?::?(\\d{2}))?(?::?(\\d{2}))?$/.exec(label);
+  const match=/^GMT([+-])(\d{1,2})(?::?(\d{2}))?(?::?(\d{2}))?$/.exec(label);
   if(!match)return null;
   const sign=match[1]==="-"?-1:1,hours=Number(match[2]),minutes=Number(match[3]??"0"),seconds=Number(match[4]??"0");
   if(!Number.isInteger(hours)||!Number.isInteger(minutes)||!Number.isInteger(seconds)||minutes>59||seconds>59||hours>24)return null;
