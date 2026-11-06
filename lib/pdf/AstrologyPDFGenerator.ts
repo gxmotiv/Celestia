@@ -212,7 +212,7 @@ export class AstrologyPDFGenerator {
 
     doc.text(`Coordinates: ${Math.abs(user.latitude).toFixed(4)}°${user.latitude >= 0 ? "N" : "S"}, ${Math.abs(user.longitude).toFixed(4)}°${user.longitude >= 0 ? "E" : "W"}`, col2X, metaY);
     doc.text(`House System: ${user.houseSystem}`, col2X, metaY + 16);
-    doc.text(`Ephemeris Engine: Swiss Ephemeris / VSOP87`, col2X, metaY + 32);
+    doc.text(`Ephemeris Engine: astronomy-engine`, col2X, metaY + 32);
 
     // Document Verification Seal
     const seed = `${user.fullName}-${user.birthDate}-${user.birthTime}`;
@@ -1340,7 +1340,7 @@ export class AstrologyPDFGenerator {
       .font("Helvetica")
       .fillColor(this.textDark)
       .text(
-        `• Ephemeris Algorithm: Swiss Ephemeris / VSOP87 planetary theory & ELP2000-82 lunar theory.\n• Sidereal Lahiri Ayanamsa: 24° 08' 42\" (Calculated via Chitra Paksha standard).\n• Hellenistic House Division: Porphyry & Whole Sign dual calculation.\n• Pythagorean Gematria: Western Agrippan alphabet matrix (A=1 ... Z=8).\n• Subject Verification Key: ${user.fullName} | ${user.birthDate} ${user.birthTime} | ${user.latitude}°N ${user.longitude}°E`,
+        `• Planetary positions: astronomy-engine (published design target about 1 arcminute; not a per-result guarantee).\n• The application does not call native Swiss Ephemeris/libswe or JPL DE405 directly.\n• Lunar-node, house, and ayanamsa calculations require separate independent validation.\n• Display decimal places are rounding, not proof of astronomical accuracy.\n• Subject: ${user.fullName} | ${user.birthDate} ${user.birthTime} | ${user.latitude}° ${user.longitude}°`,
         52,
         curY + 8,
         { width: doc.page.width - 104, lineGap: 2 }
