@@ -72,7 +72,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const timezoneResolution = useMemo(() => {
-    if (formData.timezoneMode !== "automatic" || !formData.ianaTimezone || formData.isTimeUnknown) return null;
+    if (formData.timezoneMode !== "automatic" || !formData.ianaTimezone) return null;
     const dateParts = formData.birthDate.split("-").map(Number);
     if (dateParts.length !== 3 || dateParts.some((value) => !Number.isInteger(value))) return null;
     const { hour, minute } = parseBirthClockTime(formData.birthTime);
@@ -520,7 +520,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
                       {c.lat > 0 ? `${c.lat.toFixed(2)}°N` : `${Math.abs(c.lat).toFixed(2)}°S`}, {c.lng > 0 ? `${c.lng.toFixed(2)}°E` : `${Math.abs(c.lng).toFixed(2)}°W`}
                     </span>
                     <span className="text-[10px] text-slate-400 font-mono">
-                      UTC{c.tz >= 0 ? `+${Math.floor(c.tz)}:${((c.tz % 1) * 60).toString().padStart(2, "0")}` : `${Math.floor(c.tz)}:${(Math.abs(c.tz % 1) * 60).toString().padStart(2, "0")}`}
+                      {typeof c.tz === "number" ? `UTC${c.tz >= 0 ? "+" : ""}${c.tz}` : "Offset unavailable"}
                     </span>
                   </div>
                 </button>
@@ -653,6 +653,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
               {timezoneResolution?.status === "unsupported" && <p className="text-[11px] text-amber-300">{timezoneResolution.reason} Automatic resolution is unavailable.</p>}
               {!timezoneResolution && <p className="text-[11px] text-amber-300">Select a city with an IANA timezone and a valid birth date/time to resolve automatically.</p>}
               <p className="text-[10px] text-slate-500">“Database-resolved” means the current runtime's IANA/ICU database supplied the rule; it is not independent proof of every historical legal time.</p>
+              {formData.isTimeUnknown && <p className="text-[11px] text-amber-300">Birth time is marked unknown; 12:00 is only a placeholder, not an observed birth time.</p>}
             </div>
           ) : (
             <div className="space-y-2">
@@ -699,16 +700,6 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
                 step="0.0001"
                 value={formData.longitude}
                 onChange={(e) => setFormData({ ...formData, longitude: parseFloat(e.target.value) || 0 })}
-                className="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded text-xs text-slate-100 tabular-nums focus:border-amber-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="text-[11px] font-medium text-slate-400 block mb-1">UTC Offset (Hours)</label>
-              <input
-                type="number"
-                step="0.25"
-                value={formData.timezoneOffset}
-                onChange={(e) => setFormData({ ...formData, timezoneOffset: parseFloat(e.target.value) || 0 })}
                 className="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded text-xs text-slate-100 tabular-nums focus:border-amber-500 focus:outline-none"
               />
             </div>
