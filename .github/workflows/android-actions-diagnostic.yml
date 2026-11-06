@@ -37,7 +37,7 @@ jobs:
           set -euo pipefail
           export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
           test -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-          yes | sdkmanager --licenses
+          sdkmanager --licenses < <(yes)
           sdkmanager --install "platforms;android-35" "build-tools;35.0.0"
 
       - name: Build split APKs
