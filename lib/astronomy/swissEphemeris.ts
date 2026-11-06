@@ -316,7 +316,7 @@ export class SwissEphemerisEngine {
     let speed = 0;
 
     if (body !== null) {
-      // Calculate apparent geocentric ecliptic coordinates (including light-time aberration & nutation)
+      // Request the library's apparent geocentric vector, then transform it to ecliptic coordinates.
       const vec = Astronomy.GeoVector(body, time, true);
       const ecl = Astronomy.Ecliptic(vec);
       lon = (ecl.elon % 360 + 360) % 360;
