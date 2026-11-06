@@ -38,7 +38,15 @@ The review traced the planetary calculation facade, Western chart assembly, tran
 
 **Limit:** 12:00 is a calculation placeholder, not the person's birth time and not necessarily true solar noon. Ascendant, houses, house-based placements, planetary hours, and some BaZi time results must not be treated as verified for an unknown birth time.
 
-### 3. User-facing accuracy disclosure
+### 3. Shared Lahiri-style ayanamsa model
+
+**Defect found:** Western sidereal calculations and Vedic chart conversion used different local polynomials. The Western compatibility facade used a negative quadratic term, while the Vedic module used a positive quadratic term. These could yield different sidereal longitudes from the same tropical input.
+
+**Change:** both paths now call one shared approximation in `SwissEphemerisEngine.getAyanamsa`. Its J2000 zero point is 23°51′25.53″, advanced using the IAE 1989 precession polynomial relative to J2000: 5029.0966″·T + 1.11161″·T² − 0.000113″·T³, where T is Julian centuries from J2000. This fixes the sign inconsistency and centralises the model.
+
+**Limit:** this is a Lahiri-style polynomial approximation, not a call to Swiss Ephemeris `SE_SIDM_LAHIRI`; it does not implement a full nutation/model-convention solution. It must not be described as exact Lahiri or validated against every historical/future epoch. The new test proves Western/Vedic code uses the same formula, not that the formula is astronomically exact. The cited IAE polynomial is a precession model; the adopted Lahiri zero point and convention remain an explicit app choice.
+
+### 4. User-facing accuracy disclosure
 
 Removed unsupported Swiss Ephemeris, JPL DE405, and 0.001-degree accuracy claims from the reviewed calculation labels and report surfaces. Internal benchmark output is now labelled as internal checks rather than independent astronomical certification. Asteroid calculations are explicitly described as approximate.
 
