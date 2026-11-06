@@ -1,0 +1,20 @@
+name: Android Actions Runner Diagnostic
+
+on:
+  push:
+    branches:
+      - diagnose/android-actions-runner
+
+permissions:
+  contents: read
+
+jobs:
+  runner-smoke-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Confirm runner started
+        run: |
+          echo "GitHub-hosted runner started successfully."
+          echo "Event: ${GITHUB_EVENT_NAME}"
+          echo "Commit: ${GITHUB_SHA}"
