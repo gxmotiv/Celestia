@@ -104,7 +104,7 @@ export interface KPPrediction {
   cslSignifiedHouses: number[];
   isPromiseFavorable: boolean;
   timing: string;
-  probability: number;
+  ruleScore: number; // Deterministic heuristic score; not a calibrated probability
   details: string;
   dashaAnalysis: {
     dashaLord: string;
@@ -223,7 +223,7 @@ export interface KPHoraryResult {
     isMoonCslAligned: boolean;
   };
   verdict: "YES - Strongly Promised" | "YES - Delayed / After Effort" | "NO - Denied / Not Feasible";
-  confidenceScore: number; // 0 to 100
+  ruleScore: number; // Deterministic horary heuristic; not statistical confidence
   detailedJudgment: string[];
   recommendedAction: string;
 }
