@@ -90,6 +90,10 @@ export default function HomePage() {
     if (![year, month, day].every(Number.isInteger) || year < 1 || month < 1 || month > 12 || day < 1 || day > 31) {
       throw new RangeError("Birth date must be a valid Gregorian date.");
     }
+    const calendarCheck = new Date(Date.UTC(year, month - 1, day));
+    if (calendarCheck.getUTCFullYear() !== year || calendarCheck.getUTCMonth() !== month - 1 || calendarCheck.getUTCDate() !== day) {
+      throw new RangeError("Birth date is not a valid Gregorian calendar date.");
+    }
     const { hour, minute } = parseBirthClockTime(formData.birthTime);
 
     let birthDateObj: Date;
