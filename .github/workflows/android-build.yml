@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - deploy/cloudflare-workers-free
+      - feat/android-offline-mode
     paths:
       - "android/**"
       - "lib/android/**"
@@ -116,7 +117,7 @@ jobs:
           retention-days: 30
 
       - name: Publish GitHub prerelease with both APKs
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && github.ref_name == 'deploy/cloudflare-workers-free'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
