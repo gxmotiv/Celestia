@@ -120,19 +120,6 @@ public class MainActivity extends Activity {
             }
 
             @Override
-            public void onReceivedError(
-                WebView view,
-                int errorCode,
-                String description,
-                String failingUrl
-            ) {
-                super.onReceivedError(view, errorCode, description, failingUrl);
-                if (failingUrl != null && !isOfflineUrl(Uri.parse(failingUrl))) {
-                    showOfflinePage();
-                }
-            }
-
-            @Override
             public void onReceivedHttpError(
                 WebView view,
                 WebResourceRequest request,
