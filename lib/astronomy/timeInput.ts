@@ -12,6 +12,7 @@ export function parseBirthClockTime(
   fallbackHour = 12,
   fallbackMinute = 0
 ): BirthClockTime {
+  if (typeof value !== "string") return { hour: fallbackHour, minute: fallbackMinute };
   const match = /^(\d{2}):(\d{2})$/.exec(value.trim());
   if (!match) return { hour: fallbackHour, minute: fallbackMinute };
 
