@@ -38,6 +38,8 @@ jobs:
         with:
           node-version: 24
           cache: npm
+      - name: Use npm version compatible with the committed lockfile
+        run: npm install --global npm@10.9.9
       - name: Install locked app dependencies
         run: npm ci --no-audit --no-fund
       - name: Install temporary Cloudflare build tools
@@ -62,6 +64,8 @@ jobs:
         with:
           node-version: 24
           cache: npm
+      - name: Use npm version compatible with the committed lockfile
+        run: npm install --global npm@10.9.9
       - name: Install locked app dependencies
         run: npm ci --no-audit --no-fund
       - name: Install temporary Cloudflare build tools
