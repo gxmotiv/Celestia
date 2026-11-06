@@ -61,7 +61,7 @@ for (const instant of benchmarkInstants) {
       const expectedKetuLongitude = normalize(expectedAscending.longitude + 180);
       test(
         label + ": Ketu is exactly opposite the same Rahu model",
-        circularDifference(pair.rahu.longitude, pair.ketu.longitude) <= 0.0001 &&
+        Math.abs(circularDifference(pair.rahu.longitude, pair.ketu.longitude) - 180) <= 0.0001 &&
           near(pair.ketu.longitude, expectedKetuLongitude),
         String(expectedKetuLongitude),
         String(pair.ketu.longitude)
