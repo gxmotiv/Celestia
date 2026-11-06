@@ -120,7 +120,7 @@ export class SwissEphemerisEngine {
    */
   public getAyanamsa(julianDay: number): number {
     const T = (julianDay - 2451545.0) / 36525.0;
-    // IAU Chitra Paksha / Lahiri Ayanamsa: 23°51'25.53" at J2000.0 (23.85709°)
+    // J2000 reference constant for this application's Lahiri-style approximation; independently validate the full epoch model.
     const ayanamsa = 23.85709 + 1.396971 * T - 0.0003086 * T * T;
     return ayanamsa;
   }
