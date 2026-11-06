@@ -79,7 +79,7 @@ export function PrintModal({
       setIsGeneratingPdf(true);
       setErrorMessage(null);
       setDownloadSuccess(false);
-      setPdfProgressText("Connecting to High-Precision Celestial Engine...");
+      setPdfProgressText("Preparing chart calculations...");
       setPdfProgressPercent(20);
 
       // Attempt Server-Side Vector PDF Generation via API
@@ -343,7 +343,7 @@ export function PrintModal({
                 Publication Report Layout Preview (10 Comprehensive Sections)
               </span>
               <span className="text-[11px] text-slate-500 hidden sm:inline flex items-center gap-1">
-                A4 Portrait · Vector Swiss Ephemeris Precision
+                A4 Portrait · Vector chart calculations
               </span>
             </div>
 

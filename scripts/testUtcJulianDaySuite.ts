@@ -9,7 +9,7 @@
  * 5. 2024-03-15 01:00, UTC+03:30 -> 2024-03-14 21:30 UTC, JD 2460384.39583 (Fractional +03:30 offset)
  * 6. 2000-01-01 12:00, UTC+00:00 -> 2000-01-01 12:00 UTC, JD 2451545.00000 (J2000.0 astronomical epoch)
  * 7. Existing valid UTC reference cases (Einstein 1879-03-14 10:50 UTC, Greenwich 2024-01-15 12:00 UTC)
- * 8. Planetary position sub-arcsecond verification on the patched date boundary case vs NASA JPL Horizons
+ * 8. Single-date longitude spot checks against stored reference values; not a global accuracy certificate
  */
 
 import { swissEphemeris } from "../lib/astronomy/swissEphemeris";
@@ -185,7 +185,7 @@ async function runTests() {
   // ---------------------------------------------------------------------------
   // TEST GROUP 8: Full Chart Pipeline Validation (Case 4B vs NASA JPL Horizons)
   // ---------------------------------------------------------------------------
-  console.log("\n[TEST GROUP 8: End-to-End Chart Verification on Defect Case (vs JPL Horizons)]");
+  console.log("\n[TEST GROUP 8: End-to-End Chart Spot Check on the UTC Boundary Case]");
   const chart4B = calculateWesternChart(2024, 3, 15, 1, 0, 28.6139, 77.2090, 5.5, "Placidus");
   assert(
     Math.abs(chart4B.julianDay - 2460384.3125) < 1e-6,
@@ -196,20 +196,22 @@ async function runTests() {
   const sun = chart4B.planets.find((p) => p.name === "Sun");
   const moon = chart4B.planets.find((p) => p.name === "Moon");
 
-  // NASA JPL Horizons 19:30 UTC Reference Values:
-  // Sun: 354.7087° (tolerance: 0.005° = 18")
-  // Moon: 55.5443° (tolerance: 0.010° = 36")
+  // Stored comparison values for 2024-03-15 19:30 UTC. The original query parameters,
+  // coordinate settings, time scale, and retrieval record are not stored here, so these
+  // values are regression spot checks, not a reproducible independent validation corpus.
+  // Sun reference: 354.7087° (this test threshold: 5 arcseconds).
+  // Moon reference: 55.5443° (this test threshold: 10 arcseconds).
   const sunDiffArcsec = Math.abs((sun?.longitude || 0) - 354.7087) * 3600.0;
   const moonDiffArcsec = Math.abs((moon?.longitude || 0) - 55.5443) * 3600.0;
 
   assert(
     sunDiffArcsec < 5.0,
-    `8.2 Sun longitude matches JPL Horizons within 5 arcsec (diff = ${sunDiffArcsec.toFixed(2)}")`,
+    `8.2 Sun longitude is within 5 arcsec of the stored spot-check value (diff = ${sunDiffArcsec.toFixed(2)}")`,
     `Celestia: ${sun?.longitude.toFixed(4)}°, Horizons: 354.7087°`
   );
   assert(
     moonDiffArcsec < 10.0,
-    `8.3 Moon longitude matches JPL Horizons within 10 arcsec (diff = ${moonDiffArcsec.toFixed(2)}")`,
+    `8.3 Moon longitude is within 10 arcsec of the stored spot-check value (diff = ${moonDiffArcsec.toFixed(2)}")`,
     `Celestia: ${moon?.longitude.toFixed(4)}°, Horizons: 55.5443° (was 2077" off before patch)`
   );
 

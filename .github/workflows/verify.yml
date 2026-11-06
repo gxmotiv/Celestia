@@ -37,6 +37,8 @@ jobs:
           - testSolarTermsSolverSuite.ts
           - testBaZiSolarPillarsSuite.ts
           - testBaZiProfileAdapterSuite.ts
+          - testLunarNodeConsistencySuite.ts
+          - testAyanamsaConsistencySuite.ts
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2

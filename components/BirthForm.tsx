@@ -548,7 +548,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
               type="button"
               onClick={() => handleLoadSample("einstein")}
               className="text-amber-400/90 hover:text-amber-300 underline underline-offset-2 transition-colors font-medium"
-              title="Albert Einstein (March 14, 1879, Ulm) - Swiss Ephemeris Accuracy Test"
+              title="Albert Einstein historical chart example"
             >
               Einstein
             </button>

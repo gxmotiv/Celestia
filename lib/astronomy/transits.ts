@@ -1,7 +1,7 @@
 /**
- * Professional Planetary Transit Prediction Engine
- * Computes real-time planetary transits against natal charts with 0.001° accuracy
- * using the Swiss Ephemeris. Provides daily, weekly, and monthly astrological forecasts,
+ * Planetary Transit Calculation Engine
+ * Computes transiting positions through the astronomy-engine-backed compatibility facade.
+ * Display rounding is not a 0.001° accuracy guarantee. Provides daily, weekly, and monthly forecasts,
  * major life cycle detections (Saturn, Jupiter, Uranus, Pluto), and timing windows.
  */
 
@@ -164,7 +164,7 @@ const HOUSE_TITLES: Record<number, string> = {
 };
 
 /**
- * High-precision Transit Engine comparing transiting celestial bodies to the natal chart
+ * Transit engine comparing modelled transiting celestial bodies to the natal chart
  */
 export class TransitEngine {
   public birthChart: WesternChartData;

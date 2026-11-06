@@ -94,7 +94,21 @@ export default function HomePage() {
     if (calendarCheck.getUTCFullYear() !== year || calendarCheck.getUTCMonth() !== month - 1 || calendarCheck.getUTCDate() !== day) {
       throw new RangeError("Birth date is not a valid Gregorian calendar date.");
     }
-    const { hour, minute } = parseBirthClockTime(formData.birthTime);
+    // Unknown time is an explicit 12:00 placeholder, never an inferred birth time.
+    // Otherwise reject malformed legacy/profile values rather than silently charting noon.
+    let hour: number;
+    let minute: number;
+    if (formData.isTimeUnknown) {
+      hour = 12;
+      minute = 0;
+    } else {
+      const parsedClock = parseBirthClockTime(formData.birthTime);
+      if (parsedClock.usedFallback) {
+        throw new RangeError("Birth time is invalid or missing. Enter a valid HH:mm time or mark it as unknown.");
+      }
+      hour = parsedClock.hour;
+      minute = parsedClock.minute;
+    }
 
     let birthDateObj: Date;
     let offsetSeconds: number;
@@ -181,11 +195,20 @@ export default function HomePage() {
   }, [formData]);
 
   const handleFormSubmit = (data: BirthFormData) => {
+    if (!data.isTimeUnknown && parseBirthClockTime(data.birthTime).usedFallback) {
+      window.alert("Enter a valid birth time in HH:mm format, or mark the birth time as unknown.");
+      return;
+    }
     setFormData(data);
     setIsFormCollapsed(true);
   };
 
   const handleProfileSelect = (data: BirthFormData) => {
+    if (!data.isTimeUnknown && parseBirthClockTime(data.birthTime).usedFallback) {
+      window.alert("This saved profile has an invalid or missing birth time. Review it in the birth form before calculating.");
+      setIsFormCollapsed(false);
+      return;
+    }
     const mode = data.timezoneMode ?? (data.ianaTimezone ? "automatic" : "manual");
     if (mode === "automatic") {
       if (!data.ianaTimezone) {
@@ -196,7 +219,12 @@ export default function HomePage() {
       const [profileYear, profileMonth, profileDay] = data.birthDate.split("-").map(Number);
       let resolution;
       try {
-        const clock = parseBirthClockTime(data.birthTime);
+        const clock = data.isTimeUnknown
+          ? { hour: 12, minute: 0, usedFallback: true }
+          : parseBirthClockTime(data.birthTime);
+        if (clock.usedFallback && !data.isTimeUnknown) {
+          throw new RangeError("Saved birth time is invalid or missing.");
+        }
         resolution = resolveLocalDateTime({
           year: profileYear, month: profileMonth, day: profileDay,
           hour: clock.hour, minute: clock.minute,

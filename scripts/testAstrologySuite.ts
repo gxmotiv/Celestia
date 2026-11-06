@@ -404,7 +404,7 @@ console.log("Running Category 3: Transit System Tests...");
 const transitEngine = new TransitEngine(einsteinWestern, new Date());
 const transitsNow = transitEngine.getPlanetaryPositions(new Date());
 
-// 3.1 Planetary Position Accuracy
+// 3.1 Planetary Position Output Bounds
 const planetsToVerify = ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto", "NorthNode"];
 let allPlanetsValid = true;
 planetsToVerify.forEach((pName) => {
@@ -415,11 +415,11 @@ planetsToVerify.forEach((pName) => {
 });
 
 assertTest(
-  "3.1 Planetary Positions",
+  "3.1 Planetary Position Output Bounds",
   "All 11 planetary bodies computed within valid [0, 360) celestial bounds",
   allPlanetsValid,
-  "11 planets valid with 0.001° precision",
-  allPlanetsValid ? "11/11 valid" : "Invalid planet detected"
+  "11 finite longitudes within [0, 360); this structural test does not measure accuracy",
+  allPlanetsValid ? "11/11 structurally valid" : "Invalid planet detected"
 );
 
 // 3.2 Aspect Calculation Tests

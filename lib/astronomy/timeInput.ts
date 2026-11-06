@@ -1,10 +1,12 @@
 /**
- * Strictly parse an HTML time input (HH:mm) without treating midnight as falsy.
- * Invalid or missing legacy profile values use the documented fallback.
+ * Parse an HTML time input (HH:mm) without treating midnight as falsy.
+ * Legacy callers may still request a fallback, but must inspect usedFallback
+ * and must not treat a placeholder as a verified birth time.
  */
 export interface BirthClockTime {
   hour: number;
   minute: number;
+  usedFallback: boolean;
 }
 
 export function parseBirthClockTime(
@@ -12,15 +14,19 @@ export function parseBirthClockTime(
   fallbackHour = 12,
   fallbackMinute = 0
 ): BirthClockTime {
-  if (typeof value !== "string") return { hour: fallbackHour, minute: fallbackMinute };
+  const fallback = (): BirthClockTime => ({
+    hour: fallbackHour,
+    minute: fallbackMinute,
+    usedFallback: true,
+  });
+  if (typeof value !== "string") return fallback();
+
   const match = /^(\d{2}):(\d{2})$/.exec(value.trim());
-  if (!match) return { hour: fallbackHour, minute: fallbackMinute };
+  if (!match) return fallback();
 
   const hour = Number(match[1]);
   const minute = Number(match[2]);
-  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
-    return { hour: fallbackHour, minute: fallbackMinute };
-  }
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return fallback();
 
-  return { hour, minute };
+  return { hour, minute, usedFallback: false };
 }

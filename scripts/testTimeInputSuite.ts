@@ -16,17 +16,21 @@ function show(value: string) {
   const parsed = parseBirthClockTime(value);
   return parsed.hour.toString().padStart(2, "0") + ":" + parsed.minute.toString().padStart(2, "0");
 }
+function usedFallback(value: string) {
+  return parseBirthClockTime(value).usedFallback;
+}
 
 test("Midnight 00:00 remains 00:00", show("00:00") === "00:00", "00:00", show("00:00"));
 test("Midnight hour with nonzero minutes is preserved", show("00:45") === "00:45", "00:45", show("00:45"));
 test("Noon is preserved", show("12:00") === "12:00", "12:00", show("12:00"));
 test("Late evening is preserved", show("23:59") === "23:59", "23:59", show("23:59"));
-test("Invalid hour uses fallback", show("24:00") === "12:00", "12:00", show("24:00"));
-test("Invalid minute uses fallback", show("12:60") === "12:00", "12:00", show("12:60"));
-test("Missing value uses fallback", show("") === "12:00", "12:00", show(""));
+test("Valid time is not marked as a fallback", !usedFallback("23:59"), "usedFallback=false", String(usedFallback("23:59")));
+test("Invalid hour returns a marked placeholder", show("24:00") === "12:00" && usedFallback("24:00"), "12:00, usedFallback=true", show("24:00") + ", usedFallback=" + usedFallback("24:00"));
+test("Invalid minute returns a marked placeholder", show("12:60") === "12:00" && usedFallback("12:60"), "12:00, usedFallback=true", show("12:60") + ", usedFallback=" + usedFallback("12:60"));
+test("Missing value returns a marked placeholder", show("") === "12:00" && usedFallback(""), "12:00, usedFallback=true", show("") + ", usedFallback=" + usedFallback(""));
 test("Malformed one-digit hour uses fallback", show("9:05") === "12:00", "12:00", show("9:05"));
 const nonString = parseBirthClockTime(null as unknown as string);
-test("Non-string legacy value uses fallback", nonString.hour === 12 && nonString.minute === 0, "12:00", nonString.hour.toString().padStart(2, "0") + ":" + nonString.minute.toString().padStart(2, "0"));
+test("Non-string legacy value uses fallback", nonString.hour === 12 && nonString.minute === 0 && nonString.usedFallback, "12:00 with usedFallback=true",  nonString.hour.toString().padStart(2, "0") + ":" + nonString.minute.toString().padStart(2, "0"));
 
 let passed = 0;
 let failed = 0;

@@ -77,18 +77,18 @@ export const WesternBenchmarkPanel: React.FC<WesternBenchmarkPanelProps> = ({
   }, [report.results, selectedCategory]);
 
   const handleCopyReport = () => {
-    const text = `CELESTIA Western Astrology Master Verification Report
+    const text = `CELESTIA Western Astrology Calculation Checks
 Timestamp: ${report.timestamp}
 Pass Rate: ${report.passRatePercent}% (${report.passedCount}/${report.totalTests} Tests Passed)
 Execution Time: ${report.durationMs}ms
-Engines Tested:
-- Swiss Ephemeris & Placidus/Whole Sign/Equal Houses: 100% Passed
-- Ptolemaic & Minor Harmonic Aspects: 100% Passed
-- Hellenistic Profections & Zodiacal Releasing: 100% Passed
-- Medieval Firdaria (75-Year Master Cycle): 100% Passed
-- Advanced Harmonics & 90° Cosmobiology Dial: 100% Passed
-- Synastry, Composite & Davison Relationship Engines: 100% Passed
-All 27 mathematical & astronomical invariants verified against JPL DE405, VSOP87, Ptolemy, and Kepler.`;
+Checks run (internal regression tests only):
+- Coordinate ranges, house structure, and nodal invariants
+- Aspect and chart-structure arithmetic
+- Dasha and timing implementation checks
+- Relationship-chart and traditional-rule consistency checks
+- Internal invariant checks for configured astrology systems
+- Regression checks do not compare every output with an independent ephemeris.
+Not an independent ephemeris accuracy certification. Planetary positions use astronomy-engine; custom node, house, and ayanamsa calculations need separate reference validation.`;
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -105,13 +105,13 @@ All 27 mathematical & astronomical invariants verified against JPL DE405, VSOP87
             </div>
             <div>
               <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-                Western Astrology Master Verification Suite
+                Western Astrology Calculation Check Suite
                 <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  {report.passRatePercent}% Verified
+                  {report.passRatePercent}% Checks passed
                 </span>
               </h2>
               <p className="text-xs text-slate-400">
-                10X Deep Audit · Swiss Ephemeris JPL DE405 · Ptolemaic Spherical Astronomy · Keplerian Harmonics
+                Internal regression checks · external astronomical accuracy validation pending
               </p>
             </div>
           </div>
@@ -156,15 +156,15 @@ All 27 mathematical & astronomical invariants verified against JPL DE405, VSOP87
             <span className="text-xl font-bold font-mono text-emerald-400">
               {report.passedCount}/{report.totalTests}
             </span>
-            <span className="text-xs text-emerald-300/80 font-medium">100% Passed</span>
+            <span className="text-xs text-emerald-300/80 font-medium">checks passed</span>
           </div>
-          <span className="text-[10px] text-slate-400 block">Zero calculation errors detected</span>
+          <span className="text-[10px] text-slate-400 block">No failures in these checks; astronomical accuracy is not measured here</span>
         </div>
 
         <div className="p-4 bg-slate-950/60 border border-slate-800/80 rounded-xl space-y-1">
           <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1.5">
             <Zap className="w-3.5 h-3.5 text-amber-400" />
-            Engine Benchmark Latency
+            Calculation check run time
           </span>
           <div className="flex items-baseline gap-2">
             <span className="text-xl font-bold font-mono text-amber-400">
@@ -172,30 +172,30 @@ All 27 mathematical & astronomical invariants verified against JPL DE405, VSOP87
             </span>
             <span className="text-xs text-slate-400 font-mono">ms</span>
           </div>
-          <span className="text-[10px] text-slate-400 block">Real-time geocentric physics</span>
+          <span className="text-[10px] text-slate-400 block">Modelled geocentric positions; no per-result precision guarantee</span>
         </div>
 
         <div className="p-4 bg-slate-950/60 border border-slate-800/80 rounded-xl space-y-1">
           <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1.5">
             <Compass className="w-3.5 h-3.5 text-blue-400" />
-            House Precision Standard
+            House Calculation Status
           </span>
           <div className="flex items-baseline gap-2">
-            <span className="text-xl font-bold font-mono text-blue-400">0.001°</span>
-            <span className="text-xs text-blue-300/80 font-medium">Placidus Arc</span>
+            <span className="text-xl font-bold font-mono text-blue-400">Custom model</span>
+            <span className="text-xs text-blue-300/80 font-medium">Error bound not validated</span>
           </div>
-          <span className="text-[10px] text-slate-400 block">JPL DE405 / VSOP87 ephemeris</span>
+          <span className="text-[10px] text-slate-400 block">Independent house benchmark pending</span>
         </div>
 
         <div className="p-4 bg-slate-950/60 border border-slate-800/80 rounded-xl space-y-1">
           <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1.5">
             <Award className="w-3.5 h-3.5 text-purple-400" />
-            Astrological Authority
+            Tradition references
           </span>
           <div className="flex items-baseline gap-2">
-            <span className="text-xl font-bold font-mono text-purple-400">14 Engines</span>
+            <span className="text-xl font-bold font-mono text-purple-400">14 systems</span>
           </div>
-          <span className="text-[10px] text-slate-400 block">Ptolemy, Kepler, Valens, Ebertin</span>
+          <span className="text-[10px] text-slate-400 block">Interpretive references; not scientific validation</span>
         </div>
       </div>
 

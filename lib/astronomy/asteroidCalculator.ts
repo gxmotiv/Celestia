@@ -1,10 +1,11 @@
 /**
- * High-Precision Asteroids Ephemeris Calculator
- * Calculates geocentric ecliptic longitudes, latitudes, speeds, and sign degrees
- * for the 4 major asteroids: Ceres, Pallas, Juno, and Vesta.
+ * Approximate Major-Asteroid Position Calculator
+ * Estimates geocentric ecliptic longitudes, latitudes, speeds, and sign degrees
+ * for Ceres, Pallas, Juno, and Vesta.
  *
- * Uses Keplerian orbit mechanics with osculating elements and perturbations
- * relative to J2000.0, accurate to standard astrological ephemerides.
+ * Uses simplified Keplerian orbit mechanics with fixed J2000-era orbital elements.
+ * Accuracy across dates has not been independently benchmarked against a current
+ * small-body ephemeris; do not interpret display decimals as an accuracy guarantee.
  */
 
 import { PlanetPosition, formatDegreeMinute, normalizeDegrees, ZODIAC_SIGNS } from "./ephemeris";
