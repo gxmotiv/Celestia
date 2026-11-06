@@ -806,7 +806,7 @@ export function RelationshipAstrologyView({
                     type="date"
                     value={partnerProfile.birthDate}
                     onChange={(e) =>
-                      setPartnerProfile({ ...partnerProfile, birthDate: e.target.value })
+                      setPartnerProfile({ ...partnerProfile, birthDate: e.target.value, selectedUtcInstant: undefined })
                     }
                     className="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded text-slate-200 text-xs focus:outline-none focus:border-rose-500/50"
                   />
@@ -817,7 +817,7 @@ export function RelationshipAstrologyView({
                     type="time"
                     value={partnerProfile.birthTime}
                     onChange={(e) =>
-                      setPartnerProfile({ ...partnerProfile, birthTime: e.target.value })
+                      setPartnerProfile({ ...partnerProfile, birthTime: e.target.value, selectedUtcInstant: undefined })
                     }
                     className="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded text-slate-200 text-xs focus:outline-none focus:border-rose-500/50"
                   />
@@ -908,7 +908,7 @@ export function RelationshipAstrologyView({
                               {opt.lng > 0 ? `${opt.lng.toFixed(2)}°E` : `${Math.abs(opt.lng).toFixed(2)}°W`}
                             </div>
                             <div className="text-amber-400/90">
-                              UTC {opt.tz >= 0 ? `+${opt.tz}` : opt.tz}h
+                              {typeof opt.tz === "number" ? `UTC ${opt.tz >= 0 ? "+" : ""}${opt.tz}h` : "Timezone unavailable"}
                             </div>
                           </div>
                         </button>
@@ -966,15 +966,19 @@ export function RelationshipAstrologyView({
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] text-slate-500 block mb-0.5">Timezone Offset (h)</label>
+                      <label className="text-[10px] text-slate-500 block mb-0.5">Manual UTC Offset (h)</label>
                       <input
                         type="number"
-                        step="0.5"
+                        step="any"
+                        min="-14"
+                        max="14"
                         value={partnerProfile.timezoneOffset}
                         onChange={(e) =>
                           setPartnerProfile({
                             ...partnerProfile,
-                            timezoneOffset: parseFloat(e.target.value) || 0,
+                            timezoneMode: "manual",
+                            timezoneOffset: Number(e.target.value),
+                            manualOffsetConfirmed: false,
                           })
                         }
                         className="w-full px-2 py-1 bg-slate-900 border border-slate-800 rounded text-slate-200 text-xs"
@@ -982,6 +986,65 @@ export function RelationshipAstrologyView({
                     </div>
                   </div>
                 )}
+
+                <div className="p-2.5 bg-slate-950/70 border border-slate-800 rounded-lg space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-semibold text-slate-300">Historical timezone handling</span>
+                    <select
+                      value={partnerProfile.timezoneMode}
+                      onChange={(e) => setPartnerProfile({
+                        ...partnerProfile,
+                        timezoneMode: e.target.value as "automatic" | "manual",
+                        manualOffsetConfirmed: false,
+                        selectedUtcInstant: undefined,
+                      })}
+                      className="px-2 py-1 bg-slate-900 border border-slate-700 rounded text-[10px] text-slate-200"
+                    >
+                      <option value="automatic" disabled={!partnerProfile.ianaTimezone}>Automatic IANA zone</option>
+                      <option value="manual">Manual UTC offset</option>
+                    </select>
+                  </div>
+                  {partnerProfile.timezoneMode === "automatic" ? (
+                    <div className="space-y-1">
+                      <p className="text-[10px] text-slate-400">IANA zone: <span className="font-mono text-amber-300">{partnerProfile.ianaTimezone || "Unavailable"}</span></p>
+                      {partnerTimeResolution?.status === "resolved" && partnerTimeResolution.candidates[0] && (
+                        <p className="text-[10px] text-emerald-300">Resolved: {partnerTimeResolution.candidates[0].instant.toISOString()} · {partnerTimeResolution.candidates[0].offsetLabel}</p>
+                      )}
+                      {partnerTimeResolution?.status === "ambiguous" && (
+                        <div className="space-y-1">
+                          <p className="text-[10px] text-amber-300">This local time occurs twice. Select the intended UTC instant:</p>
+                          <select
+                            value={partnerProfile.selectedUtcInstant ?? ""}
+                            onChange={(e) => setPartnerProfile({ ...partnerProfile, selectedUtcInstant: e.target.value || undefined })}
+                            className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-[10px] text-slate-200"
+                          >
+                            <option value="">Choose UTC instant</option>
+                            {partnerTimeResolution.candidates.map((candidate) => (
+                              <option key={candidate.instant.toISOString()} value={candidate.instant.toISOString()}>
+                                {candidate.instant.toISOString()} · {candidate.offsetLabel}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                      {partnerTimeResolution?.status === "nonexistent" && <p className="text-[10px] text-rose-300">This local clock time did not exist in this timezone.</p>}
+                      {partnerTimeResolution?.status === "unsupported" && <p className="text-[10px] text-amber-300">{partnerTimeResolution.reason}</p>}
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <p className="text-[10px] text-slate-400">The manual offset is user-supplied, not historically verified.</p>
+                      <label className="flex items-center gap-2 text-[10px] text-slate-300">
+                        <input
+                          type="checkbox"
+                          checked={partnerProfile.manualOffsetConfirmed}
+                          onChange={(e) => setPartnerProfile({ ...partnerProfile, manualOffsetConfirmed: e.target.checked })}
+                        />
+                        Confirm manual offset lock
+                      </label>
+                    </div>
+                  )}
+                  <p className="text-[10px] text-amber-300">{partnerTimezoneWarning}</p>
+                </div>
 
                 {/* Active Selected Location Confirmation Pill */}
                 <div className="flex items-center justify-between text-[10px] text-slate-400 bg-slate-950/40 px-2 py-1 rounded border border-slate-800/60 font-mono">
@@ -991,9 +1054,9 @@ export function RelationshipAstrologyView({
                   </span>
                   <span>
                     {partnerProfile.latitude.toFixed(2)}°N, {partnerProfile.longitude.toFixed(2)}°E · UTC
-                    {partnerProfile.timezoneOffset >= 0
-                      ? `+${partnerProfile.timezoneOffset}`
-                      : partnerProfile.timezoneOffset}
+                    {partnerResolvedOffsetHours >= 0
+                      ? `+${partnerResolvedOffsetHours}`
+                      : partnerResolvedOffsetHours}
                     h
                   </span>
                 </div>
