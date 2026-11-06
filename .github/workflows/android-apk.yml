@@ -8,6 +8,7 @@ on:
   push:
     branches:
       - feat/android-apk-wrapper
+      - deploy/cloudflare-workers-free
     paths:
       - "android/**"
       - ".github/workflows/android-apk.yml"
