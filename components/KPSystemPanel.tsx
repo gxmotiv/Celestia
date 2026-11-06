@@ -350,9 +350,9 @@ export function KPSystemPanel({
               {/* Probability & Verdict Badge */}
               <div className="flex items-center gap-3 self-start sm:self-auto">
                 <div className="text-right">
-                  <span className="text-[10px] text-slate-400 uppercase block font-semibold">KP Probability</span>
+                  <span className="text-[10px] text-slate-400 uppercase block font-semibold">Rule-based score (not probability)</span>
                   <span className="text-xl font-bold font-mono text-amber-300">
-                    {currentPrediction.probability}%
+                    {currentPrediction.ruleScore}%
                   </span>
                 </div>
 
@@ -995,9 +995,9 @@ export function KPSystemPanel({
               {/* Confidence & Verdict Badge */}
               <div className="flex items-center gap-3">
                 <div className="text-right">
-                  <span className="text-[10px] text-slate-400 uppercase block font-semibold">Confidence</span>
+                  <span className="text-[10px] text-slate-400 uppercase block font-semibold">Rule score (not statistical confidence)</span>
                   <span className="text-xl font-bold font-mono text-cyan-300">
-                    {horaryResult.confidenceScore}%
+                    {horaryResult.ruleScore}%
                   </span>
                 </div>
 
