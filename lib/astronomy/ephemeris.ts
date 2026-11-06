@@ -652,6 +652,7 @@ export function calculateWesternChart(
 
   // Calculate positions through the astronomy-engine-backed compatibility facade.
   // Default node convention is mean Rahu with Ketu exactly opposite that same node.
+  const sp = swissEphemeris.calculateAllPlanets(jd, false);
 
   const planetsList: PlanetPosition[] = [];
   planetsList.push(formatPoint("Sun", "Sun", sp.sun.longitude, rawCusps, sp.sun.speed, sp.sun.latitude));
