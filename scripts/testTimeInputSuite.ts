@@ -30,7 +30,7 @@ test("Invalid minute returns a marked placeholder", show("12:60") === "12:00" &&
 test("Missing value returns a marked placeholder", show("") === "12:00" && usedFallback(""), "12:00, usedFallback=true", show("") + ", usedFallback=" + usedFallback(""));
 test("Malformed one-digit hour uses fallback", show("9:05") === "12:00", "12:00", show("9:05"));
 const nonString = parseBirthClockTime(null as unknown as string);
-test("Non-string legacy value uses fallback", nonString.hour === 12 && nonString.minute === 0, "12:00", nonString.hour.toString().padStart(2, "0") + ":" + nonString.minute.toString().padStart(2, "0"));
+test("Non-string legacy value uses fallback", nonString.hour === 12 && nonString.minute === 0 && nonString.usedFallback, "12:00 with usedFallback=true",  nonString.hour.toString().padStart(2, "0") + ":" + nonString.minute.toString().padStart(2, "0"));
 
 let passed = 0;
 let failed = 0;
