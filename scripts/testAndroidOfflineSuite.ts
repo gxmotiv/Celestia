@@ -106,8 +106,6 @@ try {
 }
 assert("Invalid birth clock time is rejected", invalidTimeRejected, "Invalid birth time was accepted.");
 
-console.log("ANDROID OFFLINE CALCULATION TESTS: " + passed + " passed, " + failed + " failed");
-if (failed > 0) process.exitCode = 1;
 
 
 const offlineHtml = readFileSync("android/app/src/main/assets/offline/index.html", "utf8");
@@ -131,3 +129,6 @@ assert(
   !/\\bfetch\\s*\\(/.test(offlineHtml),
   "A fetch() call was found in the bundled offline page."
 );
+
+console.log("ANDROID OFFLINE CALCULATION TESTS: " + passed + " passed, " + failed + " failed");
+if (failed > 0) process.exitCode = 1;
