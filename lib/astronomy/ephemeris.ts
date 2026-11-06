@@ -65,7 +65,11 @@ export interface WesternChartData {
   julianDay: number;
   siderealTime: number; // RAMC in degrees
   obliquity: number;
+  /** Actual house system used for the returned cusps. */
   houseSystem: "Placidus" | "Equal" | "WholeSign";
+  requestedHouseSystem: "Placidus" | "Equal" | "WholeSign";
+  houseSystemFallback: boolean;
+  houseSystemFallbackReason?: string;
   asteroids?: AsteroidPositions;
   additionalPoints?: AdditionalPoints;
   arabianParts?: ArabianPartsResult;
@@ -767,7 +771,10 @@ export function calculateWesternChart(
     julianDay: jd,
     siderealTime: ramc,
     obliquity,
-    houseSystem,
+    houseSystem: swissHouses.actualSystem === "P" ? "Placidus" : swissHouses.actualSystem === "W" ? "WholeSign" : "Equal",
+    requestedHouseSystem: houseSystem,
+    houseSystemFallback: swissHouses.fallbackApplied,
+    ...(swissHouses.fallbackReason ? { houseSystemFallbackReason: swissHouses.fallbackReason } : {}),
     asteroids,
     additionalPoints,
     arabianParts,
