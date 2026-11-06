@@ -33,3 +33,15 @@ After this resolver and its regression suite pass in the same GitHub commit:
 ## Validation
 
 Source and tests are submitted for GitHub Actions execution. This document does not claim CI has passed or that the resolver is already used by the live UI.
+
+## Evidence classification for the historical fixtures
+
+The historical fixtures in the automated suite currently assert what the CI runtime's `Intl.DateTimeFormat` / IANA time-zone data returns for the selected inputs. They are regression observations of that runtime's database output, not independent proof of the legal or civil-time history of the location. In particular, the UK 1944, New York 1883, Kathmandu 1986, Lord Howe, and Samoa cases still need authoritative historical-source review before the application labels those results historically verified.
+
+The current GitHub Actions run used Bun 1.4.4 on the Ubuntu 26.04 hosted runner. The time-zone database is not pinned by this repository, and a different browser, operating system, ICU build, or tzdb version may return different historical details. The current 18 passing assertions establish that the resolver and those fixtures work in that CI runtime only.
+
+## Current CI result (2026-11-06)
+
+The latest workflow run for PR #3 completed successfully: all 10 existing standalone test suites passed, the new historical-timezone suite passed 18/18, and the Next.js production build passed. The TypeScript build now excludes `docs/historical_snapshots`, which contains archived source snapshots that are not production modules and have unresolved imports. The snapshots remain in the repository; they are not deleted.
+
+This result verifies the tested GitHub Actions environment. It does not establish interactive browser behavior, correctness in every client runtime, complete Phase 1C UI integration, or independent historical-source verification.
