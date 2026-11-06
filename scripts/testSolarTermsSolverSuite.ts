@@ -1,4 +1,4 @@
-import { calculateSolarTermsForUtcYear } from "../lib/astronomy/solarTerms";
+import { calculateSolarTermsForUtcYear, SOLAR_TERM_LONGITUDES_DEGREES } from "../lib/astronomy/solarTerms";
 
 const results: { name: string; passed: boolean; expected: string; actual: string }[] = [];
 function test(name: string, passed: boolean, expected: string, actual: string) {
@@ -6,9 +6,10 @@ function test(name: string, passed: boolean, expected: string, actual: string) {
 }
 const terms = calculateSolarTermsForUtcYear(2024);
 test("A Gregorian year contains 24 solar-longitude crossings", terms.length === 24, "24", String(terms.length));
-test("Solar-term longitudes cover 0° through 345° in 15° steps",
-  terms.every((term, index) => Math.abs(term.targetLongitude - index * 15) < 1e-9),
-  "0,15,...,345",
+test("Solar-term longitudes contain every 15° boundary exactly once",
+  terms.length === 24 && new Set(terms.map(term => term.targetLongitude)).size === 24 &&
+    SOLAR_TERM_LONGITUDES_DEGREES.every(value => terms.some(term => term.targetLongitude === value)),
+  "0,15,...,345 exactly once",
   terms.map(term => term.targetLongitude).join(","));
 test("Every solved crossing has a <=1ms final bracket",
   terms.every(term => term.bracketWidthMilliseconds <= 1),
