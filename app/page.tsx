@@ -23,6 +23,7 @@ import { calculateWesternChart } from "@/lib/astronomy/ephemeris";
 import { calculateVedicChart } from "@/lib/astronomy/vedic";
 import { calculateNumerologyProfile } from "@/lib/astronomy/numerology";
 import { calculateBaZiProfile } from "@/lib/astronomy/chinese";
+import { parseBirthClockTime } from "@/lib/astronomy/timeInput";
 
 import {
   Compass,
@@ -84,9 +85,7 @@ export default function HomePage() {
     const month = parseInt(mStr, 10) || 1;
     const day = parseInt(dStr, 10) || 1;
 
-    const [hStr, minStr] = formData.birthTime.split(":");
-    const hour = parseInt(hStr, 10) || 12;
-    const minute = parseInt(minStr, 10) || 0;
+    const { hour, minute } = parseBirthClockTime(formData.birthTime);
 
     // Unambiguously normalize local birth date/time and timezone offset to true UTC instant
     const birthDateObj = swissEphemeris.createUTCDate(

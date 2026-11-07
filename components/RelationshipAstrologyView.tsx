@@ -20,6 +20,7 @@ import { KundliMilanEngine, KundliMilanReport } from "@/lib/vedic/kundliMilanEng
 import { MasterKundliMilanOrchestrator, MasterKundliReport } from "@/lib/vedic/masterKundliMilan";
 import { VedicKundliMilanDashboard } from "@/components/VedicKundliMilanDashboard";
 import { searchCities, CityData } from "@/lib/astronomy/cities";
+import { parseBirthClockTime } from "@/lib/astronomy/timeInput";
 import {
   Heart,
   Users,
@@ -386,13 +387,13 @@ export function RelationshipAstrologyView({
   // Calculate Partner's Western Chart
   const partnerChart: WesternChartData = useMemo(() => {
     const [y, m, d] = partnerProfile.birthDate.split("-").map(Number);
-    const [h, min] = partnerProfile.birthTime.split(":").map(Number);
+    const { hour, minute } = parseBirthClockTime(partnerProfile.birthTime);
     return calculateWesternChart(
       y || 1994,
       m || 1,
       d || 1,
-      h || 12,
-      min || 0,
+      hour,
+      minute,
       partnerProfile.latitude,
       partnerProfile.longitude,
       partnerProfile.timezoneOffset,

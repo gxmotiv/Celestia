@@ -1,5 +1,6 @@
 import {
   SolarTermCalculator,
+  getSolarMonthPosition,
   CompleteBaZiEngine,
   SOLAR_TERMS,
   HEAVENLY_STEMS,
@@ -122,6 +123,71 @@ assertTest(
 // 3. FOUR PILLARS CALCULATION
 // ============================================================
 const baziEngine = new CompleteBaZiEngine();
+
+// ============================================================
+// 3A. SOLAR MONTH BRANCH SELECTION (ALL 12 BRANCHES + BOUNDARIES)
+// ============================================================
+const expectedMonthBranches = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, 1];
+for (let monthOrder = 0; monthOrder < 12; monthOrder++) {
+  const boundary = (315 + monthOrder * 30) % 360;
+  const expectedBranch = expectedMonthBranches[monthOrder];
+  const previousBranch = expectedMonthBranches[(monthOrder + 11) % 12];
+
+  const before = getSolarMonthPosition(boundary - 0.000001);
+  const at = getSolarMonthPosition(boundary);
+  const after = getSolarMonthPosition(boundary + 0.000001);
+
+  assertTest(
+    "3A. Solar Month Branches",
+    `Boundary ${boundary}° immediately before belongs to previous branch`,
+    before.branchIndex === previousBranch,
+    `Branch index ${previousBranch}`,
+    `Branch index ${before.branchIndex}`
+  );
+  assertTest(
+    "3A. Solar Month Branches",
+    `Boundary ${boundary}° itself starts the new branch`,
+    at.branchIndex === expectedBranch && at.monthOrderFromLichun === monthOrder,
+    `Branch ${expectedBranch}, month order ${monthOrder}`,
+    `Branch ${at.branchIndex}, month order ${at.monthOrderFromLichun}`
+  );
+  assertTest(
+    "3A. Solar Month Branches",
+    `Boundary ${boundary}° immediately after remains in new branch`,
+    after.branchIndex === expectedBranch,
+    `Branch index ${expectedBranch}`,
+    `Branch index ${after.branchIndex}`
+  );
+}
+
+// Longitude normalization and invalid-input guards.
+assertTest(
+  "3A. Solar Month Branches",
+  "Equivalent longitude 390° normalizes to 30° (Dragon month)",
+  getSolarMonthPosition(390).branchIndex === 4,
+  "Branch index 4",
+  `Branch index ${getSolarMonthPosition(390).branchIndex}`
+);
+assertTest(
+  "3A. Solar Month Branches",
+  "Negative longitude -45° normalizes to 315° (Tiger month)",
+  getSolarMonthPosition(-45).branchIndex === 2,
+  "Branch index 2",
+  `Branch index ${getSolarMonthPosition(-45).branchIndex}`
+);
+let rejectsInvalidLongitude = false;
+try {
+  getSolarMonthPosition(Number.NaN);
+} catch (error) {
+  rejectsInvalidLongitude = error instanceof RangeError;
+}
+assertTest(
+  "3A. Solar Month Branches",
+  "Non-finite solar longitude is rejected",
+  rejectsInvalidLongitude,
+  "RangeError",
+  rejectsInvalidLongitude ? "RangeError" : "No error"
+);
 
 // Test with known benchmark: Jan 1, 2000 @ 12:00 UTC
 // 2000 is before Lichun (Feb 4, 2000) -> Year belongs to 1999 (Ji Mao - Yin Earth Rabbit)
