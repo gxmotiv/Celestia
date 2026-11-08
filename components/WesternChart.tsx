@@ -426,6 +426,8 @@ export function WesternChart({
               person1Time={birthTime}
               person1Lat={latitude}
               person1Lon={longitude}
+              person1TimezoneOffset={timezoneOffset}
+              person1UtcInstant={birthUtcInstant}
             />
           )}
 
