@@ -64,7 +64,8 @@ export function calculateCompleteNumerologyReport(
   if (tamilVidhi === vedicBhagyank) matchPoints += 25;
   if (loShu.arrowsOfStrength.some((a) => a.isPresent)) matchPoints += 20;
 
-  const resonanceScore = Math.min(98, Math.max(65, matchPoints));
+  // A transparent deterministic heuristic, not a probability or validated outcome score.
+  const resonanceScore = Math.min(100, Math.max(0, matchPoints));
 
   const archetypesMap: Record<number, string> = {
     1: "The Sovereign Pioneer & Solar Luminary",
