@@ -65,6 +65,7 @@ interface AdvancedWesternPanelProps {
   latitude?: number;
   longitude?: number;
   timezoneOffset?: number;
+  birthUtcInstant?: string;
 }
 
 export function AdvancedWesternPanel({
@@ -75,6 +76,7 @@ export function AdvancedWesternPanel({
   latitude = 40.7128,
   longitude = -74.006,
   timezoneOffset = 0,
+  birthUtcInstant,
 }: AdvancedWesternPanelProps) {
   const [activeSubTab, setActiveSubTab] = useState<
     | "asteroids"
@@ -125,12 +127,25 @@ export function AdvancedWesternPanel({
     return declinationCalc.calculateAll(chartData.planets, chartData.obliquity);
   }, [declinationCalc, chartData.planets, chartData.obliquity]);
 
-  // Birth Date Object
+  // Use the main chart's already-resolved UTC instant whenever available.
+  // Fallback converts the supplied local clock using its explicit UTC offset.
   const birthDateObj = useMemo(() => {
+    if (birthUtcInstant) {
+      const resolved = new Date(birthUtcInstant);
+      if (!Number.isFinite(resolved.getTime())) {
+        throw new RangeError("The resolved UTC birth instant is invalid.");
+      }
+      return resolved;
+    }
     const [y, m, d] = birthDateStr.split("-").map(Number);
     const [h, min] = birthTimeStr.split(":").map(Number);
-    return new Date(Date.UTC(y || 1990, (m || 1) - 1, d || 1, h || 12, min || 0));
-  }, [birthDateStr, birthTimeStr]);
+    if (![y, m, d, h, min, timezoneOffset].every(Number.isFinite) ||
+        m < 1 || m > 12 || d < 1 || d > 31 || h < 0 || h > 23 || min < 0 || min > 59 ||
+        timezoneOffset < -14 || timezoneOffset > 14) {
+      throw new RangeError("Advanced Western calculations require valid birth date, clock time and UTC offset.");
+    }
+    return new Date(Date.UTC(y, m - 1, d, h, min) - timezoneOffset * 60 * 60 * 1000);
+  }, [birthDateStr, birthTimeStr, timezoneOffset, birthUtcInstant]);
 
   const nowObj = useMemo(() => new Date(), []);
   const currentAgeYears = useMemo(() => {
