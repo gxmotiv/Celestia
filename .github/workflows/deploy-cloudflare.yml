@@ -1,6 +1,9 @@
 name: Celestia Cloudflare Workers
 
 on:
+  push:
+    branches:
+      - deploy/cloudflare-workers-free
   pull_request:
     paths:
       - "app/**"
@@ -55,7 +58,7 @@ jobs:
 
   deploy:
     name: Deploy to Cloudflare Workers
-    if: github.event_name == 'workflow_dispatch' && inputs.deploy == true
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy == true)
     needs: cloudflare-build
     runs-on: ubuntu-latest
     steps:
