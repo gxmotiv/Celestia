@@ -777,7 +777,9 @@ export function calculateWesternChart(
 
   // Calculate Traditional Planetary Hours and Day Ruler
   const planetaryHoursCalc = new PlanetaryHoursCalculator();
-  const planetaryHours = planetaryHoursCalc.calculate(year, month, day, hour, minute, latitude);
+  const planetaryHours = planetaryHoursCalc.calculate(
+    year, month, day, hour, minute, latitude, longitude, timezoneOffsetHours
+  );
 
   // Calculate Ibn Ezra / Lilly Almuten Figuris (Ruler of Geniture)
   const almutenCalc = new AlmutenFigurisCalculator();
