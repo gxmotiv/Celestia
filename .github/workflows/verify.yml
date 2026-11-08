@@ -5,9 +5,10 @@ on:
   push:
     branches:
       - main
+      - fix/celestia-calculation-integrity
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: celestia-ci-${{ github.workflow }}-${{ github.ref }}
@@ -134,6 +135,26 @@ jobs:
           path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 30
+
+      - name: Publish GitHub prerelease with ARM32 and ARM64 APKs
+        if: github.event_name == 'push' && github.ref_name == 'fix/celestia-calculation-integrity'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          branch_tag="${GITHUB_REF_NAME//\//-}"
+          tag="android-v0.2.0-${branch_tag}-build-${GITHUB_RUN_NUMBER}"
+          sha256sum android/app/build/outputs/apk/debug/*.apk > android/app/build/outputs/apk/debug/SHA256SUMS.txt
+          gh release create "$tag" \
+            android/app/build/outputs/apk/debug/app-arm64-v8a-debug.apk \
+            android/app/build/outputs/apk/debug/app-armeabi-v7a-debug.apk \
+            android/app/build/outputs/apk/debug/SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Celestia Android v0.2.0 test build (${GITHUB_RUN_NUMBER})" \
+            --notes "Debug-signed test APKs from ${GITHUB_SHA}. ARM64: arm64-v8a; ARM32: armeabi-v7a. Version 0.2.0 (versionCode 2). Offline mode includes local Western, Vedic, numerology and BaZi natal calculations and local profiles. AI/live research, geocoding, sync, relationship matching, transits and KP are not full offline features. Install as a fresh app if Android reports a signature conflict with an earlier CI build. Not production-signed." \
+            --prerelease \
+            --latest=false
 
   production-build:
     name: Production build
