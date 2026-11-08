@@ -583,6 +583,7 @@ export function RelationshipAstrologyView({
     partnerProfile.name,
     person1Gender,
     partnerProfile.gender,
+    relationshipType,
   ]);
 
   // Filtered synastry aspects
