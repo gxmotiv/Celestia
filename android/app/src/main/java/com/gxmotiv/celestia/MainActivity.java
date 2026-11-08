@@ -8,6 +8,8 @@ import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
@@ -29,6 +31,8 @@ public class MainActivity extends Activity {
     private WebView webView;
     private WebViewAssetLoader assetLoader;
     private boolean offlinePageVisible = false;
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private Runnable mainFrameTimeout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -104,7 +108,28 @@ public class MainActivity extends Activity {
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
                 offlinePageVisible = isOfflineUrl(Uri.parse(url));
+                cancelMainFrameTimeout();
+                if (!offlinePageVisible && APP_HOST.equalsIgnoreCase(Uri.parse(url).getHost())) {
+                    mainFrameTimeout = () -> {
+                        String currentUrl = view.getUrl();
+                        if (currentUrl != null && !offlinePageVisible &&
+                            APP_HOST.equalsIgnoreCase(Uri.parse(currentUrl).getHost())) {
+                            showOfflinePage();
+                        }
+                    };
+                    // A connected phone can still be unable to reach the Worker.
+                    // Do not leave the app on a blank WebView while that request hangs.
+                    mainHandler.postDelayed(mainFrameTimeout, 15000);
+                }
                 super.onPageStarted(view, url, favicon);
+            }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                if (url != null && APP_HOST.equalsIgnoreCase(Uri.parse(url).getHost())) {
+                    cancelMainFrameTimeout();
+                }
+                super.onPageFinished(view, url);
             }
 
             @Override
@@ -173,7 +198,15 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void cancelMainFrameTimeout() {
+        if (mainFrameTimeout != null) {
+            mainHandler.removeCallbacks(mainFrameTimeout);
+            mainFrameTimeout = null;
+        }
+    }
+
     private void showOfflinePage() {
+        cancelMainFrameTimeout();
         if (webView == null || offlinePageVisible) return;
         offlinePageVisible = true;
         webView.loadUrl(OFFLINE_URL);
@@ -198,6 +231,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        cancelMainFrameTimeout();
         if (webView != null) {
             webView.destroy();
             webView = null;
