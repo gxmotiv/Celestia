@@ -40,6 +40,7 @@ interface WesternChartProps {
   latitude?: number;
   longitude?: number;
   timezoneOffset?: number;
+  birthUtcInstant?: string;
 }
 
 export function WesternChart({
@@ -50,6 +51,7 @@ export function WesternChart({
   latitude = 43.7844,
   longitude = 10.9253,
   timezoneOffset = 1,
+  birthUtcInstant,
 }: WesternChartProps) {
   // Construct comprehensive list of all celestial bodies and points available
   const allAvailableBodies: PlanetPosition[] = React.useMemo(() => {
@@ -411,6 +413,7 @@ export function WesternChart({
               latitude={latitude}
               longitude={longitude}
               timezoneOffset={timezoneOffset}
+              birthUtcInstant={birthUtcInstant}
             />
           )}
 
