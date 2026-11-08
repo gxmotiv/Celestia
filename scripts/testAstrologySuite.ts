@@ -506,7 +506,7 @@ const allDashasCombined = orchestrator.generateAllDashas({
     Aquarius: "Saturn",
     Pisces: "Jupiter",
   },
-  birthDate: einsteinDateObj,
+  birthDate: new Date("1000-01-01T00:00:00.000Z"),
   referenceDate: new Date("2026-11-08T12:00:00.000Z"),
 });
 
