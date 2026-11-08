@@ -440,26 +440,21 @@ export function calculateChaldeanComponent(name: string): ChaldeanNameComponent 
 
   const singleRoot = reduceTo9(compoundNumber || 1);
 
-  // If compound number exceeds 52, reduce down until within 10-52 or single digit
-  let lookupNumber = compoundNumber;
-  while (lookupNumber > 52) {
-    lookupNumber = lookupNumber
-      .toString()
-      .split("")
-      .reduce((s, c) => s + parseInt(c, 10), 0);
-  }
-  if (lookupNumber < 10) lookupNumber = singleRoot;
-
+  // Cheiro's compound-number chapter ends at 52. Do not fold an out-of-range
+  // raw name total into an unrelated 10-52 entry; retain the total and its root.
   const compoundMeaning =
-    lookupNumber >= 10 && lookupNumber <= 52
-      ? CHALDEAN_COMPOUND_DATABASE[lookupNumber]
+    compoundNumber >= 10 && compoundNumber <= 52
+      ? CHALDEAN_COMPOUND_DATABASE[compoundNumber]
       : undefined;
+  const noCompoundReason = compoundNumber > 52
+    ? "Cheiro's compound-number reference ends at 52; no Cheiro compound entry is assigned above that range."
+    : "This name total is a single-digit value or does not resolve to a compound number in the 10-52 reference table.";
   const meaning = compoundMeaning || {
     number: compoundNumber,
     title: "No compound-number interpretation",
-    nature: "This name total does not resolve to a compound number in the 10–52 reference table.",
+    nature: noCompoundReason,
     occultSignificance: "Only the single-root value is available for this name total in this implementation.",
-    warning: "Do not attach a compound-number meaning to a single-digit total or an unlisted number.",
+    warning: "Do not attach a compound-number meaning to a single-digit total or an out-of-range number.",
     advice: "Use the single-root calculation only; no compound interpretation is assigned.",
     fortuneCategory: "Neutral" as const,
   };
