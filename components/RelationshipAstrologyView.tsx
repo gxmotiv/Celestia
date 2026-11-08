@@ -537,7 +537,7 @@ export function RelationshipAstrologyView({
   }, [partnerChart, partnerUtcInstant]);
 
   const kundliMilanReport: KundliMilanReport | null = useMemo(() => {
-    if (!person1VedicChart || !partnerVedicChart) return null;
+    if (relationshipType !== "romantic" || !person1VedicChart || !partnerVedicChart) return null;
     try {
       return KundliMilanEngine.calculateMilan(
         person1VedicChart,
@@ -558,10 +558,11 @@ export function RelationshipAstrologyView({
     partnerProfile.name,
     person1Gender,
     partnerProfile.gender,
+    relationshipType,
   ]);
 
   const masterKundliReport: MasterKundliReport | null = useMemo(() => {
-    if (!person1VedicChart || !partnerVedicChart) return null;
+    if (relationshipType !== "romantic" || !person1VedicChart || !partnerVedicChart) return null;
     try {
       return MasterKundliMilanOrchestrator.evaluateMaster(
         person1VedicChart,
@@ -633,7 +634,7 @@ export function RelationshipAstrologyView({
             { id: "vedic", label: "Master Vedic Kundli Milan", icon: "🕉️" },
             { id: "composite", label: "Composite Midpoint Chart", icon: "⊕" },
             { id: "davison", label: "Davison Time-Space Chart", icon: "⏳" },
-          ].map((tab) => (
+          ].filter((tab) => tab.id !== "vedic" || relationshipType === "romantic").map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveRelTab(tab.id as any)}
@@ -692,7 +693,10 @@ export function RelationshipAstrologyView({
                 return (
                   <button
                     key={cat.id}
-                    onClick={() => setRelationshipType(cat.id)}
+                    onClick={() => {
+                      setRelationshipType(cat.id);
+                      if (cat.id !== "romantic" && activeRelTab === "vedic") setActiveRelTab("synastry");
+                    }}
                     className={`p-2 rounded-lg text-left transition-all flex flex-col justify-between border cursor-pointer ${
                       isSelected
                         ? "bg-rose-500/20 border-rose-500/50 shadow-sm"
@@ -1401,7 +1405,7 @@ export function RelationshipAstrologyView({
       )}
 
       {/* 4. MASTER VEDIC KUNDLI MILAN VIEW */}
-      {activeRelTab === "vedic" && (
+      {relationshipType === "romantic" && activeRelTab === "vedic" && (
         <VedicKundliMilanDashboard
           masterReport={masterKundliReport}
           milanReport={kundliMilanReport}
