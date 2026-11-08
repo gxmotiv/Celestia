@@ -83,17 +83,18 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Install pinned Gradle 8.9 with retries
+      - name: Install checksum-verified Gradle 8.14.5 from mirror
         shell: bash
         run: |
           set -euo pipefail
-          DIST="$RUNNER_TEMP/gradle-8.9-bin.zip"
+          DIST="$RUNNER_TEMP/gradle-8.14.5-bin.zip"
           curl --fail --location --retry 6 --retry-all-errors --retry-delay 5 \
-            https://downloads.gradle.org/distributions/gradle-8.9-bin.zip \
+            https://mirror.spaceport.work/gradle/gradle-8.14.5-bin.zip \
             --output "$DIST"
+          echo "6f74b601422d6d6fc4e1f9a1ab6522f642c2fdcbc15ae33ebd30ba3d7198e854  $DIST" | sha256sum --check --status
           unzip -q "$DIST" -d "$RUNNER_TEMP"
-          echo "$RUNNER_TEMP/gradle-8.9/bin" >> "$GITHUB_PATH"
-          "$RUNNER_TEMP/gradle-8.9/bin/gradle" --version
+          echo "$RUNNER_TEMP/gradle-8.14.5/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/gradle-8.14.5/bin/gradle" --version
 
       - name: Configure Gradle dependency cache
         uses: gradle/actions/setup-gradle@v4
