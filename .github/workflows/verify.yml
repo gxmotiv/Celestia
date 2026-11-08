@@ -68,6 +68,58 @@ jobs:
         env:
           CI: "true"
 
+  android-apks:
+    name: Offline Android APK build (ARM32 + ARM64)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install JavaScript dependencies
+        run: npm ci --ignore-scripts
+      - name: Bundle offline calculation engine
+        run: |
+          set -euo pipefail
+          mkdir -p android/app/src/main/assets/offline
+          test -s android/app/src/main/assets/offline/index.html
+          npx --yes esbuild@0.25.11 android/offline/offline.ts --bundle --platform=browser --format=iife --target=es2020 --tsconfig=tsconfig.json --minify --outfile=android/app/src/main/assets/offline/celestia-offline.js
+          test -s android/app/src/main/assets/offline/celestia-offline.js
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+          cache-provider: basic
+      - name: Install Android SDK packages
+        run: |
+          set -euo pipefail
+          export ANDROID_HOME=/usr/local/lib/android/sdk
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
+          test -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager --install "platforms;android-35" "build-tools;35.0.0"
+      - name: Build ARM32 and ARM64 APKs
+        working-directory: android
+        run: gradle --no-daemon :app:assembleDebug
+      - name: Verify APK outputs
+        run: |
+          set -euo pipefail
+          test -s android/app/build/outputs/apk/debug/app-arm64-v8a-debug.apk
+          test -s android/app/build/outputs/apk/debug/app-armeabi-v7a-debug.apk
+          ls -lh android/app/build/outputs/apk/debug/*.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: celestia-android-apks
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 30
+
   production-build:
     name: Production build
     runs-on: ubuntu-latest
