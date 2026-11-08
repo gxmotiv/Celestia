@@ -72,6 +72,9 @@ jobs:
     name: Offline Android APK build (ARM32 + ARM64)
     runs-on: ubuntu-24.04
     timeout-minutes: 35
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -102,7 +105,7 @@ jobs:
           export ANDROID_SDK_ROOT="$ANDROID_HOME"
           export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
           test -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-          yes | sdkmanager --licenses >/dev/null
+          sdkmanager --licenses < <(yes)
           sdkmanager --install "platforms;android-35" "build-tools;35.0.0"
       - name: Build ARM32 and ARM64 APKs
         working-directory: android
