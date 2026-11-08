@@ -40,6 +40,7 @@ jobs:
           - testLunarNodeConsistencySuite.ts
           - testAyanamsaConsistencySuite.ts
           - testTransitAspectDirectionSuite.ts
+          - testPlanetaryHoursSuite.ts
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
