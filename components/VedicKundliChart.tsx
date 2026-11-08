@@ -74,10 +74,18 @@ export function VedicKundliChart({
     );
   }, [vedicData, selectedDivision]);
 
-  // Calculate Drishti report for the active chart
+  // Calculate Drishti from the same varga placements displayed in the chart.
   const drishtiReport = useMemo(() => {
-    return calculateDrishtiMatrix(vedicData.planets, currentChart.ascendant.signIndex);
-  }, [vedicData.planets, currentChart.ascendant.signIndex]);
+    return calculateDrishtiMatrix(
+      currentChart.planets.map((planet) => ({
+        name: planet.name,
+        house: planet.house,
+        rasiIndex: planet.signIndex,
+        rasiName: planet.sign,
+      })),
+      currentChart.ascendant.signIndex
+    );
+  }, [currentChart.planets, currentChart.ascendant.signIndex]);
 
   // House helpers
   const getHouseData = (houseNum: number) => {
