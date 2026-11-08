@@ -1451,7 +1451,7 @@ export class CompleteDashaOrchestrator {
     );
 
     // Add new systems to Convergence
-    if (s116.activeHierarchy.level1) {
+    if (s116.activeHierarchy.level1?.isCurrent) {
       convergence.push({
         system: "Shodashottari",
         activePeriodName: `${s116.activeHierarchy.level1.name} (${s116.activeHierarchy.level2?.name || "Sub"})`,
@@ -1462,7 +1462,7 @@ export class CompleteDashaOrchestrator {
       });
     }
 
-    if (d168.activeHierarchy.level1) {
+    if (d168.activeHierarchy.level1?.isCurrent) {
       convergence.push({
         system: "Dwisaptati",
         activePeriodName: `${d168.activeHierarchy.level1.name} (${d168.activeHierarchy.level2?.name || "Sub"})`,
@@ -1473,7 +1473,7 @@ export class CompleteDashaOrchestrator {
       });
     }
 
-    if (sh60.activeHierarchy.level1) {
+    if (sh60.activeHierarchy.level1?.isCurrent) {
       convergence.push({
         system: "Shastihayani",
         activePeriodName: `${sh60.activeHierarchy.level1.name} Period`,
@@ -1484,7 +1484,7 @@ export class CompleteDashaOrchestrator {
       });
     }
 
-    if (st96.activeHierarchy.level1) {
+    if (st96.activeHierarchy.level1?.isCurrent) {
       convergence.push({
         system: "Sthira",
         activePeriodName: `${st96.activeHierarchy.level1.name} Sign`,
@@ -1495,7 +1495,7 @@ export class CompleteDashaOrchestrator {
       });
     }
 
-    if (mn96.activeHierarchy.level1) {
+    if (mn96.activeHierarchy.level1?.isCurrent) {
       convergence.push({
         system: "Mandooka",
         activePeriodName: `${mn96.activeHierarchy.level1.name} Leap`,
