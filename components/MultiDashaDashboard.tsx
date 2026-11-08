@@ -28,6 +28,7 @@ interface MultiDashaDashboardProps {
   vedicData: VedicChartData;
   birthDate: string;
   birthTime: string;
+  birthUtcInstant?: string;
 }
 
 export type DashaTabId =
@@ -48,6 +49,7 @@ export function MultiDashaDashboard({
   vedicData,
   birthDate,
   birthTime,
+  birthUtcInstant,
 }: MultiDashaDashboardProps) {
   // Navigation tab across all 10 systems + convergence + comparative matrix
   const [activeSystemTab, setActiveSystemTab] = useState<DashaTabId>("convergence");
@@ -59,20 +61,29 @@ export function MultiDashaDashboard({
   const orchestrator = useMemo(() => new CompleteDashaOrchestrator(), []);
   const extendedCalc = useMemo(() => new ExtendedDashaCalculator(), []);
 
-  // Parse birth date and time into UTC Date
+  // Use the exact instant resolved by the main birth-profile pipeline.
+  // The local-clock fallback is retained for standalone callers and preserves midnight.
   const birthDateObj = useMemo(() => {
+    if (birthUtcInstant) {
+      const resolved = new Date(birthUtcInstant);
+      if (!Number.isFinite(resolved.getTime())) {
+        throw new RangeError("The resolved UTC birth instant is invalid.");
+      }
+      return resolved;
+    }
     const [yStr, mStr, dStr] = birthDate.split("-");
     const [hStr, minStr] = birthTime.split(":");
-    return new Date(
-      Date.UTC(
-        parseInt(yStr, 10) || 1990,
-        (parseInt(mStr, 10) || 1) - 1,
-        parseInt(dStr, 10) || 1,
-        parseInt(hStr, 10) || 12,
-        parseInt(minStr, 10) || 0
-      )
-    );
-  }, [birthDate, birthTime]);
+    const year = Number(yStr);
+    const month = Number(mStr);
+    const day = Number(dStr);
+    const hour = Number(hStr);
+    const minute = Number(minStr);
+    if (![year, month, day, hour, minute].every(Number.isFinite) ||
+        month < 1 || month > 12 || day < 1 || day > 31 || hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+      throw new RangeError("Enter a valid birth date and local birth time.");
+    }
+    return new Date(Date.UTC(year, month - 1, day, hour, minute));
+  }, [birthDate, birthTime, birthUtcInstant]);
 
   // Extract Moon coordinates and Nakshatra parameters
   const moonPlanet = useMemo(() => {
