@@ -85,11 +85,11 @@ export function calculateCompleteNumerologyReport(
   const unifiedArchetype =
     archetypesMap[pythagorean.lifePathNumber] || archetypesMap[vedic.bhagyank] || "The Sacred Universal Creator";
 
-  const coreKarmicTheme = `You are an incarnation of ${unifiedArchetype}. Across global numerology systems, your soul vibrates with the foundational leadership of ${vedic.rulingPlanetMulank.planet}, governed occultly by Chaldean Compound ${chaldean.fullName.compoundNumber} (${chaldean.fullName.compoundMeaning.title}), channeled through Sephirah ${kabbalah.outerLifeSephirah.name} on the Tree of Life.`;
+  const coreKarmicTheme = `You are an incarnation of ${unifiedArchetype}. This symbolic synthesis combines the Vedic Mulank ruler ${vedic.rulingPlanetMulank.planet}, Chaldean name total ${chaldean.fullName.compoundNumber} (${chaldean.fullName.compoundMeaning.title}), and Sephirah ${kabbalah.outerLifeSephirah.name} on the Tree of Life. These are traditional numerology interpretations, not measured personality or destiny facts.`;
 
   const actionableDirectives = [
     `Align your primary actions with your Mulank ruler ${vedic.rulingPlanetMulank.planet}; observe ${vedic.rulingPlanetMulank.day} as your sacred weekly power day.`,
-    `Heed the ancient Chaldean occult counsel for Compound ${chaldean.fullName.compoundNumber}: ${chaldean.fullName.compoundMeaning.advice}`,
+    `Chaldean name-total note (${chaldean.fullName.compoundNumber}): ${chaldean.fullName.compoundMeaning.advice}`,
     `Channel your ${pythagorean.expressionPlanes.dominantPlane} Plane dominance into disciplined daily execution.`,
     loShu.missingNumbers.length > 0
       ? `Harmonize missing Lo Shu sector (${loShu.missingNumbers[0].number} - ${loShu.missingNumbers[0].element}): ${loShu.missingNumbers[0].fengShuiRemedy}`
