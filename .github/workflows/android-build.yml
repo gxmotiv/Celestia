@@ -5,6 +5,7 @@ on:
     branches:
       - deploy/cloudflare-workers-free
       - feat/android-offline-mode
+      - fix/celestia-calculation-integrity
     paths:
       - "android/**"
       - "lib/android/**"
