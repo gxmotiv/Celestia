@@ -41,6 +41,7 @@ jobs:
           - testAyanamsaConsistencySuite.ts
           - testTransitAspectDirectionSuite.ts
           - testPlanetaryHoursSuite.ts
+          - testDashaExpiredPeriodSuite.ts
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
