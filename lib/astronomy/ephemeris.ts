@@ -128,6 +128,42 @@ export function normalizeDegrees(deg: number): number {
   return d;
 }
 
+/**
+ * Determines whether a moving longitude is closing on an aspect to a fixed
+ * reference longitude. relativeSpeed is longitude1 minus longitude2 in degrees/day.
+ * Returns false for a stationary/unknown speed and at exactness, where direction
+ * cannot be inferred from a single instant.
+ */
+export function isAngularAspectApplying(
+  longitude1: number,
+  longitude2: number,
+  aspectAngle: number,
+  relativeSpeed: number
+): boolean {
+  if (![longitude1, longitude2, aspectAngle, relativeSpeed].every(Number.isFinite) ||
+      Math.abs(relativeSpeed) < 1e-12) {
+    return false;
+  }
+
+  const separation = normalizeDegrees(longitude1 - longitude2);
+  const targets = aspectAngle === 0 || aspectAngle === 180
+    ? [normalizeDegrees(aspectAngle)]
+    : [normalizeDegrees(aspectAngle), normalizeDegrees(360 - aspectAngle)];
+
+  let nearestSignedError = 0;
+  let nearestMagnitude = Number.POSITIVE_INFINITY;
+  for (const target of targets) {
+    const signedError = normalizeDegrees(separation - target + 180) - 180;
+    if (Math.abs(signedError) < nearestMagnitude) {
+      nearestMagnitude = Math.abs(signedError);
+      nearestSignedError = signedError;
+    }
+  }
+
+  if (nearestMagnitude < 1e-9) return false;
+  return nearestSignedError * relativeSpeed < 0;
+}
+
 export function formatDegreeMinute(deg: number): string {
   const norm = normalizeDegrees(deg);
   const signIdx = Math.floor(norm / 30);
@@ -596,9 +632,9 @@ export function calculateAspects(planets: PlanetPosition[]): AspectData[] {
         const orbDiff = Math.abs(diff - asp.angle);
 
         if (orbDiff <= maxOrb) {
-          // Applying vs separating check based on relative speeds
-          const relativeSpeed = (p1.speed || 1) - (p2.speed || 0.5);
-          const isApplying = relativeSpeed > 0 ? diff < asp.angle : diff > asp.angle;
+          // Compare the signed angular error to the nearest aspect branch.
+          const relativeSpeed = (p1.speed ?? 0) - (p2.speed ?? 0);
+          const isApplying = isAngularAspectApplying(p1.longitude, p2.longitude, asp.angle, relativeSpeed);
 
           aspects.push({
             planet1: p1.name,
