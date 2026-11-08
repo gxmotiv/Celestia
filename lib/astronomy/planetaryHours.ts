@@ -61,39 +61,62 @@ const PLANET_SYMBOLS: Record<string, string> = {
 
 export class PlanetaryHoursCalculator {
   /**
-   * Approximate sunrise and sunset times (in decimal hours 0..24)
-   * using solar declination and geographic latitude.
+   * Approximate apparent sunrise and sunset in local civil-clock hours.
+   * Uses the NOAA fractional-year solar declination/equation-of-time model,
+   * with longitude (east positive) and the supplied UTC offset.
+   * This is a daily approximation, not a precision rise/set ephemeris.
    */
   public calculateSunTimes(
     year: number,
     month: number,
     day: number,
-    latitude: number
+    latitude: number,
+    longitude: number = 0,
+    timezoneOffsetHours: number = 0
   ): { sunrise: number; sunset: number } {
-    // Day of the year
-    const startOfYear = new Date(Date.UTC(year, 0, 1));
-    const targetDate = new Date(Date.UTC(year, month - 1, day));
-    const dayOfYear = Math.floor((targetDate.getTime() - startOfYear.getTime()) / 86400000) + 1;
+    if (![year, month, day, latitude, longitude, timezoneOffsetHours].every(Number.isFinite) ||
+        month < 1 || month > 12 || day < 1 || day > 31 ||
+        latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180 ||
+        timezoneOffsetHours < -14 || timezoneOffsetHours > 14) {
+      throw new RangeError("Planetary hours require a valid date, latitude, longitude and UTC offset.");
+    }
 
-    // Approximate solar declination in radians
-    const declination = 0.4095 * Math.sin(0.0172 * (dayOfYear - 79.35));
-    const latRad = (latitude * Math.PI) / 180.0;
+    const date = new Date(Date.UTC(year, month - 1, day));
+    if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
+      throw new RangeError("Planetary-hours date is not a valid Gregorian date.");
+    }
+    const dayOfYear = Math.floor((date.getTime() - Date.UTC(year, 0, 1)) / 86400000) + 1;
+    const daysInYear = ((year % 4 === 0 && year % 100 !== 0) || year % 400 === 0) ? 366 : 365;
+    const gamma = (2 * Math.PI / daysInYear) * (dayOfYear - 1);
+    const equationOfTime = 229.18 * (
+      0.000075 + 0.001868 * Math.cos(gamma) - 0.032077 * Math.sin(gamma) -
+      0.014615 * Math.cos(2 * gamma) - 0.040849 * Math.sin(2 * gamma)
+    );
+    const declination =
+      0.006918 - 0.399912 * Math.cos(gamma) + 0.070257 * Math.sin(gamma) -
+      0.006758 * Math.cos(2 * gamma) + 0.000907 * Math.sin(2 * gamma) -
+      0.002697 * Math.cos(3 * gamma) + 0.00148 * Math.sin(3 * gamma);
 
-    // Hour angle at sunrise/sunset with standard refraction (-0.833 degrees = -0.0145 rad)
-    let cosH = (Math.sin(-0.0145) - Math.sin(latRad) * Math.sin(declination)) /
-               (Math.cos(latRad) * Math.cos(declination));
+    const latitudeRadians = latitude * Math.PI / 180;
+    const zenithRadians = 90.833 * Math.PI / 180;
+    const cosHourAngle = (
+      Math.cos(zenithRadians) - Math.sin(latitudeRadians) * Math.sin(declination)
+    ) / (Math.cos(latitudeRadians) * Math.cos(declination));
+    if (cosHourAngle > 1 || cosHourAngle < -1) {
+      // Polar night/day: no ordinary sunrise/sunset exists on this date.
+      // Return the limiting interval rather than inventing a rise or set time.
+      return cosHourAngle > 1 ? { sunrise: 12, sunset: 12 } : { sunrise: 0, sunset: 24 };
+    }
 
-    // Clamp for extreme latitudes
-    if (cosH > 1) cosH = 1;
-    if (cosH < -1) cosH = -1;
-
-    const H = Math.acos(cosH) * (180.0 / Math.PI) / 15.0; // hours from solar noon
-
-    const solarNoon = 12.0; // Mean solar noon approximation
-    const sunrise = Math.max(0, solarNoon - H);
-    const sunset = Math.min(24, solarNoon + H);
-
-    return { sunrise, sunset };
+    const hourAngleDegrees = Math.acos(Math.min(1, Math.max(-1, cosHourAngle))) * 180 / Math.PI;
+    const solarNoonUtcMinutes = 720 - 4 * longitude - equationOfTime;
+    const sunriseLocalMinutes = solarNoonUtcMinutes - 4 * hourAngleDegrees + timezoneOffsetHours * 60;
+    const sunsetLocalMinutes = solarNoonUtcMinutes + 4 * hourAngleDegrees + timezoneOffsetHours * 60;
+    const normalizeMinutes = (value: number) => ((value % 1440) + 1440) % 1440;
+    return {
+      sunrise: normalizeMinutes(sunriseLocalMinutes) / 60,
+      sunset: normalizeMinutes(sunsetLocalMinutes) / 60,
+    };
   }
 
   public calculate(
@@ -102,96 +125,80 @@ export class PlanetaryHoursCalculator {
     day: number,
     hour: number,
     minute: number,
-    latitude: number
+    latitude: number,
+    longitude: number = 0,
+    timezoneOffsetHours: number = 0
   ): PlanetaryHoursResult {
-    const birthTimeDecimal = hour + minute / 60.0;
-    const { sunrise, sunset } = this.calculateSunTimes(year, month, day, latitude);
-
-    // Day of the week: 0 = Sun, 1 = Mon, ..., 6 = Sat
-    const dateObj = new Date(Date.UTC(year, month - 1, day));
-    // In classical astrology, the astrological day begins at sunrise!
-    let dayOfWeekIndex = dateObj.getUTCDay();
-    if (birthTimeDecimal < sunrise) {
-      // Prior astrological day
-      dayOfWeekIndex = (dayOfWeekIndex + 6) % 7;
+    if (![hour, minute].every(Number.isFinite) || hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+      throw new RangeError("Planetary-hours birth clock must be a valid local HH:mm time.");
     }
+    const birthTimeMinutes = hour * 60 + minute;
+    const { sunrise, sunset } = this.calculateSunTimes(
+      year, month, day, latitude, longitude, timezoneOffsetHours
+    );
+    const sunriseMinutes = Math.round(sunrise * 60);
+    const sunsetMinutes = Math.round(sunset * 60);
+    const isBeforeSunrise = birthTimeMinutes < sunriseMinutes;
+    const dayShift = isBeforeSunrise ? -1440 : 0;
+    const dayAnchor = sunriseMinutes + dayShift;
+    let sunsetAnchor = sunsetMinutes + dayShift;
+    if (sunsetAnchor <= dayAnchor) sunsetAnchor += 1440;
+    const birthTimeOnDayline = birthTimeMinutes;
+    const isDaytime = birthTimeOnDayline >= dayAnchor && birthTimeOnDayline < sunsetAnchor;
 
+    // The astrological weekday changes at local sunrise, not midnight.
+    const calendarDate = new Date(Date.UTC(year, month - 1, day));
+    const civilWeekday = calendarDate.getUTCDay();
+    const dayOfWeekIndex = (civilWeekday + (isBeforeSunrise ? 6 : 0)) % 7;
     const dayRulerInfo = DAY_RULERS[dayOfWeekIndex];
     const dayRuler = dayRulerInfo.ruler;
-
-    // Start index in Chaldean order for the 1st hour of the day
     const firstHourIndex = CHALDEAN_ORDER.indexOf(dayRuler as any);
-
-    const isDaytime = birthTimeDecimal >= sunrise && birthTimeDecimal < sunset;
-    const dayDuration = sunset - sunrise;
-    const nightDuration = 24.0 - dayDuration;
-
-    const dayHourLength = dayDuration / 12.0;
-    const nightHourLength = nightDuration / 12.0;
+    const dayDuration = Math.max(0, sunsetAnchor - dayAnchor);
+    const nightDuration = 1440 - dayDuration;
+    const dayHourLength = dayDuration / 12;
+    const nightHourLength = nightDuration / 12;
 
     const hours: PlanetaryHour[] = [];
     let currentHourRuler = dayRuler;
     let birthHourNumber = 1;
 
-    // 12 Day Hours
     for (let i = 0; i < 12; i++) {
-      const hStart = sunrise + i * dayHourLength;
-      const hEnd = sunrise + (i + 1) * dayHourLength;
-      const rulerIdx = (firstHourIndex + i) % 7;
-      const ruler = CHALDEAN_ORDER[rulerIdx];
-      const isCurrent = isDaytime && birthTimeDecimal >= hStart && birthTimeDecimal < hEnd;
-
+      const start = dayAnchor + i * dayHourLength;
+      const end = dayAnchor + (i + 1) * dayHourLength;
+      const ruler = CHALDEAN_ORDER[(firstHourIndex + i) % 7];
+      const isCurrent = isDaytime && birthTimeOnDayline >= start && birthTimeOnDayline < end;
       if (isCurrent) {
         currentHourRuler = ruler;
         birthHourNumber = i + 1;
       }
-
       hours.push({
         hourNumber: i + 1,
         isDayHour: true,
         ruler,
         rulerSymbol: PLANET_SYMBOLS[ruler] || "",
-        startTime: this.formatTimeDecimal(hStart),
-        endTime: this.formatTimeDecimal(hEnd),
+        startTime: this.formatTimeDecimal(start / 60),
+        endTime: this.formatTimeDecimal(end / 60),
         isCurrentBirthHour: isCurrent,
       });
     }
 
-    // 12 Night Hours (continues sequentially in Chaldean order)
     const firstNightHourIndex = (firstHourIndex + 12) % 7;
     for (let i = 0; i < 12; i++) {
-      let hStart = sunset + i * nightHourLength;
-      let hEnd = sunset + (i + 1) * nightHourLength;
-      const rulerIdx = (firstNightHourIndex + i) % 7;
-      const ruler = CHALDEAN_ORDER[rulerIdx];
-
-      // Normalized if passing midnight (24:00)
-      const hStartNorm = hStart >= 24 ? hStart - 24 : hStart;
-      const hEndNorm = hEnd >= 24 ? hEnd - 24 : hEnd;
-
-      let isCurrent = false;
-      if (!isDaytime) {
-        if (birthTimeDecimal >= sunset) {
-          isCurrent = birthTimeDecimal >= hStart && birthTimeDecimal < hEnd;
-        } else {
-          // Early morning before sunrise
-          const normalizedBirth = birthTimeDecimal + 24.0;
-          isCurrent = normalizedBirth >= hStart && normalizedBirth < hEnd;
-        }
-      }
-
+      const start = sunsetAnchor + i * nightHourLength;
+      const end = sunsetAnchor + (i + 1) * nightHourLength;
+      const ruler = CHALDEAN_ORDER[(firstNightHourIndex + i) % 7];
+      const isCurrent = !isDaytime && birthTimeOnDayline >= start && birthTimeOnDayline < end;
       if (isCurrent) {
         currentHourRuler = ruler;
         birthHourNumber = i + 1;
       }
-
       hours.push({
         hourNumber: i + 1,
         isDayHour: false,
         ruler,
         rulerSymbol: PLANET_SYMBOLS[ruler] || "",
-        startTime: this.formatTimeDecimal(hStartNorm),
-        endTime: this.formatTimeDecimal(hEndNorm),
+        startTime: this.formatTimeDecimal(start / 60),
+        endTime: this.formatTimeDecimal(end / 60),
         isCurrentBirthHour: isCurrent,
       });
     }
@@ -204,10 +211,10 @@ export class PlanetaryHoursCalculator {
       currentHourRulerSymbol: PLANET_SYMBOLS[currentHourRuler] || "☉",
       birthHourNumber,
       isBirthInDaytime: isDaytime,
-      sunriseTime: this.formatTimeDecimal(sunrise),
-      sunsetTime: this.formatTimeDecimal(sunset),
-      dayHourDurationMinutes: Math.round(dayHourLength * 60),
-      nightHourDurationMinutes: Math.round(nightHourLength * 60),
+      sunriseTime: this.formatTimeDecimal(dayAnchor / 60),
+      sunsetTime: this.formatTimeDecimal(sunsetAnchor / 60),
+      dayHourDurationMinutes: Math.round(dayHourLength),
+      nightHourDurationMinutes: Math.round(nightHourLength),
       hours,
     };
   }
