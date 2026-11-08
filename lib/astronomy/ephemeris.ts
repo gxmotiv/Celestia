@@ -67,8 +67,8 @@ export interface WesternChartData {
   julianDay: number;
   siderealTime: number; // local sidereal time / RAMC in degrees
   obliquity: number;
-  birthLatitude: number;
-  birthLongitude: number; // east-positive degrees
+  birthLatitude?: number;
+  birthLongitude?: number; // east-positive degrees
   houseSystem: "Placidus" | "Equal" | "WholeSign";
   asteroids?: AsteroidPositions;
   additionalPoints?: AdditionalPoints;
