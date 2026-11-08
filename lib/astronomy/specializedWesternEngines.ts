@@ -312,7 +312,15 @@ export class AstrocartographyEngine {
     }
 
     // siderealTime is the local RAMC (= GMST + east-positive birth longitude).
-    const greenwichSidereal = normalizeDegrees(chart.siderealTime - chart.birthLongitude);
+    const birthLongitude = chart.birthLongitude;
+    if (typeof birthLongitude !== "number" || !Number.isFinite(birthLongitude)) {
+      return {
+        powerLines: [],
+        topDestinations: [],
+        calculationNote: "Birth longitude is unavailable. No geographic lines were generated.",
+      };
+    }
+    const greenwichSidereal = normalizeDegrees(chart.siderealTime - birthLongitude);
     const obliquity = radians(chart.obliquity);
     const standardPlanets = new Set(["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto"]);
 
