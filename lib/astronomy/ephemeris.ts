@@ -65,8 +65,10 @@ export interface WesternChartData {
   descendant: number;
   imumCoeli: number;
   julianDay: number;
-  siderealTime: number; // RAMC in degrees
+  siderealTime: number; // local sidereal time / RAMC in degrees
   obliquity: number;
+  birthLatitude: number;
+  birthLongitude: number; // east-positive degrees
   houseSystem: "Placidus" | "Equal" | "WholeSign";
   asteroids?: AsteroidPositions;
   additionalPoints?: AdditionalPoints;
@@ -807,6 +809,8 @@ export function calculateWesternChart(
     julianDay: jd,
     siderealTime: ramc,
     obliquity,
+    birthLatitude: latitude,
+    birthLongitude: longitude,
     houseSystem,
     asteroids,
     additionalPoints,
