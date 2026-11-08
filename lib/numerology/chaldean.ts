@@ -451,17 +451,26 @@ export function calculateChaldeanComponent(name: string): ChaldeanNameComponent 
   if (lookupNumber < 10) lookupNumber = singleRoot;
 
   const compoundMeaning =
-    CHALDEAN_COMPOUND_DATABASE[lookupNumber] ||
-    CHALDEAN_COMPOUND_DATABASE[singleRoot * 10] ||
-    CHALDEAN_COMPOUND_DATABASE[10];
+    lookupNumber >= 10 && lookupNumber <= 52
+      ? CHALDEAN_COMPOUND_DATABASE[lookupNumber]
+      : undefined;
+  const meaning = compoundMeaning || {
+    number: compoundNumber,
+    title: "No compound-number interpretation",
+    nature: "This name total does not resolve to a compound number in the 10–52 reference table.",
+    occultSignificance: "Only the single-root value is available for this name total in this implementation.",
+    warning: "Do not attach a compound-number meaning to a single-digit total or an unlisted number.",
+    advice: "Use the single-root calculation only; no compound interpretation is assigned.",
+    fortuneCategory: "Neutral" as const,
+  };
 
   return {
     name,
     compoundNumber,
     singleRoot,
     compoundMeaning: {
-      ...compoundMeaning,
-      number: compoundNumber, // keep actual full compound
+      ...meaning,
+      number: compoundNumber, // preserve the actual summed total
     },
   };
 }
