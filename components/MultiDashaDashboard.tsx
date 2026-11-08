@@ -108,25 +108,33 @@ export function MultiDashaDashboard({
 
   // Calculate current Sookshma context for Level 5 Prana
   const currentMD = useMemo(() => {
-    return (
-      vedicData.vimshottariDashas.find((d) => d.isCurrent) ||
-      vedicData.vimshottariDashas[0]
-    );
-  }, [vedicData]);
+    return vedicData.vimshottariDashas.find((period) => {
+      const start = new Date(period.startDate).getTime();
+      const end = new Date(period.endDate).getTime();
+      return Number.isFinite(start) && Number.isFinite(end) &&
+        referenceDate.getTime() >= start && referenceDate.getTime() < end;
+    }) ?? null;
+  }, [vedicData, referenceDate]);
 
   const currentAD = useMemo(() => {
-    return currentMD.subPeriods?.find((s) => s.isCurrent) || currentMD.subPeriods?.[0];
-  }, [currentMD]);
+    if (!currentMD) return null;
+    return currentMD.subPeriods?.find((period) => {
+      const start = new Date(period.startDate).getTime();
+      const end = new Date(period.endDate).getTime();
+      return Number.isFinite(start) && Number.isFinite(end) &&
+        referenceDate.getTime() >= start && referenceDate.getTime() < end;
+    }) ?? null;
+  }, [currentMD, referenceDate]);
 
   const sookshmaContext = useMemo(() => {
+    if (!currentMD || !currentAD) return undefined;
     const mdName = currentMD.planet;
-    const adName = currentAD?.planet || mdName;
+    const adName = currentAD.planet;
     const mdYears = ExtendedDashaCalculator.DASHA_YEARS[mdName] || 10;
     const adYears = ExtendedDashaCalculator.DASHA_YEARS[adName] || 10;
     const adTotalYears = (mdYears * adYears) / 120;
-    const adStartDate = currentAD ? new Date(currentAD.startDate) : new Date();
+    const adStartDate = new Date(currentAD.startDate);
 
-    // Generate Level 3 & Level 4
     const pds = extendedCalc.generatePratyantardashas(
       mdName,
       adName,
@@ -134,8 +142,9 @@ export function MultiDashaDashboard({
       adTotalYears,
       referenceDate
     );
-    const activePD = pds.find((p) => p.isCurrent) || pds[0];
-    const activeSK = activePD.sookshmas.find((s) => s.isCurrent) || activePD.sookshmas[0];
+    const activePD = pds.find((period) => period.isCurrent);
+    const activeSK = activePD?.sookshmas.find((period) => period.isCurrent);
+    if (!activePD || !activeSK) return undefined;
 
     return {
       mahadasha: mdName,
