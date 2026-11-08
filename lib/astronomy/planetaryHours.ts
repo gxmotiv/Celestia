@@ -26,6 +26,7 @@ export interface PlanetaryHoursResult {
   sunsetTime: string;
   dayHourDurationMinutes: number;
   nightHourDurationMinutes: number;
+  solarCondition: "normal" | "polar-day" | "polar-night";
   hours: PlanetaryHour[];
 }
 
@@ -73,7 +74,7 @@ export class PlanetaryHoursCalculator {
     latitude: number,
     longitude: number = 0,
     timezoneOffsetHours: number = 0
-  ): { sunrise: number; sunset: number } {
+  ): { sunrise: number; sunset: number; solarCondition: "normal" | "polar-day" | "polar-night" } {
     if (![year, month, day, latitude, longitude, timezoneOffsetHours].every(Number.isFinite) ||
         month < 1 || month > 12 || day < 1 || day > 31 ||
         latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180 ||
@@ -105,7 +106,9 @@ export class PlanetaryHoursCalculator {
     if (cosHourAngle > 1 || cosHourAngle < -1) {
       // Polar night/day: no ordinary sunrise/sunset exists on this date.
       // Return the limiting interval rather than inventing a rise or set time.
-      return cosHourAngle > 1 ? { sunrise: 12, sunset: 12 } : { sunrise: 0, sunset: 24 };
+      return cosHourAngle > 1
+        ? { sunrise: 12, sunset: 12, solarCondition: "polar-night" }
+        : { sunrise: 0, sunset: 24, solarCondition: "polar-day" };
     }
 
     const hourAngleDegrees = Math.acos(Math.min(1, Math.max(-1, cosHourAngle))) * 180 / Math.PI;
@@ -116,6 +119,7 @@ export class PlanetaryHoursCalculator {
     return {
       sunrise: normalizeMinutes(sunriseLocalMinutes) / 60,
       sunset: normalizeMinutes(sunsetLocalMinutes) / 60,
+      solarCondition: "normal",
     };
   }
 
@@ -133,7 +137,7 @@ export class PlanetaryHoursCalculator {
       throw new RangeError("Planetary-hours birth clock must be a valid local HH:mm time.");
     }
     const birthTimeMinutes = hour * 60 + minute;
-    const { sunrise, sunset } = this.calculateSunTimes(
+    const { sunrise, sunset, solarCondition } = this.calculateSunTimes(
       year, month, day, latitude, longitude, timezoneOffsetHours
     );
     const sunriseMinutes = Math.round(sunrise * 60);
@@ -142,7 +146,13 @@ export class PlanetaryHoursCalculator {
     const dayShift = isBeforeSunrise ? -1440 : 0;
     const dayAnchor = sunriseMinutes + dayShift;
     let sunsetAnchor = sunsetMinutes + dayShift;
-    if (sunsetAnchor <= dayAnchor) sunsetAnchor += 1440;
+    if (solarCondition === "polar-day") {
+      sunsetAnchor = dayAnchor + 1440;
+    } else if (solarCondition === "polar-night") {
+      sunsetAnchor = dayAnchor;
+    } else if (sunsetAnchor <= dayAnchor) {
+      sunsetAnchor += 1440;
+    }
     const birthTimeOnDayline = birthTimeMinutes;
     const isDaytime = birthTimeOnDayline >= dayAnchor && birthTimeOnDayline < sunsetAnchor;
 
@@ -153,7 +163,7 @@ export class PlanetaryHoursCalculator {
     const dayRulerInfo = DAY_RULERS[dayOfWeekIndex];
     const dayRuler = dayRulerInfo.ruler;
     const firstHourIndex = CHALDEAN_ORDER.indexOf(dayRuler as any);
-    const dayDuration = Math.max(0, sunsetAnchor - dayAnchor);
+    const dayDuration = Math.max(0, Math.min(1440, sunsetAnchor - dayAnchor));
     const nightDuration = 1440 - dayDuration;
     const dayHourLength = dayDuration / 12;
     const nightHourLength = nightDuration / 12;
@@ -215,6 +225,7 @@ export class PlanetaryHoursCalculator {
       sunsetTime: this.formatTimeDecimal(sunsetAnchor / 60),
       dayHourDurationMinutes: Math.round(dayHourLength),
       nightHourDurationMinutes: Math.round(nightHourLength),
+      solarCondition,
       hours,
     };
   }
