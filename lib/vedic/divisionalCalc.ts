@@ -88,7 +88,7 @@ export function calculateDivisionalDegreeInSign(
     let segmentStart = 0;
     for (const width of segments) {
       if (degreeInRasi < segmentStart + width || segmentStart + width >= 30) {
-        return Math.min(30 - Number.EPSILON, Math.max(0, ((degreeInRasi - segmentStart) / width) * 30));
+        return Math.min(29.999999999, Math.max(0, ((degreeInRasi - segmentStart) / width) * 30));
       }
       segmentStart += width;
     }
@@ -100,7 +100,7 @@ export function calculateDivisionalDegreeInSign(
 }
 
 function formatDivisionalDegree(degree: number): string {
-  const safeDegree = Math.min(30 - Number.EPSILON, Math.max(0, degree));
+  const safeDegree = Math.min(29.999999999, Math.max(0, degree));
   const wholeDegrees = Math.floor(safeDegree);
   const minutes = Math.floor((safeDegree - wholeDegrees) * 60);
   return `${wholeDegrees}°${minutes.toString().padStart(2, "0")}′`;
