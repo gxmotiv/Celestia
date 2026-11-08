@@ -222,6 +222,15 @@ assert("Single-digit Chaldean totals do not receive an invented compound meaning
 const validCompoundName = calculateChaldeanComponent("JJJJJJJJJJ");
 assert("Chaldean compound totals in the 10–52 range retain their database meaning",
   validCompoundName.compoundNumber === 10 && validCompoundName.compoundMeaning.title === CHALDEAN_COMPOUND_DATABASE[10].title);
+const maxCheiroCompound = calculateChaldeanComponent("J".repeat(52));
+assert("The upper published Cheiro compound bound (52) retains its table meaning",
+  maxCheiroCompound.compoundNumber === 52 &&
+  maxCheiroCompound.compoundMeaning.title === CHALDEAN_COMPOUND_DATABASE[52].title);
+const outsideCheiroCompound = calculateChaldeanComponent("J".repeat(53));
+assert("A raw total above 52 is not digit-folded into an unrelated Cheiro entry",
+  outsideCheiroCompound.compoundNumber === 53 && outsideCheiroCompound.singleRoot === 8 &&
+  outsideCheiroCompound.compoundMeaning.title === "No compound-number interpretation" &&
+  outsideCheiroCompound.compoundMeaning.fortuneCategory === "Neutral");
 
 // -----------------------------------------------------------------------------
 // 6. TAMIL EN KANIYAM TESTS
