@@ -507,14 +507,25 @@ const allDashasCombined = orchestrator.generateAllDashas({
     Pisces: "Jupiter",
   },
   birthDate: einsteinDateObj,
+  referenceDate: new Date("2026-11-08T12:00:00.000Z"),
 });
 
 assertTest(
-  "4.1 Dasha Convergence",
-  "Multi-Dasha Convergence across all 10 Classical Dasha Systems (Vimshottari, Yogini, Chara, Kalachakra, Ashtottari, Shodashottari, Dwisaptati, Shastihayani, Sthira, Mandooka)",
-  allDashasCombined.convergence.length === 10,
-  "10 synchronized Dasha systems",
-  `${allDashasCombined.convergence.length} systems summarized`
+  "4.1 Dasha Current-Period Filtering",
+  "An 1879 birth profile must not show any finite classical Dasha as current in 2026 when all generated cycles have expired",
+  allDashasCombined.convergence.length === 0 &&
+    allDashasCombined.fiveLevels.vimshottari.activeHierarchy.level1 === null &&
+    allDashasCombined.fiveLevels.yogini.activeHierarchy.level1 === null &&
+    allDashasCombined.fiveLevels.chara.activeHierarchy.level1 === null &&
+    allDashasCombined.fiveLevels.ashtottari.activeHierarchy.level1 === null &&
+    allDashasCombined.fiveLevels.kalachakra.activeHierarchy.level1 === null &&
+    allDashasCombined.fiveLevels.shodashottari.activeHierarchy.level1 === null &&
+    allDashasCombined.fiveLevels.dwisaptati.activeHierarchy.level1 === null &&
+    allDashasCombined.fiveLevels.shastihayani.activeHierarchy.level1 === null &&
+    allDashasCombined.fiveLevels.sthira.activeHierarchy.level1 === null &&
+    allDashasCombined.fiveLevels.mandooka.activeHierarchy.level1 === null,
+  "No active period for the expired historical chart",
+  `${allDashasCombined.convergence.length} periods incorrectly summarized as current`
 );
 
 // 4.2 Performance Benchmark
