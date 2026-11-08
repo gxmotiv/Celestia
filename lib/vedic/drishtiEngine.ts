@@ -9,7 +9,7 @@
  * 4. Coordinate mapping for visual SVG ray overlays on North & South Indian Kundli
  */
 
-import { VedicPlanet, VEDIC_RASIS } from "@/lib/astronomy/vedic";
+import { VEDIC_RASIS } from "@/lib/astronomy/vedic";
 
 export interface GrahaAspect {
   aspectingPlanet: string;
@@ -116,8 +116,15 @@ export function getJaiminiAspectedSigns(signIndex: number): number[] {
   }
 }
 
+export interface DrishtiPlanetInput {
+  name: string;
+  house: number;
+  rasiIndex: number;
+  rasiName: string;
+}
+
 export function calculateDrishtiMatrix(
-  planets: VedicPlanet[],
+  planets: DrishtiPlanetInput[],
   ascendantSignIndex: number
 ): DrishtiMatrixReport {
   const grahaAspects: GrahaAspect[] = [];
