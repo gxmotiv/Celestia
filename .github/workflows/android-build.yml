@@ -83,10 +83,21 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Gradle 8.9
+      - name: Install pinned Gradle 8.9 with retries
+        shell: bash
+        run: |
+          set -euo pipefail
+          DIST="$RUNNER_TEMP/gradle-8.9-bin.zip"
+          curl --fail --location --retry 6 --retry-all-errors --retry-delay 5 \
+            https://downloads.gradle.org/distributions/gradle-8.9-bin.zip \
+            --output "$DIST"
+          unzip -q "$DIST" -d "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/gradle-8.9/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/gradle-8.9/bin/gradle" --version
+
+      - name: Configure Gradle dependency cache
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: "8.9"
           cache-provider: basic
 
       - name: Install Android SDK packages from runner SDK
