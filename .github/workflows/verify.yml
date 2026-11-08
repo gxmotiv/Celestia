@@ -45,9 +45,10 @@ jobs:
           - testAndroidOfflineSuite.ts
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
+      - name: Install pinned Bun from npm
+        run: |
+          npm install --global bun@1.4.4
+          test "$(bun --version)" = "1.4.4"
       - run: bun install --frozen-lockfile
       - name: Run ${{ matrix.script }}
         run: bun run scripts/${{ matrix.script }}
@@ -60,9 +61,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
+      - name: Install pinned Bun from npm
+        run: |
+          npm install --global bun@1.4.4
+          test "$(bun --version)" = "1.4.4"
       - run: bun install --frozen-lockfile
       - run: bun run lint
         env:
@@ -128,9 +130,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
+      - name: Install pinned Bun from npm
+        run: |
+          npm install --global bun@1.4.4
+          test "$(bun --version)" = "1.4.4"
       - run: bun install --frozen-lockfile
       - run: bun run build
         env:
