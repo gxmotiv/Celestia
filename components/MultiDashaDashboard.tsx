@@ -492,7 +492,7 @@ export function MultiDashaDashboard({
                   Parashari Guardianship:
                 </strong>
                 <p>
-                  Vimshottari ({allDashas.currentPrana?.lord || "Active"}), Ashtottari ({allDashas.currentAshtottari?.planet || "Active"}), and Shodashottari ({allDashas.fiveLevels.shodashottari.activeHierarchy.level1?.name || "Active"}) emphasize focused karmic fruition and decisive personal momentum.
+                  Vimshottari ({allDashas.currentPrana?.lord || "No current period"}), Ashtottari ({allDashas.currentAshtottari?.planet || "No current period"}), and Shodashottari ({allDashas.fiveLevels.shodashottari.activeHierarchy.level1?.name || "Active"}) emphasize focused karmic fruition and decisive personal momentum.
                 </p>
               </div>
 
@@ -501,7 +501,7 @@ export function MultiDashaDashboard({
                   Jaimini Sign Triplicity:
                 </strong>
                 <p>
-                  Chara ({allDashas.currentChara?.sign || "Active"}), Sthira ({allDashas.fiveLevels.sthira.activeHierarchy.level1?.name || "Active"}), and Mandooka ({allDashas.fiveLevels.mandooka.activeHierarchy.level1?.name || "Active"}) highlight sign karakas and house activations.
+                  Chara ({allDashas.currentChara?.sign || "No current period"}), Sthira ({allDashas.fiveLevels.sthira.activeHierarchy.level1?.name || "Active"}), and Mandooka ({allDashas.fiveLevels.mandooka.activeHierarchy.level1?.name || "Active"}) highlight sign karakas and house activations.
                 </p>
               </div>
 
@@ -510,7 +510,7 @@ export function MultiDashaDashboard({
                   Tantric & Deity Currents:
                 </strong>
                 <p>
-                  Yogini ({allDashas.currentYogini?.yogini || "Active"}) and Kalachakra ({allDashas.currentKalachakra?.deity || "Active"} {allDashas.currentKalachakra?.direction}) reveal subconscious spiritual energy and directional protection.
+                  Yogini ({allDashas.currentYogini?.yogini || "No current period"}) and Kalachakra ({allDashas.currentKalachakra?.deity || "No current period"} {allDashas.currentKalachakra?.direction}) reveal subconscious spiritual energy and directional protection.
                 </p>
               </div>
             </div>
