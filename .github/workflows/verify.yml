@@ -5,9 +5,10 @@ on:
   push:
     branches:
       - main
+      - fix/celestia-calculation-integrity
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: celestia-ci-${{ github.workflow }}-${{ github.ref }}
@@ -39,11 +40,16 @@ jobs:
           - testBaZiProfileAdapterSuite.ts
           - testLunarNodeConsistencySuite.ts
           - testAyanamsaConsistencySuite.ts
+          - testTransitAspectDirectionSuite.ts
+          - testPlanetaryHoursSuite.ts
+          - testDashaExpiredPeriodSuite.ts
+          - testAndroidOfflineSuite.ts
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
+      - name: Install pinned Bun from npm
+        run: |
+          npm install --global bun@1.4.4
+          test "$(bun --version)" = "1.4.4"
       - run: bun install --frozen-lockfile
       - name: Run ${{ matrix.script }}
         run: bun run scripts/${{ matrix.script }}
@@ -56,22 +62,109 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
+      - name: Install pinned Bun from npm
+        run: |
+          npm install --global bun@1.4.4
+          test "$(bun --version)" = "1.4.4"
       - run: bun install --frozen-lockfile
       - run: bun run lint
         env:
           CI: "true"
+
+  android-apks:
+    name: Offline Android APK build (ARM32 + ARM64)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install JavaScript dependencies
+        run: npm ci --ignore-scripts
+      - name: Bundle offline calculation engine
+        run: |
+          set -euo pipefail
+          mkdir -p android/app/src/main/assets/offline
+          test -s android/app/src/main/assets/offline/index.html
+          npx --yes esbuild@0.25.11 android/offline/offline.ts --bundle --platform=browser --format=iife --target=es2020 --tsconfig=tsconfig.json --minify --outfile=android/app/src/main/assets/offline/celestia-offline.js
+          test -s android/app/src/main/assets/offline/celestia-offline.js
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Install checksum-verified Gradle 8.14.5 from mirror
+        run: |
+          set -euo pipefail
+          DIST="$RUNNER_TEMP/gradle-8.14.5-bin.zip"
+          curl --fail --location --retry 6 --retry-all-errors --retry-delay 5 \
+            https://mirror.spaceport.work/gradle/gradle-8.14.5-bin.zip \
+            --output "$DIST"
+          echo "6f74b601422d6d6fc4e1f9a1ab6522f642c2fdcbc15ae33ebd30ba3d7198e854  $DIST" | sha256sum --check --status
+          unzip -q "$DIST" -d "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/gradle-8.14.5/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/gradle-8.14.5/bin/gradle" --version
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-provider: basic
+      - name: Install Android SDK packages
+        run: |
+          set -euo pipefail
+          export ANDROID_HOME=/usr/local/lib/android/sdk
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
+          test -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          sdkmanager --licenses < <(yes)
+          sdkmanager --install "platforms;android-35" "build-tools;35.0.0"
+      - name: Build ARM32 and ARM64 APKs
+        working-directory: android
+        run: gradle --no-daemon :app:assembleDebug
+      - name: Verify APK outputs
+        run: |
+          set -euo pipefail
+          test -s android/app/build/outputs/apk/debug/app-arm64-v8a-debug.apk
+          test -s android/app/build/outputs/apk/debug/app-armeabi-v7a-debug.apk
+          ls -lh android/app/build/outputs/apk/debug/*.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: celestia-android-apks
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish GitHub prerelease with ARM32 and ARM64 APKs
+        if: github.event_name == 'push' && github.ref_name == 'fix/celestia-calculation-integrity'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          branch_tag="${GITHUB_REF_NAME//\//-}"
+          tag="android-v0.2.0-${branch_tag}-build-${GITHUB_RUN_NUMBER}"
+          sha256sum android/app/build/outputs/apk/debug/*.apk > android/app/build/outputs/apk/debug/SHA256SUMS.txt
+          gh release create "$tag" \
+            android/app/build/outputs/apk/debug/app-arm64-v8a-debug.apk \
+            android/app/build/outputs/apk/debug/app-armeabi-v7a-debug.apk \
+            android/app/build/outputs/apk/debug/SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Celestia Android v0.2.0 test build (${GITHUB_RUN_NUMBER})" \
+            --notes "Debug-signed test APKs from ${GITHUB_SHA}. ARM64: arm64-v8a; ARM32: armeabi-v7a. Version 0.2.0 (versionCode 2). Offline mode includes local Western, Vedic, numerology and BaZi natal calculations and local profiles. AI/live research, geocoding, sync, relationship matching, transits and KP are not full offline features. Install as a fresh app if Android reports a signature conflict with an earlier CI build. Not production-signed." \
+            --prerelease \
+            --latest=false
 
   production-build:
     name: Production build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
+      - name: Install pinned Bun from npm
+        run: |
+          npm install --global bun@1.4.4
+          test "$(bun --version)" = "1.4.4"
       - run: bun install --frozen-lockfile
       - run: bun run build
         env:

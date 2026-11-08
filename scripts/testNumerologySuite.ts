@@ -14,6 +14,7 @@
 
 import {
   calculateCompleteNumerologyReport,
+  calculateChaldeanComponent,
   calculatePinnacles,
   calculateChallenges,
   calculateExpressionPlanes,
@@ -213,6 +214,23 @@ assert("Path 32 is The World", ALL_KABBALAH_PATHS[21].tarotCard === "The World")
 
 assert("Hebrew alphabet mapping converts Latin characters", LATIN_TO_HEBREW_MAP["A"].value === 1 && LATIN_TO_HEBREW_MAP["M"].value === 40);
 assert("Einstein Kabbalah profile has Soul Sephirah and Outer Sephirah", einsteinReport.kabbalah.soulSephirah.number >= 1 && einsteinReport.kabbalah.outerLifeSephirah.number <= 10);
+
+const lowCompoundName = calculateChaldeanComponent("A");
+assert("Single-digit Chaldean totals do not receive an invented compound meaning",
+  lowCompoundName.compoundNumber === 1 && lowCompoundName.compoundMeaning.fortuneCategory === "Neutral" &&
+  lowCompoundName.compoundMeaning.title === "No compound-number interpretation");
+const validCompoundName = calculateChaldeanComponent("JJJJJJJJJJ");
+assert("Chaldean compound totals in the 10–52 range retain their database meaning",
+  validCompoundName.compoundNumber === 10 && validCompoundName.compoundMeaning.title === CHALDEAN_COMPOUND_DATABASE[10].title);
+const maxCheiroCompound = calculateChaldeanComponent("J".repeat(52));
+assert("The upper published Cheiro compound bound (52) retains its table meaning",
+  maxCheiroCompound.compoundNumber === 52 &&
+  maxCheiroCompound.compoundMeaning.title === CHALDEAN_COMPOUND_DATABASE[52].title);
+const outsideCheiroCompound = calculateChaldeanComponent("J".repeat(53));
+assert("A raw total above 52 is not digit-folded into an unrelated Cheiro entry",
+  outsideCheiroCompound.compoundNumber === 53 && outsideCheiroCompound.singleRoot === 8 &&
+  outsideCheiroCompound.compoundMeaning.title === "No compound-number interpretation" &&
+  outsideCheiroCompound.compoundMeaning.fortuneCategory === "Neutral");
 
 // -----------------------------------------------------------------------------
 // 6. TAMIL EN KANIYAM TESTS

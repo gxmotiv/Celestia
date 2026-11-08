@@ -65,6 +65,7 @@ interface AdvancedWesternPanelProps {
   latitude?: number;
   longitude?: number;
   timezoneOffset?: number;
+  birthUtcInstant?: string;
 }
 
 export function AdvancedWesternPanel({
@@ -75,6 +76,7 @@ export function AdvancedWesternPanel({
   latitude = 40.7128,
   longitude = -74.006,
   timezoneOffset = 0,
+  birthUtcInstant,
 }: AdvancedWesternPanelProps) {
   const [activeSubTab, setActiveSubTab] = useState<
     | "asteroids"
@@ -125,12 +127,25 @@ export function AdvancedWesternPanel({
     return declinationCalc.calculateAll(chartData.planets, chartData.obliquity);
   }, [declinationCalc, chartData.planets, chartData.obliquity]);
 
-  // Birth Date Object
+  // Use the main chart's already-resolved UTC instant whenever available.
+  // Fallback converts the supplied local clock using its explicit UTC offset.
   const birthDateObj = useMemo(() => {
+    if (birthUtcInstant) {
+      const resolved = new Date(birthUtcInstant);
+      if (!Number.isFinite(resolved.getTime())) {
+        throw new RangeError("The resolved UTC birth instant is invalid.");
+      }
+      return resolved;
+    }
     const [y, m, d] = birthDateStr.split("-").map(Number);
     const [h, min] = birthTimeStr.split(":").map(Number);
-    return new Date(Date.UTC(y || 1990, (m || 1) - 1, d || 1, h || 12, min || 0));
-  }, [birthDateStr, birthTimeStr]);
+    if (![y, m, d, h, min, timezoneOffset].every(Number.isFinite) ||
+        m < 1 || m > 12 || d < 1 || d > 31 || h < 0 || h > 23 || min < 0 || min > 59 ||
+        timezoneOffset < -14 || timezoneOffset > 14) {
+      throw new RangeError("Advanced Western calculations require valid birth date, clock time and UTC offset.");
+    }
+    return new Date(Date.UTC(y, m - 1, d, h, min) - timezoneOffset * 60 * 60 * 1000);
+  }, [birthDateStr, birthTimeStr, timezoneOffset, birthUtcInstant]);
 
   const nowObj = useMemo(() => new Date(), []);
   const currentAgeYears = useMemo(() => {
@@ -977,12 +992,14 @@ export function AdvancedWesternPanel({
               Astrocartography Planetary Power Lines
             </h4>
             <p className="text-xs text-slate-300 leading-relaxed">
-              Where your planetary energies project onto terrestrial meridians, creating geographic hotspots for career, love, vitality, and sanctuary.
+              MC/IC lines are geographic meridians; AC/DC lines are latitude-dependent horizon curves. This panel shows calculated line coordinates, not verified effects on people or ranked city recommendations.
             </p>
           </div>
 
-          {/* Top Recommendations */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
+          <p className="text-[11px] text-slate-400 leading-relaxed">{astrocartographyReport.calculationNote}</p>
+
+          {/* Destination recommendations are intentionally omitted until city-distance calculations are implemented. */}
+          {astrocartographyReport.topDestinations.length > 0 && <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
             {astrocartographyReport.topDestinations.map((t, i) => (
               <div key={i} className="p-3 bg-slate-950/60 border border-slate-800 rounded-xl space-y-1">
                 <span className="text-[10px] font-bold text-cyan-400 block">{t.purpose}</span>
@@ -990,7 +1007,7 @@ export function AdvancedWesternPanel({
                 <p className="text-[11px] text-slate-400">{t.suggestedRegion}</p>
               </div>
             ))}
-          </div>
+          </div>}
 
           {/* Detailed Planetary Lines Grid */}
           <div className="overflow-x-auto">
@@ -1010,7 +1027,7 @@ export function AdvancedWesternPanel({
                       <span className="text-amber-400">{line.symbol}</span>
                       {line.planet} {line.lineType}
                     </td>
-                    <td className="py-2 px-3 text-cyan-300 font-bold">{line.longitudeStr}</td>
+                    <td className="py-2 px-3 text-cyan-300 font-bold">{line.longitudeStr}<span className="block text-[10px] text-slate-500 font-normal">{line.coordinates.length} geographic points</span></td>
                     <td className="py-2 px-3 font-sans text-slate-300 max-w-sm truncate">{line.theme}</td>
                     <td className="py-2 px-3 font-sans text-amber-300/90">{line.bestFor}</td>
                   </tr>

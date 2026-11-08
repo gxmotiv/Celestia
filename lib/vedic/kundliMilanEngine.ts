@@ -687,7 +687,7 @@ export class KundliMilanEngine {
 
     return {
       name: "bhakoot",
-      displayName: "Bhakoot Koota (Emotional Fulfilment & Progeny Health)",
+      displayName: "Bhakoot Koota (Emotional Fulfilment & Family Themes)",
       sanskritName: "भकूट कूट",
       pointsEarned: points,
       maxPoints: 7,
@@ -755,13 +755,13 @@ export class KundliMilanEngine {
 
     return {
       name: "nadi",
-      displayName: "Nadi Koota (Genetic Synergy & Nervous System Concord)",
+      displayName: "Nadi Koota (Traditional Nadi Balance)",
       sanskritName: "नाडी कूट",
       pointsEarned: points,
       maxPoints: 8,
       person1Trait: NADI_DOSHA_LABELS[nadi1] ?? nadi1,
       person2Trait: NADI_DOSHA_LABELS[nadi2] ?? nadi2,
-      description: "Highest-weighted Koota (8 pts). Governs genetic health, progeny vitality, and longevity.",
+      description: "Highest-weighted Koota (8 pts) in this traditional matching system. Compares the partners’ assigned Nadi categories; it is a cultural/astrological convention, not a genetic, fertility, longevity, or medical assessment.",
       doshaPresent: dosha,
       doshaName: dosha ? `Nadi Dosha (${nadi1} - ${nadi2})` : undefined,
       cancellationPresent: cancellation,

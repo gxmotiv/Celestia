@@ -477,7 +477,8 @@ export default function HomePage() {
                 birthTime={formData.birthTime}
                 latitude={formData.latitude}
                 longitude={formData.longitude}
-                timezoneOffset={formData.timezoneOffset}
+                timezoneOffset={birthTimeContext.offsetSeconds / 3600}
+                birthUtcInstant={birthTimeContext.utcInstant}
               />
             )}
 
@@ -490,7 +491,7 @@ export default function HomePage() {
                 person1Lat={formData.latitude}
                 person1Lon={formData.longitude}
                 person1CityName={formData.cityName}
-                person1TimezoneOffset={formData.timezoneOffset}
+                person1TimezoneOffset={birthTimeContext.offsetSeconds / 3600}
                 person1UtcInstant={birthTimeContext.utcInstant}
               />
             )}
@@ -500,6 +501,7 @@ export default function HomePage() {
                 vedicData={vedicData}
                 birthDate={formData.birthDate}
                 birthTime={formData.birthTime}
+                birthUtcInstant={birthTimeContext.utcInstant}
                 westernData={westernData}
                 numerologyData={numerologyData}
                 baziData={baziData}

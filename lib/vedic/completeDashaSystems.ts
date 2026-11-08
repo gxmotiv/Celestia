@@ -1284,7 +1284,7 @@ export class CompleteDashaOrchestrator {
         params.sookshmaContext.years,
         refDate
       );
-      currentPrana = vimshottariPranas.find((p) => p.isCurrent) || vimshottariPranas[0] || null;
+      currentPrana = vimshottariPranas.find((p) => p.isCurrent) || null;
     }
 
     // 2. Yogini Dasha
@@ -1294,9 +1294,9 @@ export class CompleteDashaOrchestrator {
       params.birthDate,
       refDate
     );
-    const currentYogini = yogini.find((y) => y.isCurrent) || yogini[0] || null;
+    const currentYogini = yogini.find((y) => y.isCurrent) || null;
     const currentYoginiSub =
-      currentYogini?.subPeriods.find((s) => s.isCurrent) || currentYogini?.subPeriods[0] || null;
+      currentYogini?.subPeriods.find((s) => s.isCurrent) || null;
 
     // 3. Jaimini Chara Dasha
     const chara = this.charaCalculator.calculateCharaDasha(
@@ -1305,7 +1305,7 @@ export class CompleteDashaOrchestrator {
       params.birthDate,
       refDate
     );
-    const currentChara = chara.find((c) => c.isCurrent) || chara[0] || null;
+    const currentChara = chara.find((c) => c.isCurrent) || null;
 
     // 4. Kalachakra Dasha
     const kalachakra = this.kalachakraCalculator.calculateKalachakraDasha(
@@ -1313,7 +1313,7 @@ export class CompleteDashaOrchestrator {
       params.birthDate,
       refDate
     );
-    const currentKalachakra = kalachakra.find((k) => k.isCurrent) || kalachakra[0] || null;
+    const currentKalachakra = kalachakra.find((k) => k.isCurrent) || null;
 
     // 5. Ashtottari Dasha
     const ashtottari = this.ashtottariCalculator.calculateAshtottariDasha(
@@ -1322,7 +1322,7 @@ export class CompleteDashaOrchestrator {
       params.birthDate,
       refDate
     );
-    const currentAshtottari = ashtottari.find((a) => a.isCurrent) || ashtottari[0] || null;
+    const currentAshtottari = ashtottari.find((a) => a.isCurrent) || null;
 
     // 6. Cross-System Convergence Matrix
     const convergence: ActiveDashaSummary[] = [];
@@ -1335,15 +1335,6 @@ export class CompleteDashaOrchestrator {
         durationRemaining: currentPrana.durationFormatted,
         tone: currentPrana.interpretation.energyQuality,
         coreTheme: currentPrana.interpretation.brief,
-      });
-    } else {
-      convergence.push({
-        system: "Vimshottari",
-        activePeriodName: "Vimshottari Parashari Cycle",
-        lordOrSign: "Active",
-        durationRemaining: "120-year cycle",
-        tone: "positive",
-        coreTheme: "Classical 120-year Vimshottari Nakshatra dasha progression",
       });
     }
 
@@ -1460,7 +1451,7 @@ export class CompleteDashaOrchestrator {
     );
 
     // Add new systems to Convergence
-    if (s116.activeHierarchy.level1) {
+    if (s116.activeHierarchy.level1?.isCurrent) {
       convergence.push({
         system: "Shodashottari",
         activePeriodName: `${s116.activeHierarchy.level1.name} (${s116.activeHierarchy.level2?.name || "Sub"})`,
@@ -1471,7 +1462,7 @@ export class CompleteDashaOrchestrator {
       });
     }
 
-    if (d168.activeHierarchy.level1) {
+    if (d168.activeHierarchy.level1?.isCurrent) {
       convergence.push({
         system: "Dwisaptati",
         activePeriodName: `${d168.activeHierarchy.level1.name} (${d168.activeHierarchy.level2?.name || "Sub"})`,
@@ -1482,7 +1473,7 @@ export class CompleteDashaOrchestrator {
       });
     }
 
-    if (sh60.activeHierarchy.level1) {
+    if (sh60.activeHierarchy.level1?.isCurrent) {
       convergence.push({
         system: "Shastihayani",
         activePeriodName: `${sh60.activeHierarchy.level1.name} Period`,
@@ -1493,7 +1484,7 @@ export class CompleteDashaOrchestrator {
       });
     }
 
-    if (st96.activeHierarchy.level1) {
+    if (st96.activeHierarchy.level1?.isCurrent) {
       convergence.push({
         system: "Sthira",
         activePeriodName: `${st96.activeHierarchy.level1.name} Sign`,
@@ -1504,7 +1495,7 @@ export class CompleteDashaOrchestrator {
       });
     }
 
-    if (mn96.activeHierarchy.level1) {
+    if (mn96.activeHierarchy.level1?.isCurrent) {
       convergence.push({
         system: "Mandooka",
         activePeriodName: `${mn96.activeHierarchy.level1.name} Leap`,
