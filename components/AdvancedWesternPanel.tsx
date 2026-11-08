@@ -992,12 +992,14 @@ export function AdvancedWesternPanel({
               Astrocartography Planetary Power Lines
             </h4>
             <p className="text-xs text-slate-300 leading-relaxed">
-              Where your planetary energies project onto terrestrial meridians, creating geographic hotspots for career, love, vitality, and sanctuary.
+              MC/IC lines are geographic meridians; AC/DC lines are latitude-dependent horizon curves. This panel shows calculated line coordinates, not verified effects on people or ranked city recommendations.
             </p>
           </div>
 
-          {/* Top Recommendations */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
+          <p className="text-[11px] text-slate-400 leading-relaxed">{astrocartographyReport.calculationNote}</p>
+
+          {/* Destination recommendations are intentionally omitted until city-distance calculations are implemented. */}
+          {astrocartographyReport.topDestinations.length > 0 && <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
             {astrocartographyReport.topDestinations.map((t, i) => (
               <div key={i} className="p-3 bg-slate-950/60 border border-slate-800 rounded-xl space-y-1">
                 <span className="text-[10px] font-bold text-cyan-400 block">{t.purpose}</span>
@@ -1005,7 +1007,7 @@ export function AdvancedWesternPanel({
                 <p className="text-[11px] text-slate-400">{t.suggestedRegion}</p>
               </div>
             ))}
-          </div>
+          </div>}
 
           {/* Detailed Planetary Lines Grid */}
           <div className="overflow-x-auto">
@@ -1025,7 +1027,7 @@ export function AdvancedWesternPanel({
                       <span className="text-amber-400">{line.symbol}</span>
                       {line.planet} {line.lineType}
                     </td>
-                    <td className="py-2 px-3 text-cyan-300 font-bold">{line.longitudeStr}</td>
+                    <td className="py-2 px-3 text-cyan-300 font-bold">{line.longitudeStr}<span className="block text-[10px] text-slate-500 font-normal">{line.coordinates.length} geographic points</span></td>
                     <td className="py-2 px-3 font-sans text-slate-300 max-w-sm truncate">{line.theme}</td>
                     <td className="py-2 px-3 font-sans text-amber-300/90">{line.bestFor}</td>
                   </tr>
