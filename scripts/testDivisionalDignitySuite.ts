@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { calculateDivisionalChart } from "../lib/vedic/divisionalCalc";
+import { calculateDivisionalChart, DIVISIONAL_CHARTS_CONFIG } from "../lib/vedic/divisionalCalc";
 import type { VedicPlanet } from "../lib/astronomy/vedic";
 
 function makeSun(longitude: number, signIndex: number, rasiName: string): VedicPlanet {
@@ -27,6 +27,9 @@ function makeSun(longitude: number, signIndex: number, rasiName: string): VedicP
   };
 }
 
+assert.equal(Object.keys(DIVISIONAL_CHARTS_CONFIG).length, 16,
+  "The configured Parashari Shodashavarga set should contain 16 charts.");
+
 const sunInCancer = calculateDivisionalChart(
   [makeSun(100, 3, "Cancer")],
   0,
@@ -51,4 +54,4 @@ const sunInVirgo = calculateDivisionalChart(
 assert.equal(sunInVirgo.dignity, "Neutral",
   "Sun should remain neutral in Virgo, ruled by neutral Mercury.");
 
-console.log("Divisional dignity suite passed: 3 assertions.");
+console.log("Divisional dignity suite passed: 4 assertions.");
