@@ -235,7 +235,7 @@ export function AdvancedWesternPanel({
             { id: "firdaria", label: "Firdaria", icon: "👑" },
             { id: "fixedStars", label: "Fixed Stars", icon: "★" },
             { id: "eclipses", label: "Eclipses", icon: "🌑" },
-            { id: "medical", label: "Medical Astrology", icon: "⚕" },
+            { id: "medical", label: "Medical Symbolism", icon: "⚕" },
             { id: "astrocartography", label: "Astrocartography", icon: "🌐" },
           ].map((tab) => (
             <button
