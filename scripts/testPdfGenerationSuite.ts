@@ -80,8 +80,8 @@ async function run() {
   const malformed = await POST(makeRequest("{invalid json"));
   assert.equal(malformed.status, 400, "malformed JSON is rejected with HTTP 400");
 
-  const tooLarge = await POST(makeRequest("{}", { "content-length": "1000001" }));
-  assert.equal(tooLarge.status, 413, "oversized declared input is rejected with HTTP 413");
+  const tooLarge = await POST(makeRequest("x".repeat(1_000_001)));
+  assert.equal(tooLarge.status, 413, "oversized input is rejected with HTTP 413");
 
   console.log("PDF generation suite passed: 6 assertions.");
 }
