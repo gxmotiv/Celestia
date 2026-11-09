@@ -25,6 +25,7 @@ jobs:
           - testAstrologySuite.ts
           - testBaZiSuite.ts
           - testGeocodeSuite.ts
+          - testPdfGenerationSuite.ts
           - testMinorAspectsSuite.ts
           - testNavamsaSuite.ts
           - testNumerologySuite.ts
