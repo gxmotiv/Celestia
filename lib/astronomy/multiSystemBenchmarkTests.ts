@@ -669,10 +669,10 @@ export class MultiSystemBenchmarkRunner {
         system: "KP",
         name: `KP Event Promise: ${ev.name}`,
         category: "Event Prediction",
-        classicalAuthority: "KP Reader 3 & 4 (Event Timing)",
-        expectedFormula: "CSL houses evaluated against primary/supporting/detrimental houses",
-        actualResult: `Status: ${pred.verdict} (${pred.probability}% probability)`,
-        passed: pred.verdict !== undefined && pred.probability >= 0,
+        classicalAuthority: "KP Reader 3 & 4 (rule application; internal check)",
+        expectedFormula: "CSL houses evaluated against rule-defined favorable and negation houses",
+        actualResult: `Status: ${pred.verdict} (rule score: ${pred.heuristicScore}%)`,
+        passed: pred.verdict !== undefined && Number.isFinite(pred.heuristicScore) && pred.heuristicScore >= 15 && pred.heuristicScore <= 95,
         notes: `House ${ev.house} CSL (${pred.primaryCuspalSubLord}) examined for event promise.`,
       });
     });
