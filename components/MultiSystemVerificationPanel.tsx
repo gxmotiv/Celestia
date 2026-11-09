@@ -175,8 +175,17 @@ export function MultiSystemVerificationPanel({
             return (
               <div
                 key={sys.key}
+                role="button"
+                tabIndex={0}
+                aria-pressed={selectedSystem === sys.key}
                 onClick={() => setSelectedSystem(sys.key as any)}
-                className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    setSelectedSystem(sys.key as any);
+                  }
+                }}
+                className={`p-2.5 rounded-xl border transition-all cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-400/80 ${
                   selectedSystem === sys.key
                     ? "bg-slate-800/80 border-emerald-500/60 shadow"
                     : "bg-slate-950/60 border-slate-800/80 hover:bg-slate-900/60"
