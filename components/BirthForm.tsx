@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { searchCities } from "@/lib/astronomy/cities";
 import { resolveLocalDateTime } from "@/lib/astronomy/historicalTimezone";
 import { parseBirthClockTime } from "@/lib/astronomy/timeInput";
@@ -72,6 +72,36 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
   const [gpsError, setGpsError] = useState("");
   const [timezoneError, setTimezoneError] = useState("");
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const citySearchRequestRef = useRef(0);
+
+  // A saved profile can be selected while this form stays mounted. Keep the
+  // editor synchronized with the selected profile instead of showing stale fields.
+  useEffect(() => {
+    citySearchRequestRef.current += 1;
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
+    }
+    setFormData({
+      ...initialData,
+      timezoneMode: initialData.timezoneMode ?? (initialData.ianaTimezone ? "automatic" : "manual"),
+      manualOffsetConfirmed: initialData.manualOffsetConfirmed ?? false,
+    });
+    setCitySearchQuery(initialData.cityName ? `${initialData.cityName}, ${initialData.country}` : "");
+    setCityResults([]);
+    setShowCityDropdown(false);
+    setIsSearchingCity(false);
+    setShowCustomCoords(false);
+    setGpsError("");
+    setTimezoneError("");
+  }, [initialData]);
+
+  useEffect(() => {
+    return () => {
+      citySearchRequestRef.current += 1;
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    };
+  }, []);
 
   const timezoneResolution = useMemo(() => {
     if (formData.timezoneMode !== "automatic" || !formData.ianaTimezone) return null;
@@ -89,6 +119,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
 
   // Debounced search that queries Geoapify with fallback to built-in list
   const handleCitySearch = (query: string) => {
+    const requestId = ++citySearchRequestRef.current;
     setCitySearchQuery(query);
 
     if (searchTimeoutRef.current) {
@@ -123,8 +154,10 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
     searchTimeoutRef.current = setTimeout(async () => {
       try {
         const res = await fetch(`/api/geocode?q=${encodeURIComponent(query.trim())}`);
+        if (requestId !== citySearchRequestRef.current) return;
         if (res.ok) {
           const data = await res.json();
+          if (requestId !== citySearchRequestRef.current) return;
           if (data.results && data.results.length > 0) {
             setCityResults(data.results);
             setIsSearchingCity(false);
@@ -132,8 +165,11 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
           }
         }
       } catch (e) {
+        if (requestId !== citySearchRequestRef.current) return;
         console.warn("Geocode query failed, using built-in:", e);
       }
+
+      if (requestId !== citySearchRequestRef.current) return;
 
       // Built-in fallback
       const fallbacks: LocationOption[] = searchCities(query, 6).map((c) => ({
