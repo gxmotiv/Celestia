@@ -143,7 +143,7 @@ export function PrintModal({
                 Download Professional Multi-System Astrological Report
               </h2>
               <p className="text-xs text-slate-400">
-                10-Section Publication-Grade Dossier (Western, Vedic, Hellenistic, BaZi, Numerology & Predictive Timeline)
+                10-Section Multi-System Dossier (Western, Vedic, Hellenistic, BaZi, Numerology & Predictive Timeline)
               </p>
             </div>
           </div>
@@ -288,7 +288,7 @@ export function PrintModal({
                 Publication Report Layout Preview (10 Comprehensive Sections)
               </span>
               <span className="text-[11px] text-slate-500 hidden sm:inline flex items-center gap-1">
-                A4 Portrait · Vector chart calculations
+                A4 Portrait · Full-dossier capture
               </span>
             </div>
 
