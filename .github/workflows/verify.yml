@@ -44,6 +44,7 @@ jobs:
           - testPlanetaryHoursSuite.ts
           - testDashaExpiredPeriodSuite.ts
           - testMedicalAstrologySymbolismSuite.ts
+          - testHouseFrameConsistencySuite.ts
           - testAndroidOfflineSuite.ts
     steps:
       - uses: actions/checkout@v4
