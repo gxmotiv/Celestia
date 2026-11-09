@@ -13,6 +13,17 @@ export interface GeocodeResult {
   source: "geoapify" | "built-in";
 }
 
+function parseCoordinate(value: string | null): number | null {
+  if (value === null) return null;
+  const trimmed = value.trim();
+  // Permit ordinary decimal/scientific notation, but not hex, suffixes, or blank values.
+  if (!/^[+-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+-]?\\d+)?$/.test(trimmed)) {
+    return null;
+  }
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 /**
  * Calculates great-circle distance between two coordinates in kilometers (Haversine formula).
  */
@@ -61,14 +72,18 @@ export async function GET(req: NextRequest) {
   // Read Geoapify key exclusively from environment variable with NO literal fallback
   const apiKey = process.env.GEOAPIFY_API_KEY?.trim() || "";
 
+  // Reverse geocoding requires both coordinates; a partial pair is never
+  // reinterpreted as a forward city search.
+  if ((latStr === null) !== (lonStr === null)) {
+    return NextResponse.json({ error: "Both latitude and longitude are required" }, { status: 400 });
+  }
+
   // Reverse Geocoding (e.g. from GPS)
   if (latStr !== null && lonStr !== null) {
-    // Number() with explicit empty-string rejection avoids parseFloat accepting
-    // malformed prefixes such as "48.8north" as valid coordinates.
-    const lat = latStr.trim() === "" ? Number.NaN : Number(latStr);
-    const lon = lonStr.trim() === "" ? Number.NaN : Number(lonStr);
+    const lat = parseCoordinate(latStr);
+    const lon = parseCoordinate(lonStr);
 
-    if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+    if (lat === null || lon === null || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
       return NextResponse.json({ error: "Invalid coordinates" }, { status: 400 });
     }
 
