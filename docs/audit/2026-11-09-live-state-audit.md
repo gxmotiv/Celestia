@@ -91,3 +91,10 @@ A source trace found that `calculateHouses()` previously paired `Astronomy.Sider
 A new `scripts/testHouseFrameConsistencySuite.ts` checks the MC and Ascendant equations against GAST and Astronomy Engine true obliquity at three sample epochs/locations (six regression assertions). This is a frame-consistency test; it is not an independent comparison of all 12 Placidus cusps against Swiss Ephemeris or USNO reference vectors. High-latitude behavior and a complete house-system benchmark remain open.
 
 The Astronomy Engine 2.1.19 TypeScript declaration was checked directly: `e_tilt(time: AstroTime): EarthTiltInfo` is present in the version pinned by the repository. The package documents GAST separately from UT1/UTC and TT; the library approximates UT1 and UTC as equal for its design target, which is not a replacement for explicit high-precision time-scale treatment.
+
+
+### Vedic divisional-chart scope and dignity follow-up
+
+The current divisional-chart configuration contains the 16 classical Shodashavarga charts (D1, D2, D3, D4, D7, D9, D10, D12, D16, D20, D24, D27, D30, D40, D45 and D60). This is a traditional 16-chart set spanning D1 through D60, not an implementation of every possible numbered varga. The Vedic chart selector now says this explicitly.
+
+A dignity-label review found that the divisional-chart Sun classification omitted Cancer (Moon-ruled) and Pisces (Jupiter-ruled) from the Sun's natural-friend signs. Those two cases are now labeled Friendly. A new `scripts/testDivisionalDignitySuite.ts` checks Cancer, Pisces, a neutral Mercury-ruled Virgo case, and the configured 16-chart Shodashavarga count (four assertions). The natural relationship table is aligned to the Sun's friends Moon, Mars and Jupiter; it is still a simplified sign-lord dignity label and does not compute the complete five-fold temporary/compound friendship for each chart.
