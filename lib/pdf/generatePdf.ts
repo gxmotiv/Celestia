@@ -22,7 +22,6 @@ export async function generateAndDownloadPdf(
   try {
     onProgress?.("Initializing PDF Engine...", 10);
 
-    // Initialize A4 PDF: 210mm x 297mm (portrait)
     const pdf = new jsPDF({
       orientation: "portrait",
       unit: "mm",
@@ -33,43 +32,71 @@ export async function generateAndDownloadPdf(
     const pageWidth = 210;
     const pageHeight = 297;
     const margin = 10;
-    const printableWidth = pageWidth - margin * 2; // 190mm
-    const printableHeight = pageHeight - margin * 2; // 277mm
+    const printableWidth = pageWidth - margin * 2;
+    const printableHeight = pageHeight - margin * 2;
 
-    onProgress?.("Capturing document layout...", 25);
+    onProgress?.("Capturing the complete dossier...", 25);
 
-    // Ensure container is unconstrained for capture
-    const originalOverflow = containerElement.style.overflow;
-    containerElement.style.overflow = "visible";
+    // The preview sits inside a scrollable, max-height parent. html2canvas can
+    // otherwise capture only the visible viewport. Expand clipping ancestors
+    // inside its cloned document so the full report is captured without changing
+    // the live UI layout.
+    const exportAttribute = "data-celestia-pdf-export";
+    const originalAttribute = containerElement.getAttribute(exportAttribute);
+    containerElement.setAttribute(exportAttribute, "true");
 
-    // html2canvas-pro natively supports oklch() colors used by Tailwind CSS v4
-    const canvas = await html2canvas(containerElement, {
-      scale: 1.5, // 1.5x resolution delivers crisp text and charts
-      useCORS: true,
-      logging: false,
-      backgroundColor: "#ffffff",
-      windowWidth: 1024,
-      scrollY: 0,
-      scrollX: 0,
-    });
-
-    containerElement.style.overflow = originalOverflow;
+    let canvas: HTMLCanvasElement;
+    try {
+      canvas = await html2canvas(containerElement, {
+        scale: Math.min(1.25, window.devicePixelRatio || 1),
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+        windowWidth: 1024,
+        scrollY: 0,
+        scrollX: 0,
+        onclone: (clonedDocument) => {
+          const clonedTarget = clonedDocument.querySelector(
+            `[${exportAttribute}="true"]`
+          ) as HTMLElement | null;
+          let node = clonedTarget?.parentElement ?? null;
+          while (node && node !== clonedDocument.body) {
+            node.style.setProperty("overflow", "visible", "important");
+            node.style.setProperty("overflow-y", "visible", "important");
+            node.style.setProperty("overflow-x", "visible", "important");
+            node.style.setProperty("max-height", "none", "important");
+            node.style.setProperty("height", "auto", "important");
+            node.style.setProperty("contain", "none", "important");
+            node = node.parentElement;
+          }
+          if (clonedTarget) {
+            clonedTarget.style.setProperty("overflow", "visible", "important");
+            clonedTarget.style.setProperty("max-height", "none", "important");
+            clonedTarget.style.setProperty("height", "auto", "important");
+          }
+        },
+      });
+    } finally {
+      if (originalAttribute === null) {
+        containerElement.removeAttribute(exportAttribute);
+      } else {
+        containerElement.setAttribute(exportAttribute, originalAttribute);
+      }
+    }
 
     onProgress?.("Formatting multi-page layout...", 50);
 
-    const imgData = canvas.toDataURL("image/jpeg", 0.95);
+    const imgData = canvas.toDataURL("image/jpeg", 0.92);
     const imgWidth = printableWidth;
     const imgHeight = (canvas.height * printableWidth) / canvas.width;
 
     let heightLeft = imgHeight;
     let position = margin;
 
-    // First page
     pdf.addImage(imgData, "JPEG", margin, position, imgWidth, imgHeight, undefined, "FAST");
     heightLeft -= printableHeight;
 
     let pageNum = 1;
-    // Subsequent pages
     while (heightLeft > 0) {
       position -= printableHeight;
       pdf.addPage();
@@ -79,9 +106,8 @@ export async function generateAndDownloadPdf(
       onProgress?.(`Composing page ${pageNum}...`, Math.min(50 + pageNum * 8, 90));
     }
 
-    onProgress?.("Packaging & downloading PDF...", 95);
+    onProgress?.("Packaging & downloading full report...", 95);
 
-    // Generate binary Blob and trigger direct browser download
     const blob = pdf.output("blob");
     const blobUrl = URL.createObjectURL(blob);
     const downloadAnchor = document.createElement("a");
@@ -96,7 +122,7 @@ export async function generateAndDownloadPdf(
       URL.revokeObjectURL(blobUrl);
     }, 3000);
 
-    onProgress?.("PDF Download Complete!", 100);
+    onProgress?.("Full PDF download complete.", 100);
     return true;
   } catch (error) {
     console.error("PDF Generation Error:", error);
