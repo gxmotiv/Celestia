@@ -86,4 +86,4 @@ assert.ok(report.twelfthHouseTheme.includes("does not indicate hidden illness"))
 assert.equal("preventivePractices" in report, false);
 assert.equal("vulnerableSystems" in report, false);
 
-console.log("Medical astrology symbolism suite passed: 9 assertions.");
+console.log("Medical astrology symbolism suite passed: 10 assertions.");
