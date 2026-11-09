@@ -107,3 +107,10 @@ A dignity-label review found that the divisional-chart Sun classification omitte
 - PDF timezone metadata now distinguishes IANA mode from manually supplied or legacy numeric offsets. It does not label a standard offset as a historically verified, date-specific offset.
 - Added geocoding tests for malformed coordinates, overlong queries and invalid provider coordinates. Added PDF-generation tests for valid PDF response, PDF signature, invalid JSON and oversized input handling (six assertions). The verification matrix now contains 26 suites plus lint, production build and Android APK build (29 jobs total).
 - The PDF and geocoding suites, along with the other PR #14 changes, have not yet completed on a GitHub runner. Current Actions results still fail before runner assignment (null runner ID and zero steps); these are not source-level pass results.
+### Full dossier PDF UX follow-up
+
+- The PrintModal's Download Full PDF action previously accepted the PDFKit endpoint's short summary as a successful full-report download. The endpoint now maps the real chart data structures for its own concise summary use, but the full-report button now renders the actual multi-section PrintDossier component instead.
+- The HTML-to-canvas renderer now expands clipping/scroll ancestors in html2canvas-pro's cloned DOM before capture, so a scrollable preview is not intentionally limited to the visible window. The UI no longer describes this rasterized capture as vector output; its scale is capped at 1.25 to limit memory pressure on mobile devices.
+- The Medical Astrology subtab is now labeled Medical Symbolism, matching its non-diagnostic historical content.
+- The report cover no longer calls itself an Official Archival Dossier; it is labeled a Personal Archival Natal Dossier.
+- Important limit: html2canvas-pro reconstructs a DOM-based visual representation rather than producing a true vector rendering of every DOM element. PDF appearance still needs visual inspection in a real desktop browser and Android WebView, especially for long reports, charts, page boundaries, and narrow screens.
