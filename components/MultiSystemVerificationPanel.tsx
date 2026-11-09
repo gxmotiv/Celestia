@@ -116,7 +116,7 @@ export function MultiSystemVerificationPanel({
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">
-                  Universal Esoteric Verification Center
+                  Internal Calculation Check Center
                 </span>
                 <span className="text-xs text-slate-400 flex items-center gap-1">
                   <Clock className="w-3 h-3 text-slate-400" />
@@ -124,10 +124,10 @@ export function MultiSystemVerificationPanel({
                 </span>
               </div>
               <h2 className="text-2xl font-bold text-slate-100 mt-1">
-                108 Automated Mathematical & Classical Assertions
+                108 Internal Mathematical & Rule Assertions
               </h2>
               <p className="text-xs text-slate-300">
-                Empirical verification across Western, Vedic Jyotish, KP Stellar, Chinese BaZi, and Universal Numerology.
+                Internal assertions check selected formulas, arithmetic invariants, and rule-level examples across Western, Vedic Jyotish, KP, BaZi, and Numerology.
               </p>
             </div>
           </div>
@@ -140,7 +140,7 @@ export function MultiSystemVerificationPanel({
               </span>
             </div>
             <div className="p-3 bg-slate-950/70 border border-slate-800 rounded-xl text-center">
-              <span className="text-[10px] text-slate-400 block">Verified Tests</span>
+              <span className="text-[10px] text-slate-400 block">Passed Checks</span>
               <span className="text-xl font-bold font-mono text-slate-100">
                 {report.passedCount} / {report.totalAssertions}
               </span>
@@ -148,13 +148,18 @@ export function MultiSystemVerificationPanel({
             <button
               onClick={() => setRunIteration((prev) => prev + 1)}
               className="p-3 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
-              title="Re-run all 108 assertions"
+              title="Re-run all 108 internal checks"
             >
               <RotateCcw className="w-4 h-4" />
               <span className="hidden sm:inline">Re-Run Suite</span>
             </button>
           </div>
         </div>
+
+              <p className="text-[11px] text-amber-100/80 border-t border-emerald-500/20 pt-3">
+                A passing result means only that these selected internal checks passed. It does not independently certify
+                ephemeris accuracy, house cusps, historical civil-time data, every tradition-specific rule, or predictive validity.
+              </p>
 
         {/* 5-Tradition Metric Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 pt-2 border-t border-slate-800/80">
@@ -212,7 +217,7 @@ export function MultiSystemVerificationPanel({
             }`}
           >
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Test Assertions ({report.totalAssertions})</span>
+            <span>Internal Assertions ({report.totalAssertions})</span>
           </button>
 
           <button
