@@ -82,3 +82,12 @@ The draft PR `fix/celestia-ux-integrity-audit` adds these reviewed changes on to
 - A new `scripts/testMedicalAstrologySymbolismSuite.ts` contains 10 assertions for the symbolic, non-diagnostic report contract. It has been added to `.github/workflows/verify.yml`. This test has not yet run successfully because current GitHub Actions jobs are failing before runner assignment.
 
 Latest PR #14 checks observed during this audit (2026-11-09) still show `runner_id: 0` and zero execution steps for all matrix jobs. Do not describe those checks as source-code test failures or as a pass. PR #14 remains a draft and has not been merged.
+
+
+### House reference-frame consistency follow-up
+
+A source trace found that `calculateHouses()` previously paired `Astronomy.SiderealTime()` (Greenwich Apparent Sidereal Time, GAST) with a separate mean-obliquity polynomial. Those inputs describe different equinox/reference frames. Astronomy Engine's own API exposes `e_tilt(time).tobl` (true obliquity), and its maintainer's ascendant/Midheaven example uses that value with apparent sidereal time. The house code now uses the same engine's true obliquity for its MC, Ascendant, Vertex and Placidus semi-arc geometry.
+
+A new `scripts/testHouseFrameConsistencySuite.ts` checks the MC and Ascendant equations against GAST and Astronomy Engine true obliquity at three sample epochs/locations (six regression assertions). This is a frame-consistency test; it is not an independent comparison of all 12 Placidus cusps against Swiss Ephemeris or USNO reference vectors. High-latitude behavior and a complete house-system benchmark remain open.
+
+The Astronomy Engine 2.1.19 TypeScript declaration was checked directly: `e_tilt(time: AstroTime): EarthTiltInfo` is present in the version pinned by the repository. The package documents GAST separately from UT1/UTC and TT; the library approximates UT1 and UTC as equal for its design target, which is not a replacement for explicit high-precision time-scale treatment.
