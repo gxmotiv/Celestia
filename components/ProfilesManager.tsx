@@ -59,20 +59,21 @@ function isSavedProfile(value: unknown): value is SavedProfile {
 
 function getSnapshot(): SavedProfile[] {
   if (typeof window === "undefined") return emptyProfiles;
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (raw === cachedRaw) return cachedProfiles;
-  cachedRaw = raw;
-  if (!raw) {
-    cachedProfiles = emptyProfiles;
-    return cachedProfiles;
-  }
   try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw === cachedRaw) return cachedProfiles;
+    cachedRaw = raw;
+    if (!raw) {
+      cachedProfiles = emptyProfiles;
+      return cachedProfiles;
+    }
     const parsed: unknown = JSON.parse(raw);
     cachedProfiles = Array.isArray(parsed) ? parsed.filter(isSavedProfile) : emptyProfiles;
     return cachedProfiles;
   } catch {
     // Keep the original localStorage value untouched; show an empty safe snapshot.
     cachedProfiles = emptyProfiles;
+    cachedRaw = null;
     return cachedProfiles;
   }
 }
