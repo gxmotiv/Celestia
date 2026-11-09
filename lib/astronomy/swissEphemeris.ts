@@ -463,9 +463,14 @@ export class SwissEphemerisEngine {
     // Right Ascension of Midheaven (RAMC) in degrees
     const ramc = ((gstHours * 15.0 + longitude) % 360.0 + 360.0) % 360.0;
 
-    // Approximate mean obliquity polynomial. Nutation is not explicitly added here.
-    const T = (julianDay - 2451545.0) / 36525.0;
-    const epsDeg = 23.4392911 - 0.0130042 * T - 0.00000016 * T * T + 0.000000504 * T * T * T;
+    // SiderealTime() returns Greenwich Apparent Sidereal Time (GAST), whose
+    // reference equinox includes nutation. Use the matching true obliquity of
+    // date rather than mixing GAST with a mean-obliquity polynomial.
+    const earthTilt = Astronomy.e_tilt(time);
+    const epsDeg = earthTilt.tobl;
+    if (!Number.isFinite(epsDeg)) {
+      throw new RangeError("Astronomy Engine returned an invalid true obliquity.");
+    }
     const eps = epsDeg * (Math.PI / 180.0);
     const phi = latitude * (Math.PI / 180.0);
     const radRamc = ramc * (Math.PI / 180.0);
