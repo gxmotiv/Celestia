@@ -105,11 +105,26 @@ export async function POST(req: NextRequest) {
       "Coordinates: " +
         numberValue(userData.latitude) +
         ", " +
-        numberValue(userData.longitude) +
-        " | Supplied UTC offset: " +
-        numberValue(userData.timezoneOffset) +
-        " hours"
+        numberValue(userData.longitude)
     );
+    const timezoneMode = textValue(userData.timezoneMode, "legacy");
+    if (timezoneMode === "automatic" && typeof userData.ianaTimezone === "string") {
+      bodyText(doc, "Timezone mode: IANA zone " + textValue(userData.ianaTimezone));
+    } else if (timezoneMode === "manual") {
+      bodyText(
+        doc,
+        "Timezone mode: manually supplied UTC offset " +
+          numberValue(userData.timezoneOffset) +
+          " hours (not independently verified as historical civil time)"
+      );
+    } else {
+      bodyText(
+        doc,
+        "Timezone mode: legacy numeric offset " +
+          numberValue(userData.timezoneOffset) +
+          " hours (review historical applicability)"
+      );
+    }
 
     if (westernPlanets.length > 0 || Object.keys(asRecord(western.ascendant)).length > 0) {
       sectionTitle(doc, "1. WESTERN TROPICAL CHART", "#0369a1");
