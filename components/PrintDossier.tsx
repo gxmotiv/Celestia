@@ -911,7 +911,7 @@ export function PrintDossier({
           </div>
 
           <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-lg text-xs text-amber-900">
-            <strong>Canonical Citations:</strong> Formulas derived from Claudius Ptolemy (<em>Tetrabiblos</em>), Maharishi Parashara (<em>Brihat Parashara Hora Shastra</em>), Vettius Valens (<em>Anthologies</em>), <em>The Book of Changes</em> (I Ching), and <em>The Book of Formation</em> (Sefer Yetzirah). Certified by Celestia Multi-System Engine.
+            <strong>Tradition references:</strong> This report draws on concepts associated with Claudius Ptolemy (<em>Tetrabiblos</em>), Maharishi Parashara (<em>Brihat Parashara Hora Shastra</em>), Vettius Valens (<em>Anthologies</em>), <em>The Book of Changes</em> (I Ching), and <em>The Book of Formation</em> (Sefer Yetzirah). The listed works represent distinct traditions and are not evidence that every calculation has been independently validated or certified.
           </div>
         </section>
       )}
