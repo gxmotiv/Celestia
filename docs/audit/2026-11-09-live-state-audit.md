@@ -70,3 +70,15 @@ The inspected v0.2.0 release notes define offline mode as local Western, Vedic, 
 ## Scope statement
 
 This document records what was directly inspected and what remains unverified. Passing CI means the selected code and test cases passed; it does not prove every chart, historical epoch, tradition, interpretation, medical claim, or prediction is correct.
+
+## PR #14 follow-up source changes
+
+The draft PR `fix/celestia-ux-integrity-audit` adds these reviewed changes on top of the deployment branch:
+
+- Saved-profile selection now synchronizes the open BirthForm editor, and the city geocoder ignores stale responses from older search requests.
+- The built-in Leonardo da Vinci starter chart is explicitly marked as a sample until the user submits or selects a profile.
+- The Verification Center describes its 108 assertions as internal checks, not empirical certification. Its system-filter cards are keyboard-operable and show a visible focus indicator.
+- The medical-astrology panel was changed from clinical-sounding “vulnerable systems”, organ-risk priority labels, and preventive-treatment advice to historical body symbolism only. It no longer suggests supplements, detoxes, medication, or treatment. The UI states that astrology cannot diagnose, screen for, predict, or prevent illness and must not replace qualified medical care.
+- A new `scripts/testMedicalAstrologySymbolismSuite.ts` contains 10 assertions for the symbolic, non-diagnostic report contract. It has been added to `.github/workflows/verify.yml`. This test has not yet run successfully because current GitHub Actions jobs are failing before runner assignment.
+
+Latest PR #14 checks observed during this audit (2026-11-09) still show `runner_id: 0` and zero execution steps for all matrix jobs. Do not describe those checks as source-code test failures or as a pass. PR #14 remains a draft and has not been merged.
