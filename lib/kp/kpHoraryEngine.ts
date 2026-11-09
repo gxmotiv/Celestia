@@ -249,21 +249,21 @@ export class KPHoraryEngine {
         rpList.includes(moon.subLord)
       : true;
 
-    // Determine Verdict and Confidence
-    let confidenceScore = 50;
-    if (favorableConnected.length > 0) confidenceScore += 25;
-    if (favorableConnected.length >= 2) confidenceScore += 10;
-    if (matchingRP.length >= 2) confidenceScore += 10;
-    if (isMoonAligned) confidenceScore += 5;
-    if (detrimentalConnected.length > 0) confidenceScore -= detrimentalConnected.length * 15;
-    if (primaryCslPlanet.isRetrograde) confidenceScore -= 15;
+    // Rule-weighted horary score; not empirically calibrated confidence.
+    let heuristicScore = 50;
+    if (favorableConnected.length > 0) heuristicScore += 25;
+    if (favorableConnected.length >= 2) heuristicScore += 10;
+    if (matchingRP.length >= 2) heuristicScore += 10;
+    if (isMoonAligned) heuristicScore += 5;
+    if (detrimentalConnected.length > 0) heuristicScore -= detrimentalConnected.length * 15;
+    if (primaryCslPlanet.isRetrograde) heuristicScore -= 15;
 
-    confidenceScore = Math.max(10, Math.min(95, confidenceScore));
+    heuristicScore = Math.max(10, Math.min(95, heuristicScore));
 
     let verdict: KPHoraryResult["verdict"] = "YES - Delayed / After Effort";
-    if (confidenceScore >= 75) {
+    if (heuristicScore >= 75) {
       verdict = "YES - Strongly Promised";
-    } else if (confidenceScore <= 40) {
+    } else if (heuristicScore <= 40) {
       verdict = "NO - Denied / Not Feasible";
     }
 
@@ -316,7 +316,7 @@ export class KPHoraryEngine {
         isMoonCslAligned: isMoonAligned,
       },
       verdict,
-      confidenceScore,
+      heuristicScore,
       detailedJudgment,
       recommendedAction: query.remedialTip,
     };
