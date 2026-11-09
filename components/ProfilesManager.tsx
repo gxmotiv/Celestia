@@ -32,16 +32,48 @@ let cachedRaw: string | null = null;
 let cachedProfiles: SavedProfile[] = [];
 const emptyProfiles: SavedProfile[] = [];
 
+function isSavedProfile(value: unknown): value is SavedProfile {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<SavedProfile>;
+  const data = candidate.data as Partial<BirthFormData> | undefined;
+  return (
+    typeof candidate.id === "string" &&
+    typeof candidate.name === "string" &&
+    typeof candidate.savedAt === "string" &&
+    !!data &&
+    typeof data.fullName === "string" &&
+    typeof data.birthDate === "string" &&
+    typeof data.birthTime === "string" &&
+    typeof data.isTimeUnknown === "boolean" &&
+    typeof data.cityName === "string" &&
+    typeof data.country === "string" &&
+    typeof data.latitude === "number" &&
+    Number.isFinite(data.latitude) &&
+    typeof data.longitude === "number" &&
+    Number.isFinite(data.longitude) &&
+    typeof data.timezoneOffset === "number" &&
+    Number.isFinite(data.timezoneOffset) &&
+    ["Placidus", "Equal", "WholeSign"].includes(data.houseSystem || "")
+  );
+}
+
 function getSnapshot(): SavedProfile[] {
   if (typeof window === "undefined") return emptyProfiles;
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw === cachedRaw) return cachedProfiles;
+  cachedRaw = raw;
+  if (!raw) {
+    cachedProfiles = emptyProfiles;
+    return cachedProfiles;
+  }
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw === cachedRaw) return cachedProfiles;
-    cachedRaw = raw;
-    cachedProfiles = raw ? JSON.parse(raw) : [];
+    const parsed: unknown = JSON.parse(raw);
+    cachedProfiles = Array.isArray(parsed) ? parsed.filter(isSavedProfile) : emptyProfiles;
     return cachedProfiles;
   } catch {
-    return emptyProfiles;
+    // Keep the original localStorage value untouched; show an empty safe snapshot.
+    cachedProfiles = emptyProfiles;
+    return cachedProfiles;
   }
 }
 
@@ -49,16 +81,18 @@ function getServerSnapshot(): SavedProfile[] {
   return emptyProfiles;
 }
 
-function updateStorage(profiles: SavedProfile[]) {
+function updateStorage(profiles: SavedProfile[]): boolean {
   try {
     const raw = JSON.stringify(profiles);
+    localStorage.setItem(STORAGE_KEY, raw);
     cachedRaw = raw;
     cachedProfiles = profiles;
-    localStorage.setItem(STORAGE_KEY, raw);
+    listeners.forEach((listener) => listener());
+    return true;
   } catch (e) {
     console.error("Failed to update stored profiles:", e);
+    return false;
   }
-  listeners.forEach((listener) => listener());
 }
 
 export function ProfilesManager({ currentData, onSelectProfile }: ProfilesManagerProps) {
@@ -78,17 +112,22 @@ export function ProfilesManager({ currentData, onSelectProfile }: ProfilesManage
     };
 
     const updated = [newProfile, ...profiles.filter((p) => p.name !== label)];
-    updateStorage(updated);
+    const saved = updateStorage(updated);
+    if (!saved) {
+      setFeedback("Could not save profile. Check device storage.");
+      return;
+    }
 
     setProfileLabel("");
-    setFeedback(`Saved "${label}"`);
+    setFeedback("Saved " + label + " on this device");
     setTimeout(() => setFeedback(null), 2500);
   };
 
-  const deleteProfile = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const deleteProfile = (id: string) => {
     const updated = profiles.filter((p) => p.id !== id);
-    updateStorage(updated);
+    if (!updateStorage(updated)) {
+      setFeedback("Could not delete profile. Check device storage.");
+    }
   };
 
   return (
@@ -110,8 +149,10 @@ export function ProfilesManager({ currentData, onSelectProfile }: ProfilesManage
               Saved Natal Charts
             </span>
             <button
+              type="button"
               onClick={() => setIsOpen(false)}
-              className="text-slate-400 hover:text-slate-200 text-xs"
+              aria-label="Close saved profiles"
+              className="text-slate-400 hover:text-slate-200 text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400 rounded"
             >
               ✕
             </button>
@@ -119,9 +160,10 @@ export function ProfilesManager({ currentData, onSelectProfile }: ProfilesManage
 
           {/* Quick Save Current */}
           <div className="space-y-1.5">
-            <span className="text-[11px] text-slate-400 block">Save Current Entry</span>
+            <label htmlFor="celestia-profile-label" className="text-[11px] text-slate-400 block">Save Current Entry</label>
             <div className="flex items-center gap-1.5">
               <input
+                id="celestia-profile-label"
                 type="text"
                 placeholder={currentData.fullName || "Profile Name"}
                 value={profileLabel}
@@ -129,8 +171,9 @@ export function ProfilesManager({ currentData, onSelectProfile }: ProfilesManage
                 className="flex-1 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-amber-400"
               />
               <button
+                type="button"
                 onClick={saveCurrentProfile}
-                className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded text-xs flex items-center gap-1 cursor-pointer"
+                className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded text-xs flex items-center gap-1 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400"
               >
                 <Plus className="w-3 h-3" />
                 Save
@@ -153,24 +196,30 @@ export function ProfilesManager({ currentData, onSelectProfile }: ProfilesManage
               profiles.map((p) => (
                 <div
                   key={p.id}
-                  onClick={() => {
-                    onSelectProfile(p.data);
-                    setIsOpen(false);
-                  }}
-                  className="flex items-center justify-between p-2 rounded-lg bg-slate-950/60 hover:bg-amber-500/10 border border-slate-800 hover:border-amber-500/30 cursor-pointer group transition-colors"
+                  className="flex items-center gap-2 p-1.5 rounded-lg bg-slate-950/60 border border-slate-800 hover:border-amber-500/30 group transition-colors"
                 >
-                  <div className="truncate pr-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSelectProfile(p.data);
+                      setIsOpen(false);
+                    }}
+                    aria-label={"Select profile " + p.name}
+                    className="min-w-0 flex-1 text-left p-1 rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400"
+                  >
                     <span className="text-xs text-slate-200 font-medium block truncate group-hover:text-amber-300">
                       {p.name}
                     </span>
-                    <span className="text-[10px] text-slate-400 block">
+                    <span className="text-[10px] text-slate-400 block truncate">
                       {p.data.birthDate} · {p.data.cityName}
                     </span>
-                  </div>
+                  </button>
                   <button
-                    onClick={(e) => deleteProfile(p.id, e)}
-                    className="text-slate-400 hover:text-rose-400 p-1 opacity-60 group-hover:opacity-100 transition-opacity"
+                    type="button"
+                    onClick={() => deleteProfile(p.id)}
+                    className="text-slate-400 hover:text-rose-400 p-1 transition-opacity focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-400 rounded"
                     title="Delete profile"
+                    aria-label={"Delete profile " + p.name}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
