@@ -143,6 +143,14 @@ async function runGeocodeTests() {
     const resMalformedCoordinate = await GET(reqMalformedCoordinate);
     assert(resMalformedCoordinate.status === 400, "3.4 Rejects malformed coordinate strings instead of parsing numeric prefixes");
 
+    const reqPartialCoordinates = new NextRequest("http://localhost:3000/api/geocode?lat=48.8566");
+    const resPartialCoordinates = await GET(reqPartialCoordinates);
+    assert(resPartialCoordinates.status === 400, "3.5 Rejects a partial latitude/longitude pair");
+
+    const reqHexCoordinates = new NextRequest("http://localhost:3000/api/geocode?lat=0x10&lon=0x10");
+    const resHexCoordinates = await GET(reqHexCoordinates);
+    assert(resHexCoordinates.status === 400, "3.6 Rejects hexadecimal coordinate strings");
+
     // ---------------------------------------------------------
     // TEST 4: Key Configured - Forward Autocomplete
     // ---------------------------------------------------------
