@@ -17,7 +17,7 @@ function parseCoordinate(value: string | null): number | null {
   if (value === null) return null;
   const trimmed = value.trim();
   // Permit ordinary decimal/scientific notation, but not hex, suffixes, or blank values.
-  if (!/^[+-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+-]?\\d+)?$/.test(trimmed)) {
+  if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\\d+)?$/.test(trimmed)) {
     return null;
   }
   const parsed = Number(trimmed);
