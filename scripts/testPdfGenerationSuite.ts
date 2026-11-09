@@ -83,7 +83,7 @@ async function run() {
   const tooLarge = await POST(makeRequest("{}", { "content-length": "1000001" }));
   assert.equal(tooLarge.status, 413, "oversized declared input is rejected with HTTP 413");
 
-  console.log("PDF generation suite passed: 7 assertions.");
+  console.log("PDF generation suite passed: 6 assertions.");
 }
 
 run().catch((error) => {
