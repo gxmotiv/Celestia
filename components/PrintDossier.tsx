@@ -108,7 +108,7 @@ export function PrintDossier({
               Celestia Multi-System Astronomical Matrix
             </div>
             <div className="text-xs text-slate-500 uppercase tracking-widest font-mono">
-              Official Archival Natal Dossier
+              Personal Archival Natal Dossier
             </div>
           </div>
 
