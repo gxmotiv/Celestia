@@ -188,6 +188,13 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
   };
 
   const handleSelectCity = (c: LocationOption) => {
+    // Selecting a city invalidates any still-running lookup for the previous query.
+    citySearchRequestRef.current += 1;
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
+    }
+    setIsSearchingCity(false);
     setFormData((prev) => ({
       ...prev,
       cityName: c.city,
