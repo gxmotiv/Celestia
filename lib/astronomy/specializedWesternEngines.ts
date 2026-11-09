@@ -189,75 +189,128 @@ export class EclipseAnalyzer {
 export interface MedicalIndicator {
   systemName: string;
   signRuler: string;
-  governedAnatomy: string;
-  stressLevel: "Low" | "Moderate" | "Elevated";
-  preventiveAdvice: string;
+  traditionalBodyCorrespondence: string;
+  chartEmphasis: "Key" | "Additional";
+  traditionalInterpretation: string;
 }
 
 export interface MedicalAstrologyReport {
-  vitalityConstitution: string;
-  vulnerableSystems: MedicalIndicator[];
-  sixthHouseNote: string;
-  twelfthHouseNote: string;
-  preventivePractices: string[];
+  traditionalSummary: string;
+  traditionalCorrespondences: MedicalIndicator[];
+  sixthHouseTheme: string;
+  twelfthHouseTheme: string;
 }
 
+/**
+ * Historical medical-astrology symbolism only.
+ *
+ * This deliberately does not infer disease, clinical risk, symptoms, or treatment
+ * from a chart. Astrological body correspondences are cultural/historical
+ * associations and have no diagnostic or predictive medical validity.
+ */
 export class MedicalAstrologyEngine {
-  private static readonly BODY_RULERS: Record<string, { system: string; anatomy: string; advice: string }> = {
-    Aries: { system: "Cranio-Facial & Neural Vitality", anatomy: "Brain, skull, eyes, adrenal adrenaline surges", advice: "Maintain balanced hydration, avoid excessive caffeine, and practice active stress release." },
-    Taurus: { system: "Thyroid & Vocal/Cervical Spine", anatomy: "Neck, throat, thyroid gland, vocal cords", advice: "Support thyroid health with iodine/selenium, practice neck stretching, and soothe vocal strain." },
-    Gemini: { system: "Respiratory & Nervous Branching", anatomy: "Lungs, bronchial tubes, shoulders, arms, peripheral nerves", advice: "Practice deep pranayama breathing, protect against nervous burnout, and take digital detoxes." },
-    Cancer: { system: "Digestive Core & Epigastric Sanctuary", anatomy: "Stomach, epigastrium, breasts, lymphatic fluid", advice: "Nourish the gut microbiome, consume warm soothing broths, and avoid eating under emotional stress." },
-    Leo: { system: "Cardiovascular & Spinal Axis", anatomy: "Heart, thoracic spine, aorta, solar vitality", advice: "Prioritize heart-healthy cardio, support spinal alignment, and nurture emotional joy." },
-    Virgo: { system: "Enteric & Intestinal Assimilation", anatomy: "Small intestine, spleen, autonomic assimilation", advice: "Consume fiber-rich, unrefined whole foods; avoid hypochondriac worrying; prioritize calm digestion." },
-    Libra: { system: "Renal & Acid-Base Equilibrium", anatomy: "Kidneys, adrenal cortex, lumbar region, skin filtration", advice: "Drink abundant alkaline water, limit sodium spikes, and maintain peaceful aesthetic surroundings." },
-    Scorpio: { system: "Urogenital & Regenerative Excretion", anatomy: "Reproductive organs, prostate, colon, cellular detox", advice: "Support lymphatic and colon detoxification, honor emotional release, and drink clean herbal teas." },
-    Sagittarius: { system: "Hepatic & Locomotor Musculature", anatomy: "Liver, hips, thighs, sciatic nerve, arterial system", advice: "Cleanse liver with milk thistle/bitters, avoid over-indulgence in rich foods, and maintain athletic walking." },
-    Capricorn: { system: "Skeletal, Joint & Dermal Framework", anatomy: "Bones, knees, joints, teeth, connective tissue, skin", advice: "Ensure adequate calcium and magnesium intake, support joint mobility, and respect adequate rest." },
-    Aquarius: { system: "Circulatory & Bio-Electric Pathways", anatomy: "Circulation, calves, ankles, neurological synapses", advice: "Elevate legs, stimulate healthy venous circulation, and ground nervous electrical tension." },
-    Pisces: { system: "Lymphatic, Immune & Somatic Receptors", anatomy: "Feet, lymphatic drainage, pineal gland, autoimmune sensitivity", advice: "Practice Epsom salt foot soaks, strengthen mucosal immunity, and protect subtle energetic boundaries." },
+  private static readonly BODY_RULERS: Record<string, {
+    system: string;
+    correspondence: string;
+    interpretation: string;
+  }> = {
+    Aries: {
+      system: "Head & face symbolism",
+      correspondence: "Head, face and eyes",
+      interpretation: "Some historical medical-astrology traditions associate Aries with the head and face. This is a symbolic correspondence, not evidence of a health condition or risk.",
+    },
+    Taurus: {
+      system: "Neck & throat symbolism",
+      correspondence: "Neck, throat and voice",
+      interpretation: "Some historical traditions associate Taurus with the neck and throat. This does not indicate thyroid disease or a vocal-cord condition.",
+    },
+    Gemini: {
+      system: "Shoulder & breath symbolism",
+      correspondence: "Shoulders, arms and breathing",
+      interpretation: "Some historical traditions associate Gemini with the shoulders, arms and breath. This does not assess lung or nerve function.",
+    },
+    Cancer: {
+      system: "Chest & stomach symbolism",
+      correspondence: "Chest and stomach",
+      interpretation: "Some historical traditions associate Cancer with the chest and stomach. This does not assess digestive or breast health.",
+    },
+    Leo: {
+      system: "Heart & upper-back symbolism",
+      correspondence: "Heart symbolism and upper back",
+      interpretation: "Some historical traditions associate Leo with the heart and upper back. This does not indicate cardiac health or risk.",
+    },
+    Virgo: {
+      system: "Digestive symbolism",
+      correspondence: "Intestinal and digestive symbolism",
+      interpretation: "Some historical traditions associate Virgo with digestion and the intestines. This does not assess gut, spleen or other organ function.",
+    },
+    Libra: {
+      system: "Kidney & lower-back symbolism",
+      correspondence: "Kidney symbolism and lower back",
+      interpretation: "Some historical traditions associate Libra with the kidneys and lower back. This does not assess renal function.",
+    },
+    Scorpio: {
+      system: "Reproductive & eliminative symbolism",
+      correspondence: "Reproductive and eliminative symbolism",
+      interpretation: "Some historical traditions associate Scorpio with reproductive and eliminative themes. This does not assess reproductive or urological health.",
+    },
+    Sagittarius: {
+      system: "Hip & liver symbolism",
+      correspondence: "Hips, thighs and liver symbolism",
+      interpretation: "Some historical traditions associate Sagittarius with the hips, thighs and liver. This does not assess liver function or recommend a cleanse.",
+    },
+    Capricorn: {
+      system: "Bone & joint symbolism",
+      correspondence: "Bones, knees, joints and teeth",
+      interpretation: "Some historical traditions associate Capricorn with bones, knees, joints and teeth. This does not assess skeletal or dental conditions.",
+    },
+    Aquarius: {
+      system: "Calf & ankle symbolism",
+      correspondence: "Calves and ankles",
+      interpretation: "Some historical traditions associate Aquarius with the calves and ankles. This does not assess circulation or neurological function.",
+    },
+    Pisces: {
+      system: "Foot & fluid symbolism",
+      correspondence: "Feet and traditional fluid symbolism",
+      interpretation: "Some historical traditions associate Pisces with the feet and fluid symbolism. This does not assess immune, lymphatic or autoimmune conditions.",
+    },
   };
 
-  public analyzeHealth(chart: WesternChartData): MedicalAstrologyReport {
+  public analyzeTraditionalSymbolism(chart: WesternChartData): MedicalAstrologyReport {
     const sunSign = chart.planets.find((p) => p.name === "Sun")?.sign || "Aries";
     const moonSign = chart.planets.find((p) => p.name === "Moon")?.sign || "Taurus";
     const ascSign = chart.ascendant.sign;
-
-    const vulnerable: MedicalIndicator[] = [];
-
-    // Evaluate signs occupied by challenging aspects or Mars/Saturn
     const mars = chart.planets.find((p) => p.name === "Mars");
     const saturn = chart.planets.find((p) => p.name === "Saturn");
+    const keySigns = Array.from(new Set([
+      sunSign,
+      moonSign,
+      ascSign,
+      mars?.sign || "Aries",
+      saturn?.sign || "Capricorn",
+    ]));
 
-    const keySigns = Array.from(new Set([sunSign, moonSign, ascSign, mars?.sign || "Aries", saturn?.sign || "Capricorn"]));
-
-    keySigns.forEach((sign) => {
+    const traditionalCorrespondences: MedicalIndicator[] = keySigns.flatMap((sign) => {
       const data = MedicalAstrologyEngine.BODY_RULERS[sign];
-      if (data) {
-        const isStressed = sign === mars?.sign || sign === saturn?.sign;
-        vulnerable.push({
-          systemName: data.system,
-          signRuler: sign,
-          governedAnatomy: data.anatomy,
-          stressLevel: isStressed ? "Elevated" : "Moderate",
-          preventiveAdvice: data.advice,
-        });
-      }
+      if (!data) return [];
+      const isKeyChartFactor = sign === mars?.sign || sign === saturn?.sign;
+      return [{
+        systemName: data.system,
+        signRuler: sign,
+        traditionalBodyCorrespondence: data.correspondence,
+        chartEmphasis: isKeyChartFactor ? "Key" : "Additional",
+        traditionalInterpretation: data.interpretation,
+      }];
     });
 
     const house6 = chart.houses[5];
     const house12 = chart.houses[11];
 
     return {
-      vitalityConstitution: `Your somatic vitality combines ${ascSign} physical constitution with ${sunSign} solar recuperative force and ${moonSign} lunar emotional regulation.`,
-      vulnerableSystems: vulnerable,
-      sixthHouseNote: `House 6 starts in ${house6.sign}: Optimal daily healing routines flourish through disciplined ${house6.sign} wellness habits.`,
-      twelfthHouseNote: `House 12 starts in ${house12.sign}: Guard against hidden exhaustion; regenerative healing occurs through quiet retreat and sound sleep.`,
-      preventivePractices: [
-        "Align daily rhythm with constitutional somatic needs.",
-        "Emphasize targeted hydration and seasonal nutrient-dense foods.",
-        "Integrate grounding restorative movement to disperse planetary nervous tension.",
-      ],
+      traditionalSummary: `In historical medical-astrology symbolism, the Ascendant (${ascSign}), Sun (${sunSign}), and Moon (${moonSign}) are interpreted as symbolic themes. They do not describe physical condition, diagnose illness, or estimate medical risk.`,
+      traditionalCorrespondences,
+      sixthHouseTheme: `The sixth house begins in ${house6.sign}. In this tradition it is associated with routines, service and illness symbolism; this is not a clinical indicator.`,
+      twelfthHouseTheme: `The twelfth house begins in ${house12.sign}. In this tradition it is associated with retreat and hidden matters; it does not indicate hidden illness or exhaustion.`,
     };
   }
 }
