@@ -552,9 +552,16 @@ export class SwissEphemerisEngine {
       const calcPlacidusCusp = (f: number, ramcOffset: number): number => {
         let r = (ramc + ramcOffset) * (Math.PI / 180.0);
         for (let iter = 0; iter < 10; iter++) {
-          const sinDec = Math.sin(eps) * Math.sin(r);
-          const cosDec = Math.cos(Math.asin(Math.max(-1, Math.min(1, sinDec))));
-          const tanDec = sinDec / (cosDec || 0.0001);
+          // The iteration variable r is right ascension. Declination must
+          // be computed from the corresponding ecliptic longitude, not from
+          // right ascension itself. Convert RA -> ecliptic longitude first.
+          const eclipticLongitude = Math.atan2(
+            Math.sin(r),
+            Math.cos(r) * Math.cos(eps)
+          );
+          const sinDec = Math.sin(eps) * Math.sin(eclipticLongitude);
+          const cosDec = Math.sqrt(Math.max(0, 1 - sinDec * sinDec));
+          const tanDec = sinDec / Math.max(cosDec, 1e-12);
           const semiArcRatio = Math.asin(Math.max(-1, Math.min(1, Math.tan(phi) * tanDec))) * f;
           r = (ramc + ramcOffset) * (Math.PI / 180.0) + semiArcRatio;
         }
