@@ -546,6 +546,7 @@ export class SwissEphemerisEngine {
       cusps[3] = (mc + 180.0) % 360.0; // 4th house (IC)
       cusps[0] = asc; // 1st house
       cusps[6] = (asc + 180.0) % 360.0; // 7th house (DESC)
+      cusps[9] = mc; // 10th house (MC)
 
       // Calculate Placidus semi-arc cusps (11, 12, 2, 3)
       const calcPlacidusCusp = (f: number, ramcOffset: number): number => {
