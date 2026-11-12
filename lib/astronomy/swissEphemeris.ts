@@ -461,6 +461,9 @@ export class SwissEphemerisEngine {
     longitude: number,
     system: "P" | "W" | "E" | "O" = "P"
   ): SwissHouseResult {
+    if (!Number.isFinite(julianDay) || !Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+      throw new RangeError("House calculation requires a finite Julian Day, latitude within ±90°, and longitude within ±180°.");
+    }
     const time = new Astronomy.AstroTime(julianDay - 2451545.0);
 
     // Greenwich Apparent Sidereal Time (GST) in hours
@@ -499,13 +502,10 @@ export class SwissEphemerisEngine {
     ) * (180.0 / Math.PI);
     if (vertex < 0) vertex += 360.0;
 
-    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude)) {
-      throw new RangeError("House calculation requires finite longitude and latitude within ±90°.");
-    }
     // Placidus is undefined at polar-circle latitudes. Use the standard Porphyry
     // quadrant fallback explicitly instead of allowing a trigonometric result to
     // masquerade as a valid Placidus chart.
-    const systemUsed: "P" | "W" | "E" | "O" = system === "P" && Math.abs(latitude) >= 66.5622 ? "O" : system;
+    let systemUsed: "P" | "W" | "E" | "O" = system === "P" && Math.abs(latitude) >= 66.5622 ? "O" : system;
     const cusps: number[] = new Array(12);
 
     if (systemUsed === "W") {
@@ -573,9 +573,26 @@ export class SwissEphemerisEngine {
         cusps[7] = (cusps[1] + 180.0) % 360.0;  // 8th house
         cusps[8] = (cusps[2] + 180.0) % 360.0;  // 9th house
       } catch {
-        // Fallback for extreme polar latitudes
-        for (let i = 0; i < 12; i++) {
-          cusps[i] = (asc + i * 30.0) % 360.0;
+        // A numerical Placidus failure must never be reported as Placidus.
+        // Use the explicit Porphyry quadrant method and expose that fallback.
+        systemUsed = "O";
+        const ascendant = asc;
+        const descendant = (asc + 180.0) % 360.0;
+        const ic = (mc + 180.0) % 360.0;
+        const forwardArc = (from: number, to: number) => ((to - from) % 360 + 360) % 360;
+        const quadrants = [
+          [ascendant, ic],
+          [ic, descendant],
+          [descendant, mc],
+          [mc, ascendant],
+        ] as const;
+        for (let quadrant = 0; quadrant < 4; quadrant++) {
+          const [start, end] = quadrants[quadrant];
+          const arc = forwardArc(start, end);
+          const base = quadrant * 3;
+          cusps[base] = start;
+          cusps[base + 1] = (start + arc / 3) % 360;
+          cusps[base + 2] = (start + 2 * arc / 3) % 360;
         }
       }
     }
