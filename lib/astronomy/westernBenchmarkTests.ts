@@ -149,8 +149,8 @@ export class WesternBenchmarkRunner {
       standardReference: "Ptolemy / Placidus de Titis (1650)",
       expected: "12 cusps",
       actual: `${chart.houses.length} cusps`,
-      passed: chart.houses.length === 12,
-      details: "Every valid Western astrological chart must contain exactly 12 house boundaries.",
+      passed: chart.houses.length === 12 && chart.houses.every((house) => Number.isFinite(house.longitude)),
+      details: "Every valid Western chart must contain twelve finite house boundaries; an array of twelve entries with undefined cusps is invalid.",
     });
 
     // Test 2: Ascendant equals House 1 Cusp (within 0.01°)
