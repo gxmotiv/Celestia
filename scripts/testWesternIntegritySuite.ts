@@ -347,7 +347,7 @@ const transitFixtureChart = calculateWesternChart(2000, 1, 1, 12, 0, 51.4769, 0,
 const baseTransitEngine = new TransitEngine(transitFixtureChart, transitDate);
 const transitingSun = baseTransitEngine.getPlanetaryPositions(transitDate).Sun;
 const applyingNatal = {
-  ...benchmarkChart.planets[0],
+  ...transitFixtureChart.planets[0],
   id: "SyntheticNatal",
   name: "SyntheticNatal",
   longitude: normalizeDegrees(transitingSun.longitude - 59),
