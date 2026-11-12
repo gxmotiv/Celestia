@@ -463,7 +463,7 @@ export class TransitEngine {
             exactness
           );
 
-          const aspectAngle = ASPECT_SPECS[aspect.type.toLowerCase()]?.angle ?? aspect.angle;
+          const aspectAngle = ASPECT_SPECS[aspect.type.toLowerCase()]?.angle ?? 0;
           const directionKnown = Number.isFinite(transPlanet.speed) && Math.abs(transPlanet.speed) > 0.001;
           const isApplying = directionKnown
             ? isAngularAspectApplying(transLon, natalLon, aspectAngle, transPlanet.speed)
