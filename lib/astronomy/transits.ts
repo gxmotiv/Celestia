@@ -8,6 +8,8 @@
 import { swissEphemeris, SwissPlanetPosition } from "./swissEphemeris";
 import { WesternChartData, PlanetPosition, HouseCusp, ZODIAC_SIGNS } from "./ephemeris";
 import { EclipseAnalyzer } from "./specializedWesternEngines";
+import { isAngularAspectApplying } from "./ephemeris";
+import * as Astronomy from "astronomy-engine";
 
 export interface ActiveTransit {
   id: string;
@@ -29,6 +31,8 @@ export interface ActiveTransit {
   orb: number;
   maxOrb: number;
   exactness: number; // 0 to 1 (1 = exact)
+  /** Null means direction is indeterminate at a station or exact pass. */
+  isApplying: boolean | null;
   nature: "Harmonious" | "Challenging" | "Potent";
   category: "Major Life Chapter" | "Personal Trigger" | "Daily Mood";
   interpretation: string;
@@ -81,7 +85,8 @@ export interface DailyHoroscopeData {
     emoji: string;
     illumination: number;
   };
-  overallEnergy: number; // 0 to 100
+  /** Number of current transiting-to-natal aspects within configured orbs. */
+  activeTransitCount: number;
   energyMood: string;
   focus: string;
   luckyHours: string;
@@ -97,7 +102,7 @@ export interface WeeklyForecastDay {
   dayName: string;
   dateString: string;
   moonSign: string;
-  energyScore: number;
+  activeTransitCount: number;
   theme: string;
   keyTransit: string;
 }
@@ -263,43 +268,31 @@ export class TransitEngine {
   }
 
   /**
-   * Calculate transit duration estimate based on transiting planet speed
+   * Transit duration is NOT calculated from fixed planet-name buckets.
+   * Exact ingress/exactitude/egress and retrograde repeat passes require a
+   * time-stepped ephemeris search; this UI currently reports only the live orb.
    */
-  public calculateTransitDuration(planetName: string, aspectType: string): string {
-    switch (planetName) {
-      case "Moon":
-        return "2 – 4 hours";
-      case "Sun":
-      case "Mercury":
-      case "Venus":
-        return "2 – 4 days";
-      case "Mars":
-        return "1 – 2 weeks";
-      case "Jupiter":
-        return "2 – 3 months";
-      case "Saturn":
-        return "6 – 9 months";
-      case "Uranus":
-      case "Neptune":
-      case "Pluto":
-        return "1 – 2 years (with retrogrades)";
-      case "NorthNode":
-        return "3 – 5 months";
-      default:
-        return "Several days";
-    }
+  public calculateTransitDuration(_planetName: string, _aspectType: string): string {
+    return "Duration not solved: exact ingress, repeat passes and egress need a date-stepped search";
   }
 
   /**
-   * Approximate peak time for the transit
+   * Local linear estimate only. This never calls a separating aspect a future
+   * peak, and it refuses to guess near a station or exact pass.
    */
-  public calculatePeakTime(orb: number, planetSpeed: number): string {
-    if (orb < 0.3) return "Exact right now (Peak Intensity)";
-    const daysToPeak = Math.abs(planetSpeed) > 0.001 ? Math.round(orb / Math.abs(planetSpeed)) : 10;
-    if (daysToPeak <= 1) return "Peak within 24 hours";
-    if (daysToPeak < 30) return `Peak in ~${daysToPeak} days`;
-    const months = Math.round(daysToPeak / 30);
-    return `Peak in ~${months} month${months > 1 ? "s" : ""}`;
+  public calculatePeakTime(orb: number, planetSpeed: number, isApplying: boolean | null): string {
+    if (isApplying === null || Math.abs(planetSpeed) <= 0.001) {
+      return "Timing indeterminate near station or exact pass";
+    }
+    if (!isApplying) {
+      return "Separating: nearest exact pass may have occurred; next pass not yet solved";
+    }
+    if (orb < 0.01) return "Near exact now (linear orb threshold)";
+    const daysToExact = orb / Math.abs(planetSpeed);
+    if (!Number.isFinite(daysToExact)) return "Exact-pass timing unavailable";
+    if (daysToExact < 1) return "Applying: linear estimate under 24 hours";
+    if (daysToExact < 30) return `Applying: linear estimate ~${daysToExact.toFixed(1)} days`;
+    return `Applying: linear estimate ~${(daysToExact / 30).toFixed(1)} months`;
   }
 
   /**
@@ -470,6 +463,12 @@ export class TransitEngine {
             exactness
           );
 
+          const aspectAngle = ASPECT_SPECS[aspect.type.toLowerCase()]?.angle ?? aspect.angle;
+          const directionKnown = Number.isFinite(transPlanet.speed) && Math.abs(transPlanet.speed) > 0.001;
+          const isApplying = directionKnown
+            ? isAngularAspectApplying(transLon, natalLon, aspectAngle, transPlanet.speed)
+            : null;
+
           transits.push({
             id: `${transName}-${aspect.type}-${natalPoint.name}`,
             transitingPlanet: transName,
@@ -490,6 +489,7 @@ export class TransitEngine {
             orb: aspect.orb,
             maxOrb: aspect.maxOrb,
             exactness: exactness,
+            isApplying,
             nature: aspect.nature,
             category: category,
             interpretation: this.getTransitInterpretation(
@@ -499,7 +499,7 @@ export class TransitEngine {
               transHouse
             ),
             duration: this.calculateTransitDuration(transName, aspect.type),
-            peak: this.calculatePeakTime(aspect.orb, transPlanet.speed),
+            peak: this.calculatePeakTime(aspect.orb, transPlanet.speed, isApplying),
             significanceScore: score,
           });
         }
