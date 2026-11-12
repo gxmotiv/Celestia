@@ -1,10 +1,10 @@
 /**
  * Multi-System Planetary Transit Prediction Engine
  * Provides clean, pure separation between:
- * 1. Western Modern (Tropical, Placidus/Equal/Koch, Ptolemaic Aspects, Psychological)
+ * 1. Western Modern (Tropical, Placidus/Equal/Porphyry/Whole Sign, Ptolemaic Aspects, Psychological)
  * 2. Vedic Jyotish (Sidereal Lahiri/Raman/KP, Whole Sign / Chandra Lagna Gochara, Graha Drishti, Karmic + Remedies)
  * 3. Hellenistic Traditional (Tropical, Whole Sign, Sect, Ptolemaic)
- * 4. Western Sidereal (Fagan-Bradley, Placidus/Equal, Ptolemaic)
+ * 4. Western Sidereal (Fagan-Bradley, Placidus/Equal/Porphyry, Ptolemaic)
  * 5. Dual Comparison Mode (Side-by-side reconciliation with cross-system synthesis)
  */
 
@@ -835,9 +835,18 @@ export class MultiSystemTransitEngine {
         birthWestern.birthLongitude as number,
         systemCode
       );
-      this.natalHouseCusps = houseResult.houseCusps.map((cusp) =>
-        config.zodiac === "sidereal" ? normalizeDegrees(cusp - natalAyanamsa) : normalizeDegrees(cusp)
-      );
+      if (config.houseSystem === "whole-sign" && config.zodiac === "sidereal") {
+        // Whole Sign houses start at 0° of the sidereal Ascendant sign.
+        // Shifting tropical Whole Sign cusps by an ayanamsa would move each
+        // boundary off the sign start, so rebuild the sidereal sign framework.
+        const siderealAscendant = normalizeDegrees(birthWestern.ascendant.longitude - natalAyanamsa);
+        const firstSign = Math.floor(siderealAscendant / 30);
+        this.natalHouseCusps = Array.from({ length: 12 }, (_, index) => ((firstSign + index) % 12) * 30);
+      } else {
+        this.natalHouseCusps = houseResult.houseCusps.map((cusp) =>
+          config.zodiac === "sidereal" ? normalizeDegrees(cusp - natalAyanamsa) : normalizeDegrees(cusp)
+        );
+      }
       this.houseSystemUsed = houseResult.houseSystemUsed === "O" ? "porphyry"
         : houseResult.houseSystemUsed === "W" ? "whole-sign"
         : houseResult.houseSystemUsed === "E" ? "equal" : "placidus";
