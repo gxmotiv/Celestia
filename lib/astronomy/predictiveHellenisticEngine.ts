@@ -52,12 +52,18 @@ export class ProgressionsEngine {
     birthDate: Date,
     currentDate: Date,
     lat: number,
-    lon: number,
-    timezoneOffset: number
+    lon: number
   ): ProgressedChartResult {
+    if (!Number.isFinite(birthDate.getTime()) || !Number.isFinite(currentDate.getTime()) ||
+        currentDate.getTime() < birthDate.getTime()) {
+      throw new RangeError("Secondary progressions require valid dates with currentDate on or after birthDate.");
+    }
+    if (![lat, lon].every(Number.isFinite) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+      throw new RangeError("Secondary progressions require latitude ±90° and east-positive longitude ±180°.");
+    }
     const diffMs = currentDate.getTime() - birthDate.getTime();
     const ageYears = diffMs / (365.2422 * 86400000);
-    const age = Math.max(0, Math.floor(ageYears));
+    const age = Math.floor(ageYears);
 
     // Secondary progression: 1 day after birth = 1 year of life
     const progressedTimeMs = birthDate.getTime() + ageYears * 86400000;
@@ -108,10 +114,9 @@ export class ProgressionsEngine {
 
     // Moon changes signs roughly every 2.3 to 2.5 years
     const moonSignChanges: MoonSignChangeEvent[] = [];
-    const currentYear = currentDate.getFullYear();
-
     for (let delta = -2; delta <= 10; delta++) {
       const checkAge = age + delta;
+      if (checkAge < 0) continue;
       const checkTimeMs = birthDate.getTime() + checkAge * 86400000;
       const nextTimeMs = birthDate.getTime() + (checkAge + 1) * 86400000;
 
@@ -127,7 +132,9 @@ export class ProgressionsEngine {
       if (moonPos1.sign !== moonPos2.sign) {
         moonSignChanges.push({
           age: checkAge,
-          year: currentYear + delta,
+          // A secondary-progression day corresponds to a life-year beginning
+          // on this age birthday; avoid deriving it from the current local year.
+          year: birthDate.getUTCFullYear() + checkAge,
           fromSign: moonPos1.sign,
           toSign: moonPos2.sign,
           interpretation: `Progressed Moon shifts into ${moonPos2.sign}: A 2.5-year chapter focusing emotional focus, lifestyle habits, and instincts into ${moonPos2.sign} themes.`,
@@ -137,7 +144,7 @@ export class ProgressionsEngine {
 
     return {
       age,
-      progressedDate: progDateObj.toLocaleDateString(),
+      progressedDate: progDateObj.toISOString(),
       progressedPlanets: progChart.planets,
       progressedSun: progSun,
       progressedMoon: progMoon,
