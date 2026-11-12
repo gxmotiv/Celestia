@@ -115,7 +115,7 @@ export class MidpointCalculator {
   public calculateAllMidpoints(planets: PlanetPosition[]): MidpointItem[] {
     const items: MidpointItem[] = [];
     const corePlanets = planets.filter((p) =>
-      ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto", "Chiron", "NorthNode"].includes(p.name)
+      ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto", "Chiron", "NorthNode", "Ascendant", "Midheaven"].includes(p.name)
     );
 
     for (let i = 0; i < corePlanets.length; i++) {
@@ -200,9 +200,9 @@ export class HarmonicChartCalculator {
       description: "Shows resilience in crisis, the transformative forge of pressure, survival instincts, and power regenerated through surrender.",
     },
     9: {
-      name: "9th Harmonic (H9) - Navamsha / Spiritual Fulfilment",
-      theme: "Novile Series (40° / 80°) & Soul Dharma",
-      description: "Western analog to Navamsha: reveals the soul's resting happiness, philosophical peace, mature relationship fulfillment, and destiny in the later phase of life.",
+      name: "9th Harmonic (H9) - Novile Series",
+      theme: "Novile divisions (40° / 80° and related ninth-harmonic angles)",
+      description: "A ninth-harmonic chart formed by multiplying longitudes by nine. It is not equivalent to the Vedic Navamsha (D9), which uses a separate sign-division method. Interpretive themes vary by school.",
     },
   };
 
@@ -210,6 +210,9 @@ export class HarmonicChartCalculator {
     planets: PlanetPosition[],
     harmonicNumber: number
   ): HarmonicChart {
+    if (!Number.isInteger(harmonicNumber) || harmonicNumber < 1 || harmonicNumber > 360) {
+      throw new RangeError("Harmonic number must be an integer from 1 to 360.");
+    }
     const meta =
       HarmonicChartCalculator.KEY_HARMONICS[harmonicNumber] || {
         name: `${harmonicNumber}th Harmonic (H${harmonicNumber})`,
@@ -309,6 +312,10 @@ export class DeclinationCalculator {
     eclipticLat = 0,
     obliquity = 23.43929
   ): number {
+    if (![eclipticLon, eclipticLat, obliquity].every(Number.isFinite) ||
+        Math.abs(eclipticLat) > 90 || Math.abs(obliquity) > 90) {
+      throw new RangeError("Declination requires finite ecliptic coordinates and obliquity.");
+    }
     const DEG2RAD = Math.PI / 180.0;
     const RAD2DEG = 180.0 / Math.PI;
 
@@ -340,7 +347,11 @@ export class DeclinationCalculator {
     obliquity = 23.43929,
     maxOrb = 1.2
   ): DeclinationReport {
-    const OOB_THRESHOLD = 23.43929; // Out of Bounds if > maximum solar obliquity
+    if (!Number.isFinite(obliquity) || Math.abs(obliquity) > 90 || !Number.isFinite(maxOrb) || maxOrb < 0) {
+      throw new RangeError("Declination analysis requires valid obliquity and a non-negative finite orb.");
+    }
+    // The maximum solar declination is the obliquity of date, not a fixed J2000 constant.
+    const OOB_THRESHOLD = Math.abs(obliquity);
 
     const declinationList: DeclinationData[] = planets.map((p) => {
       const dec = this.calculateDeclination(p.longitude, p.latitude || 0, obliquity);
