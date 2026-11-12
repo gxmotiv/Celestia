@@ -538,7 +538,7 @@ export class FirdariaEngine {
       activeSubLord: activeSub,
       activeYearsRange: activeRange,
       allPeriods: periods,
-      interpretation: `Under the medieval ${isDiurnal ? "day" : "night"} Firdaria sequence, cycle ${cycleNumber + 1} is active. Current major ruler: ${activeMajor} (${activeRange}); sub-ruler: ${activeSub}.`,
+      interpretation: `Under the medieval ${isDiurnal ? "day" : "night"} Firdaria sequence, cycle ${cycleNumber + 1} is active. Current major ruler: ${activeMajor} (${activeRange}); sub-ruler: ${activeSub}. Node periods are placed after the seven planetary majors in this selected variant; some medieval presentations place the nodes after Mars in nocturnal charts.`,
     };
   }
 }
