@@ -66,10 +66,10 @@ export const CELESTIAL_GROUPS: BodyGroup[] = [
     bodies: [
       { id: "NorthNode", name: "North Node", symbol: "☊", desc: "Soul destiny, evolutionary growth vector" },
       { id: "SouthNode", name: "South Node", symbol: "☋", desc: "Past-life karma, innate talents & comfort trap" },
-      { id: "Chiron", name: "Chiron", symbol: "⚷", desc: "The Wounded Healer, bridge to deep compassion" },
+      { id: "Chiron", name: "Chiron (approx.)", symbol: "⚷", desc: "Approximate illustrative orbit model only; not a precision Chiron ephemeris. Astrological interpretation is symbolic." },
       { id: "MeanLilith", name: "Mean Lilith", symbol: "⚸", desc: "Primal independence, untamed feminine shadow" },
       { id: "TrueLilith", name: "True Lilith (Osc.)", symbol: "⚸*", desc: "Osculating lunar apogee, raw instinctive sovereignty" },
-      { id: "WhiteMoon", name: "White Moon (Selena)", symbol: "☽*", desc: "Pure karmic grace, spiritual light & guardian angel" },
+      { id: "WhiteMoon", name: "White Moon (symbolic)", symbol: "☽*", desc: "Hypothetical, tradition-dependent esoteric point; not a physical body or measured lunar orbit." },
     ],
   },
   {
