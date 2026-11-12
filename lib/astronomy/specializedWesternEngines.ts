@@ -217,7 +217,7 @@ export class MedicalAstrologyEngine {
     Aries: {
       system: "Head & face symbolism",
       correspondence: "Head, face and eyes",
-      interpretation: "Some historical medical-astrology traditions associate Aries with the head and face. This is a symbolic correspondence, not evidence of a health condition or risk.",
+      interpretation: "Some historical medical-astrology traditions associate Aries with the head and face. This does not provide evidence of a health condition or risk.",
     },
     Taurus: {
       system: "Neck & throat symbolism",
