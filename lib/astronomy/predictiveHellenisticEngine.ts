@@ -528,7 +528,7 @@ export class FirdariaEngine {
     let activeSub = "No active sub-period";
     let activeRange = "";
 
-    sequence.forEach((item, itemIndex) => {
+    sequence.forEach((item) => {
       const localStart = cumulativeYears;
       const localEnd = cumulativeYears + item.years;
       const startAge = cycleStartAge + localStart;
