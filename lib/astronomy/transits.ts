@@ -715,7 +715,7 @@ export class TransitEngine {
   public getEclipseTransits(): EclipseTransit[] {
     // Use the same dynamic Astronomy Engine event search as the Advanced
     // Western panel. Never substitute an expired hard-coded eclipse calendar.
-    const events = new EclipseAnalyzer().analyzeEclipses(this.birthChart);
+    const events = new EclipseAnalyzer().analyzeEclipses(this.birthChart, this.currentDate);
     return events.map((event) => {
       const longitude = event.degree;
       const natalAspects: string[] = [];
