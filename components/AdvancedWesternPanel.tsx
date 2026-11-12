@@ -950,7 +950,7 @@ export function AdvancedWesternPanel({
               <div key={idx} className="p-3.5 bg-slate-950/60 border border-slate-800 rounded-xl space-y-2 hover:border-slate-700 transition-all">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h5 className="text-xs font-bold text-slate-100">{e.type} Eclipse</h5>
+                    <h5 className="text-xs font-bold text-slate-100">{e.type}</h5>
                     <span className="text-[10px] text-slate-400 font-mono">{e.date} · {e.degreeFormatted} · UTC peak</span>
                   </div>
                   <span className="text-xs font-bold px-2 py-0.5 rounded bg-rose-500/15 border border-rose-500/30 text-rose-300 font-mono">
