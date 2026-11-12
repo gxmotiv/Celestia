@@ -74,7 +74,7 @@ export default function HomePage() {
     manualOffsetConfirmed: true,
     baziTimeBasis: "local-mean-solar",
     baziDayBoundaryPolicy: "pure-zi",
-    houseSystem: "Placidus",
+    houseSystem: "Auto",
   });
 
   const [activeTab, setActiveTab] = useState<SystemTabId>("western");
@@ -385,7 +385,7 @@ export default function HomePage() {
                 {Math.abs(formData.longitude).toFixed(2)}°{formData.longitude >= 0 ? "E" : "W"}
               </span>
               <span className="text-slate-600">·</span>
-              <span className="text-amber-300/80 font-mono text-[11px]">{formData.houseSystem} Houses</span>
+              <span className="text-amber-300/80 font-mono text-[11px]">{westernData.houseSystem} Houses</span>
             </div>
 
             <button
