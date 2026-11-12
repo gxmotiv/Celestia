@@ -207,6 +207,11 @@ check(solarReturn.longitudeErrorDegrees < 0.002,
   "Solar return event solves to within 0.002 degrees of the natal Sun longitude");
 check(solarReturn.chart.houseSystem === "Placidus" && solarReturn.chart.houses.length === 12,
   "Solar return chart recalculates twelve Placidus cusps at its reference location");
+const relocatedSolarReturn = returnEngine.calculateSolarReturn(directedFixture, 2026, 40.7128, -74.006, "Placidus");
+check(relocatedSolarReturn.exactUtc === solarReturn.exactUtc,
+  "Relocating a solar return does not change the geocentric exact return instant");
+check(Math.abs(relocatedSolarReturn.chart.ascendant.longitude - solarReturn.chart.ascendant.longitude) > 1,
+  "Relocating a solar return changes its local Ascendant and house geometry");
 const lunarReturnReference = new Date("2026-11-12T00:00:00.000Z");
 const lunarReturn = returnEngine.calculateNextLunarReturn(directedFixture, lunarReturnReference, 51.4769, 0, "WholeSign");
 check(new Date(lunarReturn.exactUtc).getTime() > lunarReturnReference.getTime(),
