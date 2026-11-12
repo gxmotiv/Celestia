@@ -66,7 +66,7 @@ export class AstrologyPDFGenerator {
         const upcomingEclipses = transitEngine.getEclipseTransits();
 
         // 1. Cover Page
-        this.generateCoverPage(data.userData);
+        this.generateCoverPage(data.userData, data.western.houseSystem);
 
         // 2. Table of Contents
         this.doc.addPage();
@@ -117,7 +117,7 @@ export class AstrologyPDFGenerator {
   /* ========================================================================= */
   /* 1. COVER PAGE                                                             */
   /* ========================================================================= */
-  private generateCoverPage(user: PDFUserData): void {
+  private generateCoverPage(user: PDFUserData, resolvedHouseSystem: string): void {
     const doc = this.doc;
     const pageWidth = doc.page.width;
     const pageHeight = doc.page.height;
@@ -211,7 +211,7 @@ export class AstrologyPDFGenerator {
     doc.text(`Location: ${user.cityName}, ${user.country}`, col1X, metaY + 32);
 
     doc.text(`Coordinates: ${Math.abs(user.latitude).toFixed(4)}°${user.latitude >= 0 ? "N" : "S"}, ${Math.abs(user.longitude).toFixed(4)}°${user.longitude >= 0 ? "E" : "W"}`, col2X, metaY);
-    doc.text(`House System: ${data.western.houseSystem}`, col2X, metaY + 16);
+    doc.text(`House System: ${resolvedHouseSystem}`, col2X, metaY + 16);
     doc.text(`Ephemeris Engine: astronomy-engine`, col2X, metaY + 32);
 
     // Document Verification Seal
