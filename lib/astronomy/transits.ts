@@ -7,6 +7,7 @@
 
 import { swissEphemeris, SwissPlanetPosition } from "./swissEphemeris";
 import { WesternChartData, PlanetPosition, HouseCusp, ZODIAC_SIGNS } from "./ephemeris";
+import { EclipseAnalyzer } from "./specializedWesternEngines";
 
 export interface ActiveTransit {
   id: string;
@@ -712,75 +713,33 @@ export class TransitEngine {
    * Detect current astronomical eclipse cycles affecting the chart
    */
   public getEclipseTransits(): EclipseTransit[] {
-    // Current cycle eclipse points (Virgo/Pisces & Aries/Libra nodes)
-    const currentYearEclipses = [
-      {
-        type: "Solar Eclipse" as const,
-        date: "Feb 17, 2026",
-        sign: "Aquarius",
-        degree: 28.8,
-        lon: 328.8,
-      },
-      {
-        type: "Lunar Eclipse" as const,
-        date: "Mar 3, 2026",
-        sign: "Virgo",
-        degree: 12.9,
-        lon: 162.9,
-      },
-      {
-        type: "Solar Eclipse" as const,
-        date: "Aug 12, 2026",
-        sign: "Leo",
-        degree: 20.0,
-        lon: 140.0,
-      },
-      {
-        type: "Lunar Eclipse" as const,
-        date: "Aug 28, 2026",
-        sign: "Pisces",
-        degree: 4.9,
-        lon: 334.9,
-      },
-    ];
+    // Use the same dynamic Astronomy Engine event search as the Advanced
+    // Western panel. Never substitute an expired hard-coded eclipse calendar.
+    const events = new EclipseAnalyzer().analyzeEclipses(this.birthChart);
+    return events.map((event) => {
+      const longitude = event.degree;
+      const natalAspects: string[] = [];
 
-    const results: EclipseTransit[] = [];
-
-    for (const ec of currentYearEclipses) {
-      const house = this.getHouse(ec.lon);
-      const aspects: string[] = [];
-
-      // Check contacts with natal planets
-      for (const p of this.birthChart.planets) {
-        const diff = this.calculateAngle(ec.lon, p.longitude);
-        if (diff <= 4.0) {
-          aspects.push(`Conjunction to Natal ${p.name} (orb ${diff.toFixed(1)}°)`);
-        } else if (Math.abs(diff - 180) <= 4.0) {
-          aspects.push(`Opposition to Natal ${p.name} (orb ${Math.abs(diff - 180).toFixed(1)}°)`);
+      for (const natal of this.birthChart.planets) {
+        const rawDifference = Math.abs(longitude - natal.longitude);
+        const difference = Math.min(rawDifference, 360 - rawDifference);
+        if (difference <= 4) {
+          natalAspects.push(`Conjunction to Natal ${natal.name} (orb ${difference.toFixed(1)}°)`);
+        } else if (Math.abs(difference - 180) <= 4) {
+          natalAspects.push(`Opposition to Natal ${natal.name} (orb ${Math.abs(difference - 180).toFixed(1)}°)`);
         }
       }
 
-      // Check Ascendant and Midheaven
-      if (this.birthChart.ascendant) {
-        const diffAsc = this.calculateAngle(ec.lon, this.birthChart.ascendant.longitude);
-        if (diffAsc <= 4.0) aspects.push(`Conjunction to Natal Ascendant! (Life Turning Point)`);
-      }
-
-      results.push({
-        type: ec.type,
-        date: ec.date,
-        sign: ec.sign,
-        degree: ec.degree,
-        natalHouse: house,
-        natalAspects: aspects,
-        interpretation:
-          aspects.length > 0
-            ? `Direct trigger on your chart! This eclipse activates your ${HOUSE_TITLES[house]} with major karmic turning points: ${aspects.join(", ")}.`
-            : `Activates your ${HOUSE_TITLES[house]}, stimulating swift evolution and shedding obsolete dynamics in this arena.`,
-      });
-    }
-
-    return results;
+      return {
+        type: event.type.includes("Solar") ? "Solar Eclipse" as const : "Lunar Eclipse" as const,
+        date: event.peakUtc,
+        sign: event.zodiacSign,
+        degree: Math.round((longitude % 30) * 100) / 100,
+        natalHouse: event.affectedHouse,
+        natalAspects,
+        interpretation: `${event.type} in ${event.zodiacSign} at ${event.degreeFormatted}, in natal house ${event.affectedHouse}. This is an astrological symbolism overlay, not a guaranteed prediction. ${event.visibilityNote}`,
+      };
+    });
   }
 
   /**
