@@ -45,6 +45,7 @@ export interface SwissHouseResult {
   localSiderealTime: number;
   /** True obliquity of date in degrees, matching Astronomy Engine GAST. */
   obliquity: number;
+  houseSystemUsed: "P" | "W" | "E" | "O";
 }
 
 export interface SwissAspect {
