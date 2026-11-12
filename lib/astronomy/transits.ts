@@ -622,7 +622,7 @@ export class TransitEngine {
       3: "Saturn disciplines your 3rd House of thought, communication, and skills. Mental focus sharpens, frivolous chatter ceases, and you are called to study, write, or master a high-stakes technical craft.",
       4: "Saturn anchors in your 4th House of roots, home, and ancestral karma. You are restructuring your domestic foundation, repairing family obligations, or renovating physical and emotional sanctuaries.",
       5: "Saturn tests your 5th House of creative joy, romance, and children. Casual flings no longer satisfy; you demand authentic, committed romance. Creative projects require relentless discipline and professional execution.",
-      6: "Saturn tightens your 6th House of health, daily routine, and work ethic. Neglected bodily habits demand immediate rehabilitation. Streamline workflows, commit to clean nutrition, and honor your nervous system.",
+      6: "Saturn emphasizes structure in daily routines, work and service. Review commitments, simplify workflows and choose sustainable habits. This is symbolic house interpretation, not a health assessment.",
       7: "Saturn crosses the Descendant into your 7th House of committed partnership. Flimsy relationships dissolve while mature, rock-solid commitments are forged. You learn the sacred art of healthy boundaries in love and business.",
       8: "Saturn enters your 8th House of shared assets, taxes, intimacy, and psychological debts. You face deep financial or emotional entanglements, paying off karmic debts and emerging with financial autonomy.",
       9: "Saturn structures your 9th House of philosophy, higher education, and worldview. Vague spiritual platitudes give way to rigorous philosophical grounding, academic credentials, and authentic ethical codes.",
@@ -672,12 +672,12 @@ export class TransitEngine {
 
   public getSaturnAdvice(house: number): string {
     const map: Record<number, string> = {
-      1: "Invest in your health, posture, and foundational habits. You are the architect of your new era.",
+      1: "Review your foundational routines, boundaries and personal presentation. You are the architect of your new era.",
       2: "Audit your bank accounts and streamline expenses. Build lasting, tangible security.",
       3: "Write that book, enroll in that masterclass, or learn that high-value language.",
       4: "Make peace with your past and establish a peaceful, decluttered sanctuary at home.",
       5: "Treat your creative talent like a serious business. Devote one hour every single day to it.",
-      6: "Schedule annual health checkups, sleep 8 hours, and refine your daily calendar.",
+      6: "Review your daily calendar, protect reasonable rest time and simplify repetitive tasks. Medical checkups should be scheduled according to clinical guidance, not astrology.",
       7: "Do not rush commitment, but honor the partner who stands by you with steadfast loyalty.",
       8: "Settle old debts, organize joint estate paperwork, and embrace deep psychological truth.",
       9: "Publish your research, plan purposeful pilgrimages, and anchor your ethical compass.",
@@ -698,7 +698,7 @@ export class TransitEngine {
       3: "Jupiter inspires your 3rd House of writing, media, and networking. Your words carry charismatic influence. Great for launching podcasts, newsletters, publishing, and short travels.",
       4: "Jupiter protects your 4th House of home and family. Real estate opportunities, joyous family celebrations, or expanding your living space bring deep emotional security.",
       5: "Jupiter lights up your 5th House of creative joy, romance, and entertainment! One of the happiest transits possible: love flourishes, creative inspiration flows, and life feels playful.",
-      6: "Jupiter elevates your 6th House of daily work and vitality. Enjoyable job conditions, supportive coworkers, and rapid recovery from physical fatigue are promised.",
+      6: "Jupiter symbolically expands the 6th House themes of work, service and daily routines. This does not predict physical vitality, fatigue, recovery or illness.",
       7: "Jupiter graces your 7th House of sacred partnership! Lucrative business contracts and blessed romantic unions emerge. The partner who enters now expands your entire world.",
       8: "Jupiter enriches your 8th House of joint finances, investments, and deep intimacy. Grants, inheritances, or partner windfalls arrive, alongside profound spiritual healing.",
       9: "Jupiter rejoices in its home 9th House! International travel, academic triumphs, spiritual enlightenments, and expansive publications open broad horizons.",
