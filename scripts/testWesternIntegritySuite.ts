@@ -122,6 +122,7 @@ const autoChart = calculateWesternChart(...args, "Auto");
 check(autoChart.requestedHouseSystem === "Auto", "Auto selection is preserved as the requested mode");
 check(autoChart.houseSystem === "Placidus", "Auto selects Placidus for the modern Western profile at ordinary latitude");
 check(autoChart.houses.length === 12, "Auto Western chart returns twelve house cusps");
+check(autoChart.houses.every((house) => Number.isFinite(house.longitude)), "Auto Western chart has twelve finite cusp longitudes");
 const wholeSignChart = calculateWesternChart(...args, "WholeSign");
 const equalChart = calculateWesternChart(...args, "Equal");
 const porphyryChart = calculateWesternChart(...args, "Porphyry");
@@ -134,6 +135,7 @@ for (const entry of [
   ["Porphyry", porphyryChart],
 ] as const) {
   check(entry[1].houses.length === 12, entry[0] + " returns twelve cusps");
+  check(entry[1].houses.every((house) => Number.isFinite(house.longitude)), entry[0] + " returns twelve finite cusp longitudes");
   close(
     normalizeDegrees(entry[1].houses[6].longitude - entry[1].houses[0].longitude),
     180,
@@ -146,6 +148,7 @@ check(polarAuto.houseSystem === "Porphyry", "Auto switches to Porphyry at polar 
 check(Boolean(polarAuto.houseSystemNote && polarAuto.houseSystemNote.includes("polar")),
   "Polar fallback is disclosed to the user");
 check(polarAuto.houses.length === 12, "Polar fallback returns twelve cusps");
+check(polarAuto.houses.every((house) => Number.isFinite(house.longitude)), "Polar fallback returns twelve finite cusp longitudes");
 const polarExplicitPlacidus = calculateWesternChart(2000, 1, 1, 12, 0, 70, 0, 0, "Placidus");
 check(polarExplicitPlacidus.houseSystem === "Porphyry",
   "Explicit Placidus request reports Porphyry when polar fallback is used");
