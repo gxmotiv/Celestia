@@ -78,8 +78,8 @@ export function TransitView({
 
   // Custom House System Override (for Western)
   const [selectedHouseSystem, setSelectedHouseSystem] = useState<
-    "placidus" | "whole-sign" | "equal" | "porphyry"
-  >("placidus");
+    "auto" | "placidus" | "whole-sign" | "equal" | "porphyry"
+  >("auto");
 
   // BaZi Gender (for Da Yun progression direction)
   const [baZiGender, setBaZiGender] = useState<"Male" | "Female">("Male");
@@ -104,10 +104,16 @@ export function TransitView({
     if (systemMode === "comparison") return TRANSIT_SYSTEM_PRESETS.western;
     const base = TRANSIT_SYSTEM_PRESETS[systemMode] || TRANSIT_SYSTEM_PRESETS.western;
     if (systemMode === "western") {
-      return { ...base, houseSystem: selectedHouseSystem };
+      const natalResolvedSystem = westernChart.houseSystem === "WholeSign" ? "whole-sign"
+        : westernChart.houseSystem === "Equal" ? "equal"
+        : westernChart.houseSystem === "Porphyry" ? "porphyry" : "placidus";
+      return {
+        ...base,
+        houseSystem: selectedHouseSystem === "auto" ? natalResolvedSystem : selectedHouseSystem,
+      };
     }
     return base;
-  }, [systemMode, selectedHouseSystem]);
+  }, [systemMode, selectedHouseSystem, westernChart.houseSystem]);
 
   // Multi-System Transit Engine Instance
   const multiEngine = useMemo(() => {
@@ -281,6 +287,7 @@ export function TransitView({
                   onChange={(e) => setSelectedHouseSystem(e.target.value as any)}
                   className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-amber-300 text-xs font-medium focus:outline-none focus:border-amber-400 cursor-pointer"
                 >
+                  <option value="auto">Auto — follow natal Western chart ({westernChart.houseSystem})</option>
                   <option value="placidus">Placidus (Quadrant)</option>
                   <option value="porphyry">Porphyry (Equal Quadrants)</option>
                   <option value="whole-sign">Whole Sign (Hellenistic)</option>
