@@ -257,7 +257,7 @@ export function AdvancedWesternPanel({
             Western Astrology Techniques & Calculations
           </h3>
           <p className="text-[11px] text-slate-400">
-            Asteroids · Shadow Axis · Arabian Parts · Midpoints · Harmonics · Declinations · Progressions · Profections · Releasing · Firdaria · Fixed Stars · Eclipses · Medical · Astrocartography
+            Asteroids · Shadow Axis · Arabian Parts · Midpoints · Harmonics · Declinations · Progressions · Solar Arc · Solar/Lunar Returns · Profections · Releasing · Firdaria · Fixed Stars · Eclipses · Medical Symbolism · Astrocartography
           </p>
         </div>
 
