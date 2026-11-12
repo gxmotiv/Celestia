@@ -54,7 +54,8 @@ export interface AspectData {
   angle: number; // nominal angle: 0, 60, 90, 120, 180, etc.
   actualDiff: number; // absolute difference
   orb: number; // orb difference from exact
-  isApplying: boolean;
+  /** Null when one point has no modeled speed or the relative speed is stationary. */
+  isApplying: boolean | null;
   nature: "Harmonious" | "Challenging" | "Neutral";
 }
 
@@ -644,7 +645,11 @@ export function calculateAspects(planets: PlanetPosition[]): AspectData[] {
         if (orbDiff <= maxOrb) {
           // Compare the signed angular error to the nearest aspect branch.
           const relativeSpeed = (p1.speed ?? 0) - (p2.speed ?? 0);
-          const isApplying = isAngularAspectApplying(p1.longitude, p2.longitude, asp.angle, relativeSpeed);
+          const isAngleWithoutSpeed = ["Ascendant", "Midheaven", "Descendant", "Imum Coeli"].includes(p1.name) ||
+            ["Ascendant", "Midheaven", "Descendant", "Imum Coeli"].includes(p2.name);
+          const isApplying = isAngleWithoutSpeed || Math.abs(relativeSpeed) < 1e-12
+            ? null
+            : isAngularAspectApplying(p1.longitude, p2.longitude, asp.angle, relativeSpeed);
 
           aspects.push({
             planet1: p1.name,
