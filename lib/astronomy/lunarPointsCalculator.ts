@@ -33,21 +33,41 @@ const RAD2DEG = 180.0 / Math.PI;
 
 export class LunarPointsCalculator {
   /**
-   * Mean Lilith (Lunar Apogee):
-   * Longitude of lunar perigee at J2000.0 is ~83.353243°, apogee is perigee + 180° = 263.353243° or
-   * standard Mean Apogee formula = 142.19° + 40.664876° * T (in Julian centuries).
+   * Mean Black Moon Lilith (mean lunar apogee).
+   *
+   * The prior implementation used 142.1903 + 40.664876*T with T in
+   * Julian centuries. That rate was off by a factor of 100 and its J2000
+   * epoch was inconsistent with the mean-apogee definition.
+   *
+   * This compact empirical fit is cross-checked against Swiss Ephemeris
+   * mean-apogee reference output around 1900–2050. It is an approximation,
+   * not a replacement for the full Moshier/ELP lunar theory.
    */
+  private meanApogeeLongitude(jd: number): number {
+    const daysSinceJ2000 = jd - 2451545.0;
+    const phaseDegrees = 0.3287143373 * daysSinceJ2000 + 96.6084061482;
+    return normalizeDegrees(
+      263.3521188770 +
+      0.1114036699 * daysSinceJ2000 +
+      0.1156754590 * Math.sin(phaseDegrees * DEG2RAD)
+    );
+  }
+
   public calculateMeanLilithLon(jd: number): { lon: number; speed: number } {
-    const T = (jd - 2451545.0) / 36525.0;
-    // Mean lunar apogee advances ~40.664876 degrees per Julian century
-    const lon = normalizeDegrees(142.1903 + 40.664876 * T - 0.00014 * T * T);
-    const speed = 40.664876 / 36525.0; // ~0.111° per day
-    return { lon, speed };
+    if (!Number.isFinite(jd)) {
+      throw new RangeError("Mean lunar apogee requires a finite Julian Day.");
+    }
+    const stepDays = 0.5;
+    const lon = this.meanApogeeLongitude(jd);
+    const before = this.meanApogeeLongitude(jd - stepDays);
+    const after = this.meanApogeeLongitude(jd + stepDays);
+    const signedDelta = normalizeDegrees(after - before + 180) - 180;
+    return { lon, speed: signedDelta / (2 * stepDays) };
   }
 
   /**
-   * True (Osculating) Lilith:
-   * Incorporates solar perturbations, evection, and annual inequality on the lunar apogee.
+   * Approximate True-Lilith model using a compact periodic correction.
+   * This is NOT a full osculating-apogee solution from lunar position/velocity vectors.
    */
   public calculateTrueLilithLon(jd: number): { lon: number; speed: number } {
     const T = (jd - 2451545.0) / 36525.0;
@@ -67,14 +87,29 @@ export class LunarPointsCalculator {
       1.25 * Math.sin(2 * D) -
       0.68 * Math.sin(M_moon);
 
-    const trueLon = normalizeDegrees(mean + correction);
-    return { lon: trueLon, speed: 0.111 };
+    const correctedLongitude = (atJd: number) => {
+      const t = (atJd - 2451545.0) / 36525.0;
+      const meanLongitude = this.meanApogeeLongitude(atJd);
+      const sunMeanAnomaly = normalizeDegrees(357.5291 + 35999.0503 * t) * DEG2RAD;
+      const moonMeanAnomaly = normalizeDegrees(134.9634 + 477198.8676 * t) * DEG2RAD;
+      const elongation = normalizeDegrees(297.8502 + 445267.1115 * t) * DEG2RAD;
+      const periodic = 11.69 * Math.sin(2 * elongation - moonMeanAnomaly) +
+        2.05 * Math.sin(sunMeanAnomaly) + 1.25 * Math.sin(2 * elongation) -
+        0.68 * Math.sin(moonMeanAnomaly);
+      return normalizeDegrees(meanLongitude + periodic);
+    };
+    const stepDays = 0.5;
+    const trueLon = correctedLongitude(jd);
+    const before = correctedLongitude(jd - stepDays);
+    const after = correctedLongitude(jd + stepDays);
+    const signedDelta = normalizeDegrees(after - before + 180) - 180;
+    return { lon: trueLon, speed: signedDelta / (2 * stepDays) };
   }
 
   /**
-   * White Moon / Selena:
-   * 7-year rhythmic harmonic cycle of the white moon (revolution period exactly 7 sidereal years = ~2556.7 days).
-   * Epoch J2000.0 longitude: ~298.15°
+   * Symbolic White Moon / Selena convention.
+   * This is not a known physical body or an astronomical lunar orbit; multiple
+   * astrological schools use different symbolic cycles and epochs.
    */
   public calculateWhiteMoonLon(jd: number): { lon: number; speed: number } {
     const daysSinceEpoch = jd - 2451545.0;
@@ -122,9 +157,8 @@ export class LunarPointsCalculator {
   }
 
   /**
-   * Trans-Plutonian Hypnos & Proserpine (Symbolic theoretical archetypes)
-   * Proserpine: ~650-year ultra-slow cycle (subconscious regeneration)
-   * Hypnos: ~720-year cycle (the dream world and liminal gates)
+   * Hypothetical symbolic points sometimes named Proserpine and Hypnos.
+   * These are not measured orbits and must not be presented as physical planets.
    */
   public calculateTheoreticalPoints(jd: number): { proserpine: number; hypnos: number } {
     const T = (jd - 2451545.0) / 36525.0;
