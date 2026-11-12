@@ -901,9 +901,10 @@ export function AdvancedWesternPanel({
         <div className="space-y-4">
           <div className="flex items-center justify-between text-xs px-3 py-2 bg-slate-950/80 border border-slate-800 rounded-lg text-slate-400">
             <span>Tight Aspects to Fixed Stars (&lt; 1.25° orb): <strong className="text-amber-300 font-mono">{starContacts.length} active</strong></span>
-            <span>Including 4 Royal Archangel Stars &amp; Medusa Algol</span>
+            <span>20 reference entries · J2000 only</span>
           </div>
 
+          <p className="text-[11px] text-amber-200/80 leading-relaxed">These are approximate stored J2000 tropical longitudes, not positions precessed to the birth date. Stellar proper motion, nutation and aberration are not included; treat contacts as illustrative until an epoch-aware star catalogue is integrated.</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {starContacts.map((c, i) => (
               <div key={i} className="p-3.5 bg-slate-950/60 border border-slate-800 rounded-xl space-y-1.5 hover:border-slate-700 transition-all">
@@ -940,7 +941,7 @@ export function AdvancedWesternPanel({
               Major Solar &amp; Lunar Eclipses Impacting Your Natal Houses
             </h4>
             <p className="text-xs text-slate-300 leading-relaxed">
-              Eclipses act as cosmic wildcards, catalyzing non-negotiable course-corrections in the specific houses they touch over a 6 to 12 month cycle.
+              Global astronomical eclipse events are searched dynamically from the selected date. The house overlay is an astrological interpretation, not a guaranteed event or personal forecast; local visibility is not implied.
             </p>
           </div>
 
@@ -950,13 +951,14 @@ export function AdvancedWesternPanel({
                 <div className="flex items-center justify-between">
                   <div>
                     <h5 className="text-xs font-bold text-slate-100">{e.type} Eclipse</h5>
-                    <span className="text-[10px] text-slate-400 font-mono">{e.date} · {e.degreeFormatted}</span>
+                    <span className="text-[10px] text-slate-400 font-mono">{e.date} · {e.degreeFormatted} · UTC peak</span>
                   </div>
                   <span className="text-xs font-bold px-2 py-0.5 rounded bg-rose-500/15 border border-rose-500/30 text-rose-300 font-mono">
                     House {e.affectedHouse}
                   </span>
                 </div>
                 <p className="text-xs text-slate-300 font-medium">{e.theme}</p>
+                <p className="text-[10px] text-slate-500">{e.visibilityNote}</p>
                 <ul className="space-y-1 text-[11px] text-slate-400 pt-1 border-t border-slate-800/80">
                   {e.recommendations.map((rec, rIdx) => (
                     <li key={rIdx} className="flex items-center gap-1.5">
