@@ -11,6 +11,7 @@ import {
   isSunAboveHorizonInChart,
 } from "../lib/astronomy/horizon";
 import { calculateHellenisticAnalysis, calculateSiderealComparison } from "../lib/astronomy/hellenistic";
+import { ProgressionsEngine } from "../lib/astronomy/predictiveHellenisticEngine";
 import { ArabianPartsCalculator } from "../lib/astronomy/arabianPartsCalculator";
 import {
   FirdariaEngine,
@@ -104,6 +105,10 @@ check(dateObliquityReport.declinations[0].isOutOfBounds === false,
   "OOB threshold follows the supplied obliquity of date instead of a fixed J2000 constant");
 const midpointEngine = new MidpointCalculator();
 const midpointChart = calculateWesternChart(2000, 1, 1, 12, 0, 51.4769, 0, 0, "Placidus");
+close(midpointChart.additionalPoints?.vertex.longitude ?? Number.NaN, 188.469312, 0.01,
+  "Natal additional-points Vertex uses the corrected western prime-vertical intersection");
+close(midpointChart.additionalPoints?.eastPoint.longitude ?? Number.NaN, 11.373900, 0.01,
+  "Natal additional-points East Point uses RA = RAMC + 90° rather than duplicating MC");
 const allMidpointPoints = [
   ...midpointChart.planets,
   midpointChart.ascendant,
@@ -139,6 +144,21 @@ const oldEpochChart = calculateWesternChart(2000, 1, 1, 12, 0, 51.4769, 0, 0, "P
 const oldEpochSidereal = calculateSiderealComparison(oldEpochChart);
 check(oldEpochSidereal.faganBradleyAyanamsa < siderealComparison.faganBradleyAyanamsa,
   "Fagan-Bradley ayanamsa changes across epochs rather than using a timeless constant");
+
+// 0c. Secondary progression event labels use the progressed age's life-year, not the current year offset.
+const progressionBirth = new Date("1990-07-14T10:30:00.000Z");
+const progressionNow = new Date("2026-01-10T10:30:00.000Z");
+const progressionReport = new ProgressionsEngine().calculateProgressions(
+  progressionBirth, progressionNow, 51.4769, 0, 0
+);
+check(progressionReport.age === 35, "Secondary progression age uses elapsed tropical years");
+check(progressionReport.progressedDate === new Date(
+  progressionBirth.getTime() + ((progressionNow.getTime() - progressionBirth.getTime()) / (365.2422 * 86400000)) * 86400000
+).toISOString(), "Progressed date is serialized as a deterministic UTC ISO timestamp");
+check(progressionReport.moonSignChanges.every((event) => event.year === 1990 + event.age),
+  "Progressed Moon sign-change calendar year is derived from birth year plus life age");
+check(progressionReport.moonSignChanges.every((event) => event.age >= 0),
+  "Progressed Moon forecast does not report pre-birth sign changes");
 
 // 1. Solar altitude and sect are based on real horizon geometry, not house numbers.
 close(
@@ -190,6 +210,8 @@ close(placidusReference.houseCusps[1], 61.141524, 0.005, "Placidus 2nd cusp matc
 close(placidusReference.houseCusps[2], 82.020398, 0.005, "Placidus 3rd cusp matches Swiss Ephemeris fixture");
 close(placidusReference.houseCusps[10], 299.062295, 0.005, "Placidus 11th cusp matches Swiss Ephemeris fixture");
 close(placidusReference.houseCusps[11], 327.701257, 0.005, "Placidus 12th cusp matches Swiss Ephemeris fixture");
+close(placidusReference.vertex, 188.469312, 0.01, "Vertex matches Swiss Ephemeris reference coordinate");
+close(placidusReference.equatorialAscendant, 11.373900, 0.01, "East Point/equatorial Ascendant matches Swiss Ephemeris reference coordinate");
 const args = [2000, 1, 1, 12, 0, 40.7128, -74.006, -5] as const;
 const autoChart = calculateWesternChart(...args, "Auto");
 check(autoChart.requestedHouseSystem === "Auto", "Auto selection is preserved as the requested mode");
