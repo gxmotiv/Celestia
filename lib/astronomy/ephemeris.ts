@@ -705,9 +705,11 @@ export function calculateWesternChart(
     : houseResult.houseSystemUsed === "O" ? "Porphyry" : "Placidus";
   const houseSystemNote = polarPlacidusFallback
     ? "Placidus is not geometrically defined at/above the polar circle here; Porphyry quadrant houses were used instead."
-    : houseSystem === "Auto"
-      ? "Auto selected Placidus for the Western Modern chart. Hellenistic and Vedic calculations retain their own Whole Sign house frameworks."
-      : undefined;
+    : actualHouseSystem !== resolvedRequest
+      ? "The requested Placidus calculation could not be resolved numerically for this place/date; Porphyry quadrant houses were used instead."
+      : houseSystem === "Auto"
+        ? "Auto selected Placidus for the Western Modern chart. Hellenistic and Vedic calculations retain their own Whole Sign house frameworks."
+        : undefined;
   const asc = houseResult.ascendant;
   const mc = houseResult.midheaven;
 
