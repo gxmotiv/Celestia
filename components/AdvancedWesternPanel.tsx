@@ -23,6 +23,7 @@ import {
   ZodiacalReleasingReport,
   FirdariaEngine,
   FirdariaReport,
+  FirdariaNightOrder,
 } from "@/lib/astronomy/predictiveHellenisticEngine";
 import {
   FixedStarsEngine,
@@ -79,6 +80,7 @@ export function AdvancedWesternPanel({
   birthUtcInstant,
 }: AdvancedWesternPanelProps) {
   const [selectedReleasingLot, setSelectedReleasingLot] = useState<"spirit" | "fortune">("spirit");
+  const [firdariaNightOrder, setFirdariaNightOrder] = useState<FirdariaNightOrder>("nodes-after-planets");
   const [activeSubTab, setActiveSubTab] = useState<
     | "asteroids"
     | "lilith"
@@ -176,15 +178,15 @@ export function AdvancedWesternPanel({
     const releaseLongitude = selectedReleasingLot === "spirit" ? spiritLon : fortuneLon;
     const releaseName = selectedReleasingLot === "spirit"
       ? "Spirit (Career & Purpose)" as const
-      : "Fortune (Physical Health & Material Fortune)" as const;
+      : "Fortune (Body & Circumstances)" as const;
     return zrEngine.calculateReleasing(birthDateObj, releaseLongitude, releaseName, nowObj, fortuneLon);
   }, [zrEngine, birthDateObj, nowObj, chartData.arabianParts, selectedReleasingLot]);
 
   // Firdaria
   const firdariaEngine = useMemo(() => new FirdariaEngine(), []);
   const firdariaReport: FirdariaReport = useMemo(() => {
-    return firdariaEngine.calculateFirdaria(chartData, currentAgeExactYears);
-  }, [firdariaEngine, chartData, currentAgeExactYears]);
+    return firdariaEngine.calculateFirdaria(chartData, currentAgeExactYears, firdariaNightOrder);
+  }, [firdariaEngine, chartData, currentAgeExactYears, firdariaNightOrder]);
 
   // Fixed Stars
   const fixedStarsEngine = useMemo(() => new FixedStarsEngine(), []);
@@ -867,6 +869,19 @@ export function AdvancedWesternPanel({
                 {firdariaReport.isDiurnal ? "Diurnal Sect (Day Chart)" : "Nocturnal Sect (Night Chart)"}
               </span>
             </div>
+            {!firdariaReport.isDiurnal && (
+              <label className="flex flex-wrap items-center gap-2 text-[11px] text-slate-300">
+                **Nocturnal sequence**
+                <select
+                  value={firdariaNightOrder}
+                  onChange={(event) => setFirdariaNightOrder(event.target.value as FirdariaNightOrder)}
+                  className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-amber-200"
+                >
+                  <option value="nodes-after-planets">Nodes after seven planets (standard)</option>
+                  <option value="nodes-after-mars">Nodes immediately after Mars (alternative)</option>
+                </select>
+              </label>
+            )}
             <p className="text-xs text-slate-300 leading-relaxed">
               {firdariaReport.interpretation}
             </p>
