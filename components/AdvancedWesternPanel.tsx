@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import {
   WesternChartData,
   PlanetPosition,
@@ -88,12 +88,19 @@ export function AdvancedWesternPanel({
   const [selectedReleasingLot, setSelectedReleasingLot] = useState<"spirit" | "fortune">("spirit");
   const [firdariaNightOrder, setFirdariaNightOrder] = useState<FirdariaNightOrder>("nodes-after-planets");
   const [selectedReturnYear, setSelectedReturnYear] = useState<number>(new Date().getUTCFullYear());
-  const [returnLatitude, setReturnLatitude] = useState<number>(latitude);
-  const [returnLongitude, setReturnLongitude] = useState<number>(longitude);
-  useEffect(() => {
-    setReturnLatitude(latitude);
-    setReturnLongitude(longitude);
-  }, [latitude, longitude]);
+  const [returnLocationOverride, setReturnLocationOverride] = useState<{
+    baseLatitude: number;
+    baseLongitude: number;
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  // When the parent switches the natal profile/location, discard the old
+  // return-location override by deriving the active values from the new props.
+  const returnLocationMatchesProfile =
+    returnLocationOverride?.baseLatitude === latitude &&
+    returnLocationOverride?.baseLongitude === longitude;
+  const returnLatitude = returnLocationMatchesProfile ? returnLocationOverride.latitude : latitude;
+  const returnLongitude = returnLocationMatchesProfile ? returnLocationOverride.longitude : longitude;
   const [activeSubTab, setActiveSubTab] = useState<
     | "asteroids"
     | "lilith"
@@ -1220,14 +1227,18 @@ export function AdvancedWesternPanel({
                 Return latitude
                 <input type="number" min="-90" max="90" step="0.0001" value={returnLatitude} onChange={(event) => {
                   const value = Number(event.target.value);
-                  if (event.target.value !== "" && Number.isFinite(value) && value >= -90 && value <= 90) setReturnLatitude(value);
+                  if (event.target.value !== "" && Number.isFinite(value) && value >= -90 && value <= 90) {
+                    setReturnLocationOverride({ baseLatitude: latitude, baseLongitude: longitude, latitude: value, longitude: returnLongitude });
+                  }
                 }} className="w-24 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-amber-200"/>
               </label>
               <label className="flex items-center gap-2">
                 Return longitude
                 <input type="number" min="-180" max="180" step="0.0001" value={returnLongitude} onChange={(event) => {
                   const value = Number(event.target.value);
-                  if (event.target.value !== "" && Number.isFinite(value) && value >= -180 && value <= 180) setReturnLongitude(value);
+                  if (event.target.value !== "" && Number.isFinite(value) && value >= -180 && value <= 180) {
+                    setReturnLocationOverride({ baseLatitude: latitude, baseLongitude: longitude, latitude: returnLatitude, longitude: value });
+                  }
                 }} className="w-24 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-amber-200"/>
               </label>
             </div>
