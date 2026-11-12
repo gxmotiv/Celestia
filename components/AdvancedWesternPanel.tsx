@@ -78,6 +78,7 @@ export function AdvancedWesternPanel({
   timezoneOffset = 0,
   birthUtcInstant,
 }: AdvancedWesternPanelProps) {
+  const [selectedReleasingLot, setSelectedReleasingLot] = useState<"spirit" | "fortune">("spirit");
   const [activeSubTab, setActiveSubTab] = useState<
     | "asteroids"
     | "lilith"
@@ -148,10 +149,11 @@ export function AdvancedWesternPanel({
   }, [birthDateStr, birthTimeStr, timezoneOffset, birthUtcInstant]);
 
   const nowObj = useMemo(() => new Date(), []);
-  const currentAgeYears = useMemo(() => {
+  const currentAgeExactYears = useMemo(() => {
     const diff = nowObj.getTime() - birthDateObj.getTime();
-    return Math.max(0, Math.floor(diff / (365.2422 * 86400000)));
+    return Math.max(0, diff / (365.2422 * 86400000));
   }, [nowObj, birthDateObj]);
+  const currentAgeYears = Math.floor(currentAgeExactYears);
 
   // Secondary Progressions
   const progEngine = useMemo(() => new ProgressionsEngine(), []);
@@ -165,18 +167,24 @@ export function AdvancedWesternPanel({
     return profEngine.calculateAnnualProfection(chartData, currentAgeYears);
   }, [profEngine, chartData, currentAgeYears]);
 
-  // Zodiacal Releasing (from Spirit)
+  // Zodiacal Releasing can be calculated from Spirit or Fortune. Peak/angular
+  // status is always measured relative to the Lot of Fortune.
   const zrEngine = useMemo(() => new ZodiacalReleasingEngine(), []);
-  const spiritReleasing: ZodiacalReleasingReport = useMemo(() => {
-    const spiritLon = chartData.arabianParts?.partOfSpirit.longitude || 0;
-    return zrEngine.calculateReleasing(birthDateObj, spiritLon, "Spirit (Career & Purpose)");
-  }, [zrEngine, birthDateObj, chartData.arabianParts]);
+  const releasingReport: ZodiacalReleasingReport = useMemo(() => {
+    const spiritLon = chartData.arabianParts?.partOfSpirit.longitude ?? 0;
+    const fortuneLon = chartData.arabianParts?.partOfFortune.longitude ?? spiritLon;
+    const releaseLongitude = selectedReleasingLot === "spirit" ? spiritLon : fortuneLon;
+    const releaseName = selectedReleasingLot === "spirit"
+      ? "Spirit (Career & Purpose)" as const
+      : "Fortune (Physical Health & Material Fortune)" as const;
+    return zrEngine.calculateReleasing(birthDateObj, releaseLongitude, releaseName, nowObj, fortuneLon);
+  }, [zrEngine, birthDateObj, nowObj, chartData.arabianParts, selectedReleasingLot]);
 
   // Firdaria
   const firdariaEngine = useMemo(() => new FirdariaEngine(), []);
   const firdariaReport: FirdariaReport = useMemo(() => {
-    return firdariaEngine.calculateFirdaria(chartData, currentAgeYears);
-  }, [firdariaEngine, chartData, currentAgeYears]);
+    return firdariaEngine.calculateFirdaria(chartData, currentAgeExactYears);
+  }, [firdariaEngine, chartData, currentAgeExactYears]);
 
   // Fixed Stars
   const fixedStarsEngine = useMemo(() => new FixedStarsEngine(), []);
@@ -777,10 +785,14 @@ export function AdvancedWesternPanel({
           <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
             <h4 className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
               <ScrollText className="w-3.5 h-3.5 text-amber-400" />
-              Zodiacal Releasing from the Part of Spirit (Vocation & Destiny Chapters)
+              Zodiacal Releasing from the Lot of {selectedReleasingLot === "spirit" ? "Spirit" : "Fortune"}
             </h4>
+            <div className="flex flex-wrap gap-2 mb-2">
+              <button type="button" onClick={() => setSelectedReleasingLot("spirit")} className={`px-3 py-1.5 rounded-lg text-xs border ${selectedReleasingLot === "spirit" ? "border-amber-400/50 bg-amber-500/15 text-amber-200" : "border-slate-700 text-slate-400"}`}>Lot of Spirit</button>
+              <button type="button" onClick={() => setSelectedReleasingLot("fortune")} className={`px-3 py-1.5 rounded-lg text-xs border ${selectedReleasingLot === "fortune" ? "border-amber-400/50 bg-amber-500/15 text-amber-200" : "border-slate-700 text-slate-400"}`}>Lot of Fortune</button>
+            </div>
             <p className="text-xs text-slate-300 leading-relaxed">
-              {spiritReleasing.interpretation}
+              {releasingReport.interpretation}
             </p>
           </div>
 
@@ -797,7 +809,7 @@ export function AdvancedWesternPanel({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 font-mono">
-                {spiritReleasing.allL1Periods.map((p, i) => (
+                {releasingReport.allL1Periods.map((p, i) => (
                   <tr key={i} className="hover:bg-slate-800/40 transition-colors">
                     <td className="py-2 px-3 font-sans font-semibold text-slate-200">
                       {p.sign}
@@ -818,6 +830,24 @@ export function AdvancedWesternPanel({
                 ))}
               </tbody>
             </table>
+          </div>
+          <div className="p-4 bg-slate-950/60 border border-slate-800 rounded-xl space-y-3">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <h5 className="text-xs font-bold text-cyan-300">Active Level 2 Period</h5>
+              <span className="text-xs font-semibold text-amber-300">{releasingReport.currentL2Period.sign} · {releasingReport.currentL2Period.ruler}</span>
+            </div>
+            <p className="text-[11px] text-slate-300">
+              {releasingReport.currentL2Period.startDate.slice(0, 10)} — {releasingReport.currentL2Period.endDate.slice(0, 10)}
+              {releasingReport.currentL2Period.isLoosingOfBond ? " · Loosing of the Bond" : ""}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {releasingReport.allL2Periods.map((period, index) => (
+                <span key={index} className={`text-[10px] px-2 py-1 rounded border ${period === releasingReport.currentL2Period ? "border-cyan-400/60 bg-cyan-500/15 text-cyan-200" : "border-slate-800 bg-slate-900 text-slate-400"}`}>
+                  {period.sign}{period.isLoosingOfBond ? " ↯" : ""}
+                </span>
+              ))}
+            </div>
+            <p className="text-[10px] text-slate-500">{releasingReport.methodNote}</p>
           </div>
         </div>
       )}
