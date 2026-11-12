@@ -402,7 +402,7 @@ export class WesternBenchmarkRunner {
       expected: `Sun in House ${sunHouse} -> ${isDiurnalExpected ? "Diurnal (Day)" : "Nocturnal (Night)"}`,
       actual: `Sect calculated as: ${firdariaRep.isDiurnal ? "Diurnal" : "Nocturnal"}`,
       passed: firdariaRep.isDiurnal === isDiurnalExpected,
-      details: "Planets above the horizon (Houses 7 through 12) establish a Diurnal sect; below horizon establishes a Nocturnal sect.",
+      details: "Sect is determined by the Sun geometric altitude relative to the local horizon and must not depend on the selected zodiacal house-number system.",
     });
 
     // Test 14: Medieval Firdaria Total Years Cycle Sum (75 Years)
@@ -421,10 +421,13 @@ export class WesternBenchmarkRunner {
 
     // Test 15: Zodiacal Releasing L1 12-Period Sequence
     const spiritLon = chart.arabianParts?.partOfSpirit.longitude || 0;
+    const releasingReferenceDate = new Date();
     const zrReport = this.releasingEngine.calculateReleasing(
       new Date("1990-01-01T12:00:00Z"),
       spiritLon,
-      "Spirit (Career & Purpose)"
+      "Spirit (Career & Purpose)",
+      releasingReferenceDate,
+      chart.arabianParts?.partOfFortune.longitude ?? spiritLon
     );
     results.push({
       id: "W-PRED-04",
@@ -433,7 +436,9 @@ export class WesternBenchmarkRunner {
       standardReference: "Vettius Valens Anthologies Book IV.4–10",
       expected: "12 successive L1 sign periods generated",
       actual: `${zrReport.allL1Periods.length} L1 periods starting in ${zrReport.lotSign}`,
-      passed: zrReport.allL1Periods.length === 12,
+      passed: zrReport.allL1Periods.length >= 12 &&
+        new Date(zrReport.currentL1Period.startDate).getTime() <= releasingReferenceDate.getTime() &&
+        new Date(zrReport.currentL1Period.endDate).getTime() > releasingReferenceDate.getTime(),
       details: "Zodiacal releasing from the Lot of Spirit cycles through all twelve zodiacal signs with planet-specific periods.",
     });
 
