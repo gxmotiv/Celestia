@@ -9,6 +9,7 @@
  */
 
 import { calculateWesternChart, WesternChartData, normalizeDegrees } from "./ephemeris";
+import { isSunAboveHorizonInChart } from "./horizon";
 import { swissEphemeris } from "./swissEphemeris";
 import { MinorAspectsEngine } from "./minorAspects";
 import { AsteroidCalculator } from "./asteroidCalculator";
@@ -148,8 +149,8 @@ export class WesternBenchmarkRunner {
       standardReference: "Ptolemy / Placidus de Titis (1650)",
       expected: "12 cusps",
       actual: `${chart.houses.length} cusps`,
-      passed: chart.houses.length === 12,
-      details: "Every valid Western astrological chart must contain exactly 12 house boundaries.",
+      passed: chart.houses.length === 12 && chart.houses.every((house) => Number.isFinite(house.longitude)),
+      details: "Every valid Western chart must contain twelve finite house boundaries; an array of twelve entries with undefined cusps is invalid.",
     });
 
     // Test 2: Ascendant equals House 1 Cusp (within 0.01°)
@@ -223,7 +224,12 @@ export class WesternBenchmarkRunner {
     });
 
     // Test 6: Whole Sign House System validation
-    const wsHouses = swissEphemeris.calculateHouses(chart.julianDay, 43.7844, 10.9253, "W");
+    const wsHouses = swissEphemeris.calculateHouses(
+      chart.julianDay,
+      chart.birthLatitude ?? 43.7844,
+      chart.birthLongitude ?? 10.9253,
+      "W"
+    );
     const ascSignIdx = Math.floor(chart.ascendant.longitude / 30);
     const expectedH1Ws = ascSignIdx * 30.0;
     const wsDiff = Math.abs(wsHouses.houseCusps[0] - expectedH1Ws);
@@ -239,7 +245,12 @@ export class WesternBenchmarkRunner {
     });
 
     // Test 7: Equal House System 30° Spacing Invariant
-    const eqHouses = swissEphemeris.calculateHouses(chart.julianDay, 43.7844, 10.9253, "E");
+    const eqHouses = swissEphemeris.calculateHouses(
+      chart.julianDay,
+      chart.birthLatitude ?? 43.7844,
+      chart.birthLongitude ?? 10.9253,
+      "E"
+    );
     let eqPassed = true;
     for (let i = 0; i < 12; i++) {
       const expectedDeg = normalizeDegrees(chart.ascendant.longitude + i * 30.0);
@@ -288,7 +299,7 @@ export class WesternBenchmarkRunner {
       standardReference: "Ptolemy Tetrabiblos Book I, Ch. 13",
       expected: "0°, 30°, 60°, 90°, 120°, 150°, 180° exact",
       actual: anglesValid ? "All aspects conform to standard nominal angles" : "Mismatch found",
-      passed: anglesValid,
+      passed: aspects.length > 0 && anglesValid,
       details: "Ptolemaic and Keplerian aspects must adhere strictly to their canonical geometric arc divisions.",
     });
 
@@ -308,7 +319,7 @@ export class WesternBenchmarkRunner {
       standardReference: "Mathematical Aspect Definition",
       expected: "|actualDiff - nominalAngle| == orb",
       actual: orbsCorrect ? "Verified: orbs computed with 100% mathematical consistency" : "Mismatch found",
-      passed: orbsCorrect,
+      passed: aspects.length > 0 && orbsCorrect,
       details: "Orb represents the exact deviation of the planetary separation from the true geometric aspect angle.",
     });
 
@@ -329,20 +340,40 @@ export class WesternBenchmarkRunner {
       details: "Because the South Node is mathematically defined as North Node + 180°, counting their opposition as an aspect is redundant.",
     });
 
-    // Test 11: Minor Harmonic Aspects (Quintiles 72°, Septiles 51.43°, Noviles 40°)
-    const minorAsp = this.minorAspectsEngine.calculateMinorAspects(chart.planets);
-    const hasQuintileSeries = minorAsp.some(
-      (a) => a.aspectType.name.includes("Quintile") || a.aspectType.harmonicFamily === "quintile"
-    );
+    // Test 11: Controlled exact-angle fixtures for the 5th, 7th, 8th and 9th harmonic families.
+    const template = chart.planets[0];
+    const harmonicFixtures = [
+      { name: "Quintile", angle: 72 },
+      { name: "Septile", angle: 360 / 7 },
+      { name: "Semisquare", angle: 45 },
+      { name: "Novile", angle: 40 },
+    ];
+    const harmonicChecks = harmonicFixtures.map((fixture) => {
+      const syntheticPair = [
+        { ...template, id: "SyntheticA", name: "SyntheticA", longitude: 0, speed: 0.1 },
+        { ...template, id: "SyntheticB", name: "SyntheticB", longitude: fixture.angle, speed: 0.05 },
+      ];
+      const detected = this.minorAspectsEngine.calculateMinorAspects(syntheticPair, {
+        useMinorAspects: true,
+        minorOrbMultiplier: 1,
+        includeHarmonics: false,
+        harmonicNumber: 5,
+        showWeakAspects: true,
+        aspectTypes: [fixture.name],
+        filterNature: "all",
+      });
+      return detected.some((aspect) => aspect.aspectType.name === fixture.name && aspect.orb < 0.001);
+    });
+    const harmonicFamiliesPassed = harmonicChecks.every(Boolean);
     results.push({
       id: "W-ASP-04",
-      name: "Keplerian Harmonic Minor Aspects Engine",
+      name: "Controlled 5th, 7th, 8th and 9th Harmonic Geometry",
       category: "Aspects & Orbs",
-      standardReference: "Johannes Kepler (Harmonices Mundi, 1619)",
-      expected: "Engine detects 5th, 7th, 8th, and 9th harmonic series",
-      actual: `${minorAsp.length} minor aspects identified in chart`,
-      passed: minorAsp.length >= 0 && typeof hasQuintileSeries === "boolean",
-      details: "Kepler introduced harmonics 5 (quintile 72°), 7 (septile 51°25'), and 8 (semisquare 45°) to astrological science.",
+      standardReference: "Harmonic divisions: 360°/5, 360°/7, 360°/8, 360°/9",
+      expected: "Exact Quintile, Septile, Semisquare and Novile detected in synthetic two-point charts",
+      actual: harmonicChecks.map((passed, index) => `${harmonicFixtures[index].name}: ${passed ? "pass" : "fail"}`).join("; "),
+      passed: harmonicFamiliesPassed,
+      details: "Each harmonic family is tested with a controlled pair at its exact mathematical angle; this does not validate interpretive meaning.",
     });
   }
 
@@ -366,7 +397,7 @@ export class WesternBenchmarkRunner {
     // Test 13: Diurnal vs Nocturnal Sect Detection (Day vs Night Chart)
     // Sun in House 7..12 = Diurnal; Sun in House 1..6 = Nocturnal
     const sunHouse = chart.planets.find((p) => p.name === "Sun")?.house || 1;
-    const isDiurnalExpected = sunHouse >= 7 && sunHouse <= 12;
+    const isDiurnalExpected = isSunAboveHorizonInChart(chart);
     const firdariaRep = this.firdariaEngine.calculateFirdaria(chart, 30);
     results.push({
       id: "W-PRED-02",
@@ -376,7 +407,7 @@ export class WesternBenchmarkRunner {
       expected: `Sun in House ${sunHouse} -> ${isDiurnalExpected ? "Diurnal (Day)" : "Nocturnal (Night)"}`,
       actual: `Sect calculated as: ${firdariaRep.isDiurnal ? "Diurnal" : "Nocturnal"}`,
       passed: firdariaRep.isDiurnal === isDiurnalExpected,
-      details: "Planets above the horizon (Houses 7 through 12) establish a Diurnal sect; below horizon establishes a Nocturnal sect.",
+      details: "Sect is determined by the Sun geometric altitude relative to the local horizon and must not depend on the selected zodiacal house-number system.",
     });
 
     // Test 14: Medieval Firdaria Total Years Cycle Sum (75 Years)
@@ -395,10 +426,13 @@ export class WesternBenchmarkRunner {
 
     // Test 15: Zodiacal Releasing L1 12-Period Sequence
     const spiritLon = chart.arabianParts?.partOfSpirit.longitude || 0;
+    const releasingReferenceDate = new Date();
     const zrReport = this.releasingEngine.calculateReleasing(
       new Date("1990-01-01T12:00:00Z"),
       spiritLon,
-      "Spirit (Career & Purpose)"
+      "Spirit (Career & Purpose)",
+      releasingReferenceDate,
+      chart.arabianParts?.partOfFortune.longitude ?? spiritLon
     );
     results.push({
       id: "W-PRED-04",
@@ -407,7 +441,9 @@ export class WesternBenchmarkRunner {
       standardReference: "Vettius Valens Anthologies Book IV.4–10",
       expected: "12 successive L1 sign periods generated",
       actual: `${zrReport.allL1Periods.length} L1 periods starting in ${zrReport.lotSign}`,
-      passed: zrReport.allL1Periods.length === 12,
+      passed: zrReport.allL1Periods.length >= 12 &&
+        new Date(zrReport.currentL1Period.startDate).getTime() <= releasingReferenceDate.getTime() &&
+        new Date(zrReport.currentL1Period.endDate).getTime() > releasingReferenceDate.getTime(),
       details: "Zodiacal releasing from the Lot of Spirit cycles through all twelve zodiacal signs with planet-specific periods.",
     });
 
@@ -416,8 +452,7 @@ export class WesternBenchmarkRunner {
       new Date("1990-01-01T12:00:00Z"),
       new Date("2025-01-01T12:00:00Z"),
       40.7128,
-      -74.006,
-      -5
+      -74.006
     );
     results.push({
       id: "W-PRED-05",
@@ -475,7 +510,10 @@ export class WesternBenchmarkRunner {
       standardReference: "Celestial Mechanics (Max Solar Obliquity ε = 23°26')",
       expected: "Parallels / Contraparallels evaluated against 23.439° limit",
       actual: `${decRep.parallels.length} Parallels, ${decRep.contraparallels.length} Contraparallels, ${decRep.outOfBoundsCount} OOB planets`,
-      passed: decRep.parallels.length >= 0 && Array.isArray(decRep.declinations),
+      passed: decRep.declinations.length === chart.planets.length &&
+        decRep.declinations.every((entry) => Number.isFinite(entry.declination)) &&
+        decRep.outOfBoundsCount >= 0 && decRep.outOfBoundsCount <= chart.planets.length &&
+        Math.abs(this.declinationCalculator.calculateDeclination(90, 0, chart.obliquity) - chart.obliquity) < 1e-6,
       details: "Planets exceeding the Sun's maximum declination of ~23°26' are deemed Out of Bounds (OOB), acting with unbounded autonomy.",
     });
 
@@ -559,7 +597,8 @@ export class WesternBenchmarkRunner {
     const p2Sun = partnerChart.planets[0].longitude;
     const expCompSun = this.midpointCalculator.calculateMidpoint(p1Sun, p2Sun);
     const actualCompSun = compRep.planets.find((p) => p.name === "Sun")?.longitude || 0;
-    const compSunDiff = Math.abs(expCompSun - actualCompSun);
+    const rawCompSunDiff = Math.abs(expCompSun - actualCompSun);
+    const compSunDiff = Math.min(rawCompSunDiff, 360 - rawCompSunDiff);
     results.push({
       id: "W-REL-02",
       name: "Composite Chart Mathematical Midpoint Invariant",
@@ -608,33 +647,33 @@ export class WesternBenchmarkRunner {
     });
 
     // Test 26: Historical Leonardo da Vinci Classical Chart (April 15, 1452, Vinci, Italy)
-    // Leonardo da Vinci's historical horoscope has Sun in early/mid Taurus in Gregorian or 25° Aries in Julian calendar
+    // Historical date/time conventions are not independently validated by this sample.
     const leoChart = calculateWesternChart(1452, 4, 15, 22, 0, 43.7844, 10.9253, 1, "Placidus");
     const leoSun = leoChart.planets.find((p) => p.name === "Sun")!;
     const leoMoon = leoChart.planets.find((p) => p.name === "Moon")!;
     results.push({
       id: "W-BENCH-02",
-      name: "Leonardo da Vinci (1452) Historical Natal Chart Benchmark",
+      name: "Leonardo sample chart build (historical data unverified)",
       category: "Classical Benchmark Verification",
-      standardReference: "Historical Horoscopes / Rodden Rating AA (Diary of Antonio da Vinci)",
-      expected: "Sun in Aries 25°, Moon in Scorpio 26°, Ascendant in Sagittarius",
+      standardReference: "Structural smoke test only; historical calendar/time conversion is unresolved",
+      expected: "At least ten planetary points and twelve house cusps",
       actual: `Sun: ${leoSun.signDegreeFormatted}, Moon: ${leoMoon.signDegreeFormatted}, ASC: ${leoChart.ascendant.signDegreeFormatted}`,
-      passed: leoSun.sign === "Aries" && leoMoon.sign === "Scorpio" && leoChart.ascendant.sign === "Sagittarius",
-      details: "Matches historical archival birth records documented by Leonardo's grandfather in the State Archives of Florence.",
+      passed: leoChart.planets.length >= 10 && leoChart.houses.length === 12 && Boolean(leoSun) && Boolean(leoMoon),
+      details: "The source record uses a historical Julian/Florentine local-time convention. This Gregorian fixed-offset sample is not a validated conversion and the test checks output structure only.",
     });
 
     // Test 27: Royal Archangel Fixed Star Regulus Longitude Calibration
-    // Regulus entered Virgo 0°00' in 2011; J2000 longitude was 150.08° (29°50' Leo)
+    // Regulus J2000 tropical longitude is approximately Leo 29°50 (149.83°).
     const regulus = FixedStarsEngine.FIXED_STARS.find((s) => s.name.includes("Regulus"));
     results.push({
       id: "W-BENCH-03",
       name: "Royal Archangel Fixed Star Regulus J2000 Calibration",
       category: "Classical Benchmark Verification",
       standardReference: "Ptolemaic Star Catalogue / Hipparchus Precession Rate",
-      expected: "Regulus at 150.08° (Leo 29°50' / Archangel Raphael)",
+      expected: "Regulus near 149.83° (Leo 29°50) at J2000",
       actual: `${regulus?.name} calibrated at ${regulus?.longitude}° (${regulus?.nature})`,
-      passed: !!regulus && Math.abs(regulus.longitude - 150.08) < 0.05,
-      details: "The 4 Royal Archangel stars of Persia anchor celestial orientation across millennia of precession.",
+      passed: !!regulus && Math.abs(regulus.longitude - 149.83) < 0.05,
+      details: "This checks only the stored J2000 reference longitude. The application does not yet precess fixed-star positions to the chart epoch or apply proper motion.",
     });
   }
 }

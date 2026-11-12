@@ -164,11 +164,11 @@ const RELATIONSHIP_CATEGORIES: {
   },
   {
     id: "karmic",
-    label: "Karmic Soul Bond / Spiritual Connection",
+    label: "Karmic-theme symbolism",
     shortLabel: "Karmic",
     icon: "🔮",
     badgeColor: "border-purple-500/40 text-purple-300 bg-purple-500/10",
-    description: "Soul contracts, past-life resonance, destiny timing, and evolutionary growth",
+    description: "Modern astrological symbolism around nodal contacts and themes of meaning; not evidence of past lives or destiny",
   },
   {
     id: "stranger",
@@ -176,7 +176,7 @@ const RELATIONSHIP_CATEGORIES: {
     shortLabel: "Stranger / Random",
     icon: "⚡",
     badgeColor: "border-cyan-500/40 text-cyan-300 bg-cyan-500/10",
-    description: "Instant resonance, fated synchronicity, curiosity, and passing crossroads",
+    description: "Symbolic reflection on brief encounters and curiosity; not evidence that an encounter was fated",
   },
 ];
 
@@ -628,7 +628,9 @@ export function RelationshipAstrologyView({
           </p>
         </div>
 
-        {/* View Tabs */}
+        <p className="text-[11px] text-slate-400 bg-slate-950/50 border border-slate-800 rounded-lg p-3">Synastry, composite and Davison charts are astrological interpretation frameworks. Their labels, heuristic scores and karmic/soulmate themes are not scientific measures of compatibility, probability of success, destiny or past-life connection. Vedic Milan points are also tradition-specific rules, not a measured probability. Use these systems as prompts for reflection and communication, not as decision rules for relationships.</p>
+
+      {/* View Tabs */}
         <div className="flex items-center gap-1.5 flex-wrap">
           {[
             { id: "synastry", label: "Synastry & Affinity", icon: "⚯" },
@@ -1124,6 +1126,8 @@ export function RelationshipAstrologyView({
             </div>
           )}
 
+          <p className="text-[11px] text-slate-400 bg-slate-950/50 border border-slate-800 rounded-lg p-3">These values are a hand-designed astrology index, not a compatibility probability, psychometric test or measured relationship outcome. Each dimension starts at 70 and is adjusted by selected planetary aspects, aspect type and orb using fixed heuristic weights. They are symbolic prompts only, not a basis for deciding whether a relationship is suitable.</p>
+
           {/* Compatibility Radar Scores */}
           <div className="p-4 sm:p-5 bg-slate-950/80 border border-slate-800 rounded-xl space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-2">
@@ -1135,10 +1139,10 @@ export function RelationshipAstrologyView({
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-3xl font-bold font-mono text-rose-400">
-                  {synastryReport.scores.overall}%
+                  {synastryReport.scores.overall}
                 </span>
                 <span className="text-[10px] text-slate-400 block leading-tight">
-                  Overall Composite<br />Compatibility Score
+                  Weighted astrology index<br />(25–99 heuristic points)
                 </span>
               </div>
             </div>
@@ -1154,10 +1158,10 @@ export function RelationshipAstrologyView({
                     <span className="text-slate-300 font-medium truncate" title={dim.label}>
                       {dim.label}
                     </span>
-                    <span className="font-mono font-bold text-slate-100">{dim.val}%</span>
+                    <span className="font-mono font-bold text-slate-100">{dim.val}</span>
                   </div>
                   <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                    <div className={`h-full ${dim.color}`} style={{ width: `${dim.val}%` }} />
+                    <div className={`h-full ${dim.color}`} style={{ width: `${(dim.val / 99) * 100}%` }} />
                   </div>
                   <p className="text-[10px] text-slate-400 line-clamp-2 leading-tight">
                     {dim.description}
@@ -1173,7 +1177,7 @@ export function RelationshipAstrologyView({
               <div className="p-4 bg-purple-950/30 border border-purple-500/30 rounded-xl space-y-2">
                 <h5 className="text-xs font-bold text-purple-300 flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-                  Karmic Connections &amp; Soul Contracts ({synastryReport.karmicConnections.length})
+                  Traditional karmic-theme markers ({synastryReport.karmicConnections.length})
                 </h5>
                 <div className="space-y-1.5">
                   {synastryReport.karmicConnections.map((k, i) => (
@@ -1190,7 +1194,7 @@ export function RelationshipAstrologyView({
               <div className="p-4 bg-rose-950/30 border border-rose-500/30 rounded-xl space-y-2">
                 <h5 className="text-xs font-bold text-rose-300 flex items-center gap-1.5">
                   <Heart className="w-3.5 h-3.5 text-rose-400" />
-                  Key Evolutionary Markers ({synastryReport.soulmateIndicators.length})
+                  Selected synastry markers ({synastryReport.soulmateIndicators.length})
                 </h5>
                 <div className="space-y-1.5">
                   {synastryReport.soulmateIndicators.map((s, i) => (
@@ -1201,7 +1205,7 @@ export function RelationshipAstrologyView({
                   ))}
                   {synastryReport.soulmateIndicators.length === 0 && (
                     <p className="text-xs text-slate-400">
-                      Standard affinity dynamics without rare Soli-Lunar conjunction exactitudes.
+                      No entries for the currently selected nodal and Sun–Moon marker rules.
                     </p>
                   )}
                 </div>
@@ -1275,7 +1279,7 @@ export function RelationshipAstrologyView({
                               : "bg-purple-500/10 text-purple-400 border-purple-500/30"
                           }`}
                         >
-                          {asp.nature} ({asp.score}/10)
+                          {asp.nature} · interpretive weight {asp.score}/10
                         </span>
                       </div>
                     </div>

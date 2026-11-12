@@ -1,16 +1,17 @@
 /**
  * Multi-System Planetary Transit Prediction Engine
  * Provides clean, pure separation between:
- * 1. Western Modern (Tropical, Placidus/Equal/Koch, Ptolemaic Aspects, Psychological)
+ * 1. Western Modern (Tropical, Placidus/Equal/Porphyry/Whole Sign, Ptolemaic Aspects, Psychological)
  * 2. Vedic Jyotish (Sidereal Lahiri/Raman/KP, Whole Sign / Chandra Lagna Gochara, Graha Drishti, Karmic + Remedies)
  * 3. Hellenistic Traditional (Tropical, Whole Sign, Sect, Ptolemaic)
- * 4. Western Sidereal (Fagan-Bradley, Placidus/Equal, Ptolemaic)
+ * 4. Western Sidereal (Fagan-Bradley, Placidus/Equal/Porphyry, Ptolemaic)
  * 5. Dual Comparison Mode (Side-by-side reconciliation with cross-system synthesis)
  */
 
 import { swissEphemeris, SwissPlanetPosition } from "./swissEphemeris";
 import { WesternChartData, normalizeDegrees, ZODIAC_SIGNS, isAngularAspectApplying } from "./ephemeris";
 import { VedicChartData } from "./vedic";
+import { isSunAboveHorizonInChart } from "./horizon";
 import { CompleteBaZiEngine, BaZiChart } from "./baziEngine";
 
 export const PLANET_SYMBOLS: Record<string, string> = {
@@ -32,17 +33,8 @@ export const PLANET_SYMBOLS: Record<string, string> = {
 
 export type ZodiacSystem = "tropical" | "sidereal";
 
-export type HouseSystem =
-  | "placidus"
-  | "whole-sign"
-  | "equal"
-  | "koch"
-  | "campanus"
-  | "regiomontanus"
-  | "porphyry"
-  | "topocentric"
-  | "sripati"
-  | "bhava";
+/** Only systems actually calculated by this engine are selectable. */
+export type HouseSystem = "placidus" | "whole-sign" | "equal" | "porphyry";
 
 export type AspectSystem = "western" | "vedic" | "hellenistic";
 
@@ -150,7 +142,8 @@ export interface CalculatedAspect {
   orb: number;
   maxOrb: number;
   strength: number; // 0 to 1
-  isApplying: boolean;
+  /** Null for sign/house-based aspects where applying/separating is not defined. */
+  isApplying: boolean | null;
   nature: "Harmonious" | "Challenging" | "Potent" | "Karmic Full Sight" | "Special Drishti";
   system: AspectSystem;
   description: string;
@@ -817,6 +810,8 @@ export class MultiSystemTransitEngine {
   public birthVedic?: VedicChartData;
   public currentDate: Date;
   public ayanamsaValue: number;
+  public houseSystemUsed: string;
+  private natalHouseCusps: number[];
 
   constructor(
     config: TransitSystemConfig,
@@ -829,6 +824,39 @@ export class MultiSystemTransitEngine {
     this.birthVedic = birthVedic;
     this.currentDate = currentDate;
     this.ayanamsaValue = calculateAyanamsaValue(config.ayanamsa, currentDate);
+    const birthInstant = new Date((birthWestern.julianDay - 2440587.5) * 86400000);
+    const natalAyanamsa = calculateAyanamsaValue(config.ayanamsa, birthInstant);
+    const systemCode = config.houseSystem === "whole-sign" ? "W"
+      : config.houseSystem === "equal" ? "E"
+      : config.houseSystem === "porphyry" ? "O" : "P";
+    if (Number.isFinite(birthWestern.birthLatitude) && Number.isFinite(birthWestern.birthLongitude)) {
+      const houseResult = swissEphemeris.calculateHouses(
+        birthWestern.julianDay,
+        birthWestern.birthLatitude as number,
+        birthWestern.birthLongitude as number,
+        systemCode
+      );
+      if (config.houseSystem === "whole-sign" && config.zodiac === "sidereal") {
+        // Whole Sign houses start at 0° of the sidereal Ascendant sign.
+        // Shifting tropical Whole Sign cusps by an ayanamsa would move each
+        // boundary off the sign start, so rebuild the sidereal sign framework.
+        const siderealAscendant = normalizeDegrees(birthWestern.ascendant.longitude - natalAyanamsa);
+        const firstSign = Math.floor(siderealAscendant / 30);
+        this.natalHouseCusps = Array.from({ length: 12 }, (_, index) => ((firstSign + index) % 12) * 30);
+      } else {
+        this.natalHouseCusps = houseResult.houseCusps.map((cusp) =>
+          config.zodiac === "sidereal" ? normalizeDegrees(cusp - natalAyanamsa) : normalizeDegrees(cusp)
+        );
+      }
+      this.houseSystemUsed = houseResult.houseSystemUsed === "O" ? "porphyry"
+        : houseResult.houseSystemUsed === "W" ? "whole-sign"
+        : houseResult.houseSystemUsed === "E" ? "equal" : "placidus";
+    } else {
+      this.natalHouseCusps = birthWestern.houses.map((house) =>
+        config.zodiac === "sidereal" ? normalizeDegrees(house.longitude - natalAyanamsa) : normalizeDegrees(house.longitude)
+      );
+      this.houseSystemUsed = config.houseSystem;
+    }
   }
 
   /**
@@ -873,51 +901,22 @@ export class MultiSystemTransitEngine {
   /**
    * Calculate House Placement in the chosen House System
    */
-  public calculateHouse(longitude: number, isSidereal: boolean = false): number {
+  public calculateHouse(longitude: number, _isSidereal: boolean = false): number {
     const normLon = normalizeDegrees(longitude);
-
-    // 1. WHOLE SIGN (Vedic Rasi or Hellenistic)
-    if (this.config.houseSystem === "whole-sign") {
-      const ascLon = isSidereal
-        ? this.birthVedic?.lagna.siderealLongitude ??
-          this.toZodiacLongitude(this.birthWestern.ascendant.longitude)
-        : this.birthWestern.ascendant.longitude;
-
-      const ascSignIdx = Math.floor(normalizeDegrees(ascLon) / 30);
-      const planetSignIdx = Math.floor(normLon / 30);
-      let house = planetSignIdx - ascSignIdx + 1;
-      if (house <= 0) house += 12;
-      return house;
+    const cusps = this.natalHouseCusps;
+    if (!cusps || cusps.length !== 12) {
+      throw new RangeError("The selected natal house system has no valid twelve-cusp framework.");
     }
-
-    // 2. EQUAL HOUSE (30° from Ascendant degree)
-    if (this.config.houseSystem === "equal" || this.config.houseSystem === "bhava") {
-      const ascLon = isSidereal
-        ? this.birthVedic?.lagna.siderealLongitude ??
-          this.toZodiacLongitude(this.birthWestern.ascendant.longitude)
-        : this.birthWestern.ascendant.longitude;
-
-      let diff = normLon - normalizeDegrees(ascLon);
-      if (diff < 0) diff += 360;
-      return Math.floor(diff / 30) + 1;
-    }
-
-    // 3. PLACIDUS / QUADRANT SYSTEMS
-    // Use Western house cusps from birthChart
-    const cusps = this.birthWestern.houses.map((h) => h.longitude);
-    if (!cusps || cusps.length < 12) return 1;
 
     for (let i = 0; i < 12; i++) {
       const currentCusp = cusps[i];
       const nextCusp = cusps[(i + 1) % 12];
-
       if (currentCusp < nextCusp) {
         if (normLon >= currentCusp && normLon < nextCusp) return i + 1;
-      } else {
-        if (normLon >= currentCusp || normLon < nextCusp) return i + 1;
+      } else if (normLon >= currentCusp || normLon < nextCusp) {
+        return i + 1;
       }
     }
-
     return 1;
   }
 
@@ -978,12 +977,14 @@ export class MultiSystemTransitEngine {
               orb: Math.round(orb * 100) / 100,
               maxOrb: spec.orb,
               strength,
-              isApplying: isAngularAspectApplying(
-                transitingPlanet.rawLongitude,
-                nat.longitude,
-                spec.angle,
-                transitingPlanet.speed
-              ),
+              isApplying: Math.abs(transitingPlanet.speed) < 0.001
+                ? null
+                : isAngularAspectApplying(
+                    transitingPlanet.rawLongitude,
+                    nat.longitude,
+                    spec.angle,
+                    transitingPlanet.speed
+                  ),
               nature: spec.nature,
               system: this.config.aspectSystem,
               description: `${transitingPlanet.name} in ${transitingPlanet.sign} forms a ${spec.type} (${Math.round(orb * 10) / 10}° orb) to natal ${nat.name} in ${nat.sign}.`,
@@ -1063,7 +1064,7 @@ export class MultiSystemTransitEngine {
             maxOrb: 15.0,
             strength: drishtiStrength,
             // Whole-sign Graha Drishti is sign/house based; it has no degree-orb applying state.
-            isApplying: false,
+            isApplying: null,
             nature: drishtiTitle.includes("Amrita")
               ? "Harmonious"
               : drishtiTitle.includes("Special")
@@ -1219,7 +1220,7 @@ export class MultiSystemTransitEngine {
 
     // Hellenistic Diurnal / Nocturnal Sect check
     // Sun in houses 7 through 12 is Diurnal (above horizon); 1 through 6 is Nocturnal
-    const isDiurnalSect = (sunPlanet?.house || 1) >= 7;
+    const isDiurnalSect = isSunAboveHorizonInChart(this.birthWestern);
 
     return {
       config: this.config,
@@ -1232,7 +1233,7 @@ export class MultiSystemTransitEngine {
       }),
       planets: calculatedPlanets,
       aspects: allAspects,
-      houseSystemUsed: this.config.houseSystem,
+      houseSystemUsed: this.houseSystemUsed,
       zodiacUsed: this.config.zodiac,
       specialConditions: {
         isSadeSati,

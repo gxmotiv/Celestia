@@ -6,7 +6,10 @@
  */
 
 import { swissEphemeris, SwissPlanetPosition } from "./swissEphemeris";
-import { WesternChartData, PlanetPosition, HouseCusp, ZODIAC_SIGNS } from "./ephemeris";
+import { WesternChartData, PlanetPosition, HouseCusp, ZODIAC_SIGNS, normalizeDegrees } from "./ephemeris";
+import { EclipseAnalyzer } from "./specializedWesternEngines";
+import { isAngularAspectApplying } from "./ephemeris";
+import * as Astronomy from "astronomy-engine";
 
 export interface ActiveTransit {
   id: string;
@@ -28,6 +31,8 @@ export interface ActiveTransit {
   orb: number;
   maxOrb: number;
   exactness: number; // 0 to 1 (1 = exact)
+  /** Null means direction is indeterminate at a station or exact pass. */
+  isApplying: boolean | null;
   nature: "Harmonious" | "Challenging" | "Potent";
   category: "Major Life Chapter" | "Personal Trigger" | "Daily Mood";
   interpretation: string;
@@ -80,8 +85,9 @@ export interface DailyHoroscopeData {
     emoji: string;
     illumination: number;
   };
-  overallEnergy: number; // 0 to 100
-  energyMood: string;
+  /** Number of current transiting-to-natal aspects within configured orbs. */
+  activeTransitCount: number;
+  transitSummary: string;
   focus: string;
   luckyHours: string;
   challenges: string[];
@@ -96,7 +102,7 @@ export interface WeeklyForecastDay {
   dayName: string;
   dateString: string;
   moonSign: string;
-  energyScore: number;
+  activeTransitCount: number;
   theme: string;
   keyTransit: string;
 }
@@ -216,7 +222,13 @@ export class TransitEngine {
    */
   public getHouse(longitude: number): number {
     const cusps = this.birthChart.houses.map((h) => h.longitude);
-    if (!cusps || cusps.length < 12) return 1;
+    if (cusps.length !== 12 || !cusps.every(Number.isFinite)) {
+      // Imported/legacy chart fallback: use Whole Sign houses from the supplied
+      // Ascendant and do not falsely assign every transit to house 1.
+      const ascendantSign = Math.floor(normalizeDegrees(this.birthChart.ascendant.longitude) / 30);
+      const transitSign = Math.floor(normalizeDegrees(longitude) / 30);
+      return ((transitSign - ascendantSign + 12) % 12) + 1;
+    }
 
     for (let i = 0; i < 12; i++) {
       const currentCusp = cusps[i];
@@ -262,43 +274,31 @@ export class TransitEngine {
   }
 
   /**
-   * Calculate transit duration estimate based on transiting planet speed
+   * Transit duration is NOT calculated from fixed planet-name buckets.
+   * Exact ingress/exactitude/egress and retrograde repeat passes require a
+   * time-stepped ephemeris search; this UI currently reports only the live orb.
    */
-  public calculateTransitDuration(planetName: string, aspectType: string): string {
-    switch (planetName) {
-      case "Moon":
-        return "2 – 4 hours";
-      case "Sun":
-      case "Mercury":
-      case "Venus":
-        return "2 – 4 days";
-      case "Mars":
-        return "1 – 2 weeks";
-      case "Jupiter":
-        return "2 – 3 months";
-      case "Saturn":
-        return "6 – 9 months";
-      case "Uranus":
-      case "Neptune":
-      case "Pluto":
-        return "1 – 2 years (with retrogrades)";
-      case "NorthNode":
-        return "3 – 5 months";
-      default:
-        return "Several days";
-    }
+  public calculateTransitDuration(_planetName: string, _aspectType: string): string {
+    return "Duration not solved: exact ingress, repeat passes and egress need a date-stepped search";
   }
 
   /**
-   * Approximate peak time for the transit
+   * Local linear estimate only. This never calls a separating aspect a future
+   * peak, and it refuses to guess near a station or exact pass.
    */
-  public calculatePeakTime(orb: number, planetSpeed: number): string {
-    if (orb < 0.3) return "Exact right now (Peak Intensity)";
-    const daysToPeak = Math.abs(planetSpeed) > 0.001 ? Math.round(orb / Math.abs(planetSpeed)) : 10;
-    if (daysToPeak <= 1) return "Peak within 24 hours";
-    if (daysToPeak < 30) return `Peak in ~${daysToPeak} days`;
-    const months = Math.round(daysToPeak / 30);
-    return `Peak in ~${months} month${months > 1 ? "s" : ""}`;
+  public calculatePeakTime(orb: number, planetSpeed: number, isApplying: boolean | null): string {
+    if (isApplying === null || Math.abs(planetSpeed) <= 0.001) {
+      return "Timing indeterminate near station or exact pass";
+    }
+    if (!isApplying) {
+      return "Separating: nearest exact pass may have occurred; next pass not yet solved";
+    }
+    if (orb < 0.01) return "Near exact now (linear orb threshold)";
+    const daysToExact = orb / Math.abs(planetSpeed);
+    if (!Number.isFinite(daysToExact)) return "Exact-pass timing unavailable";
+    if (daysToExact < 1) return "Applying: linear estimate under 24 hours";
+    if (daysToExact < 30) return `Applying: linear estimate ~${daysToExact.toFixed(1)} days`;
+    return `Applying: linear estimate ~${(daysToExact / 30).toFixed(1)} months`;
   }
 
   /**
@@ -469,6 +469,12 @@ export class TransitEngine {
             exactness
           );
 
+          const aspectAngle = ASPECT_SPECS[aspect.type.toLowerCase()]?.angle ?? 0;
+          const directionKnown = Number.isFinite(transPlanet.speed) && Math.abs(transPlanet.speed) > 0.001;
+          const isApplying = directionKnown
+            ? isAngularAspectApplying(transLon, natalLon, aspectAngle, transPlanet.speed)
+            : null;
+
           transits.push({
             id: `${transName}-${aspect.type}-${natalPoint.name}`,
             transitingPlanet: transName,
@@ -489,6 +495,7 @@ export class TransitEngine {
             orb: aspect.orb,
             maxOrb: aspect.maxOrb,
             exactness: exactness,
+            isApplying,
             nature: aspect.nature,
             category: category,
             interpretation: this.getTransitInterpretation(
@@ -498,7 +505,7 @@ export class TransitEngine {
               transHouse
             ),
             duration: this.calculateTransitDuration(transName, aspect.type),
-            peak: this.calculatePeakTime(aspect.orb, transPlanet.speed),
+            peak: this.calculatePeakTime(aspect.orb, transPlanet.speed, isApplying),
             significanceScore: score,
           });
         }
@@ -533,7 +540,7 @@ export class TransitEngine {
       houseInterpretation: this.getSaturnHouseInterpretation(satHouse),
       lessons: this.getSaturnLessons(satHouse),
       advice: this.getSaturnAdvice(satHouse),
-      duration: "Active Phase (2025–2027)",
+      duration: "Current position snapshot; sign ingress, exact aspect dates and house-exit timing are not solved.",
     };
 
     // 2. JUPITER (1-Year Cycle)
@@ -554,7 +561,7 @@ export class TransitEngine {
       ],
       advice:
         "Plant bold seeds in this house sector. Say yes to opportunities that stretch your comfort zone.",
-      duration: "Annual Blessing Window (2026)",
+      duration: "Current position snapshot; sign ingress, exact aspect dates and house-exit timing are not solved.",
     };
 
     // 3. URANUS (7-Year Cycle)
@@ -575,7 +582,7 @@ export class TransitEngine {
       ],
       advice:
         "Do not fight sudden shifts here; innovate alongside them. Your true genius lies on the other side of conformity.",
-      duration: "Long-term Metamorphosis",
+      duration: "Current position snapshot; sign ingress and house-exit dates are not solved.",
     };
 
     // 4. PLUTO (Generational Cycle)
@@ -596,11 +603,11 @@ export class TransitEngine {
       ],
       advice:
         "Allow what is obsolete to decompose gracefully. The rebirth in this area will grant you generational power.",
-      duration: "Generational Transmutation (Through 2043)",
+      duration: "Current position snapshot; sign ingress and house-exit dates are not solved.",
     };
 
     // 5. ECLIPSE DETECTIONS
-    const eclipses = this.getEclipseTransits();
+    const eclipses = this.getEclipseTransits(targetDate);
 
     return {
       saturn: saturnData,
@@ -621,7 +628,7 @@ export class TransitEngine {
       3: "Saturn disciplines your 3rd House of thought, communication, and skills. Mental focus sharpens, frivolous chatter ceases, and you are called to study, write, or master a high-stakes technical craft.",
       4: "Saturn anchors in your 4th House of roots, home, and ancestral karma. You are restructuring your domestic foundation, repairing family obligations, or renovating physical and emotional sanctuaries.",
       5: "Saturn tests your 5th House of creative joy, romance, and children. Casual flings no longer satisfy; you demand authentic, committed romance. Creative projects require relentless discipline and professional execution.",
-      6: "Saturn tightens your 6th House of health, daily routine, and work ethic. Neglected bodily habits demand immediate rehabilitation. Streamline workflows, commit to clean nutrition, and honor your nervous system.",
+      6: "Saturn emphasizes structure in daily routines, work and service. Review commitments, simplify workflows and choose sustainable habits. This is symbolic house interpretation, not a health assessment.",
       7: "Saturn crosses the Descendant into your 7th House of committed partnership. Flimsy relationships dissolve while mature, rock-solid commitments are forged. You learn the sacred art of healthy boundaries in love and business.",
       8: "Saturn enters your 8th House of shared assets, taxes, intimacy, and psychological debts. You face deep financial or emotional entanglements, paying off karmic debts and emerging with financial autonomy.",
       9: "Saturn structures your 9th House of philosophy, higher education, and worldview. Vague spiritual platitudes give way to rigorous philosophical grounding, academic credentials, and authentic ethical codes.",
@@ -671,12 +678,12 @@ export class TransitEngine {
 
   public getSaturnAdvice(house: number): string {
     const map: Record<number, string> = {
-      1: "Invest in your health, posture, and foundational habits. You are the architect of your new era.",
+      1: "Review your foundational routines, boundaries and personal presentation. You are the architect of your new era.",
       2: "Audit your bank accounts and streamline expenses. Build lasting, tangible security.",
       3: "Write that book, enroll in that masterclass, or learn that high-value language.",
       4: "Make peace with your past and establish a peaceful, decluttered sanctuary at home.",
       5: "Treat your creative talent like a serious business. Devote one hour every single day to it.",
-      6: "Schedule annual health checkups, sleep 8 hours, and refine your daily calendar.",
+      6: "Review your daily calendar, protect reasonable rest time and simplify repetitive tasks. Medical checkups should be scheduled according to clinical guidance, not astrology.",
       7: "Do not rush commitment, but honor the partner who stands by you with steadfast loyalty.",
       8: "Settle old debts, organize joint estate paperwork, and embrace deep psychological truth.",
       9: "Publish your research, plan purposeful pilgrimages, and anchor your ethical compass.",
@@ -697,7 +704,7 @@ export class TransitEngine {
       3: "Jupiter inspires your 3rd House of writing, media, and networking. Your words carry charismatic influence. Great for launching podcasts, newsletters, publishing, and short travels.",
       4: "Jupiter protects your 4th House of home and family. Real estate opportunities, joyous family celebrations, or expanding your living space bring deep emotional security.",
       5: "Jupiter lights up your 5th House of creative joy, romance, and entertainment! One of the happiest transits possible: love flourishes, creative inspiration flows, and life feels playful.",
-      6: "Jupiter elevates your 6th House of daily work and vitality. Enjoyable job conditions, supportive coworkers, and rapid recovery from physical fatigue are promised.",
+      6: "Jupiter symbolically expands the 6th House themes of work, service and daily routines. This does not predict physical vitality, fatigue, recovery or illness.",
       7: "Jupiter graces your 7th House of sacred partnership! Lucrative business contracts and blessed romantic unions emerge. The partner who enters now expands your entire world.",
       8: "Jupiter enriches your 8th House of joint finances, investments, and deep intimacy. Grants, inheritances, or partner windfalls arrive, alongside profound spiritual healing.",
       9: "Jupiter rejoices in its home 9th House! International travel, academic triumphs, spiritual enlightenments, and expansive publications open broad horizons.",
@@ -711,232 +718,70 @@ export class TransitEngine {
   /**
    * Detect current astronomical eclipse cycles affecting the chart
    */
-  public getEclipseTransits(): EclipseTransit[] {
-    // Current cycle eclipse points (Virgo/Pisces & Aries/Libra nodes)
-    const currentYearEclipses = [
-      {
-        type: "Solar Eclipse" as const,
-        date: "Feb 17, 2026",
-        sign: "Aquarius",
-        degree: 28.8,
-        lon: 328.8,
-      },
-      {
-        type: "Lunar Eclipse" as const,
-        date: "Mar 3, 2026",
-        sign: "Virgo",
-        degree: 12.9,
-        lon: 162.9,
-      },
-      {
-        type: "Solar Eclipse" as const,
-        date: "Aug 12, 2026",
-        sign: "Leo",
-        degree: 20.0,
-        lon: 140.0,
-      },
-      {
-        type: "Lunar Eclipse" as const,
-        date: "Aug 28, 2026",
-        sign: "Pisces",
-        degree: 4.9,
-        lon: 334.9,
-      },
-    ];
+  public getEclipseTransits(referenceDate: Date = this.currentDate): EclipseTransit[] {
+    // Use the same dynamic Astronomy Engine event search as the Advanced
+    // Western panel. Never substitute an expired hard-coded eclipse calendar.
+    const events = new EclipseAnalyzer().analyzeEclipses(this.birthChart, referenceDate);
+    return events.map((event) => {
+      const longitude = event.degree;
+      const natalAspects: string[] = [];
 
-    const results: EclipseTransit[] = [];
-
-    for (const ec of currentYearEclipses) {
-      const house = this.getHouse(ec.lon);
-      const aspects: string[] = [];
-
-      // Check contacts with natal planets
-      for (const p of this.birthChart.planets) {
-        const diff = this.calculateAngle(ec.lon, p.longitude);
-        if (diff <= 4.0) {
-          aspects.push(`Conjunction to Natal ${p.name} (orb ${diff.toFixed(1)}°)`);
-        } else if (Math.abs(diff - 180) <= 4.0) {
-          aspects.push(`Opposition to Natal ${p.name} (orb ${Math.abs(diff - 180).toFixed(1)}°)`);
+      for (const natal of this.birthChart.planets) {
+        const rawDifference = Math.abs(longitude - natal.longitude);
+        const difference = Math.min(rawDifference, 360 - rawDifference);
+        if (difference <= 4) {
+          natalAspects.push(`Conjunction to Natal ${natal.name} (orb ${difference.toFixed(1)}°)`);
+        } else if (Math.abs(difference - 180) <= 4) {
+          natalAspects.push(`Opposition to Natal ${natal.name} (orb ${Math.abs(difference - 180).toFixed(1)}°)`);
         }
       }
 
-      // Check Ascendant and Midheaven
-      if (this.birthChart.ascendant) {
-        const diffAsc = this.calculateAngle(ec.lon, this.birthChart.ascendant.longitude);
-        if (diffAsc <= 4.0) aspects.push(`Conjunction to Natal Ascendant! (Life Turning Point)`);
-      }
-
-      results.push({
-        type: ec.type,
-        date: ec.date,
-        sign: ec.sign,
-        degree: ec.degree,
-        natalHouse: house,
-        natalAspects: aspects,
-        interpretation:
-          aspects.length > 0
-            ? `Direct trigger on your chart! This eclipse activates your ${HOUSE_TITLES[house]} with major karmic turning points: ${aspects.join(", ")}.`
-            : `Activates your ${HOUSE_TITLES[house]}, stimulating swift evolution and shedding obsolete dynamics in this arena.`,
-      });
-    }
-
-    return results;
+      return {
+        type: event.type.includes("Solar") ? "Solar Eclipse" as const : "Lunar Eclipse" as const,
+        date: event.peakUtc,
+        sign: event.zodiacSign,
+        degree: Math.round((longitude % 30) * 100) / 100,
+        natalHouse: event.affectedHouse,
+        natalAspects,
+        interpretation: `${event.type} in ${event.zodiacSign} at ${event.degreeFormatted}, in natal house ${event.affectedHouse}. This is an astrological symbolism overlay, not a guaranteed prediction. ${event.visibilityNote}`,
+      };
+    });
   }
 
   /**
    * Calculate Timing Windows (When to Act!)
    */
   public getTimingWindows(): Record<string, TimingWindow> {
-    const currentPlanets = this.getPlanetaryPositions(this.currentDate);
-    const jupHouse = this.getHouse(currentPlanets.Jupiter.longitude);
-    const satHouse = this.getHouse(currentPlanets.Saturn.longitude);
-    const sunHouse = this.getHouse(currentPlanets.Sun.longitude);
-
-    // Career Phase
-    let careerPhase = "Foundation & Strategic Discipline";
-    if (jupHouse === 10 || sunHouse === 10) careerPhase = "Harvest & High Visibility";
-    else if (jupHouse === 1 || jupHouse === 2) careerPhase = "Expansion & Resource Growth";
-    else if (satHouse === 10) careerPhase = "Mastery & High Accountability";
-
-    // Love Climate
-    const venHouse = this.getHouse(currentPlanets.Venus.longitude);
-    let loveClimate = "Stable & Contemplative";
-    if (venHouse === 7 || venHouse === 5) loveClimate = "Peak Magnetic Romance & Connection";
-    else if (jupHouse === 7) loveClimate = "Golden Partnership & Union Window";
+    // The current project does not yet solve future exact transits, ingresses,
+    // stations and egresses for each life category. Returning hard-coded
+    // "best days" or "next opportunities" would be fabricated precision.
+    const unavailable = (
+      title: string,
+      category: TimingWindow["category"]
+    ): TimingWindow => ({
+      title,
+      category,
+      currentPhase: "No date-specific timing window is calculated",
+      bestTimes: [],
+      challengingTimes: [],
+      advice: "Use the displayed current transit contacts as symbolic reflection only. This panel does not calculate a dated event window or predict an outcome.",
+      nextOpportunity: "Not calculated",
+    });
 
     return {
-      career: {
-        title: "Career & Ambition Timing",
-        category: "career",
-        currentPhase: careerPhase,
-        bestTimes: [
-          {
-            period: "Sun transiting 10th House (Annual Peak)",
-            description: "High visibility with executive leadership and public recognition.",
-          },
-          {
-            period: "Jupiter Trine Natal Midheaven",
-            description: "Effortless promotions, lucrative client acquisitions, and career expansion.",
-          },
-        ],
-        challengingTimes: [
-          {
-            period: "Mercury Retrograde windows",
-            description: "Double-check contracts; avoid rash product launches; review workflows.",
-          },
-          {
-            period: "Saturn Square Midheaven",
-            description: "Endure heavy workload; prove competency; avoid hasty resignations.",
-          },
-        ],
-        advice:
-          "Build systematic excellence today. Deliver measurable results while Jupiter expands your professional reputation.",
-        nextOpportunity: "Upcoming New Moon in your Career / Income sector",
-      },
-      love: {
-        title: "Love & Partnership Timing",
-        category: "love",
-        currentPhase: loveClimate,
-        bestTimes: [
-          {
-            period: "Venus Transiting 5th & 7th Houses",
-            description: "Effortless mutual attraction, tender romance, and joyous dates.",
-          },
-          {
-            period: "Jupiter Aspecting Natal Venus",
-            description: "Golden romantic synchronicity, commitments, and generous affection.",
-          },
-        ],
-        challengingTimes: [
-          {
-            period: "Venus Retrograde (every 18 months)",
-            description: "Ex-partners resurface; reassess relationship values and self-worth.",
-          },
-          {
-            period: "Mars Square Natal Venus",
-            description: "Emotional friction or impatience; practice conscious de-escalation.",
-          },
-        ],
-        advice:
-          "Show up authentically without masking. The right partnership honors your sacred sovereignty.",
-        nextOpportunity: "Venus-Jupiter conjunction window",
-      },
-      finance: {
-        title: "Finance & Wealth Timing",
-        category: "finance",
-        currentPhase:
-          jupHouse === 2 || jupHouse === 8
-            ? "High Prosperity & Resource Expansion"
-            : "Strategic Budgeting & Asset Fortification",
-        bestTimes: [
-          {
-            period: "Jupiter Transiting 2nd or 8th House",
-            description: "Lucrative investments, bonuses, client expansions, and passive income gains.",
-          },
-          {
-            period: "Sun & Mercury in 2nd House",
-            description: "Ideal time to negotiate raises, revise fee structures, and audit accounts.",
-          },
-        ],
-        challengingTimes: [
-          {
-            period: "Saturn in 2nd House",
-            description: "Budget rigorously; eliminate frivolous overhead; build emergency cash.",
-          },
-        ],
-        advice:
-          "Cultivate multiple uncorrelated income streams. Invest in appreciating skills and tangible assets.",
-        nextOpportunity: "Next Taurus/Scorpio or 2nd/8th House Full Moon",
-      },
+      career: unavailable("Career & Ambition Timing", "career"),
+      love: unavailable("Love & Partnership Timing", "love"),
+      finance: unavailable("Finance & Wealth Timing", "finance"),
       health: {
-        title: "Health & Vitality Timing",
+        title: "Well-being Reflection (Non-medical)",
         category: "health",
-        currentPhase:
-          sunHouse === 1 || sunHouse === 6 ? "High Vitality & Routine Optimization" : "Restorative Maintenance",
-        bestTimes: [
-          {
-            period: "Sun in 1st House",
-            description: "Peak physical stamina, natural glow, and swift recovery.",
-          },
-          {
-            period: "Mars Harmonious to Natal Sun",
-            description: "Personal records in fitness, muscular tone, and energetic drive.",
-          },
-        ],
-        challengingTimes: [
-          {
-            period: "Saturn Conjunct/Square Natal Mars",
-            description: "Risk of bone, joint, or tooth fatigue; prioritize deep sleep and slow down.",
-          },
-        ],
-        advice:
-          "Treat your physical body like the sacred temple of your consciousness. Hydrate and honor circadian rhythm.",
-        nextOpportunity: "Sun entering your 1st House or Spring Equinox",
+        currentPhase: "No health timing is calculated",
+        bestTimes: [],
+        challengingTimes: [],
+        advice: "Astrology cannot assess health, diagnose illness, estimate medical risk or guide treatment. For symptoms or health decisions, use qualified clinical care.",
+        nextOpportunity: "Not calculated",
       },
-      spiritual: {
-        title: "Spiritual & Inner Growth Timing",
-        category: "spiritual",
-        currentPhase: "Deep Intuitive Awakening",
-        bestTimes: [
-          {
-            period: "Neptune Trine Natal Sun/Moon",
-            description: "Profound mystical downloads, prophetic dreams, and artistic channeled flow.",
-          },
-          {
-            period: "Sun in 12th House (Month before birthday)",
-            description: "Sacred retreat, meditation, and karmic closure.",
-          },
-        ],
-        challengingTimes: [
-          {
-            period: "Pluto Square Natal Moon",
-            description: "Subconscious purge; requires deep therapy, breathwork, or shadow work.",
-          },
-        ],
-        advice:
-          "Daily silence is not a luxury; it is your ultimate strategic advantage. Listen to your gut whisper.",
-        nextOpportunity: "Upcoming Pisces/Neptune alignment",
-      },
+      spiritual: unavailable("Spiritual & Inner Growth Timing", "spiritual"),
     };
   }
 }
@@ -987,73 +832,44 @@ export class DailyHoroscope {
    * Generate complete daily horoscope for a target date
    */
   public generateDailyHoroscope(targetDate: Date = new Date()): DailyHoroscopeData {
+    if (!Number.isFinite(targetDate.getTime())) {
+      throw new RangeError("Daily transit snapshot requires a valid target date.");
+    }
     const planets = this.transitEngine.getPlanetaryPositions(targetDate);
     const transits = this.transitEngine.getCurrentTransits(targetDate);
-
     const moonPos = planets.Moon;
     const sunPos = planets.Sun;
     const moonPhase = this.getMoonPhase(sunPos.longitude, moonPos.longitude);
 
-    // Calculate energy score from transits
-    let energyScore = 65;
-    transits.slice(0, 10).forEach((t) => {
-      if (t.nature === "Harmonious") energyScore += t.exactness * 6;
-      else if (t.nature === "Challenging") energyScore -= t.exactness * 4;
-      else energyScore += t.exactness * 2;
-    });
-    energyScore = Math.max(30, Math.min(98, Math.round(energyScore)));
-
-    let energyMood = "Balanced & Strategic Flow";
-    if (energyScore >= 85) energyMood = "Radiant, Expansive & High-Momentum";
-    else if (energyScore >= 70) energyMood = "Productive, Optimistic & Social";
-    else if (energyScore >= 50) energyMood = "Reflective, Disciplined & Steady";
-    else energyMood = "Introspective Calibration & Grounding";
-
-    // Focus area based on transiting Sun & Moon houses
     const sunHouse = this.transitEngine.getHouse(sunPos.longitude);
     const moonHouse = this.transitEngine.getHouse(moonPos.longitude);
-
-    const FOCUS_AREAS: Record<number, string> = {
-      1: "Personal Vitality, Image & Decisive Leadership",
-      2: "Financial Fortification & Self-Worth Recognition",
-      3: "Intellectual Agility, Writing & Strategic Networking",
-      4: "Domestic Sanctuary, Family Grounding & Emotional Rest",
-      5: "Creative Passion, Playful Self-Expression & Romance",
-      6: "Routine Optimization, High-Level Craftsmanship & Wellness",
-      7: "Diplomatic Cooperation, Partnership Alignment & Contracts",
-      8: "Deep Psychological Focus, Shared Resources & Rebirth",
-      9: "Big-Picture Vision, Higher Studies & Adventurous Horizons",
-      10: "Career Milestones, Public Authority & Executive Execution",
-      11: "Community Impact, Meaningful Alliances & Future Goals",
-      12: "Subconscious Healing, Sacred Solitude & Meditation",
+    const focusAreas: Record<number, string> = {
+      1: "Identity and self-presentation",
+      2: "Resources and personal values",
+      3: "Learning and communication",
+      4: "Home and foundations",
+      5: "Creativity and enjoyment",
+      6: "Work and daily routines",
+      7: "Partnerships and agreements",
+      8: "Shared resources and change",
+      9: "Study and worldview",
+      10: "Public role and vocation",
+      11: "Community and long-range goals",
+      12: "Rest and reflection",
     };
+    const focus = `Moon in natal house ${moonHouse}: ${focusAreas[moonHouse] || "General reflection"} (symbolic house theme only)`;
 
-    const focus = FOCUS_AREAS[moonHouse] || FOCUS_AREAS[sunHouse] || "Creative & Professional Mastery";
-
-    // Lucky hours based on planetary hours
-    const luckyHourMap = [
-      "09:15 AM – 11:30 AM (Solar-Jupiter Peak)",
-      "02:00 PM – 04:30 PM (Mercury-Venus Alignment)",
-      "10:00 AM – 12:45 PM (Lunar-Mars Focus)",
-      "03:30 PM – 05:45 PM (Golden Hour Harmony)",
-      "11:00 AM – 01:15 PM (High-Vibration Window)",
-    ];
-    const luckyHours = luckyHourMap[targetDate.getDay() % luckyHourMap.length];
-
-    // Affirmation
     const affirmations = [
-      "I align my sovereign will with the harmonious rhythms of the cosmos. Opportunities flow to me effortlessly.",
-      "My mind is clear, my boundaries are firm, and my actions build lasting legacy.",
-      "I welcome transformative challenges as fertile soil for my inevitable triumph.",
-      "I honor my unique cosmic blueprint; abundance and authentic love surround me today.",
-      "I navigate today's planetary currents with calm wisdom, poise, and playful grace.",
+      "I can approach today's decisions with clarity and patience.",
+      "I can focus on what is within my control and let the rest wait.",
+      "I can make steady progress through thoughtful, practical action.",
+      "I can listen carefully, ask clear questions and respect my boundaries.",
+      "I can balance ambition with rest and realistic expectations.",
     ];
-    const affirmation = affirmations[(targetDate.getDate() + targetDate.getMonth()) % affirmations.length];
-
-    // Top highlight transit
+    const affirmation = affirmations[(targetDate.getUTCDate() + targetDate.getUTCMonth()) % affirmations.length];
     const highlightTransit = transits.length > 0
       ? `${transits[0].transitingPlanet} ${transits[0].aspectSymbol} Natal ${transits[0].natalPlanet}`
-      : "Sun Harmonic Alignment";
+      : "No current aspect within the configured transit orbs";
 
     return {
       date: targetDate.toLocaleDateString("en-US", {
@@ -1061,38 +877,36 @@ export class DailyHoroscope {
         month: "long",
         day: "numeric",
         year: "numeric",
+        timeZone: "UTC",
       }),
       dateObj: targetDate,
       moonSign: moonPos.sign,
       moonDegree: moonPos.degree,
       moonSignFormatted: `${moonPos.degree.toFixed(1)}° ${moonPos.sign}`,
-      moonPhase: moonPhase,
-      overallEnergy: energyScore,
-      energyMood: energyMood,
-      focus: focus,
-      luckyHours: luckyHours,
+      moonPhase,
+      activeTransitCount: transits.length,
+      transitSummary: `${transits.length} current transit aspects fall within the configured orbs. This is a geometric count, not a score or prediction of how the day will go.`,
+      focus,
+      luckyHours: "Not calculated: this view has no selected location and precision sunrise/sunset planetary-hour calculation.",
       challenges: [
-        "Avoid imposter syndrome or knee-jerk emotional reactions.",
-        "Refrain from taking on extra tasks that dilute your primary focus.",
+        "No personal challenge forecast is calculated from these positions.",
+        "Use current aspects as symbolic reflection, not as a prediction of events.",
       ],
       opportunities: [
-        "Initiate crucial conversations during your Lucky Hours.",
-        "Pitch ambitious concepts; influential peers are receptive.",
-        "Ground creative inspiration into concrete, actionable steps.",
+        "No personal opportunity forecast is calculated from these positions.",
+        "Review the exact transit contacts and their applying/separating status instead.",
       ],
-      affirmation: affirmation,
+      affirmation,
       bestActions: [
-        "Draft the blueprint for your primary goal",
-        "Reach out to an admired mentor or collaborator",
-        "Take a brisk 20-minute walk in natural sunlight",
-        "Set clear boundaries around deep-work hours",
+        "Choose one realistic priority for the day.",
+        "Check important facts before making a consequential decision.",
+        "Keep a workable balance between focused effort and rest.",
       ],
       avoidActions: [
-        "Doom-scrolling or getting distracted by internet drama",
-        "Making impulsive purchases to soothe temporary anxiety",
-        "Saying yes out of people-pleasing guilt",
+        "Avoid treating astrological symbolism as certainty.",
+        "Avoid making medical, legal or financial decisions solely from a horoscope.",
       ],
-      highlightTransit: highlightTransit,
+      highlightTransit,
     };
   }
 
@@ -1112,9 +926,9 @@ export class DailyHoroscope {
         dayName: i === 0 ? "Today" : dayNames[d.getDay()],
         dateString: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
         moonSign: horoscope.moonSign,
-        energyScore: horoscope.overallEnergy,
-        theme: horoscope.energyMood.split("&")[0].trim(),
-        keyTransit: horoscope.highlightTransit || "Harmonic Alignment",
+        activeTransitCount: horoscope.activeTransitCount,
+        theme: horoscope.focus,
+        keyTransit: horoscope.highlightTransit || "No current aspect within configured orbs",
       });
     }
 
@@ -1126,47 +940,59 @@ export class DailyHoroscope {
    */
   public generateMonthlyForecast(targetMonth?: number, targetYear?: number): MonthlyForecastOverview {
     const now = new Date();
-    const month = targetMonth !== undefined ? targetMonth : now.getMonth();
-    const year = targetYear !== undefined ? targetYear : now.getFullYear();
+    const month = targetMonth ?? now.getUTCMonth();
+    const year = targetYear ?? now.getUTCFullYear();
+    if (!Number.isInteger(month) || month < 0 || month > 11 || !Number.isInteger(year) || year < 1600 || year > 2600) {
+      throw new RangeError("Monthly phase calendar requires month 0–11 and a supported Gregorian year.");
+    }
 
     const monthNames = [
       "January", "February", "March", "April", "May", "June",
       "July", "August", "September", "October", "November", "December",
     ];
+    const startDate = new Date(Date.UTC(year, month, 1));
+    const endDate = new Date(Date.UTC(year, month + 1, 1));
+    const daysInMonth = Math.round((endDate.getTime() - startDate.getTime()) / 86400000);
+
+    // Astronomy Engine defines new/full moon from the geocentric ecliptic
+    // longitude difference of Moon and Sun (0° and 180° respectively).
+    const newMoon = Astronomy.SearchMoonPhase(0, startDate, daysInMonth);
+    const fullMoon = Astronomy.SearchMoonPhase(180, startDate, daysInMonth);
+    const dateInsideMonth = (event: Astronomy.AstroTime | null): string | null => {
+      if (!event) return null;
+      const eventDate = event.date;
+      if (eventDate.getTime() < startDate.getTime() || eventDate.getTime() >= endDate.getTime()) return null;
+      return eventDate.toISOString();
+    };
+    const newMoonIso = dateInsideMonth(newMoon);
+    const fullMoonIso = dateInsideMonth(fullMoon);
+    const toDateLabel = (iso: string | null) => iso ? iso.slice(0, 10) + " UTC" : "Not found in this month";
+
+    const highlights: MonthlyForecastOverview["highlights"] = [];
+    if (newMoonIso) {
+      highlights.push({
+        date: newMoonIso.slice(0, 10),
+        title: "Astronomical New Moon",
+        description: "Geocentric Sun–Moon ecliptic longitude separation reaches 0°. Astrological interpretations are not calculated by this calendar.",
+        impact: "Medium",
+      });
+    }
+    if (fullMoonIso) {
+      highlights.push({
+        date: fullMoonIso.slice(0, 10),
+        title: "Astronomical Full Moon",
+        description: "Geocentric Sun–Moon ecliptic longitude separation reaches 180°. Astrological interpretations are not calculated by this calendar.",
+        impact: "Medium",
+      });
+    }
 
     return {
       monthName: monthNames[month],
-      year: year,
-      newMoonDate: `${monthNames[month]} 12`,
-      fullMoonDate: `${monthNames[month]} 27`,
-      generalTheme:
-        "A transformative chapter marked by structural discipline, strategic relationship alignment, and decisive professional momentum.",
-      highlights: [
-        {
-          date: `${monthNames[month]} 4`,
-          title: "Mercury Ingress & Intellectual Flow",
-          description: "Clear communication, sharp negotiation skills, and commercial synergy.",
-          impact: "Medium",
-        },
-        {
-          date: `${monthNames[month]} 12`,
-          title: "New Moon Intentions Portal",
-          description: "Prime day to plant ambitious seeds and launch long-term projects.",
-          impact: "High",
-        },
-        {
-          date: `${monthNames[month]} 19`,
-          title: "Sun-Jupiter Planetary Harmony",
-          description: "Peak good fortune, optimistic breakthroughs, and social magnetism.",
-          impact: "High",
-        },
-        {
-          date: `${monthNames[month]} 27`,
-          title: "Full Moon Culmination & Revelation",
-          description: "Climax of ongoing negotiations; celebrate wins and release what no longer serves.",
-          impact: "High",
-        },
-      ],
+      year,
+      newMoonDate: toDateLabel(newMoonIso),
+      fullMoonDate: toDateLabel(fullMoonIso),
+      generalTheme: "This calendar reports calculated astronomical lunar phases only. It does not predict personal events, opportunities or outcomes.",
+      highlights,
     };
   }
 }

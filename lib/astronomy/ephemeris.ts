@@ -14,8 +14,11 @@ import { LunarPointsCalculator, AdditionalPoints } from "./lunarPointsCalculator
 import { ArabianPartsCalculator, ArabianPartsResult } from "./arabianPartsCalculator";
 import { PlanetaryHoursCalculator, PlanetaryHoursResult } from "./planetaryHours";
 import { AlmutenFigurisCalculator, AlmutenFigurisResult } from "./almutenFigurisCalculator";
+import { isSunAboveHorizon } from "./horizon";
 
 export type SolarProximity = "Cazimi" | "Combust" | "UnderBeams" | "Free";
+export type WesternHouseSystem = "Auto" | "Placidus" | "Equal" | "WholeSign" | "Porphyry";
+export type ResolvedWesternHouseSystem = Exclude<WesternHouseSystem, "Auto">;
 
 export interface PlanetPosition {
   id: string;
@@ -51,7 +54,8 @@ export interface AspectData {
   angle: number; // nominal angle: 0, 60, 90, 120, 180, etc.
   actualDiff: number; // absolute difference
   orb: number; // orb difference from exact
-  isApplying: boolean;
+  /** Null when one point has no modeled speed or the relative speed is stationary. */
+  isApplying: boolean | null;
   nature: "Harmonious" | "Challenging" | "Neutral";
 }
 
@@ -69,7 +73,12 @@ export interface WesternChartData {
   obliquity: number;
   birthLatitude?: number;
   birthLongitude?: number; // east-positive degrees
-  houseSystem: "Placidus" | "Equal" | "WholeSign";
+  /** House system actually used for the Western chart. */
+  houseSystem: ResolvedWesternHouseSystem;
+  /** User selection before automatic/polar fallback resolution. */
+  requestedHouseSystem?: WesternHouseSystem;
+  /** Explains automatic selection or a polar fallback when applicable. */
+  houseSystemNote?: string;
   asteroids?: AsteroidPositions;
   additionalPoints?: AdditionalPoints;
   arabianParts?: ArabianPartsResult;
@@ -636,7 +645,11 @@ export function calculateAspects(planets: PlanetPosition[]): AspectData[] {
         if (orbDiff <= maxOrb) {
           // Compare the signed angular error to the nearest aspect branch.
           const relativeSpeed = (p1.speed ?? 0) - (p2.speed ?? 0);
-          const isApplying = isAngularAspectApplying(p1.longitude, p2.longitude, asp.angle, relativeSpeed);
+          const isAngleWithoutSpeed = ["Ascendant", "Midheaven", "Descendant", "Imum Coeli"].includes(p1.name) ||
+            ["Ascendant", "Midheaven", "Descendant", "Imum Coeli"].includes(p2.name);
+          const isApplying = isAngleWithoutSpeed || Math.abs(relativeSpeed) < 1e-12
+            ? null
+            : isAngularAspectApplying(p1.longitude, p2.longitude, asp.angle, relativeSpeed);
 
           aspects.push({
             planet1: p1.name,
@@ -671,22 +684,39 @@ export function calculateWesternChart(
   latitude: number,
   longitude: number,
   timezoneOffsetHours: number, // e.g. -5 for EST, 5.5 for IST
-  houseSystem: "Placidus" | "Equal" | "WholeSign" = "Placidus",
+  houseSystem: WesternHouseSystem = "Placidus",
   second: number = 0
 ): WesternChartData {
   // Convert the supplied local clock and fixed UTC offset to a UTC Julian Day.
   // This lower-level API cannot infer historical IANA timezone transitions.
   const jd = swissEphemeris.calculateJulianDay(year, month, day, hour, minute, second, timezoneOffsetHours);
-  const sysCode = houseSystem === "WholeSign" ? "W" : houseSystem === "Equal" ? "E" : "P";
+  if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+    throw new RangeError("Western chart coordinates must use latitude ±90° and east-positive longitude ±180°.");
+  }
+  const polarPlacidusFallback = Math.abs(latitude) >= 66.5622 && (houseSystem === "Auto" || houseSystem === "Placidus");
+  const resolvedRequest: ResolvedWesternHouseSystem = houseSystem === "Auto"
+    ? (polarPlacidusFallback ? "Porphyry" : "Placidus")
+    : polarPlacidusFallback ? "Porphyry" : houseSystem;
+  const sysCode = resolvedRequest === "WholeSign" ? "W" : resolvedRequest === "Equal" ? "E" : resolvedRequest === "Porphyry" ? "O" : "P";
   const houseResult = swissEphemeris.calculateHouses(jd, latitude, longitude, sysCode);
   const rawCusps = houseResult.houseCusps;
+  const actualHouseSystem: ResolvedWesternHouseSystem = houseResult.houseSystemUsed === "W" ? "WholeSign"
+    : houseResult.houseSystemUsed === "E" ? "Equal"
+    : houseResult.houseSystemUsed === "O" ? "Porphyry" : "Placidus";
+  const houseSystemNote = polarPlacidusFallback
+    ? "Placidus is not geometrically defined at/above the polar circle here; Porphyry quadrant houses were used instead."
+    : actualHouseSystem !== resolvedRequest
+      ? "The requested Placidus calculation could not be resolved numerically for this place/date; Porphyry quadrant houses were used instead."
+      : houseSystem === "Auto"
+        ? "Auto selected Placidus for the Western Modern chart. Hellenistic and Vedic calculations retain their own Whole Sign house frameworks."
+        : undefined;
   const asc = houseResult.ascendant;
   const mc = houseResult.midheaven;
 
-  const T = (jd - 2451545.0) / 36525.0;
-  const gmst = calculateGMST(jd);
-  const ramc = normalizeDegrees(gmst + longitude);
-  const obliquity = calculateObliquity(T);
+  // Reuse the same apparent sidereal time and true obliquity used for the
+  // Ascendant/MC calculation so horizon, house and astrocartography geometry agree.
+  const ramc = houseResult.localSiderealTime;
+  const obliquity = houseResult.obliquity;
 
   // Calculate positions through the astronomy-engine-backed compatibility facade.
   // Default node convention is mean Rahu with Ketu exactly opposite that same node.
@@ -726,7 +756,17 @@ export function calculateWesternChart(
   const lunarPointsCalc = new LunarPointsCalculator();
   const additionalPoints = lunarPointsCalc.calculateAll(jd, ramc, latitude, obliquity, rawCusps);
 
-  // Calculate Arabian Parts
+  // Determine chart sect from the Sun's actual geometric altitude, not its
+  // sign-based house number. This remains invariant under house-system changes.
+  const isBirthDaytime = isSunAboveHorizon({
+    eclipticLongitude: sp.sun.longitude,
+    eclipticLatitude: sp.sun.latitude,
+    obliquity,
+    localSiderealTime: ramc,
+    geographicLatitude: latitude,
+  });
+
+  // Calculate Arabian Parts using the astronomical sect result.
   const arabianCalc = new ArabianPartsCalculator();
   const arabianParts = arabianCalc.calculateAll({
     ascendant: asc,
@@ -738,6 +778,7 @@ export function calculateWesternChart(
     jupiter: sp.jupiter.longitude,
     saturn: sp.saturn.longitude,
     houseCusps: rawCusps,
+    isDayChart: isBirthDaytime,
   });
 
   // Format House Cusps
@@ -792,7 +833,7 @@ export function calculateWesternChart(
     moon: sp.moon.longitude,
     partOfFortune,
     planets: planetsList.map((p) => ({ name: p.name, longitude: p.longitude, house: p.house })),
-    isDayChart: planetaryHours.isBirthInDaytime,
+    isDayChart: isBirthDaytime,
     dayRuler: planetaryHours.dayRuler,
     hourRuler: planetaryHours.currentHourRuler,
   });
@@ -811,7 +852,9 @@ export function calculateWesternChart(
     obliquity,
     birthLatitude: latitude,
     birthLongitude: longitude,
-    houseSystem,
+    houseSystem: actualHouseSystem,
+    requestedHouseSystem: houseSystem,
+    houseSystemNote,
     asteroids,
     additionalPoints,
     arabianParts,

@@ -6,6 +6,7 @@
  */
 
 import * as Astronomy from "astronomy-engine";
+import { calculateEastPointLongitude, calculateVertexLongitude } from "./anglePoints";
 
 export interface SwissPlanetPosition {
   longitude: number;      // Ecliptic longitude in degrees, rounded for display (not an accuracy guarantee)
@@ -41,6 +42,12 @@ export interface SwissHouseResult {
   midheaven: number;
   houseCusps: number[]; // Array of 12 house cusps (1-indexed semantics: [0..11] or 12 items)
   vertex: number;
+  /** Local apparent sidereal time / RAMC in degrees, using the same model as house cusps. */
+  localSiderealTime: number;
+  /** True obliquity of date in degrees, matching Astronomy Engine GAST. */
+  obliquity: number;
+  houseSystemUsed: "P" | "W" | "E" | "O";
+  equatorialAscendant: number;
 }
 
 export interface SwissAspect {
@@ -454,8 +461,11 @@ export class SwissEphemerisEngine {
     julianDay: number,
     latitude: number,
     longitude: number,
-    system: "P" | "W" | "E" = "P"
+    system: "P" | "W" | "E" | "O" = "P"
   ): SwissHouseResult {
+    if (!Number.isFinite(julianDay) || !Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+      throw new RangeError("House calculation requires a finite Julian Day, latitude within ±90°, and longitude within ±180°.");
+    }
     const time = new Astronomy.AstroTime(julianDay - 2451545.0);
 
     // Greenwich Apparent Sidereal Time (GST) in hours
@@ -486,41 +496,69 @@ export class SwissEphemerisEngine {
     ) * (180.0 / Math.PI);
     if (asc < 0) asc += 360.0;
 
-    // Vertex calculation (western electric axis)
-    const ramcVertex = (ramc + 180.0) * (Math.PI / 180.0);
-    let vertex = Math.atan2(
-      Math.cos(ramcVertex),
-      -Math.sin(ramcVertex) * Math.cos(eps) + (1 / Math.tan(phi || 0.0001)) * Math.sin(eps)
-    ) * (180.0 / Math.PI);
-    if (vertex < 0) vertex += 360.0;
+    const vertex = calculateVertexLongitude(ramc, latitude, epsDeg);
+    const equatorialAscendant = calculateEastPointLongitude(ramc, epsDeg);
 
+    // Placidus is undefined at polar-circle latitudes. Use the standard Porphyry
+    // quadrant fallback explicitly instead of allowing a trigonometric result to
+    // masquerade as a valid Placidus chart.
+    let systemUsed: "P" | "W" | "E" | "O" = system === "P" && Math.abs(latitude) >= 66.5622 ? "O" : system;
     const cusps: number[] = new Array(12);
 
-    if (system === "W") {
+    if (systemUsed === "W") {
       // Whole Sign System: House 1 begins at 0° of Ascendant sign
       const ascSignIdx = Math.floor(asc / 30);
       for (let i = 0; i < 12; i++) {
         cusps[i] = ((ascSignIdx + i) % 12) * 30.0;
       }
-    } else if (system === "E") {
+    } else if (systemUsed === "E") {
       // Equal House System: 30° divisions starting from ASC
       for (let i = 0; i < 12; i++) {
         cusps[i] = (asc + i * 30.0) % 360.0;
       }
+    } else if (systemUsed === "O") {
+      // Porphyry: divide each ecliptic quadrant into three equal arcs.
+      const ascendant = asc;
+      const descendant = (asc + 180.0) % 360.0;
+      const ic = (mc + 180.0) % 360.0;
+      const forwardArc = (from: number, to: number) => ((to - from) % 360 + 360) % 360;
+      const q1 = forwardArc(ascendant, ic);
+      const q2 = forwardArc(ic, descendant);
+      const q3 = forwardArc(descendant, mc);
+      const q4 = forwardArc(mc, ascendant);
+      cusps[0] = ascendant;
+      cusps[1] = (ascendant + q1 / 3) % 360;
+      cusps[2] = (ascendant + 2 * q1 / 3) % 360;
+      cusps[3] = ic;
+      cusps[4] = (ic + q2 / 3) % 360;
+      cusps[5] = (ic + 2 * q2 / 3) % 360;
+      cusps[6] = descendant;
+      cusps[7] = (descendant + q3 / 3) % 360;
+      cusps[8] = (descendant + 2 * q3 / 3) % 360;
+      cusps[9] = mc;
+      cusps[10] = (mc + q4 / 3) % 360;
+      cusps[11] = (mc + 2 * q4 / 3) % 360;
     } else {
       // Placidus House System
-      cusps[9] = mc; // 10th house
       cusps[3] = (mc + 180.0) % 360.0; // 4th house (IC)
       cusps[0] = asc; // 1st house
       cusps[6] = (asc + 180.0) % 360.0; // 7th house (DESC)
+      cusps[9] = mc; // 10th house (MC)
 
       // Calculate Placidus semi-arc cusps (11, 12, 2, 3)
       const calcPlacidusCusp = (f: number, ramcOffset: number): number => {
         let r = (ramc + ramcOffset) * (Math.PI / 180.0);
         for (let iter = 0; iter < 10; iter++) {
-          const sinDec = Math.sin(eps) * Math.sin(r);
-          const cosDec = Math.cos(Math.asin(Math.max(-1, Math.min(1, sinDec))));
-          const tanDec = sinDec / (cosDec || 0.0001);
+          // The iteration variable r is right ascension. Declination must
+          // be computed from the corresponding ecliptic longitude, not from
+          // right ascension itself. Convert RA -> ecliptic longitude first.
+          const eclipticLongitude = Math.atan2(
+            Math.sin(r),
+            Math.cos(r) * Math.cos(eps)
+          );
+          const sinDec = Math.sin(eps) * Math.sin(eclipticLongitude);
+          const cosDec = Math.sqrt(Math.max(0, 1 - sinDec * sinDec));
+          const tanDec = sinDec / Math.max(cosDec, 1e-12);
           const semiArcRatio = Math.asin(Math.max(-1, Math.min(1, Math.tan(phi) * tanDec))) * f;
           r = (ramc + ramcOffset) * (Math.PI / 180.0) + semiArcRatio;
         }
@@ -540,11 +578,60 @@ export class SwissEphemerisEngine {
         cusps[7] = (cusps[1] + 180.0) % 360.0;  // 8th house
         cusps[8] = (cusps[2] + 180.0) % 360.0;  // 9th house
       } catch {
-        // Fallback for extreme polar latitudes
-        for (let i = 0; i < 12; i++) {
-          cusps[i] = (asc + i * 30.0) % 360.0;
+        // A numerical Placidus failure must never be reported as Placidus.
+        // Use the explicit Porphyry quadrant method and expose that fallback.
+        systemUsed = "O";
+        const ascendant = asc;
+        const descendant = (asc + 180.0) % 360.0;
+        const ic = (mc + 180.0) % 360.0;
+        const forwardArc = (from: number, to: number) => ((to - from) % 360 + 360) % 360;
+        const quadrants = [
+          [ascendant, ic],
+          [ic, descendant],
+          [descendant, mc],
+          [mc, ascendant],
+        ] as const;
+        for (let quadrant = 0; quadrant < 4; quadrant++) {
+          const [start, end] = quadrants[quadrant];
+          const arc = forwardArc(start, end);
+          const base = quadrant * 3;
+          cusps[base] = start;
+          cusps[base + 1] = (start + arc / 3) % 360;
+          cusps[base + 2] = (start + 2 * arc / 3) % 360;
         }
       }
+    }
+
+    const hasTwelveFiniteCusps = () =>
+      Array.from({ length: 12 }, (_, index) => cusps[index]).every(Number.isFinite);
+
+    if (!hasTwelveFiniteCusps() && systemUsed !== "O") {
+      // Math functions return NaN rather than throwing for some invalid
+      // semi-arc configurations. Detect that explicitly and resolve using
+      // the documented Porphyry quadrant fallback.
+      systemUsed = "O";
+      const ascendant = asc;
+      const descendant = (asc + 180.0) % 360.0;
+      const ic = (mc + 180.0) % 360.0;
+      const forwardArc = (from: number, to: number) => ((to - from) % 360 + 360) % 360;
+      const quadrants = [
+        [ascendant, ic],
+        [ic, descendant],
+        [descendant, mc],
+        [mc, ascendant],
+      ] as const;
+      for (let quadrant = 0; quadrant < 4; quadrant++) {
+        const [start, end] = quadrants[quadrant];
+        const arc = forwardArc(start, end);
+        const base = quadrant * 3;
+        cusps[base] = start;
+        cusps[base + 1] = (start + arc / 3) % 360;
+        cusps[base + 2] = (start + 2 * arc / 3) % 360;
+      }
+    }
+
+    if (!hasTwelveFiniteCusps() || !Number.isFinite(asc) || !Number.isFinite(mc)) {
+      throw new RangeError("House calculation could not produce twelve finite cusps and valid angles.");
     }
 
     const round4 = (v: number) => Math.round(v * 10000) / 10000;
@@ -554,6 +641,10 @@ export class SwissEphemerisEngine {
       midheaven: round4(mc),
       houseCusps: cusps.map(round4),
       vertex: round4(vertex),
+      localSiderealTime: round4(ramc),
+      obliquity: round4(epsDeg),
+      houseSystemUsed: systemUsed,
+      equatorialAscendant: round4(equatorialAscendant),
     };
   }
 

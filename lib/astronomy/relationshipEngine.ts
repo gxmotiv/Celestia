@@ -58,8 +58,9 @@ export interface SynastryAspect {
   symbol: string;
   angle: number;
   orb: number;
-  isApplying: boolean;
-  score: number; // 1 to 10
+  /** Cross-chart natal aspects compare two static birth snapshots; applying/separating is not defined here. */
+  isApplying: boolean | null;
+  score: number; // Interpretive heuristic weight, not measured compatibility
   nature: "Harmonious" | "Challenging" | "Dynamic" | "Karmic";
   category: string;
   title: string;
@@ -81,7 +82,7 @@ export interface CompatibilityScores {
   communication: number; // Mercury/Moon contacts
   valuesAlignment: number;// Venus/Jupiter contacts
   longTermPotential: number;// Saturn contacts
-  overall: number;       // Weighted composite affinity (0-100)
+  overall: number;       // Heuristic weighted astrology index (25-99), not a probability
   verdict: string;
   dimensions: AffinityDimension[];
   relationshipContextSummary: string;
@@ -90,7 +91,7 @@ export interface CompatibilityScores {
 export interface KarmicIndicator {
   type: "Node Contact" | "Vertex Contact" | "Saturnian Bond" | "Chironic Healing";
   description: string;
-  intensity: "Mild" | "Moderate" | "Profound" | "Life-Altering";
+  intensity: "Tight orb" | "Moderate orb";
 }
 
 export interface SynastryReport {
@@ -293,28 +294,28 @@ export const SYNASTRY_INTERPRETATIONS: Record<
     advice: "Tackle ambitious long-range milestones, home building, or fitness goals as a team.",
   },
   "Sun-NorthNode-Conjunction": {
-    title: "Fated Evolutionary Catalyst",
+    title: "Nodal Growth Theme",
     score: 9.7,
     category: "Growth & Purpose",
     nature: "Karmic",
-    description: "A potent destiny contact. Person 1's core presence acts as a direct beacon pulling Person 2 toward their future soul purpose.",
+    description: "Some modern astrology traditions interpret this close Sun–Node contact as a symbolic growth or life-direction theme. It does not establish destiny or determine either person's future.",
     advice: "Embrace the accelerated personal growth that this union triggers in both lives.",
   },
   "Moon-NorthNode-Conjunction": {
-    title: "Soulmate Nodal Embrace",
+    title: "Nodal Emotional Resonance",
     score: 9.8,
     category: "Growth & Purpose",
     nature: "Karmic",
-    description: "Immediate uncanny familiarity, as though your souls scheduled this meeting before incarnation. Emotional evolution is accelerated.",
+    description: "Some modern astrology traditions interpret this Moon–Node contact as symbolic emotional familiarity or shared growth themes. It is not evidence of a pre-incarnation agreement.",
     advice: "Honor this deep psychic connection with gratitude and emotional authenticity.",
   },
   "Venus-NorthNode-Conjunction": {
-    title: "Karmic Lovers & Destined Affection",
+    title: "Venus–Node Affection Theme",
     score: 9.6,
     category: "Romance & Chemistry",
     nature: "Karmic",
-    description: "Meeting feels planned by the cosmos. Love acts as the central vehicle through which both souls fulfill their destiny.",
-    advice: "A classic sign of soulmates meeting to learn higher love, artistic expression, or mutual devotion.",
+    description: "Some astrology traditions read this Venus–Node contact as a symbolic affection or relationship-growth theme. It does not show that a meeting was destined or guarantee a relationship.",
+    advice: "Use this symbolism as a prompt to discuss affection, shared values and expectations; it does not identify soulmates.",
   },
   "Sun-Saturn-Trine": {
     title: "Pillar of Respect & Endurance",
@@ -393,7 +394,7 @@ export class SynastryEngine {
       }
       if (this.relType === "stranger") {
         if (rawCategory === "Romance & Chemistry") return "Instant Vibe & Spark";
-        if (rawCategory === "Commitment & Longevity") return "Destined Crossroad";
+        if (rawCategory === "Commitment & Longevity") return "Unexpected Encounters";
         return rawCategory;
       }
       if (this.relType === "mentor") {
@@ -479,7 +480,7 @@ export class SynastryEngine {
               symbol: def.symbol,
               angle: def.angle,
               orb: Math.round(orbDiff * 100) / 100,
-              isApplying: true,
+              isApplying: null,
               score: interp.score,
               nature: interp.nature,
               category: adjustedCategory,
@@ -598,7 +599,7 @@ export class SynastryEngine {
             : "Shared progressive visions, social communities, community impact, and future hopes.";
         case 12:
           return isStranger
-            ? "Uncanny deja-vu feeling. A fleeting or sudden encounter carrying subconscious or past-life reverberations."
+            ? "A sudden or familiar-feeling encounter; some astrologers associate this with past-life symbolism, but it is not evidence of a prior connection."
             : "Subconscious soul-merging, dream telepathy, unspoken empathy, and spiritual transcendence.";
         default:
           return "Active astrological house overlay.";
@@ -710,7 +711,7 @@ export class SynastryEngine {
       overall = Math.round(em * 0.28 + sat * 0.20 + comm * 0.20 + val * 0.16 + men * 0.10 + phys * 0.06);
       dimensions = [
         { key: "nurturing", label: "Parental Warmth & Holding (Moon)", val: em, color: "bg-blue-500", description: "Providing emotional safety, unconditional love, and comforting presence" },
-        { key: "growth", label: "Self-Actualization & Talents (Sun/Jupiter)", val: val, color: "bg-emerald-500", description: "Encouraging the child's authentic destiny, talents, and joy" },
+        { key: "growth", label: "Self-Actualization & Talents (Sun/Jupiter)", val: val, color: "bg-emerald-500", description: "Encouraging the child's interests, talents, autonomy and joy" },
         { key: "comm", label: "Openhearted Listening (Mercury)", val: comm, color: "bg-cyan-500", description: "Creating a safe space where the child expresses feelings without fear" },
         { key: "anchor", label: "Steadfast Anchor & Structure (Saturn)", val: sat, color: "bg-purple-500", description: "Consistent rules and loving boundaries that provide psychological security" },
         { key: "learning", label: "Curiosity & Wonder (Mercury)", val: men, color: "bg-amber-500", description: "Encouraging exploration, education, and lively intellectual curiosity" },
@@ -774,10 +775,10 @@ export class SynastryEngine {
         { key: "spark", label: "Energetic Magnetism (Mars/Sun)", val: phys, color: "bg-rose-500", description: "The sudden spark that makes this passing encounter memorable" },
         { key: "curiosity", label: "Intellectual Intrigue (Mercury)", val: men, color: "bg-amber-500", description: "Curiosity to learn who this person is and what they represent" },
         { key: "flow", label: "Effortless Dialogue", val: comm, color: "bg-cyan-500", description: "Talking as if you already know each other from another lifetime" },
-        { key: "karmic", label: "Synchronicity Node (Saturn)", val: sat, color: "bg-purple-500", description: "A meaningful crossroads encounter engineered by planetary timing" },
+        { key: "karmic", label: "Synchronicity Node (Saturn)", val: sat, color: "bg-purple-500", description: "A timing or responsibility theme sometimes explored through Saturn symbolism; it is not evidence that an encounter was engineered or fated." },
         { key: "worldview", label: "Philosophical Mirror (Jupiter)", val: val, color: "bg-emerald-500", description: "A serendipitous conversation that offers a fresh perspective on life" },
       ];
-      verdict = overall >= 85 ? "Fated Synchronistic Encounter with Instant Resonance" : overall >= 72 ? "Intriguing Passing Mirror with Fresh Insights" : "Brief Celestial Intersection with Curious Dynamics";
+      verdict = overall >= 85 ? "Strong Symbolic Resonance & Mutual Curiosity" : overall >= 72 ? "Interesting Encounter with Fresh Perspectives" : "Brief Connection with Different Rhythms";
       relationshipContextSummary = `Meeting as strangers or acquaintances, this synastry shows why the universe brought your paths together. Even a brief interaction can act as a catalyst for new self-awareness.`;
     } else if (this.relType === "mentor") {
       overall = Math.round(men * 0.28 + val * 0.22 + comm * 0.2 + sat * 0.16 + em * 0.08 + phys * 0.06);
@@ -801,7 +802,7 @@ export class SynastryEngine {
         { key: "values", label: "Value Harmony & Vision (Jupiter)", val: val, color: "bg-emerald-500", description: "Shared life ideals, moral alignment, and mutual expansion" },
         { key: "longevity", label: "Marital Longevity (Saturn)", val: sat, color: "bg-purple-500", description: "Enduring commitment, shared responsibility, and devotion" },
       ];
-      verdict = overall >= 88 ? "Extraordinary Soulmate Affinity & Enduring Resonance" : overall >= 78 ? "Strong Natural Compatibility & Deep Chemistry" : overall >= 68 ? "Balanced Dynamic Attraction with Growth Edges" : "High-Growth Karmic Crucible Requiring Conscious Communication";
+      verdict = overall >= 88 ? "Strong Romantic Affinity Themes" : overall >= 78 ? "Prominent Chemistry & Shared Themes" : overall >= 68 ? "Mixed Attraction and Growth Themes" : "Contrasting Patterns Calling for Clear Communication";
       relationshipContextSummary = `This romantic synastry reveals powerful attraction and emotional depth. Planetary alignments offer both thrilling chemistry and the grounding required for enduring partnership.`;
     }
 
@@ -853,8 +854,8 @@ export class SynastryEngine {
       if (a.nature === "Karmic" || a.planet1.includes("Node") || a.planet2.includes("Node")) {
         karmicConnections.push({
           type: "Node Contact",
-          description: `${a.planet1} aspecting ${a.planet2} (${a.aspectName}): Soul evolutionary contract.`,
-          intensity: a.orb < 2.0 ? "Life-Altering" : "Profound",
+          description: `${a.planet1} ${a.aspectName} ${a.planet2}: a close nodal contact sometimes interpreted as a karmic theme in modern astrology. This is not evidence of a soul contract or past-life bond.`,
+          intensity: a.orb < 2.0 ? "Tight orb" : "Moderate orb",
         });
       }
 
@@ -863,7 +864,7 @@ export class SynastryEngine {
         (a.planet1 === "Moon" && a.planet2 === "Sun") ||
         (a.planet1 === "Venus" && a.planet2 === "Mars" && a.aspectName === "Conjunction")
       ) {
-        soulmateIndicators.push(`${a.title}: Archetypal soul contact.`);
+        soulmateIndicators.push(`${a.title}: A Sun–Moon or Venus–Mars contact sometimes read as a symbolic affinity theme; it does not establish a soulmate bond.`);
       }
     });
 

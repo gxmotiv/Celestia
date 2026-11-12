@@ -1,4 +1,6 @@
 import { WesternChartData, PlanetPosition } from "./ephemeris";
+import { isSunAboveHorizonInChart } from "./horizon";
+import { calculateAyanamsaValue } from "./MultiSystemTransitEngine";
 
 export interface HellenisticAnalysis {
   isDiurnal: boolean;
@@ -26,7 +28,9 @@ export interface HellenisticAnalysis {
 }
 
 export interface SiderealComparison {
+  /** Fagan–Bradley ayanāṃśa evaluated at this chart's UTC epoch. */
   faganBradleyAyanamsa: number;
+  referenceUtc: string;
   planets: Array<{
     name: string;
     tropicalSign: string;
@@ -68,8 +72,9 @@ export function calculateHellenisticAnalysis(western: WesternChartData): Helleni
   const moon = western.planets.find(p => p.name === "Moon");
   const ascLon = western.ascendant.longitude;
 
-  // Diurnal check: Sun is above horizon (Houses 7 through 12 in quadrant, or relative to Asc/Dsc)
-  const isDiurnal = sun ? (sun.house >= 7 && sun.house <= 12) : true;
+  // Sect depends on the Sun crossing the real local horizon, not the selected
+  // zodiacal house-number framework (Whole Sign, Equal, Placidus, etc.).
+  const isDiurnal = isSunAboveHorizonInChart(western);
 
   const sectLight = isDiurnal ? "Sun" : "Moon";
   const beneficOfSect = isDiurnal ? "Jupiter" : "Venus";
@@ -87,9 +92,17 @@ export function calculateHellenisticAnalysis(western: WesternChartData): Helleni
     { planet: "Saturn", joyHouse: 12 },
   ];
 
+  const ascSignIdx = Math.floor(normalizeDeg(ascLon) / 30);
+  const getWholeSignHouseFromLon = (longitude: number) => {
+    const signIndex = Math.floor(normalizeDeg(longitude) / 30);
+    return ((signIndex - ascSignIdx + 12) % 12) + 1;
+  };
+
   const joys = traditionalJoys.map(j => {
     const pl = western.planets.find(p => p.name === j.planet);
-    const actualHouse = pl ? pl.house : 1;
+    // Hellenistic planetary joys are defined in Whole Sign houses. Do not
+    // reuse the Western wheel's Placidus/Equal house number here.
+    const actualHouse = pl ? getWholeSignHouseFromLon(pl.longitude) : 1;
     return {
       planet: j.planet,
       joyHouse: j.joyHouse,
@@ -126,13 +139,9 @@ export function calculateHellenisticAnalysis(western: WesternChartData): Helleni
     ? normalizeDeg(ascLon + fortuneLon - mercuryLon)
     : normalizeDeg(ascLon + mercuryLon - fortuneLon);
 
-  // Whole Sign house determination from Ascendant sign
-  const ascSignIdx = Math.floor(normalizeDeg(ascLon) / 30);
-
-  const getHouseFromLon = (lon: number) => {
-    const pSignIdx = Math.floor(normalizeDeg(lon) / 30);
-    return ((pSignIdx - ascSignIdx + 12) % 12) + 1;
-  };
+  // Whole Sign house determination from Ascendant sign. This is independent
+  // of the display house system used by the Western natal chart.
+  const getHouseFromLon = getWholeSignHouseFromLon;
 
   const fortuneInfo = getSignAndDegree(fortuneLon);
   const spiritInfo = getSignAndDegree(spiritLon);
@@ -196,8 +205,16 @@ export function calculateHellenisticAnalysis(western: WesternChartData): Helleni
 }
 
 export function calculateSiderealComparison(western: WesternChartData): SiderealComparison {
-  // Fagan-Bradley Ayanamsa is approximately 24.8° currently
-  const faganBradleyAyanamsa = 24.84;
+  if (!Number.isFinite(western.julianDay)) {
+    throw new RangeError("Sidereal comparison requires a finite natal Julian Day.");
+  }
+  // Ayanamsa changes with epoch. Use the same date-dependent Fagan-Bradley
+  // model as the multi-system engine instead of a stale hard-coded constant.
+  const referenceDate = new Date((western.julianDay - 2440587.5) * 86400000);
+  if (!Number.isFinite(referenceDate.getTime())) {
+    throw new RangeError("Sidereal comparison could not resolve the natal UTC epoch.");
+  }
+  const faganBradleyAyanamsa = calculateAyanamsaValue("fagan-bradley", referenceDate);
 
   const planets = western.planets.map(p => {
     const tropicalSign = p.sign;
@@ -218,6 +235,7 @@ export function calculateSiderealComparison(western: WesternChartData): Sidereal
 
   return {
     faganBradleyAyanamsa,
+    referenceUtc: referenceDate.toISOString(),
     planets,
   };
 }

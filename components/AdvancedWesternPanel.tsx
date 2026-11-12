@@ -23,7 +23,14 @@ import {
   ZodiacalReleasingReport,
   FirdariaEngine,
   FirdariaReport,
+  FirdariaNightOrder,
 } from "@/lib/astronomy/predictiveHellenisticEngine";
+import {
+  SolarArcDirectionsEngine,
+  WesternReturnEngine,
+  type SolarArcDirectionsReport,
+  type ReturnChartReport,
+} from "@/lib/astronomy/westernDirectionsAndReturns";
 import {
   FixedStarsEngine,
   StarContact,
@@ -78,6 +85,22 @@ export function AdvancedWesternPanel({
   timezoneOffset = 0,
   birthUtcInstant,
 }: AdvancedWesternPanelProps) {
+  const [selectedReleasingLot, setSelectedReleasingLot] = useState<"spirit" | "fortune">("spirit");
+  const [firdariaNightOrder, setFirdariaNightOrder] = useState<FirdariaNightOrder>("nodes-after-planets");
+  const [selectedReturnYear, setSelectedReturnYear] = useState<number>(new Date().getUTCFullYear());
+  const [returnLocationOverride, setReturnLocationOverride] = useState<{
+    baseLatitude: number;
+    baseLongitude: number;
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  // When the parent switches the natal profile/location, discard the old
+  // return-location override by deriving the active values from the new props.
+  const returnLocationMatchesProfile =
+    returnLocationOverride?.baseLatitude === latitude &&
+    returnLocationOverride?.baseLongitude === longitude;
+  const returnLatitude = returnLocationMatchesProfile ? returnLocationOverride.latitude : latitude;
+  const returnLongitude = returnLocationMatchesProfile ? returnLocationOverride.longitude : longitude;
   const [activeSubTab, setActiveSubTab] = useState<
     | "asteroids"
     | "lilith"
@@ -86,6 +109,8 @@ export function AdvancedWesternPanel({
     | "harmonics"
     | "declinations"
     | "progressions"
+    | "solarArc"
+    | "returns"
     | "profections"
     | "releasing"
     | "firdaria"
@@ -148,16 +173,39 @@ export function AdvancedWesternPanel({
   }, [birthDateStr, birthTimeStr, timezoneOffset, birthUtcInstant]);
 
   const nowObj = useMemo(() => new Date(), []);
-  const currentAgeYears = useMemo(() => {
+  const currentAgeExactYears = useMemo(() => {
     const diff = nowObj.getTime() - birthDateObj.getTime();
-    return Math.max(0, Math.floor(diff / (365.2422 * 86400000)));
+    return Math.max(0, diff / (365.2422 * 86400000));
   }, [nowObj, birthDateObj]);
+  const currentAgeYears = Math.floor(currentAgeExactYears);
 
   // Secondary Progressions
   const progEngine = useMemo(() => new ProgressionsEngine(), []);
   const progressionsReport: ProgressedChartResult = useMemo(() => {
-    return progEngine.calculateProgressions(birthDateObj, nowObj, latitude, longitude, timezoneOffset);
-  }, [progEngine, birthDateObj, nowObj, latitude, longitude, timezoneOffset]);
+    return progEngine.calculateProgressions(birthDateObj, nowObj, latitude, longitude);
+  }, [progEngine, birthDateObj, nowObj, latitude, longitude]);
+
+  // Solar Arc Directions (Naibod key) and exact return charts.
+  const solarArcEngine = useMemo(() => new SolarArcDirectionsEngine(), []);
+  const solarArcReport: SolarArcDirectionsReport = useMemo(
+    () => solarArcEngine.calculate(chartData, birthDateObj, nowObj, 1),
+    [solarArcEngine, chartData, birthDateObj, nowObj]
+  );
+  const returnEngine = useMemo(() => new WesternReturnEngine(), []);
+  const solarReturnReport: ReturnChartReport = useMemo(
+    () => returnEngine.calculateSolarReturn(
+      chartData, selectedReturnYear, returnLatitude, returnLongitude,
+      chartData.requestedHouseSystem ?? chartData.houseSystem
+    ),
+    [returnEngine, chartData, selectedReturnYear, returnLatitude, returnLongitude]
+  );
+  const lunarReturnReport: ReturnChartReport = useMemo(
+    () => returnEngine.calculateNextLunarReturn(
+      chartData, nowObj, returnLatitude, returnLongitude,
+      chartData.requestedHouseSystem ?? chartData.houseSystem
+    ),
+    [returnEngine, chartData, nowObj, returnLatitude, returnLongitude]
+  );
 
   // Hellenistic Profections
   const profEngine = useMemo(() => new ProfectionsEngine(), []);
@@ -165,18 +213,24 @@ export function AdvancedWesternPanel({
     return profEngine.calculateAnnualProfection(chartData, currentAgeYears);
   }, [profEngine, chartData, currentAgeYears]);
 
-  // Zodiacal Releasing (from Spirit)
+  // Zodiacal Releasing can be calculated from Spirit or Fortune. Peak/angular
+  // status is always measured relative to the Lot of Fortune.
   const zrEngine = useMemo(() => new ZodiacalReleasingEngine(), []);
-  const spiritReleasing: ZodiacalReleasingReport = useMemo(() => {
-    const spiritLon = chartData.arabianParts?.partOfSpirit.longitude || 0;
-    return zrEngine.calculateReleasing(birthDateObj, spiritLon, "Spirit (Career & Purpose)");
-  }, [zrEngine, birthDateObj, chartData.arabianParts]);
+  const releasingReport: ZodiacalReleasingReport = useMemo(() => {
+    const spiritLon = chartData.arabianParts?.partOfSpirit.longitude ?? 0;
+    const fortuneLon = chartData.arabianParts?.partOfFortune.longitude ?? spiritLon;
+    const releaseLongitude = selectedReleasingLot === "spirit" ? spiritLon : fortuneLon;
+    const releaseName = selectedReleasingLot === "spirit"
+      ? "Spirit (Career & Purpose)" as const
+      : "Fortune (Body & Circumstances)" as const;
+    return zrEngine.calculateReleasing(birthDateObj, releaseLongitude, releaseName, nowObj, fortuneLon);
+  }, [zrEngine, birthDateObj, nowObj, chartData.arabianParts, selectedReleasingLot]);
 
   // Firdaria
   const firdariaEngine = useMemo(() => new FirdariaEngine(), []);
   const firdariaReport: FirdariaReport = useMemo(() => {
-    return firdariaEngine.calculateFirdaria(chartData, currentAgeYears);
-  }, [firdariaEngine, chartData, currentAgeYears]);
+    return firdariaEngine.calculateFirdaria(chartData, currentAgeExactYears, firdariaNightOrder);
+  }, [firdariaEngine, chartData, currentAgeExactYears, firdariaNightOrder]);
 
   // Fixed Stars
   const fixedStarsEngine = useMemo(() => new FixedStarsEngine(), []);
@@ -213,10 +267,10 @@ export function AdvancedWesternPanel({
         <div>
           <h3 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-amber-400" />
-            Complete Western Astrology Architecture
+            Western Astrology Techniques & Calculations
           </h3>
           <p className="text-[11px] text-slate-400">
-            Asteroids · Shadow Axis · Arabian Parts · Midpoints · Harmonics · Declinations · Progressions · Profections · Releasing · Firdaria · Fixed Stars · Eclipses · Medical · Astrocartography
+            Asteroids · Shadow Axis · Arabian Parts · Midpoints · Harmonics · Declinations · Progressions · Solar Arc · Solar/Lunar Returns · Profections · Releasing · Firdaria · Fixed Stars · Eclipses · Medical Symbolism · Astrocartography
           </p>
         </div>
 
@@ -230,6 +284,8 @@ export function AdvancedWesternPanel({
             { id: "harmonics", label: "Harmonics", icon: "〰" },
             { id: "declinations", label: "Declinations", icon: "||" },
             { id: "progressions", label: "Progressions", icon: "☽" },
+            { id: "solarArc", label: "Solar Arc", icon: "↗" },
+            { id: "returns", label: "Solar / Lunar Returns", icon: "↻" },
             { id: "profections", label: "Profections", icon: "⏳" },
             { id: "releasing", label: "Zodiacal Releasing", icon: "📜" },
             { id: "firdaria", label: "Firdaria", icon: "👑" },
@@ -257,6 +313,7 @@ export function AdvancedWesternPanel({
       {/* SUB-TAB 1: 4 MAJOR ASTEROIDS */}
       {activeSubTab === "asteroids" && asteroids && (
         <div className="space-y-4">
+          <p className="text-[11px] text-amber-200/80 bg-amber-950/20 border border-amber-700/30 rounded-lg p-3">Asteroid longitudes use a simplified Keplerian model with fixed J2000 orbital elements. They are illustrative and are not equivalent to a current high-precision small-body ephemeris.</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[
               {
@@ -326,6 +383,7 @@ export function AdvancedWesternPanel({
       {/* SUB-TAB 2: LUNAR POINTS & SHADOW AXIS */}
       {activeSubTab === "lilith" && points && (
         <div className="space-y-4">
+          <p className="text-[11px] text-amber-200/80 bg-amber-950/20 border border-amber-700/30 rounded-lg p-3">Calculation quality: Mean Lilith uses an empirical approximation; True Lilith uses a simplified periodic correction, not a full osculating lunar-orbit solution. Chiron is a rough illustrative model, not an ephemeris-grade position. White Moon/Selena and Proserpine are symbolic or tradition-dependent points, not known physical bodies. Vertex and East Point are geometric chart angles.</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[
               {
@@ -338,31 +396,31 @@ export function AdvancedWesternPanel({
                 data: points.trueLilith,
                 name: "True Lilith (Osculating Apogee)",
                 symbol: "⚸*",
-                desc: "High-precision osculating apogee with solar perturbations: points directly to volatile flashpoints of raw instinct.",
+                desc: "Approximate lunar-apogee longitude with a compact periodic correction; this is not a full osculating-apogee solution. Interpretive meanings are symbolic."
               },
               {
                 data: points.whiteMoon,
                 name: "White Moon Selena",
                 symbol: "☽*",
-                desc: "7-year cycle of divine protection, selfless service, karmic grace, and instinctive moral integrity.",
+                desc: "A hypothetical White Moon/Selena point used by some modern esoteric traditions. Its cycle and epoch are convention-dependent; it is not a physical Moon or evidence of divine protection."
               },
               {
                 data: points.vertex,
                 name: "Vertex (Axis of Destiny)",
                 symbol: "Vx",
-                desc: "Western Prime Vertical intersection: the electric gateway of fated encounters, sudden turning points, and synchronicity.",
+                desc: "Ecliptic intersection with the western prime vertical. Traditional astrology gives it symbolic associations with encounters; these are interpretations, not guaranteed events."
               },
               {
                 data: points.eastPoint,
-                name: "East Point (Equatorial Ascendant)",
+                name: "East Point (ecliptic)",
                 symbol: "EP",
-                desc: "Equatorial horizon intersection: the conscious mental self-projection and how you perceive reality.",
+                desc: "Ecliptic point whose right ascension is RAMC + 90°. It is distinct from the equatorial point on the eastern horizon; its meanings are interpretive symbolism."
               },
               {
                 data: points.proserpine,
                 name: "Proserpine (Symbolic Regeneration)",
                 symbol: "⚹P",
-                desc: "Theoretical outer octave of Pluto: total cellular regeneration, psychological rebirth, and spiritual immortality.",
+                desc: "A hypothetical symbolic longitude used in some modern astrology; it has no verified physical orbit or astronomical ephemeris. Interpretive meanings are archetypal."
               },
             ].map((p) => (
               <div
@@ -392,9 +450,12 @@ export function AdvancedWesternPanel({
       {activeSubTab === "arabian" && arabian && (
         <div className="space-y-4">
           <div className="flex items-center justify-between text-xs px-2 py-1.5 bg-slate-950/80 border border-slate-800 rounded-lg text-slate-400">
-            <span>Chart Sect: <strong className="text-amber-300">{arabian.isDayChart ? "Diurnal (Day Chart - Sun Above Horizon)" : "Nocturnal (Night Chart - Sun Below Horizon)"}</strong></span>
-            <span>Total Arabian Lots: <strong className="text-slate-200 font-mono">{arabian.allParts.length} calculated</strong></span>
+            <span>Chart Sect: <strong className="text-amber-300">{arabian.isDayChart ? "Diurnal (Sun above horizon)" : "Nocturnal (Sun below horizon)"}</strong></span>
+            <span>Lots: <strong className="text-slate-200 font-mono">{arabian.allParts.length} calculated</strong></span>
           </div>
+          <p className="text-[11px] text-amber-200/80 bg-amber-950/20 border border-amber-700/30 rounded-lg p-3">
+            The seven Hermetic Lots (Fortune, Spirit, Eros, Necessity, Courage, Victory and Nemesis) are shown alongside selected supplementary medieval formula variants. Lots are calculated sensitive points, not physical bodies; authors and traditions use different formulas. Health, death and Mars–Saturn lots are historical/experimental symbolism only and do not predict illness, death, surgery or injury.
+          </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {arabian.allParts.map((part) => (
@@ -451,7 +512,7 @@ export function AdvancedWesternPanel({
                   <th className="py-2.5 px-3">Planetary Axis</th>
                   <th className="py-2.5 px-3">Zodiac Position</th>
                   <th className="py-2.5 px-3">90° Dial</th>
-                  <th className="py-2.5 px-3">Catalyzed By</th>
+                  <th className="py-2.5 px-3">Aspected by</th>
                   <th className="py-2.5 px-3">Psychological Interpretation</th>
                 </tr>
               </thead>
@@ -488,9 +549,9 @@ export function AdvancedWesternPanel({
         <div className="space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
-              <h4 className="text-xs font-semibold text-slate-200">Wave Harmonics of Consciousness</h4>
+              <h4 className="text-xs font-semibold text-slate-200">Harmonic Charts</h4>
               <p className="text-[11px] text-slate-400">
-                Multiplying natal longitudes by harmonic frequency numbers unveils specialized soul frequencies.
+                Multiplying natal longitudes by an integer and reducing them to 0–360° lets astrologers examine aspect patterns in harmonic space. These are mathematical chart transformations, not measured physical or neurological frequencies.
               </p>
             </div>
 
@@ -563,7 +624,7 @@ export function AdvancedWesternPanel({
         <div className="space-y-4">
           <div className="flex items-center justify-between text-xs px-3 py-2 bg-slate-950/80 border border-slate-800 rounded-lg text-slate-400">
             <span>
-              Out of Bounds (OOB) Planets (&gt; 23°26&apos;):{" "}
+              Out of Bounds (OOB) Planets (&gt; {Math.abs(chartData.obliquity).toFixed(3)}° obliquity of date):{" "}
               <strong className={declinationReport.outOfBoundsCount > 0 ? "text-rose-400" : "text-slate-200"}>
                 {declinationReport.outOfBoundsCount} detected
               </strong>
@@ -777,10 +838,14 @@ export function AdvancedWesternPanel({
           <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
             <h4 className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
               <ScrollText className="w-3.5 h-3.5 text-amber-400" />
-              Zodiacal Releasing from the Part of Spirit (Vocation & Destiny Chapters)
+              Zodiacal Releasing from the Lot of {selectedReleasingLot === "spirit" ? "Spirit" : "Fortune"}
             </h4>
+            <div className="flex flex-wrap gap-2 mb-2">
+              <button type="button" onClick={() => setSelectedReleasingLot("spirit")} className={`px-3 py-1.5 rounded-lg text-xs border ${selectedReleasingLot === "spirit" ? "border-amber-400/50 bg-amber-500/15 text-amber-200" : "border-slate-700 text-slate-400"}`}>Lot of Spirit</button>
+              <button type="button" onClick={() => setSelectedReleasingLot("fortune")} className={`px-3 py-1.5 rounded-lg text-xs border ${selectedReleasingLot === "fortune" ? "border-amber-400/50 bg-amber-500/15 text-amber-200" : "border-slate-700 text-slate-400"}`}>Lot of Fortune</button>
+            </div>
             <p className="text-xs text-slate-300 leading-relaxed">
-              {spiritReleasing.interpretation}
+              {releasingReport.interpretation}
             </p>
           </div>
 
@@ -797,7 +862,7 @@ export function AdvancedWesternPanel({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 font-mono">
-                {spiritReleasing.allL1Periods.map((p, i) => (
+                {releasingReport.allL1Periods.map((p, i) => (
                   <tr key={i} className="hover:bg-slate-800/40 transition-colors">
                     <td className="py-2 px-3 font-sans font-semibold text-slate-200">
                       {p.sign}
@@ -819,6 +884,24 @@ export function AdvancedWesternPanel({
               </tbody>
             </table>
           </div>
+          <div className="p-4 bg-slate-950/60 border border-slate-800 rounded-xl space-y-3">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <h5 className="text-xs font-bold text-cyan-300">Active Level 2 Period</h5>
+              <span className="text-xs font-semibold text-amber-300">{releasingReport.currentL2Period.sign} · {releasingReport.currentL2Period.ruler}</span>
+            </div>
+            <p className="text-[11px] text-slate-300">
+              {releasingReport.currentL2Period.startDate.slice(0, 10)} — {releasingReport.currentL2Period.endDate.slice(0, 10)}
+              {releasingReport.currentL2Period.isLoosingOfBond ? " · Loosing of the Bond" : ""}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {releasingReport.allL2Periods.map((period, index) => (
+                <span key={index} className={`text-[10px] px-2 py-1 rounded border ${period === releasingReport.currentL2Period ? "border-cyan-400/60 bg-cyan-500/15 text-cyan-200" : "border-slate-800 bg-slate-900 text-slate-400"}`}>
+                  {period.sign}{period.isLoosingOfBond ? " ↯" : ""}
+                </span>
+              ))}
+            </div>
+            <p className="text-[10px] text-slate-500">{releasingReport.methodNote}</p>
+          </div>
         </div>
       )}
 
@@ -835,6 +918,19 @@ export function AdvancedWesternPanel({
                 {firdariaReport.isDiurnal ? "Diurnal Sect (Day Chart)" : "Nocturnal Sect (Night Chart)"}
               </span>
             </div>
+            {!firdariaReport.isDiurnal && (
+              <label className="flex flex-wrap items-center gap-2 text-[11px] text-slate-300">
+                <strong>Nocturnal sequence</strong>
+                <select
+                  value={firdariaNightOrder}
+                  onChange={(event) => setFirdariaNightOrder(event.target.value as FirdariaNightOrder)}
+                  className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-amber-200"
+                >
+                  <option value="nodes-after-planets">Nodes after seven planets (standard)</option>
+                  <option value="nodes-after-mars">Nodes immediately after Mars (alternative)</option>
+                </select>
+              </label>
+            )}
             <p className="text-xs text-slate-300 leading-relaxed">
               {firdariaReport.interpretation}
             </p>
@@ -871,9 +967,10 @@ export function AdvancedWesternPanel({
         <div className="space-y-4">
           <div className="flex items-center justify-between text-xs px-3 py-2 bg-slate-950/80 border border-slate-800 rounded-lg text-slate-400">
             <span>Tight Aspects to Fixed Stars (&lt; 1.25° orb): <strong className="text-amber-300 font-mono">{starContacts.length} active</strong></span>
-            <span>Including 4 Royal Archangel Stars &amp; Medusa Algol</span>
+            <span>20 reference entries · J2000 only</span>
           </div>
 
+          <p className="text-[11px] text-amber-200/80 leading-relaxed">These are approximate stored J2000 tropical longitudes, not positions precessed to the birth date. Stellar proper motion, nutation and aberration are not included; treat contacts as illustrative until an epoch-aware star catalogue is integrated.</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {starContacts.map((c, i) => (
               <div key={i} className="p-3.5 bg-slate-950/60 border border-slate-800 rounded-xl space-y-1.5 hover:border-slate-700 transition-all">
@@ -910,7 +1007,7 @@ export function AdvancedWesternPanel({
               Major Solar &amp; Lunar Eclipses Impacting Your Natal Houses
             </h4>
             <p className="text-xs text-slate-300 leading-relaxed">
-              Eclipses act as cosmic wildcards, catalyzing non-negotiable course-corrections in the specific houses they touch over a 6 to 12 month cycle.
+              Global astronomical eclipse events are searched dynamically from the selected date. The house overlay is an astrological interpretation, not a guaranteed event or personal forecast; local visibility is not implied.
             </p>
           </div>
 
@@ -919,14 +1016,15 @@ export function AdvancedWesternPanel({
               <div key={idx} className="p-3.5 bg-slate-950/60 border border-slate-800 rounded-xl space-y-2 hover:border-slate-700 transition-all">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h5 className="text-xs font-bold text-slate-100">{e.type} Eclipse</h5>
-                    <span className="text-[10px] text-slate-400 font-mono">{e.date} · {e.degreeFormatted}</span>
+                    <h5 className="text-xs font-bold text-slate-100">{e.type}</h5>
+                    <span className="text-[10px] text-slate-400 font-mono">{e.date} · {e.degreeFormatted} · UTC peak</span>
                   </div>
                   <span className="text-xs font-bold px-2 py-0.5 rounded bg-rose-500/15 border border-rose-500/30 text-rose-300 font-mono">
                     House {e.affectedHouse}
                   </span>
                 </div>
                 <p className="text-xs text-slate-300 font-medium">{e.theme}</p>
+                <p className="text-[10px] text-slate-500">{e.visibilityNote}</p>
                 <ul className="space-y-1 text-[11px] text-slate-400 pt-1 border-t border-slate-800/80">
                   {e.recommendations.map((rec, rIdx) => (
                     <li key={rIdx} className="flex items-center gap-1.5">
@@ -1047,6 +1145,143 @@ export function AdvancedWesternPanel({
           </div>
         </div>
       )}
+
+      {/* SOLAR ARC DIRECTIONS */}
+      {activeSubTab === "solarArc" && (
+        <div className="space-y-4">
+          <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
+            <h4 className="text-xs font-bold text-amber-300">Solar Arc Directions · Naibod Key</h4>
+            <p className="text-[11px] text-slate-300">
+              Elapsed tropical age × 0.98564733°; the same symbolic arc is added to natal planets and chart angles. Contacts are geometry-based traditional directions, not guaranteed event predictions.
+            </p>
+            <div className="flex flex-wrap gap-4 text-[11px] text-slate-400">
+              <span>Age: <strong className="text-slate-100">{solarArcReport.ageYears.toFixed(2)} years</strong></span>
+              <span>Directed arc: <strong className="text-amber-200">{solarArcReport.arcDegrees.toFixed(4)}°</strong></span>
+              <span>Key: <strong className="text-slate-100">Naibod</strong></span>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="p-3 bg-slate-950/60 border border-slate-800 rounded-xl space-y-2">
+              <h5 className="text-xs font-bold text-slate-200">Directed planets</h5>
+              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                {solarArcReport.directedPlanets.map((point) => (
+                  <div key={point.name} className="flex justify-between gap-2">
+                    <span className="text-slate-400">{point.name}</span>
+                    <span className="text-amber-200 font-mono">{point.signDegreeFormatted}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="p-3 bg-slate-950/60 border border-slate-800 rounded-xl space-y-2">
+              <h5 className="text-xs font-bold text-slate-200">Directed angles</h5>
+              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                {solarArcReport.directedAngles.map((point) => (
+                  <div key={point.name} className="flex justify-between gap-2">
+                    <span className="text-slate-400">{point.name}</span>
+                    <span className="text-amber-200 font-mono">{point.signDegreeFormatted}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="p-3 bg-slate-950/60 border border-slate-800 rounded-xl space-y-2">
+            <div className="flex justify-between items-center">
+              <h5 className="text-xs font-bold text-slate-200">Directed-to-natal contacts (≤ 1°)</h5>
+              <span className="text-[10px] text-slate-500">{solarArcReport.contacts.length} contacts</span>
+            </div>
+            {solarArcReport.contacts.length === 0 ? (
+              <p className="text-[11px] text-slate-500">No contacts within the selected 1° orb.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-[11px] text-slate-300">
+                  <thead><tr className="text-slate-500"><th className="text-left py-1">Directed point</th><th className="text-left">Aspect</th><th className="text-left">Natal point</th><th className="text-right">Orb</th></tr></thead>
+                  <tbody>
+                    {solarArcReport.contacts.map((contact, index) => (
+                      <tr key={index} className="border-t border-slate-800/70">
+                        <td className="py-1.5">{contact.directedPoint}</td><td>{contact.aspect}</td><td>{contact.natalPoint}</td><td className="text-right font-mono text-amber-200">{contact.orb.toFixed(3)}°</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+          <p className="text-[10px] text-slate-500">{solarArcReport.methodNote}</p>
+        </div>
+      )}
+
+      {/* EXACT SOLAR AND LUNAR RETURNS */}
+      {activeSubTab === "returns" && (
+        <div className="space-y-4">
+          <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
+            <h4 className="text-xs font-bold text-amber-300">Exact Return Charts</h4>
+            <p className="text-[11px] text-slate-300">Return instants are solved when the transiting geocentric ecliptic longitude reaches the natal Sun or Moon longitude. Chart houses are recalculated for the selected reference location.</p>
+            <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-300">
+              <label className="flex items-center gap-2">
+                Solar return year
+                <select value={selectedReturnYear} onChange={(event) => setSelectedReturnYear(Number(event.target.value))} className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-amber-200">
+                  {Array.from({ length: 11 }, (_, index) => new Date().getUTCFullYear() - 2 + index).map((year) => <option key={year} value={year}>{year}</option>)}
+                </select>
+              </label>
+              <label className="flex items-center gap-2">
+                Return latitude
+                <input type="number" min="-90" max="90" step="0.0001" value={returnLatitude} onChange={(event) => {
+                  const value = Number(event.target.value);
+                  if (event.target.value !== "" && Number.isFinite(value) && value >= -90 && value <= 90) {
+                    setReturnLocationOverride({ baseLatitude: latitude, baseLongitude: longitude, latitude: value, longitude: returnLongitude });
+                  }
+                }} className="w-24 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-amber-200"/>
+              </label>
+              <label className="flex items-center gap-2">
+                Return longitude
+                <input type="number" min="-180" max="180" step="0.0001" value={returnLongitude} onChange={(event) => {
+                  const value = Number(event.target.value);
+                  if (event.target.value !== "" && Number.isFinite(value) && value >= -180 && value <= 180) {
+                    setReturnLocationOverride({ baseLatitude: latitude, baseLongitude: longitude, latitude: returnLatitude, longitude: value });
+                  }
+                }} className="w-24 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-amber-200"/>
+              </label>
+            </div>
+            <p className="text-[10px] text-slate-500">Return location: {returnLatitude.toFixed(4)}°, {returnLongitude.toFixed(4)}° · Resolved house system: {solarReturnReport.houseSystem}. Moving location changes houses and angles, not the exact geocentric return instant.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {[solarReturnReport, lunarReturnReport].map((report) => (
+              <div key={report.kind} className="p-4 bg-slate-950/60 border border-slate-800 rounded-xl space-y-2">
+                <h5 className="text-xs font-bold text-slate-100">{report.kind}</h5>
+                <p className="text-lg font-mono text-amber-200">{report.exactUtc}</p>
+                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  <div><span className="text-slate-500 block">Natal target</span><strong>{report.targetLongitude.toFixed(6)}°</strong></div>
+                  <div><span className="text-slate-500 block">Return longitude</span><strong>{report.returnLongitude.toFixed(6)}°</strong></div>
+                  <div><span className="text-slate-500 block">Longitude error</span><strong>{(report.longitudeErrorDegrees * 3600).toFixed(2)}″</strong></div>
+                  <div><span className="text-slate-500 block">Resolved house frame</span><strong>{report.houseSystem}</strong></div>
+                </div>
+                <div className="pt-2 border-t border-slate-800 space-y-2">
+                  <h6 className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Return chart core</h6>
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
+                    <div className="flex justify-between gap-2"><span className="text-slate-500">Sun</span><span className="text-slate-200">{report.chart.planets.find((point) => point.name === "Sun")?.signDegreeFormatted ?? "N/A"}</span></div>
+                    <div className="flex justify-between gap-2"><span className="text-slate-500">Moon</span><span className="text-slate-200">{report.chart.planets.find((point) => point.name === "Moon")?.signDegreeFormatted ?? "N/A"}</span></div>
+                    <div className="flex justify-between gap-2"><span className="text-slate-500">Ascendant</span><span className="text-slate-200">{report.chart.ascendant.signDegreeFormatted}</span></div>
+                    <div className="flex justify-between gap-2"><span className="text-slate-500">Midheaven</span><span className="text-slate-200">{report.chart.midheaven.signDegreeFormatted}</span></div>
+                  </div>
+                  <details className="text-[10px]">
+                    <summary className="cursor-pointer text-slate-400 hover:text-slate-200">Show all 12 house cusps</summary>
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-1 pt-2">
+                      {report.chart.houses.map((house) => (
+                        <div key={house.house} className="flex justify-between gap-2">
+                          <span className="text-slate-500">House {house.house}</span>
+                          <span className="text-slate-200">{house.signDegreeFormatted}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                </div>
+                <p className="text-[10px] text-slate-500">{report.methodNote}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

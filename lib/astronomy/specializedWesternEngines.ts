@@ -1,11 +1,13 @@
 /**
  * Specialized Western Astrology Engines:
- * 1. Fixed Stars Engine (35+ Classical, Royal & Archangel stars with orb detection & Ptolemaic natures)
- * 2. Eclipse Analyzer (Solar & Lunar eclipses affecting natal houses with 6-12 month impacts)
+ * 1. Fixed Stars Engine (20 symbolic reference entries; stored longitudes are not date-adjusted)
+ * 2. Eclipse Analyzer (Astronomy Engine global solar/lunar eclipse search with natal-house overlays)
  * 3. Medical Astrology Indicators (Zodiac bodily rulerships, stress aspects, 6th/12th house vitality analysis)
  * 4. Astrocartography Power Lines (Planetary lines on AC, DC, MC, IC across geographic coordinates)
  */
 
+import * as Astronomy from "astronomy-engine";
+import { swissEphemeris } from "./swissEphemeris";
 import {
   WesternChartData,
   PlanetPosition,
@@ -21,7 +23,7 @@ import {
 export interface FixedStar {
   name: string;
   constellation: string;
-  longitude: number; // J2000 longitude
+  longitude: number; // Approximate J2000 tropical ecliptic longitude; no proper-motion correction
   magnitude: number;
   nature: "Royal" | "Benefic" | "Malefic" | "Mixed";
   planetaryNature: string; // e.g. "Jupiter / Mars"
@@ -42,9 +44,13 @@ export interface StarContact {
 }
 
 export class FixedStarsEngine {
+  public static readonly CATALOGUE_EPOCH_JD = 2451545.0;
   public static readonly FIXED_STARS: FixedStar[] = [
+    // 20 curated reference entries. Positions are illustrative J2000 tropical longitudes.
+    // They are NOT precessed to the chart epoch and do not include stellar proper motion.
+    // Do not represent these contacts as high-precision current-of-date fixed-star positions.
     // 4 Royal Archangel Stars of Persia
-    { name: "Regulus (Cor Leonis)", constellation: "Leo", longitude: 150.08, magnitude: 1.35, nature: "Royal", planetaryNature: "Mars / Jupiter", color: "White-Blue", meaning: "Archangel Raphael. Supreme leadership, royal honor, courage, and sudden fame; downfall only occurs if revenge is taken." },
+    { name: "Regulus (Cor Leonis)", constellation: "Leo", longitude: 149.83, magnitude: 1.35, nature: "Royal", planetaryNature: "Mars / Jupiter", color: "White-Blue", meaning: "Archangel Raphael. Supreme leadership, royal honor, courage, and sudden fame; downfall only occurs if revenge is taken." },
     { name: "Aldebaran", constellation: "Taurus", longitude: 69.95, magnitude: 0.85, nature: "Royal", planetaryNature: "Mars", color: "Orange", meaning: "Archangel Michael. Integrity brings glorious success in business, military, and statecraft; corruption brings rapid loss." },
     { name: "Antares (Cor Scorpionis)", constellation: "Scorpio", longitude: 249.93, magnitude: 0.96, nature: "Royal", planetaryNature: "Mars / Jupiter", color: "Fiery Red", meaning: "Archangel Uriel. Strategic boldness, fearless confrontation with danger, deep occult power, and triumphant transformation." },
     { name: "Fomalhaut", constellation: "Piscis Austrinus", longitude: 333.87, magnitude: 1.16, nature: "Royal", planetaryNature: "Venus / Mercury", color: "Pure White", meaning: "Archangel Gabriel. Fame through poetic artistry, visionary ideals, and spiritual magic; requires unwavering moral clarity." },
@@ -70,7 +76,16 @@ export class FixedStarsEngine {
     { name: "Achernar", constellation: "Eridanus", longitude: 345.31, magnitude: 0.46, nature: "Benefic", planetaryNature: "Jupiter", color: "Bright Blue", meaning: "The End of the River. Religious devotion, high moral authority, philanthropic success, and spiritual benevolence." },
   ];
 
+  public isCatalogueEpochCompatible(chart: WesternChartData): boolean {
+    // The stored longitudes are approximate J2000 references. Without RA/Dec,
+    // proper motion and precession to date, comparing them to a modern chart
+    // would create false star contacts.
+    return Number.isFinite(chart.julianDay) &&
+      Math.abs(chart.julianDay - FixedStarsEngine.CATALOGUE_EPOCH_JD) <= 1;
+  }
+
   public calculateStarContacts(chart: WesternChartData, maxOrb = 1.25): StarContact[] {
+    if (!this.isCatalogueEpochCompatible(chart)) return [];
     const contacts: StarContact[] = [];
     const testPoints = [
       ...chart.planets,
@@ -109,7 +124,8 @@ export class FixedStarsEngine {
 
 export interface EclipseItem {
   date: string;
-  type: "Total Solar" | "Annular Solar" | "Total Lunar" | "Partial Lunar" | "Partial Solar";
+  peakUtc: string;
+  type: "Total Solar" | "Annular Solar" | "Total Lunar" | "Partial Lunar" | "Penumbral Lunar" | "Partial Solar";
   zodiacSign: string;
   degree: number;
   degreeFormatted: string;
@@ -117,71 +133,149 @@ export interface EclipseItem {
   intensity: "High" | "Extreme" | "Moderate";
   theme: string;
   recommendations: string[];
+  visibilityNote: string;
 }
 
 export class EclipseAnalyzer {
-  private static readonly UPCOMING_ECLIPSES = [
-    { date: "March 14, 2025", type: "Total Lunar" as const, lon: 173.9 },    // ~23° Virgo
-    { date: "March 29, 2025", type: "Partial Solar" as const, lon: 9.0 },     // ~9° Aries
-    { date: "September 7, 2025", type: "Total Lunar" as const, lon: 345.3 }, // ~15° Pisces
-    { date: "September 21, 2025", type: "Partial Solar" as const, lon: 179.0 },// ~29° Virgo
-    { date: "February 17, 2026", type: "Annular Solar" as const, lon: 328.8 }, // ~28° Aquarius
-    { date: "March 3, 2026", type: "Total Lunar" as const, lon: 162.8 },      // ~12° Virgo
-    { date: "August 12, 2026", type: "Total Solar" as const, lon: 140.0 },     // ~20° Leo
-    { date: "August 28, 2026", type: "Partial Lunar" as const, lon: 334.8 },   // ~4° Pisces
-  ];
+  public analyzeEclipses(
+    chart: WesternChartData,
+    referenceDate: Date = new Date(),
+    yearsAhead = 3
+  ): EclipseItem[] {
+    if (!Number.isFinite(referenceDate.getTime())) {
+      throw new RangeError("Eclipse search requires a valid reference date.");
+    }
+    if (!Number.isFinite(yearsAhead) || yearsAhead <= 0 || yearsAhead > 20) {
+      throw new RangeError("Eclipse search horizon must be greater than 0 and no more than 20 years.");
+    }
 
-  public analyzeEclipses(chart: WesternChartData): EclipseItem[] {
-    const getHouse = (lon: number) => {
+    const endDate = new Date(referenceDate.getTime());
+    endDate.setUTCFullYear(endDate.getUTCFullYear() + yearsAhead);
+
+    let usedWholeSignFallback = false;
+    const getHouse = (longitude: number) => {
       const cusps = chart.houses;
-      for (let i = 0; i < cusps.length; i++) {
-        const c = cusps[i].longitude;
-        const n = cusps[(i + 1) % cusps.length].longitude;
-        if (n > c) {
-          if (lon >= c && lon < n) return i + 1;
-        } else {
-          if (lon >= c || lon < n) return i + 1;
+      const hasCompleteCusps = Array.isArray(cusps) &&
+        cusps.length === 12 &&
+        Array.from({ length: 12 }, (_, index) => cusps[index])
+          .every((cusp) => Number.isFinite(cusp?.longitude));
+      if (!hasCompleteCusps) {
+        // Legacy/imported charts may contain no complete house-cusp array.
+        // Use a deterministic Whole Sign fallback from the supplied Ascendant,
+        // and disclose it in the event note rather than inventing house 1.
+        usedWholeSignFallback = true;
+        const ascSign = Math.floor(normalizeDegrees(chart.ascendant.longitude) / 30);
+        const pointSign = Math.floor(normalizeDegrees(longitude) / 30);
+        return ((pointSign - ascSign + 12) % 12) + 1;
+      }
+      for (let i = 0; i < 12; i++) {
+        const current = cusps[i].longitude;
+        const nextCusp = cusps[(i + 1) % 12].longitude;
+        if (current < nextCusp) {
+          if (longitude >= current && longitude < nextCusp) return i + 1;
+        } else if (longitude >= current || longitude < nextCusp) {
+          return i + 1;
         }
       }
       return 1;
     };
 
-    const HOUSE_THEMES: Record<number, { theme: string; recs: string[] }> = {
-      1: { theme: "Radical Identity & Body Rebirth", recs: ["Revitalize personal appearance", "Redefine life boundaries", "Step boldly into individual agency"] },
-      2: { theme: "Financial Re-orientation & Self-Worth", recs: ["Restructure income streams", "Release scarcity fears", "Invest in core personal values"] },
-      3: { theme: "Mental Breakthroughs & New Communications", recs: ["Begin a writing project", "Resolve neighborly or sibling ties", "Upgrade technical skills"] },
-      4: { theme: "Home Sanctuary & Ancestral Foundations", recs: ["Relocate or renovate sanctuary", "Address ancestral roots", "Create deeper emotional peace"] },
-      5: { theme: "Creative Culmination & Romantic Renewal", recs: ["Launch artistic passion projects", "Celebrate inner-child joy", "Embrace heart vulnerability"] },
-      6: { theme: "Wellness Overhaul & Daily Discipline", recs: ["Adopt holistic health rituals", "Reorganize work habits", "Prioritize restorative rest"] },
-      7: { theme: "Relationship Evolution & Partnership Contracts", recs: ["Re-evaluate contractual parity", "Commit or gracefully release", "Foster transparent honesty"] },
-      8: { theme: "Psychological Metamorphosis & Shared Capital", recs: ["Transform debts and investments", "Heal deep psychological taboos", "Release mortal anxieties"] },
-      9: { theme: "Philosophical Awakening & World Horizons", recs: ["Embark on a spiritual pilgrimage", "Publish or teach your wisdom", "Expand cross-cultural understanding"] },
-      10: { theme: "Career Destiny & Public Recognition", recs: ["Step into executive leadership", "Align profession with true calling", "Claim public reputation with dignity"] },
-      11: { theme: "Community Re-alignment & Future Hopes", recs: ["Prune toxic peer groups", "Join visionary collectives", "Cast bold intentions for the coming era"] },
-      12: { theme: "Subconscious Surrender & Spiritual Healing", recs: ["Enter sacred solitary retreat", "Engage dreamwork & meditation", "Forgive and release past burdens"] },
+    const houseThemes: Record<number, { theme: string; recs: string[] }> = {
+      1: { theme: "Identity and self-presentation symbolism", recs: ["Reflect on personal priorities", "Review how you present yourself", "Set realistic intentions"] },
+      2: { theme: "Resources and personal values symbolism", recs: ["Review your budget", "Clarify personal values", "Plan practical resource goals"] },
+      3: { theme: "Learning and communication symbolism", recs: ["Organize learning goals", "Review important communications", "Reconnect with local community"] },
+      4: { theme: "Home and foundations symbolism", recs: ["Review home priorities", "Organize family records", "Create a calmer home routine"] },
+      5: { theme: "Creativity and enjoyment symbolism", recs: ["Make time for creative work", "Review leisure commitments", "Explore a hobby"] },
+      6: { theme: "Work and routines symbolism", recs: ["Review daily routines", "Organize work processes", "Plan sustainable habits"] },
+      7: { theme: "Partnership symbolism", recs: ["Review relationship expectations", "Clarify shared commitments", "Make space for honest dialogue"] },
+      8: { theme: "Shared resources and change symbolism", recs: ["Review shared financial arrangements", "Organize relevant records", "Reflect on boundaries"] },
+      9: { theme: "Study and worldview symbolism", recs: ["Review education goals", "Explore a new subject", "Reflect on beliefs"] },
+      10: { theme: "Public role and vocation symbolism", recs: ["Review professional priorities", "Clarify long-term goals", "Plan a realistic next step"] },
+      11: { theme: "Community and long-range hopes symbolism", recs: ["Review group commitments", "Reconnect with supportive networks", "Refine long-range plans"] },
+      12: { theme: "Rest and reflection symbolism", recs: ["Protect time for rest", "Review personal boundaries", "Make room for reflection"] },
     };
 
-    return EclipseAnalyzer.UPCOMING_ECLIPSES.map((e) => {
-      const house = getHouse(e.lon);
-      const signIdx = Math.floor(e.lon / 30);
-      const sign = ZODIAC_SIGNS[signIdx]?.name || "Aries";
-      const info = HOUSE_THEMES[house];
+    const toPeakDate = (peak: Astronomy.AstroTime): Date => new Date(peak.date.getTime());
+    const julianDay = (date: Date) => swissEphemeris.calculateJulianDay(
+      date.getUTCFullYear(),
+      date.getUTCMonth() + 1,
+      date.getUTCDate(),
+      date.getUTCHours(),
+      date.getUTCMinutes(),
+      date.getUTCSeconds(),
+      0
+    );
+
+    const raw: Array<{ peak: Date; type: EclipseItem["type"]; longitude: number }> = [];
+
+    // Global solar eclipse searches (partial, annular and total).
+    try {
+      let event = Astronomy.SearchGlobalSolarEclipse(referenceDate);
+      for (let count = 0; count < 64; count++) {
+        const peak = toPeakDate(event.peak);
+        if (peak.getTime() > endDate.getTime()) break;
+        if (peak.getTime() >= referenceDate.getTime()) {
+          const sunLongitude = swissEphemeris.getApparentSunLongitude(julianDay(peak));
+          const type = event.kind === Astronomy.EclipseKind.Total ? "Total Solar"
+            : event.kind === Astronomy.EclipseKind.Annular ? "Annular Solar" : "Partial Solar";
+          raw.push({ peak, type, longitude: sunLongitude });
+        }
+        event = Astronomy.NextGlobalSolarEclipse(event.peak);
+      }
+    } catch {
+      // If the astronomy library cannot resolve a future event, do not fall back
+      // to stale hand-maintained eclipse dates.
+    }
+
+    // Lunar eclipse searches include penumbral events as well as partial/total.
+    try {
+      let event = Astronomy.SearchLunarEclipse(referenceDate);
+      for (let count = 0; count < 64; count++) {
+        const peak = toPeakDate(event.peak);
+        if (peak.getTime() > endDate.getTime()) break;
+        if (peak.getTime() >= referenceDate.getTime()) {
+          const moonPosition = swissEphemeris.calculatePlanetPosition(
+            swissEphemeris.MOON,
+            julianDay(peak)
+          );
+          const type = event.kind === Astronomy.EclipseKind.Total ? "Total Lunar"
+            : event.kind === Astronomy.EclipseKind.Partial ? "Partial Lunar" : "Penumbral Lunar";
+          raw.push({ peak, type, longitude: moonPosition.longitude });
+        }
+        event = Astronomy.NextLunarEclipse(event.peak);
+      }
+    } catch {
+      // Keep the valid events found by the other search, if any.
+    }
+
+    raw.sort((a, b) => a.peak.getTime() - b.peak.getTime());
+
+    return raw.map((event) => {
+      const longitude = normalizeDegrees(event.longitude);
+      const house = getHouse(longitude);
+      const signIndex = Math.floor(longitude / 30);
+      const sign = ZODIAC_SIGNS[signIndex]?.name || "Aries";
+      const info = houseThemes[house];
+      const isTotal = event.type === "Total Solar" || event.type === "Total Lunar";
+      const intensity: EclipseItem["intensity"] = isTotal ? "Extreme"
+        : event.type === "Penumbral Lunar" ? "Moderate" : "High";
 
       return {
-        date: e.date,
-        type: e.type,
+        date: event.peak.toISOString().slice(0, 10),
+        peakUtc: event.peak.toISOString(),
+        type: event.type,
         zodiacSign: sign,
-        degree: e.lon,
-        degreeFormatted: formatDegreeMinute(e.lon),
+        degree: longitude,
+        degreeFormatted: formatDegreeMinute(longitude),
         affectedHouse: house,
-        intensity: e.type.includes("Total") ? "Extreme" : "High",
+        intensity,
         theme: info.theme,
         recommendations: info.recs,
+        visibilityNote: "This is a global astronomical eclipse event. Local visibility depends on geographic location and is not implied by this natal-chart overlay." + (usedWholeSignFallback ? " Natal house is a disclosed Whole Sign fallback because the imported chart has incomplete house cusps." : ""),
       };
     });
   }
 }
-
 // ---------------------------------------------------------------------------
 // 3. MEDICAL ASTROLOGY INDICATORS
 // ---------------------------------------------------------------------------

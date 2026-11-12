@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - fix/celestia-calculation-integrity
+      - fix/western-house-sect-predictive-integrity
 
 permissions:
   contents: write
@@ -23,6 +24,7 @@ jobs:
       matrix:
         script:
           - testAstrologySuite.ts
+          - testWesternIntegritySuite.ts
           - testBaZiSuite.ts
           - testGeocodeSuite.ts
           - testPdfGenerationSuite.ts
