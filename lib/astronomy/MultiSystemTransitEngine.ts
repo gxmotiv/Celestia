@@ -977,12 +977,14 @@ export class MultiSystemTransitEngine {
               orb: Math.round(orb * 100) / 100,
               maxOrb: spec.orb,
               strength,
-              isApplying: isAngularAspectApplying(
-                transitingPlanet.rawLongitude,
-                nat.longitude,
-                spec.angle,
-                transitingPlanet.speed
-              ),
+              isApplying: Math.abs(transitingPlanet.speed) < 0.001
+                ? null
+                : isAngularAspectApplying(
+                    transitingPlanet.rawLongitude,
+                    nat.longitude,
+                    spec.angle,
+                    transitingPlanet.speed
+                  ),
               nature: spec.nature,
               system: this.config.aspectSystem,
               description: `${transitingPlanet.name} in ${transitingPlanet.sign} forms a ${spec.type} (${Math.round(orb * 10) / 10}° orb) to natal ${nat.name} in ${nat.sign}.`,
