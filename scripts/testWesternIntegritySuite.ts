@@ -418,6 +418,21 @@ close(dayLots.partOfTravel.longitude, 70, 1e-9, "Day Travel Lot uses ASC + 9th c
 close(nightLots.partOfTravel.longitude, 70, 1e-9, "Abū Maʿshar / al-Qabīsī Travel Lot uses the same 9th-cusp minus 9th-ruler arc by night");
 check(dayLots.partOfTravel.formula.includes("Day"), "Travel Lot formula label exposes day convention");
 check(nightLots.partOfTravel.formula.includes("same by day and night"), "Travel Lot formula label identifies the documented invariant sect convention");
+close(dayLots.partOfNecessity.longitude, 0, 1e-9, "Day Necessity uses ASC + Fortune - Mercury");
+close(nightLots.partOfNecessity.longitude, 130, 1e-9, "Night Necessity reverses the Mercury/Fortune arc");
+close(dayLots.partOfCourage.longitude, 340, 1e-9, "Day Courage uses ASC + Fortune - Mars");
+close(nightLots.partOfCourage.longitude, 150, 1e-9, "Night Courage reverses the Mars/Fortune arc");
+close(dayLots.partOfVictory.longitude, 250, 1e-9, "Day Victory uses ASC + Jupiter - Spirit");
+close(nightLots.partOfVictory.longitude, 240, 1e-9, "Night Victory reverses the Jupiter/Spirit arc");
+check(dayLots.allParts.length === 15, "Seven Hermetic Lots are included alongside eight supplementary variants");
+check(dayLots.partOfNemesis === dayLots.partOfCatastrophe,
+  "The canonical Nemesis property aliases the legacy Catastrophe field");
+check(dayLots.partOfHealth.interpretation.includes("cannot") &&
+  dayLots.partOfHealth.interpretation.includes("diagnose disease"),
+  "Health Lot result explicitly cannot diagnose disease or estimate health risk");
+check(dayLots.partOfSurgery.interpretation.includes("does not predict surgery"),
+  "Mars-Saturn separation Lot explicitly does not predict surgery");
+
 
 // 8. Transit direction and forecast outputs must be computed, not invented.
 const transitDate = new Date("2026-11-12T00:00:00.000Z");
