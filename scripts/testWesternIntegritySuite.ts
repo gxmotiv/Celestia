@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   calculateWesternChart,
+  calculateAspects,
   normalizeDegrees,
   type PlanetPosition,
   type WesternChartData,
@@ -83,6 +84,23 @@ function syntheticSectChart(localSiderealTime: number): WesternChartData {
 }
 
 console.log("Western calculation integrity regression suite");
+
+// Natal aspects to chart angles have no modeled angular speed. They must not be
+// reported as separating merely because angle points were stored with speed 0.
+const angleAspect = calculateAspects([
+  syntheticSun(0),
+  { ...syntheticSun(0), id: "Ascendant", name: "Ascendant", speed: 0 },
+]).find((aspect) => aspect.planet1 === "Sun" || aspect.planet2 === "Sun");
+check(angleAspect?.isApplying === null,
+  "Natal planet-to-angle aspect direction is indeterminate without a modeled angle speed");
+const stationaryAspect = calculateAspects([
+  { ...syntheticSun(0), speed: 0 },
+  { ...syntheticSun(90), id: "StationaryBody", name: "StationaryBody", speed: 0 },
+]).find((aspect) => aspect.planet1 === "Sun" || aspect.planet2 === "Sun");
+check(stationaryAspect?.isApplying === null,
+  "A fully stationary relative aspect is not falsely labelled separating");
+
+
 
 // 0. Advanced coordinate/point integrity: mean apogee reference, OOB threshold, axes and harmonic labels.
 const lunarPoints = new LunarPointsCalculator();
