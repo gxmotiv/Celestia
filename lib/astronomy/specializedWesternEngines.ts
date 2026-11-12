@@ -44,6 +44,7 @@ export interface StarContact {
 }
 
 export class FixedStarsEngine {
+  public static readonly CATALOGUE_EPOCH_JD = 2451545.0;
   public static readonly FIXED_STARS: FixedStar[] = [
     // 20 curated reference entries. Positions are illustrative J2000 tropical longitudes.
     // They are NOT precessed to the chart epoch and do not include stellar proper motion.
@@ -75,7 +76,16 @@ export class FixedStarsEngine {
     { name: "Achernar", constellation: "Eridanus", longitude: 345.31, magnitude: 0.46, nature: "Benefic", planetaryNature: "Jupiter", color: "Bright Blue", meaning: "The End of the River. Religious devotion, high moral authority, philanthropic success, and spiritual benevolence." },
   ];
 
+  public isCatalogueEpochCompatible(chart: WesternChartData): boolean {
+    // The stored longitudes are approximate J2000 references. Without RA/Dec,
+    // proper motion and precession to date, comparing them to a modern chart
+    // would create false star contacts.
+    return Number.isFinite(chart.julianDay) &&
+      Math.abs(chart.julianDay - FixedStarsEngine.CATALOGUE_EPOCH_JD) <= 1;
+  }
+
   public calculateStarContacts(chart: WesternChartData, maxOrb = 1.25): StarContact[] {
+    if (!this.isCatalogueEpochCompatible(chart)) return [];
     const contacts: StarContact[] = [];
     const testPoints = [
       ...chart.planets,
