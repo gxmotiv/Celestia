@@ -211,7 +211,7 @@ export class AstrologyPDFGenerator {
     doc.text(`Location: ${user.cityName}, ${user.country}`, col1X, metaY + 32);
 
     doc.text(`Coordinates: ${Math.abs(user.latitude).toFixed(4)}°${user.latitude >= 0 ? "N" : "S"}, ${Math.abs(user.longitude).toFixed(4)}°${user.longitude >= 0 ? "E" : "W"}`, col2X, metaY);
-    doc.text(`House System: ${user.houseSystem}`, col2X, metaY + 16);
+    doc.text(`House System: ${data.western.houseSystem}`, col2X, metaY + 16);
     doc.text(`Ephemeris Engine: astronomy-engine`, col2X, metaY + 32);
 
     // Document Verification Seal
