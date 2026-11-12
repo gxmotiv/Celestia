@@ -498,23 +498,27 @@ export class SwissEphemerisEngine {
     ) * (180.0 / Math.PI);
     if (vertex < 0) vertex += 360.0;
 
+    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude)) {
+      throw new RangeError("House calculation requires finite longitude and latitude within ±90°.");
+    }
+    // Placidus is undefined at polar-circle latitudes. Use the standard Porphyry
+    // quadrant fallback explicitly instead of allowing a trigonometric result to
+    // masquerade as a valid Placidus chart.
+    const systemUsed: "P" | "W" | "E" | "O" = system === "P" && Math.abs(latitude) >= 66.5622 ? "O" : system;
     const cusps: number[] = new Array(12);
 
-    if (system === "W") {
+    if (systemUsed === "W") {
       // Whole Sign System: House 1 begins at 0° of Ascendant sign
       const ascSignIdx = Math.floor(asc / 30);
       for (let i = 0; i < 12; i++) {
         cusps[i] = ((ascSignIdx + i) % 12) * 30.0;
       }
-    } else if (system === "E") {
+    } else if (systemUsed === "E") {
       // Equal House System: 30° divisions starting from ASC
       for (let i = 0; i < 12; i++) {
         cusps[i] = (asc + i * 30.0) % 360.0;
       }
-    } else if (system === "E") {
-      // Equal House System: each cusp advances 30° from the Ascendant.
-      for (let i = 0; i < 12; i++) cusps[i] = (asc + i * 30.0) % 360.0;
-    } else if (system === "O") {
+    } else if (systemUsed === "O") {
       // Porphyry: divide each ecliptic quadrant into three equal arcs.
       const ascendant = asc;
       const descendant = (asc + 180.0) % 360.0;
@@ -584,6 +588,7 @@ export class SwissEphemerisEngine {
       vertex: round4(vertex),
       localSiderealTime: round4(ramc),
       obliquity: round4(epsDeg),
+      houseSystemUsed: systemUsed,
     };
   }
 
