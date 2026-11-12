@@ -26,6 +26,12 @@ import {
   FirdariaNightOrder,
 } from "@/lib/astronomy/predictiveHellenisticEngine";
 import {
+  SolarArcDirectionsEngine,
+  WesternReturnEngine,
+  type SolarArcDirectionsReport,
+  type ReturnChartReport,
+} from "@/lib/astronomy/westernDirectionsAndReturns";
+import {
   FixedStarsEngine,
   StarContact,
   EclipseAnalyzer,
@@ -81,6 +87,7 @@ export function AdvancedWesternPanel({
 }: AdvancedWesternPanelProps) {
   const [selectedReleasingLot, setSelectedReleasingLot] = useState<"spirit" | "fortune">("spirit");
   const [firdariaNightOrder, setFirdariaNightOrder] = useState<FirdariaNightOrder>("nodes-after-planets");
+  const [selectedReturnYear, setSelectedReturnYear] = useState<number>(new Date().getUTCFullYear());
   const [activeSubTab, setActiveSubTab] = useState<
     | "asteroids"
     | "lilith"
@@ -89,6 +96,8 @@ export function AdvancedWesternPanel({
     | "harmonics"
     | "declinations"
     | "progressions"
+    | "solarArc"
+    | "returns"
     | "profections"
     | "releasing"
     | "firdaria"
@@ -162,6 +171,28 @@ export function AdvancedWesternPanel({
   const progressionsReport: ProgressedChartResult = useMemo(() => {
     return progEngine.calculateProgressions(birthDateObj, nowObj, latitude, longitude);
   }, [progEngine, birthDateObj, nowObj, latitude, longitude]);
+
+  // Solar Arc Directions (Naibod key) and exact return charts.
+  const solarArcEngine = useMemo(() => new SolarArcDirectionsEngine(), []);
+  const solarArcReport: SolarArcDirectionsReport = useMemo(
+    () => solarArcEngine.calculate(chartData, birthDateObj, nowObj, 1),
+    [solarArcEngine, chartData, birthDateObj, nowObj]
+  );
+  const returnEngine = useMemo(() => new WesternReturnEngine(), []);
+  const solarReturnReport: ReturnChartReport = useMemo(
+    () => returnEngine.calculateSolarReturn(
+      chartData, selectedReturnYear, latitude, longitude,
+      chartData.requestedHouseSystem ?? chartData.houseSystem
+    ),
+    [returnEngine, chartData, selectedReturnYear, latitude, longitude]
+  );
+  const lunarReturnReport: ReturnChartReport = useMemo(
+    () => returnEngine.calculateNextLunarReturn(
+      chartData, nowObj, latitude, longitude,
+      chartData.requestedHouseSystem ?? chartData.houseSystem
+    ),
+    [returnEngine, chartData, nowObj, latitude, longitude]
+  );
 
   // Hellenistic Profections
   const profEngine = useMemo(() => new ProfectionsEngine(), []);
@@ -240,6 +271,8 @@ export function AdvancedWesternPanel({
             { id: "harmonics", label: "Harmonics", icon: "〰" },
             { id: "declinations", label: "Declinations", icon: "||" },
             { id: "progressions", label: "Progressions", icon: "☽" },
+            { id: "solarArc", label: "Solar Arc", icon: "↗" },
+            { id: "returns", label: "Solar / Lunar Returns", icon: "↻" },
             { id: "profections", label: "Profections", icon: "⏳" },
             { id: "releasing", label: "Zodiacal Releasing", icon: "📜" },
             { id: "firdaria", label: "Firdaria", icon: "👑" },
@@ -1099,6 +1132,103 @@ export function AdvancedWesternPanel({
           </div>
         </div>
       )}
+
+      {/* SOLAR ARC DIRECTIONS */}
+      {activeSubTab === "solarArc" && (
+        <div className="space-y-4">
+          <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
+            <h4 className="text-xs font-bold text-amber-300">Solar Arc Directions · Naibod Key</h4>
+            <p className="text-[11px] text-slate-300">
+              Elapsed tropical age × 0.98564733°; the same symbolic arc is added to natal planets and chart angles. Contacts are geometry-based traditional directions, not guaranteed event predictions.
+            </p>
+            <div className="flex flex-wrap gap-4 text-[11px] text-slate-400">
+              <span>Age: <strong className="text-slate-100">{solarArcReport.ageYears.toFixed(2)} years</strong></span>
+              <span>Directed arc: <strong className="text-amber-200">{solarArcReport.arcDegrees.toFixed(4)}°</strong></span>
+              <span>Key: <strong className="text-slate-100">Naibod</strong></span>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="p-3 bg-slate-950/60 border border-slate-800 rounded-xl space-y-2">
+              <h5 className="text-xs font-bold text-slate-200">Directed planets</h5>
+              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                {solarArcReport.directedPlanets.map((point) => (
+                  <div key={point.name} className="flex justify-between gap-2">
+                    <span className="text-slate-400">{point.name}</span>
+                    <span className="text-amber-200 font-mono">{point.signDegreeFormatted}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="p-3 bg-slate-950/60 border border-slate-800 rounded-xl space-y-2">
+              <h5 className="text-xs font-bold text-slate-200">Directed angles</h5>
+              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                {solarArcReport.directedAngles.map((point) => (
+                  <div key={point.name} className="flex justify-between gap-2">
+                    <span className="text-slate-400">{point.name}</span>
+                    <span className="text-amber-200 font-mono">{point.signDegreeFormatted}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="p-3 bg-slate-950/60 border border-slate-800 rounded-xl space-y-2">
+            <div className="flex justify-between items-center">
+              <h5 className="text-xs font-bold text-slate-200">Directed-to-natal contacts (≤ 1°)</h5>
+              <span className="text-[10px] text-slate-500">{solarArcReport.contacts.length} contacts</span>
+            </div>
+            {solarArcReport.contacts.length === 0 ? (
+              <p className="text-[11px] text-slate-500">No contacts within the selected 1° orb.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-[11px] text-slate-300">
+                  <thead><tr className="text-slate-500"><th className="text-left py-1">Directed point</th><th className="text-left">Aspect</th><th className="text-left">Natal point</th><th className="text-right">Orb</th></tr></thead>
+                  <tbody>
+                    {solarArcReport.contacts.map((contact, index) => (
+                      <tr key={index} className="border-t border-slate-800/70">
+                        <td className="py-1.5">{contact.directedPoint}</td><td>{contact.aspect}</td><td>{contact.natalPoint}</td><td className="text-right font-mono text-amber-200">{contact.orb.toFixed(3)}°</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+          <p className="text-[10px] text-slate-500">{solarArcReport.methodNote}</p>
+        </div>
+      )}
+
+      {/* EXACT SOLAR AND LUNAR RETURNS */}
+      {activeSubTab === "returns" && (
+        <div className="space-y-4">
+          <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
+            <h4 className="text-xs font-bold text-amber-300">Exact Return Charts</h4>
+            <p className="text-[11px] text-slate-300">Return instants are solved when the transiting geocentric ecliptic longitude reaches the natal Sun or Moon longitude. Chart houses are recalculated for the selected reference location.</p>
+            <label className="flex items-center gap-2 text-[11px] text-slate-300">
+              Solar return year
+              <select value={selectedReturnYear} onChange={(event) => setSelectedReturnYear(Number(event.target.value))} className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-amber-200">
+                {Array.from({ length: 11 }, (_, index) => new Date().getUTCFullYear() - 2 + index).map((year) => <option key={year} value={year}>{year}</option>)}
+              </select>
+            </label>
+            <p className="text-[10px] text-slate-500">Return location: {latitude.toFixed(4)}°, {longitude.toFixed(4)}° · House system: {solarReturnReport.houseSystem}. Moving location changes houses and angles, not the exact geocentric return instant.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {[solarReturnReport, lunarReturnReport].map((report) => (
+              <div key={report.kind} className="p-4 bg-slate-950/60 border border-slate-800 rounded-xl space-y-2">
+                <h5 className="text-xs font-bold text-slate-100">{report.kind}</h5>
+                <p className="text-lg font-mono text-amber-200">{report.exactUtc}</p>
+                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  <div><span className="text-slate-500 block">Natal target</span><strong>{report.targetLongitude.toFixed(6)}°</strong></div>
+                  <div><span className="text-slate-500 block">Return longitude</span><strong>{report.returnLongitude.toFixed(6)}°</strong></div>
+                  <div><span className="text-slate-500 block">Longitude error</span><strong>{(report.longitudeErrorDegrees * 3600).toFixed(2)}″</strong></div>
+                  <div><span className="text-slate-500 block">Resolved house frame</span><strong>{report.houseSystem}</strong></div>
+                </div>
+                <p className="text-[10px] text-slate-500">{report.methodNote}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
