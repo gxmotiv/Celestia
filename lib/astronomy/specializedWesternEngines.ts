@@ -188,7 +188,7 @@ export class EclipseAnalyzer {
     // Global solar eclipse searches (partial, annular and total).
     try {
       let event = Astronomy.SearchGlobalSolarEclipse(referenceDate);
-      for (let count = 0; count < 16; count++) {
+      for (let count = 0; count < 64; count++) {
         const peak = toPeakDate(event.peak);
         if (peak.getTime() > endDate.getTime()) break;
         if (peak.getTime() >= referenceDate.getTime()) {
@@ -207,7 +207,7 @@ export class EclipseAnalyzer {
     // Lunar eclipse searches include penumbral events as well as partial/total.
     try {
       let event = Astronomy.SearchLunarEclipse(referenceDate);
-      for (let count = 0; count < 16; count++) {
+      for (let count = 0; count < 64; count++) {
         const peak = toPeakDate(event.peak);
         if (peak.getTime() > endDate.getTime()) break;
         if (peak.getTime() >= referenceDate.getTime()) {
