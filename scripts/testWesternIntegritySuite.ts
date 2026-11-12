@@ -23,6 +23,13 @@ import {
   TRANSIT_SYSTEM_PRESETS,
 } from "../lib/astronomy/MultiSystemTransitEngine";
 import { calculateVedicChart } from "../lib/astronomy/vedic";
+import { LunarPointsCalculator } from "../lib/astronomy/lunarPointsCalculator";
+import {
+  DeclinationCalculator,
+  HarmonicChartCalculator,
+  MidpointCalculator,
+} from "../lib/astronomy/advancedWesternCalculators";
+import { DailyHoroscope, TransitEngine } from "../lib/astronomy/transits";
 
 let assertions = 0;
 function check(condition: unknown, message: string): void {
@@ -334,7 +341,68 @@ close(nightLots.partOfTravel.longitude, 320, 1e-9, "Night Travel Lot reverses 9t
 check(dayLots.partOfTravel.formula.includes("Day"), "Travel Lot formula label exposes day convention");
 check(nightLots.partOfTravel.formula.includes("Night"), "Travel Lot formula label exposes night convention");
 
-// 8. Eclipse events are dynamically searched, sorted, and not drawn from expired fixed dates.
+// 8. Transit direction and forecast outputs must be computed, not invented.
+const transitDate = new Date("2026-11-12T00:00:00.000Z");
+const baseTransitEngine = new TransitEngine(benchmarkChart, transitDate);
+const transitingSun = baseTransitEngine.getPlanetaryPositions(transitDate).Sun;
+const applyingNatal = {
+  ...benchmarkChart.planets[0],
+  id: "SyntheticNatal",
+  name: "SyntheticNatal",
+  longitude: normalizeDegrees(transitingSun.longitude - 59),
+  sign: "Synthetic",
+  signDegreeFormatted: "Synthetic natal point",
+};
+const applyingChart = { ...benchmarkChart, planets: [applyingNatal] };
+const applyingTransit = new TransitEngine(applyingChart, transitDate)
+  .getCurrentTransits(transitDate)
+  .find((item) => item.transitingPlanet === "Sun" && item.natalPlanet === "SyntheticNatal" && item.aspect === "Sextile");
+check(applyingTransit?.isApplying === true,
+  "TransitEngine marks a direct Sun approaching the 60° sextile as applying");
+check(Boolean(applyingTransit?.peak.includes("Applying")),
+  "Applying transit uses a labelled local linear estimate, not an absolute-speed peak guess");
+
+const separatingNatal = {
+  ...applyingNatal,
+  longitude: normalizeDegrees(transitingSun.longitude - 61),
+};
+const separatingChart = { ...benchmarkChart, planets: [separatingNatal] };
+const separatingTransit = new TransitEngine(separatingChart, transitDate)
+  .getCurrentTransits(transitDate)
+  .find((item) => item.transitingPlanet === "Sun" && item.natalPlanet === "SyntheticNatal" && item.aspect === "Sextile");
+check(separatingTransit?.isApplying === false,
+  "TransitEngine marks a direct Sun moving away from the 60° sextile as separating");
+check(Boolean(separatingTransit?.peak.includes("Separating")),
+  "Separating transit is not falsely assigned a future exact peak");
+check(
+  new TransitEngine(benchmarkChart, transitDate).calculateTransitDuration("Saturn", "Square").includes("not solved"),
+  "Transit duration is not presented as an exact solved interval when ingress/exact/egress are not calculated"
+);
+
+const dailySnapshot = new DailyHoroscope(benchmarkChart).generateDailyHoroscope(transitDate);
+check(dailySnapshot.activeTransitCount >= 0, "Daily snapshot reports a geometric active-transit count");
+check(dailySnapshot.transitSummary.includes("not a score"), "Daily snapshot discloses that aspect count is not a fortune/energy score");
+check(!("overallEnergy" in dailySnapshot), "Daily snapshot no longer emits a fabricated numeric energy score");
+check(dailySnapshot.luckyHours.startsWith("Not calculated"),
+  "Daily snapshot does not invent lucky-clock hours without location and sunrise/sunset calculation");
+
+const monthlyCalendar = new DailyHoroscope(benchmarkChart).generateMonthlyForecast(10, 2026);
+check(monthlyCalendar.highlights.some((item) => item.title === "Astronomical New Moon"),
+  "Monthly calendar contains a dynamically searched astronomical New Moon");
+check(monthlyCalendar.highlights.some((item) => item.title === "Astronomical Full Moon"),
+  "Monthly calendar contains a dynamically searched astronomical Full Moon");
+check(monthlyCalendar.highlights.every((item) => {
+  const time = Date.parse(item.date + "T00:00:00.000Z");
+  return time >= Date.UTC(2026, 10, 1) && time < Date.UTC(2026, 11, 1);
+}), "Monthly lunar-phase events are inside the selected UTC month");
+
+const timingWindows = new TransitEngine(benchmarkChart, transitDate).getTimingWindows();
+check(Object.values(timingWindows).every((window) =>
+  window.bestTimes.length === 0 && window.challengingTimes.length === 0 &&
+  window.nextOpportunity === "Not calculated"
+), "Timing-window panel does not emit invented date-free best days or next opportunities");
+
+// 9. Eclipse events are dynamically searched, sorted, and not drawn from expired fixed dates.
 const eclipseChart = calculateWesternChart(2000, 1, 1, 12, 0, 40.7128, -74.006, -5, "Placidus");
 const eclipseStart = new Date("2026-11-12T00:00:00.000Z");
 const eclipses = new EclipseAnalyzer().analyzeEclipses(eclipseChart, eclipseStart, 2);
@@ -350,13 +418,13 @@ check(
   "Dynamic eclipse events are sorted by peak time"
 );
 
-// 9. Fixed-star data are explicitly reference entries, not a falsely claimed 35+ catalogue.
+// 10. Fixed-star data are explicitly reference entries, not a falsely claimed 35+ catalogue.
 check(FixedStarsEngine.FIXED_STARS.length === 20, "Fixed-star catalogue count matches the 20 implemented reference entries");
 const regulus = FixedStarsEngine.FIXED_STARS.find((star) => star.name.includes("Regulus"));
 check(Boolean(regulus && Math.abs(regulus.longitude - 149.83) < 0.05),
   "Regulus J2000 tropical longitude reference is near Leo 29 degrees 50 minutes");
 
-// 10. The dedicated deep Western benchmark runner must report meaningful passing assertions.
+// 11. The dedicated deep Western benchmark runner must report meaningful passing assertions.
 const benchmarkChart = calculateWesternChart(2000, 1, 1, 12, 0, 51.4769, 0, 0, "Placidus");
 const benchmark = new WesternBenchmarkRunner().runFullSuite(benchmarkChart);
 check(benchmark.totalTests >= 25, "Western deep benchmark suite executes its expected test set");
