@@ -325,7 +325,7 @@ export class ZodiacalReleasingEngine {
   public calculateReleasing(
     birthDate: Date,
     lotLongitude: number,
-    lotName: "Spirit (Career & Purpose)" | "Fortune (Physical Health & Material Fortune)",
+    lotName: "Spirit (Career & Purpose)" | "Fortune (Body & Circumstances)",
     referenceDate: Date = new Date(),
     lotOfFortuneLongitude: number = lotLongitude
   ): ZodiacalReleasingReport {
@@ -444,8 +444,11 @@ export interface FirdariaPeriod {
   subPeriods: Array<{ subLord: string; startAge: number; endAge: number }>;
 }
 
+export type FirdariaNightOrder = "nodes-after-planets" | "nodes-after-mars";
+
 export interface FirdariaReport {
   isDiurnal: boolean;
+  nightOrder: FirdariaNightOrder;
   activeMajorLord: string;
   activeSubLord: string;
   activeYearsRange: string;
@@ -467,7 +470,8 @@ export class FirdariaEngine {
     { planet: "SouthNode", symbol: "☋", years: 2 },
   ];
 
-  // Nocturnal Order: Moon (9), Saturn (11), Jupiter (12), Mars (7), Sun (10), Venus (8), Mercury (13), North Node (3), South Node (2)
+  // Traditional nocturnal order: Moon, Saturn, Jupiter, Mars, Sun, Venus,
+  // Mercury, then the two nodes.
   private static readonly NOCTURNAL_LORDS = [
     { planet: "Moon", symbol: "☽", years: 9 },
     { planet: "Saturn", symbol: "♄", years: 11 },
@@ -480,15 +484,40 @@ export class FirdariaEngine {
     { planet: "SouthNode", symbol: "☋", years: 2 },
   ];
 
-  public calculateFirdaria(chart: WesternChartData, currentAge: number): FirdariaReport {
+  // Some medieval presentations place the two node periods immediately
+  // after Mars in the nocturnal sequence.
+  private static readonly NOCTURNAL_NODES_AFTER_MARS = [
+    { planet: "Moon", symbol: "☽", years: 9 },
+    { planet: "Saturn", symbol: "♄", years: 11 },
+    { planet: "Jupiter", symbol: "♃", years: 12 },
+    { planet: "Mars", symbol: "♂", years: 7 },
+    { planet: "NorthNode", symbol: "☊", years: 3 },
+    { planet: "SouthNode", symbol: "☋", years: 2 },
+    { planet: "Sun", symbol: "☉", years: 10 },
+    { planet: "Venus", symbol: "♀", years: 8 },
+    { planet: "Mercury", symbol: "☿", years: 13 },
+  ];
+
+  private static readonly CHALDEAN_SUBPERIOD_ORDER = [
+    "Saturn", "Jupiter", "Mars", "Sun", "Venus", "Mercury", "Moon",
+  ];
+
+  public calculateFirdaria(
+    chart: WesternChartData,
+    currentAge: number,
+    nightOrder: FirdariaNightOrder = "nodes-after-planets"
+  ): FirdariaReport {
     if (!Number.isFinite(currentAge) || currentAge < 0) {
       throw new RangeError("Firdaria age must be a finite non-negative number of tropical years.");
     }
     // Sect is based on actual solar altitude, not whichever house system the
     // user selected for the displayed Western wheel.
     const isDiurnal = isSunAboveHorizonInChart(chart);
-    const sequence = isDiurnal ? FirdariaEngine.DIURNAL_LORDS : FirdariaEngine.NOCTURNAL_LORDS;
-    const sevenPlanetSequence = sequence.slice(0, 7);
+    const sequence = isDiurnal
+      ? FirdariaEngine.DIURNAL_LORDS
+      : nightOrder === "nodes-after-mars"
+        ? FirdariaEngine.NOCTURNAL_NODES_AFTER_MARS
+        : FirdariaEngine.NOCTURNAL_LORDS;
     const periods: FirdariaPeriod[] = [];
     const cycleNumber = Math.floor(currentAge / 75);
     const ageWithinCycle = currentAge - cycleNumber * 75;
@@ -509,11 +538,11 @@ export class FirdariaEngine {
       // The seven classical planetary major periods are divided into seven
       // sub-periods, beginning with that major ruler and continuing in the
       // same sect-specific Chaldean sequence. Node majors have no sub-periods.
-      if (itemIndex < 7) {
-        const majorPosition = sevenPlanetSequence.findIndex((period) => period.planet === item.planet);
+      if (FirdariaEngine.CHALDEAN_SUBPERIOD_ORDER.includes(item.planet)) {
+        const majorPosition = FirdariaEngine.CHALDEAN_SUBPERIOD_ORDER.indexOf(item.planet);
         const subYears = item.years / 7;
         for (let subIndex = 0; subIndex < 7; subIndex++) {
-          const subLord = sevenPlanetSequence[(majorPosition + subIndex) % 7].planet;
+          const subLord = FirdariaEngine.CHALDEAN_SUBPERIOD_ORDER[(majorPosition + subIndex) % 7];
           const subStart = startAge + subIndex * subYears;
           const subEnd = subIndex === 6 ? endAge : startAge + (subIndex + 1) * subYears;
           subPeriods.push({ subLord, startAge: subStart, endAge: subEnd });
@@ -527,7 +556,7 @@ export class FirdariaEngine {
       if (ageWithinCycle >= localStart && ageWithinCycle < localEnd) {
         activeMajor = item.planet;
         activeRange = `Age ${startAge.toFixed(2)} to ${endAge.toFixed(2)}`;
-        if (itemIndex >= 7) activeSub = "No sub-period in this node-period variant";
+        if (!FirdariaEngine.CHALDEAN_SUBPERIOD_ORDER.includes(item.planet)) activeSub = "No sub-period for lunar-node major periods";
       }
 
       periods.push({
@@ -543,11 +572,12 @@ export class FirdariaEngine {
 
     return {
       isDiurnal,
+      nightOrder,
       activeMajorLord: activeMajor,
       activeSubLord: activeSub,
       activeYearsRange: activeRange,
       allPeriods: periods,
-      interpretation: `Under the medieval ${isDiurnal ? "day" : "night"} Firdaria sequence, cycle ${cycleNumber + 1} is active. Current major ruler: ${activeMajor} (${activeRange}); sub-ruler: ${activeSub}. Node periods are placed after the seven planetary majors in this selected variant; some medieval presentations place the nodes after Mars in nocturnal charts.`,
+      interpretation: `Under the medieval ${isDiurnal ? "day" : "night"} Firdaria sequence (${isDiurnal ? "nodes after the seven planetary periods" : nightOrder}), cycle ${cycleNumber + 1} is active. Current major ruler: ${activeMajor} (${activeRange}); sub-ruler: ${activeSub}. Planetary sub-periods rotate from the major ruler in Chaldean order; lunar-node majors have no seven-planet sub-periods.`,
     };
   }
 }
