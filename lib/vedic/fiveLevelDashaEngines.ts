@@ -215,9 +215,9 @@ export class Vimshottari5LevelEngine {
       currentMs += durMs;
     }
 
-    const activeL1 = level1.find((item) => item.isCurrent) || level1[0];
-    const targetL1Name = selectedPath?.level1 || activeL1.name;
-    const targetL1 = level1.find((item) => item.name === targetL1Name) || activeL1;
+    const activeL1 = level1.find((item) => item.isCurrent) ?? null;
+    const targetL1Name = selectedPath?.level1 || activeL1?.name || level1[0].name;
+    const targetL1 = level1.find((item) => item.name === targetL1Name) || activeL1 || level1[0];
 
     // Level 2: Antardashas for targetL1
     const level2: DashaLevelItem[] = [];
@@ -257,9 +257,9 @@ export class Vimshottari5LevelEngine {
       l2CurrentMs += durMs;
     }
 
-    const activeL2 = level2.find((item) => item.isCurrent) || level2[0];
-    const targetL2Name = selectedPath?.level2 || activeL2.name;
-    const targetL2 = level2.find((item) => item.name === targetL2Name) || activeL2;
+    const activeL2 = level2.find((item) => item.isCurrent) ?? null;
+    const targetL2Name = selectedPath?.level2 || activeL2?.name || level2[0].name;
+    const targetL2 = level2.find((item) => item.name === targetL2Name) || activeL2 || level2[0];
 
     // Level 3: Pratyantardashas for targetL2
     const level3: DashaLevelItem[] = [];
@@ -299,9 +299,9 @@ export class Vimshottari5LevelEngine {
       l3CurrentMs += durMs;
     }
 
-    const activeL3 = level3.find((item) => item.isCurrent) || level3[0];
-    const targetL3Name = selectedPath?.level3 || activeL3.name;
-    const targetL3 = level3.find((item) => item.name === targetL3Name) || activeL3;
+    const activeL3 = level3.find((item) => item.isCurrent) ?? null;
+    const targetL3Name = selectedPath?.level3 || activeL3?.name || level3[0].name;
+    const targetL3 = level3.find((item) => item.name === targetL3Name) || activeL3 || level3[0];
 
     // Level 4: Sookshma for targetL3
     const level4: DashaLevelItem[] = [];
@@ -342,9 +342,9 @@ export class Vimshottari5LevelEngine {
       l4CurrentMs += durMs;
     }
 
-    const activeL4 = level4.find((item) => item.isCurrent) || level4[0];
-    const targetL4Name = selectedPath?.level4 || activeL4.name;
-    const targetL4 = level4.find((item) => item.name === targetL4Name) || activeL4;
+    const activeL4 = level4.find((item) => item.isCurrent) ?? null;
+    const targetL4Name = selectedPath?.level4 || activeL4?.name || level4[0].name;
+    const targetL4 = level4.find((item) => item.name === targetL4Name) || activeL4 || level4[0];
 
     // Level 5: Prana for targetL4
     const level5: DashaLevelItem[] = [];
@@ -385,7 +385,7 @@ export class Vimshottari5LevelEngine {
       l5CurrentMs += durMs;
     }
 
-    const activeL5 = level5.find((item) => item.isCurrent) || level5[0];
+    const activeL5 = level5.find((item) => item.isCurrent) ?? null;
 
     return {
       systemName: "Vimshottari",
@@ -501,9 +501,9 @@ export class Yogini5LevelEngine {
       currentMs += durMs;
     }
 
-    const activeL1 = level1.find((item) => item.isCurrent) || level1[0];
-    const targetL1Name = selectedPath?.level1 || activeL1.name;
-    const targetL1 = level1.find((item) => item.name === targetL1Name) || activeL1;
+    const activeL1 = level1.find((item) => item.isCurrent) ?? null;
+    const targetL1Name = selectedPath?.level1 || activeL1?.name || level1[0].name;
+    const targetL1 = level1.find((item) => item.name === targetL1Name) || activeL1 || level1[0];
 
     // Level 2: Antar-Yoginis = (L1_years * Sub_years) / 36
     const level2: DashaLevelItem[] = [];
@@ -543,9 +543,9 @@ export class Yogini5LevelEngine {
       l2CurrentMs += durMs;
     }
 
-    const activeL2 = level2.find((item) => item.isCurrent) || level2[0];
-    const targetL2Name = selectedPath?.level2 || activeL2.name;
-    const targetL2 = level2.find((item) => item.name === targetL2Name) || activeL2;
+    const activeL2 = level2.find((item) => item.isCurrent) ?? null;
+    const targetL2Name = selectedPath?.level2 || activeL2?.name || level2[0].name;
+    const targetL2 = level2.find((item) => item.name === targetL2Name) || activeL2 || level2[0];
 
     // Level 3: Pratyantar-Yoginis = (L2_years * Sub_years) / 36
     const level3: DashaLevelItem[] = [];
@@ -585,9 +585,9 @@ export class Yogini5LevelEngine {
       l3CurrentMs += durMs;
     }
 
-    const activeL3 = level3.find((item) => item.isCurrent) || level3[0];
-    const targetL3Name = selectedPath?.level3 || activeL3.name;
-    const targetL3 = level3.find((item) => item.name === targetL3Name) || activeL3;
+    const activeL3 = level3.find((item) => item.isCurrent) ?? null;
+    const targetL3Name = selectedPath?.level3 || activeL3?.name || level3[0].name;
+    const targetL3 = level3.find((item) => item.name === targetL3Name) || activeL3 || level3[0];
 
     // Level 4: Sookshma-Yoginis = (L3_years * Sub_years) / 36
     const level4: DashaLevelItem[] = [];
@@ -628,9 +628,9 @@ export class Yogini5LevelEngine {
       l4CurrentMs += durMs;
     }
 
-    const activeL4 = level4.find((item) => item.isCurrent) || level4[0];
-    const targetL4Name = selectedPath?.level4 || activeL4.name;
-    const targetL4 = level4.find((item) => item.name === targetL4Name) || activeL4;
+    const activeL4 = level4.find((item) => item.isCurrent) ?? null;
+    const targetL4Name = selectedPath?.level4 || activeL4?.name || level4[0].name;
+    const targetL4 = level4.find((item) => item.name === targetL4Name) || activeL4 || level4[0];
 
     // Level 5: Prana-Yoginis = (L4_years * Sub_years) / 36
     const level5: DashaLevelItem[] = [];
@@ -671,7 +671,7 @@ export class Yogini5LevelEngine {
       l5CurrentMs += durMs;
     }
 
-    const activeL5 = level5.find((item) => item.isCurrent) || level5[0];
+    const activeL5 = level5.find((item) => item.isCurrent) ?? null;
 
     return {
       systemName: "Yogini",
@@ -780,9 +780,9 @@ export class Chara5LevelEngine {
       currentMs += durMs;
     }
 
-    const activeL1 = level1.find((item) => item.isCurrent) || level1[0];
-    const targetL1Name = selectedPath?.level1 || activeL1.name;
-    const targetL1 = level1.find((item) => item.name === targetL1Name) || activeL1;
+    const activeL1 = level1.find((item) => item.isCurrent) ?? null;
+    const targetL1Name = selectedPath?.level1 || activeL1?.name || level1[0].name;
+    const targetL1 = level1.find((item) => item.name === targetL1Name) || activeL1 || level1[0];
 
     // Level 2: Antardasha Signs = L1_duration / 12
     const level2: DashaLevelItem[] = [];
@@ -821,9 +821,9 @@ export class Chara5LevelEngine {
       l2CurrentMs += l2DurMs;
     }
 
-    const activeL2 = level2.find((item) => item.isCurrent) || level2[0];
-    const targetL2Name = selectedPath?.level2 || activeL2.name;
-    const targetL2 = level2.find((item) => item.name === targetL2Name) || activeL2;
+    const activeL2 = level2.find((item) => item.isCurrent) ?? null;
+    const targetL2Name = selectedPath?.level2 || activeL2?.name || level2[0].name;
+    const targetL2 = level2.find((item) => item.name === targetL2Name) || activeL2 || level2[0];
 
     // Level 3: Pratyantardasha Signs = L2_duration / 12
     const level3: DashaLevelItem[] = [];
@@ -862,9 +862,9 @@ export class Chara5LevelEngine {
       l3CurrentMs += l3DurMs;
     }
 
-    const activeL3 = level3.find((item) => item.isCurrent) || level3[0];
-    const targetL3Name = selectedPath?.level3 || activeL3.name;
-    const targetL3 = level3.find((item) => item.name === targetL3Name) || activeL3;
+    const activeL3 = level3.find((item) => item.isCurrent) ?? null;
+    const targetL3Name = selectedPath?.level3 || activeL3?.name || level3[0].name;
+    const targetL3 = level3.find((item) => item.name === targetL3Name) || activeL3 || level3[0];
 
     // Level 4: Sookshma Signs = L3_duration / 12
     const level4: DashaLevelItem[] = [];
@@ -904,9 +904,9 @@ export class Chara5LevelEngine {
       l4CurrentMs += l4DurMs;
     }
 
-    const activeL4 = level4.find((item) => item.isCurrent) || level4[0];
-    const targetL4Name = selectedPath?.level4 || activeL4.name;
-    const targetL4 = level4.find((item) => item.name === targetL4Name) || activeL4;
+    const activeL4 = level4.find((item) => item.isCurrent) ?? null;
+    const targetL4Name = selectedPath?.level4 || activeL4?.name || level4[0].name;
+    const targetL4 = level4.find((item) => item.name === targetL4Name) || activeL4 || level4[0];
 
     // Level 5: Prana Signs = L4_duration / 12
     const level5: DashaLevelItem[] = [];
@@ -946,7 +946,7 @@ export class Chara5LevelEngine {
       l5CurrentMs += l5DurMs;
     }
 
-    const activeL5 = level5.find((item) => item.isCurrent) || level5[0];
+    const activeL5 = level5.find((item) => item.isCurrent) ?? null;
 
     return {
       systemName: "Chara",
@@ -1065,9 +1065,9 @@ export class Ashtottari5LevelEngine {
       currentMs += durMs;
     }
 
-    const activeL1 = level1.find((item) => item.isCurrent) || level1[0];
-    const targetL1Name = selectedPath?.level1 || activeL1.name;
-    const targetL1 = level1.find((item) => item.name === targetL1Name) || activeL1;
+    const activeL1 = level1.find((item) => item.isCurrent) ?? null;
+    const targetL1Name = selectedPath?.level1 || activeL1?.name || level1[0].name;
+    const targetL1 = level1.find((item) => item.name === targetL1Name) || activeL1 || level1[0];
 
     // Level 2: Antardashas = (L1_years * Sub_years) / 108
     const level2: DashaLevelItem[] = [];
@@ -1107,9 +1107,9 @@ export class Ashtottari5LevelEngine {
       l2CurrentMs += durMs;
     }
 
-    const activeL2 = level2.find((item) => item.isCurrent) || level2[0];
-    const targetL2Name = selectedPath?.level2 || activeL2.name;
-    const targetL2 = level2.find((item) => item.name === targetL2Name) || activeL2;
+    const activeL2 = level2.find((item) => item.isCurrent) ?? null;
+    const targetL2Name = selectedPath?.level2 || activeL2?.name || level2[0].name;
+    const targetL2 = level2.find((item) => item.name === targetL2Name) || activeL2 || level2[0];
 
     // Level 3: Pratyantardashas = (L2_years * Sub_years) / 108
     const level3: DashaLevelItem[] = [];
@@ -1149,9 +1149,9 @@ export class Ashtottari5LevelEngine {
       l3CurrentMs += durMs;
     }
 
-    const activeL3 = level3.find((item) => item.isCurrent) || level3[0];
-    const targetL3Name = selectedPath?.level3 || activeL3.name;
-    const targetL3 = level3.find((item) => item.name === targetL3Name) || activeL3;
+    const activeL3 = level3.find((item) => item.isCurrent) ?? null;
+    const targetL3Name = selectedPath?.level3 || activeL3?.name || level3[0].name;
+    const targetL3 = level3.find((item) => item.name === targetL3Name) || activeL3 || level3[0];
 
     // Level 4: Sookshma = (L3_years * Sub_years) / 108
     const level4: DashaLevelItem[] = [];
@@ -1192,9 +1192,9 @@ export class Ashtottari5LevelEngine {
       l4CurrentMs += durMs;
     }
 
-    const activeL4 = level4.find((item) => item.isCurrent) || level4[0];
-    const targetL4Name = selectedPath?.level4 || activeL4.name;
-    const targetL4 = level4.find((item) => item.name === targetL4Name) || activeL4;
+    const activeL4 = level4.find((item) => item.isCurrent) ?? null;
+    const targetL4Name = selectedPath?.level4 || activeL4?.name || level4[0].name;
+    const targetL4 = level4.find((item) => item.name === targetL4Name) || activeL4 || level4[0];
 
     // Level 5: Prana = (L4_years * Sub_years) / 108
     const level5: DashaLevelItem[] = [];
@@ -1235,7 +1235,7 @@ export class Ashtottari5LevelEngine {
       l5CurrentMs += durMs;
     }
 
-    const activeL5 = level5.find((item) => item.isCurrent) || level5[0];
+    const activeL5 = level5.find((item) => item.isCurrent) ?? null;
 
     return {
       systemName: "Ashtottari",
@@ -1340,9 +1340,9 @@ export class Kalachakra5LevelEngine {
       currentMs += durMs;
     }
 
-    const activeL1 = level1.find((item) => item.isCurrent) || level1[0];
-    const targetL1Name = selectedPath?.level1 || activeL1.name;
-    const targetL1 = level1.find((item) => item.name === targetL1Name) || activeL1;
+    const activeL1 = level1.find((item) => item.isCurrent) ?? null;
+    const targetL1Name = selectedPath?.level1 || activeL1?.name || level1[0].name;
+    const targetL1 = level1.find((item) => item.name === targetL1Name) || activeL1 || level1[0];
 
     // Level 2: Antar-Pada = (L1_years * 5) / 45
     const level2: DashaLevelItem[] = [];
@@ -1382,9 +1382,9 @@ export class Kalachakra5LevelEngine {
       l2CurrentMs += durMs;
     }
 
-    const activeL2 = level2.find((item) => item.isCurrent) || level2[0];
-    const targetL2Name = selectedPath?.level2 || activeL2.name;
-    const targetL2 = level2.find((item) => item.name === targetL2Name) || activeL2;
+    const activeL2 = level2.find((item) => item.isCurrent) ?? null;
+    const targetL2Name = selectedPath?.level2 || activeL2?.name || level2[0].name;
+    const targetL2 = level2.find((item) => item.name === targetL2Name) || activeL2 || level2[0];
 
     // Level 3: Pratyantar-Pada = (L2_years * 5) / 45
     const level3: DashaLevelItem[] = [];
@@ -1424,9 +1424,9 @@ export class Kalachakra5LevelEngine {
       l3CurrentMs += durMs;
     }
 
-    const activeL3 = level3.find((item) => item.isCurrent) || level3[0];
-    const targetL3Name = selectedPath?.level3 || activeL3.name;
-    const targetL3 = level3.find((item) => item.name === targetL3Name) || activeL3;
+    const activeL3 = level3.find((item) => item.isCurrent) ?? null;
+    const targetL3Name = selectedPath?.level3 || activeL3?.name || level3[0].name;
+    const targetL3 = level3.find((item) => item.name === targetL3Name) || activeL3 || level3[0];
 
     // Level 4: Sookshma-Pada = (L3_years * 5) / 45
     const level4: DashaLevelItem[] = [];
@@ -1467,9 +1467,9 @@ export class Kalachakra5LevelEngine {
       l4CurrentMs += durMs;
     }
 
-    const activeL4 = level4.find((item) => item.isCurrent) || level4[0];
-    const targetL4Name = selectedPath?.level4 || activeL4.name;
-    const targetL4 = level4.find((item) => item.name === targetL4Name) || activeL4;
+    const activeL4 = level4.find((item) => item.isCurrent) ?? null;
+    const targetL4Name = selectedPath?.level4 || activeL4?.name || level4[0].name;
+    const targetL4 = level4.find((item) => item.name === targetL4Name) || activeL4 || level4[0];
 
     // Level 5: Prana-Pada = (L4_years * 5) / 45
     const level5: DashaLevelItem[] = [];
@@ -1510,7 +1510,7 @@ export class Kalachakra5LevelEngine {
       l5CurrentMs += durMs;
     }
 
-    const activeL5 = level5.find((item) => item.isCurrent) || level5[0];
+    const activeL5 = level5.find((item) => item.isCurrent) ?? null;
 
     return {
       systemName: "Kalachakra",
@@ -1627,9 +1627,9 @@ export class Shodashottari5LevelEngine {
       currentMs += durMs;
     }
 
-    const activeL1 = level1.find((item) => item.isCurrent) || level1[0];
-    const targetL1Name = selectedPath?.level1 || activeL1.name;
-    const targetL1 = level1.find((item) => item.name === targetL1Name) || activeL1;
+    const activeL1 = level1.find((item) => item.isCurrent) ?? null;
+    const targetL1Name = selectedPath?.level1 || activeL1?.name || level1[0].name;
+    const targetL1 = level1.find((item) => item.name === targetL1Name) || activeL1 || level1[0];
 
     // Level 2: Antardashas = (L1_years * sub_years) / 116
     const level2: DashaLevelItem[] = [];
@@ -1669,9 +1669,9 @@ export class Shodashottari5LevelEngine {
       l2CurrentMs += durMs;
     }
 
-    const activeL2 = level2.find((item) => item.isCurrent) || level2[0];
-    const targetL2Name = selectedPath?.level2 || activeL2.name;
-    const targetL2 = level2.find((item) => item.name === targetL2Name) || activeL2;
+    const activeL2 = level2.find((item) => item.isCurrent) ?? null;
+    const targetL2Name = selectedPath?.level2 || activeL2?.name || level2[0].name;
+    const targetL2 = level2.find((item) => item.name === targetL2Name) || activeL2 || level2[0];
 
     // Level 3: Pratyantardashas = (L2_years * sub_years) / 116
     const level3: DashaLevelItem[] = [];
@@ -1712,9 +1712,9 @@ export class Shodashottari5LevelEngine {
       l3CurrentMs += durMs;
     }
 
-    const activeL3 = level3.find((item) => item.isCurrent) || level3[0];
-    const targetL3Name = selectedPath?.level3 || activeL3.name;
-    const targetL3 = level3.find((item) => item.name === targetL3Name) || activeL3;
+    const activeL3 = level3.find((item) => item.isCurrent) ?? null;
+    const targetL3Name = selectedPath?.level3 || activeL3?.name || level3[0].name;
+    const targetL3 = level3.find((item) => item.name === targetL3Name) || activeL3 || level3[0];
 
     // Level 4: Sookshma = (L3_years * sub_years) / 116
     const level4: DashaLevelItem[] = [];
@@ -1755,9 +1755,9 @@ export class Shodashottari5LevelEngine {
       l4CurrentMs += durMs;
     }
 
-    const activeL4 = level4.find((item) => item.isCurrent) || level4[0];
-    const targetL4Name = selectedPath?.level4 || activeL4.name;
-    const targetL4 = level4.find((item) => item.name === targetL4Name) || activeL4;
+    const activeL4 = level4.find((item) => item.isCurrent) ?? null;
+    const targetL4Name = selectedPath?.level4 || activeL4?.name || level4[0].name;
+    const targetL4 = level4.find((item) => item.name === targetL4Name) || activeL4 || level4[0];
 
     // Level 5: Prana = (L4_years * sub_years) / 116
     const level5: DashaLevelItem[] = [];
@@ -1798,7 +1798,7 @@ export class Shodashottari5LevelEngine {
       l5CurrentMs += durMs;
     }
 
-    const activeL5 = level5.find((item) => item.isCurrent) || level5[0];
+    const activeL5 = level5.find((item) => item.isCurrent) ?? null;
 
     return {
       systemName: "Shodashottari",
@@ -1915,9 +1915,9 @@ export class Dwisaptati5LevelEngine {
       currentMs += durMs;
     }
 
-    const activeL1 = level1.find((item) => item.isCurrent) || level1[0];
-    const targetL1Name = selectedPath?.level1 || activeL1.name;
-    const targetL1 = level1.find((item) => item.name === targetL1Name) || activeL1;
+    const activeL1 = level1.find((item) => item.isCurrent) ?? null;
+    const targetL1Name = selectedPath?.level1 || activeL1?.name || level1[0].name;
+    const targetL1 = level1.find((item) => item.name === targetL1Name) || activeL1 || level1[0];
 
     // Level 2: Antardashas = (L1_years * sub_years) / 168
     const level2: DashaLevelItem[] = [];
@@ -1957,9 +1957,9 @@ export class Dwisaptati5LevelEngine {
       l2CurrentMs += durMs;
     }
 
-    const activeL2 = level2.find((item) => item.isCurrent) || level2[0];
-    const targetL2Name = selectedPath?.level2 || activeL2.name;
-    const targetL2 = level2.find((item) => item.name === targetL2Name) || activeL2;
+    const activeL2 = level2.find((item) => item.isCurrent) ?? null;
+    const targetL2Name = selectedPath?.level2 || activeL2?.name || level2[0].name;
+    const targetL2 = level2.find((item) => item.name === targetL2Name) || activeL2 || level2[0];
 
     // Level 3: Pratyantardashas = (L2_years * sub_years) / 168
     const level3: DashaLevelItem[] = [];
@@ -2000,9 +2000,9 @@ export class Dwisaptati5LevelEngine {
       l3CurrentMs += durMs;
     }
 
-    const activeL3 = level3.find((item) => item.isCurrent) || level3[0];
-    const targetL3Name = selectedPath?.level3 || activeL3.name;
-    const targetL3 = level3.find((item) => item.name === targetL3Name) || activeL3;
+    const activeL3 = level3.find((item) => item.isCurrent) ?? null;
+    const targetL3Name = selectedPath?.level3 || activeL3?.name || level3[0].name;
+    const targetL3 = level3.find((item) => item.name === targetL3Name) || activeL3 || level3[0];
 
     // Level 4: Sookshma = (L3_years * sub_years) / 168
     const level4: DashaLevelItem[] = [];
@@ -2043,9 +2043,9 @@ export class Dwisaptati5LevelEngine {
       l4CurrentMs += durMs;
     }
 
-    const activeL4 = level4.find((item) => item.isCurrent) || level4[0];
-    const targetL4Name = selectedPath?.level4 || activeL4.name;
-    const targetL4 = level4.find((item) => item.name === targetL4Name) || activeL4;
+    const activeL4 = level4.find((item) => item.isCurrent) ?? null;
+    const targetL4Name = selectedPath?.level4 || activeL4?.name || level4[0].name;
+    const targetL4 = level4.find((item) => item.name === targetL4Name) || activeL4 || level4[0];
 
     // Level 5: Prana = (L4_years * sub_years) / 168
     const level5: DashaLevelItem[] = [];
@@ -2086,7 +2086,7 @@ export class Dwisaptati5LevelEngine {
       l5CurrentMs += durMs;
     }
 
-    const activeL5 = level5.find((item) => item.isCurrent) || level5[0];
+    const activeL5 = level5.find((item) => item.isCurrent) ?? null;
 
     return {
       systemName: "Dwisaptati",
@@ -2203,9 +2203,9 @@ export class Shastihayani5LevelEngine {
       currentMs += durMs;
     }
 
-    const activeL1 = level1.find((item) => item.isCurrent) || level1[0];
-    const targetL1Name = selectedPath?.level1 || activeL1.name;
-    const targetL1 = level1.find((item) => item.name === targetL1Name) || activeL1;
+    const activeL1 = level1.find((item) => item.isCurrent) ?? null;
+    const targetL1Name = selectedPath?.level1 || activeL1?.name || level1[0].name;
+    const targetL1 = level1.find((item) => item.name === targetL1Name) || activeL1 || level1[0];
 
     // Level 2: Antardashas = (L1_years * sub_years) / 60
     const level2: DashaLevelItem[] = [];
@@ -2245,9 +2245,9 @@ export class Shastihayani5LevelEngine {
       l2CurrentMs += durMs;
     }
 
-    const activeL2 = level2.find((item) => item.isCurrent) || level2[0];
-    const targetL2Name = selectedPath?.level2 || activeL2.name;
-    const targetL2 = level2.find((item) => item.name === targetL2Name) || activeL2;
+    const activeL2 = level2.find((item) => item.isCurrent) ?? null;
+    const targetL2Name = selectedPath?.level2 || activeL2?.name || level2[0].name;
+    const targetL2 = level2.find((item) => item.name === targetL2Name) || activeL2 || level2[0];
 
     // Level 3: Pratyantardashas = (L2_years * sub_years) / 60
     const level3: DashaLevelItem[] = [];
@@ -2288,9 +2288,9 @@ export class Shastihayani5LevelEngine {
       l3CurrentMs += durMs;
     }
 
-    const activeL3 = level3.find((item) => item.isCurrent) || level3[0];
-    const targetL3Name = selectedPath?.level3 || activeL3.name;
-    const targetL3 = level3.find((item) => item.name === targetL3Name) || activeL3;
+    const activeL3 = level3.find((item) => item.isCurrent) ?? null;
+    const targetL3Name = selectedPath?.level3 || activeL3?.name || level3[0].name;
+    const targetL3 = level3.find((item) => item.name === targetL3Name) || activeL3 || level3[0];
 
     // Level 4: Sookshma = (L3_years * sub_years) / 60
     const level4: DashaLevelItem[] = [];
@@ -2331,9 +2331,9 @@ export class Shastihayani5LevelEngine {
       l4CurrentMs += durMs;
     }
 
-    const activeL4 = level4.find((item) => item.isCurrent) || level4[0];
-    const targetL4Name = selectedPath?.level4 || activeL4.name;
-    const targetL4 = level4.find((item) => item.name === targetL4Name) || activeL4;
+    const activeL4 = level4.find((item) => item.isCurrent) ?? null;
+    const targetL4Name = selectedPath?.level4 || activeL4?.name || level4[0].name;
+    const targetL4 = level4.find((item) => item.name === targetL4Name) || activeL4 || level4[0];
 
     // Level 5: Prana = (L4_years * sub_years) / 60
     const level5: DashaLevelItem[] = [];
@@ -2374,7 +2374,7 @@ export class Shastihayani5LevelEngine {
       l5CurrentMs += durMs;
     }
 
-    const activeL5 = level5.find((item) => item.isCurrent) || level5[0];
+    const activeL5 = level5.find((item) => item.isCurrent) ?? null;
 
     return {
       systemName: "Shastihayani",
@@ -2481,9 +2481,9 @@ export class Sthira5LevelEngine {
       currentMs += durMs;
     }
 
-    const activeL1 = level1.find((item) => item.isCurrent) || level1[0];
-    const targetL1Name = selectedPath?.level1 || activeL1.name;
-    const targetL1 = level1.find((item) => item.name === targetL1Name) || activeL1;
+    const activeL1 = level1.find((item) => item.isCurrent) ?? null;
+    const targetL1Name = selectedPath?.level1 || activeL1?.name || level1[0].name;
+    const targetL1 = level1.find((item) => item.name === targetL1Name) || activeL1 || level1[0];
 
     // Level 2: Antardashas = (L1_years * sub_years) / 96
     const level2: DashaLevelItem[] = [];
@@ -2523,9 +2523,9 @@ export class Sthira5LevelEngine {
       l2CurrentMs += durMs;
     }
 
-    const activeL2 = level2.find((item) => item.isCurrent) || level2[0];
-    const targetL2Name = selectedPath?.level2 || activeL2.name;
-    const targetL2 = level2.find((item) => item.name === targetL2Name) || activeL2;
+    const activeL2 = level2.find((item) => item.isCurrent) ?? null;
+    const targetL2Name = selectedPath?.level2 || activeL2?.name || level2[0].name;
+    const targetL2 = level2.find((item) => item.name === targetL2Name) || activeL2 || level2[0];
 
     // Level 3: Pratyantardashas = (L2_years * sub_years) / 96
     const level3: DashaLevelItem[] = [];
@@ -2566,9 +2566,9 @@ export class Sthira5LevelEngine {
       l3CurrentMs += durMs;
     }
 
-    const activeL3 = level3.find((item) => item.isCurrent) || level3[0];
-    const targetL3Name = selectedPath?.level3 || activeL3.name;
-    const targetL3 = level3.find((item) => item.name === targetL3Name) || activeL3;
+    const activeL3 = level3.find((item) => item.isCurrent) ?? null;
+    const targetL3Name = selectedPath?.level3 || activeL3?.name || level3[0].name;
+    const targetL3 = level3.find((item) => item.name === targetL3Name) || activeL3 || level3[0];
 
     // Level 4: Sookshma = (L3_years * sub_years) / 96
     const level4: DashaLevelItem[] = [];
@@ -2609,9 +2609,9 @@ export class Sthira5LevelEngine {
       l4CurrentMs += durMs;
     }
 
-    const activeL4 = level4.find((item) => item.isCurrent) || level4[0];
-    const targetL4Name = selectedPath?.level4 || activeL4.name;
-    const targetL4 = level4.find((item) => item.name === targetL4Name) || activeL4;
+    const activeL4 = level4.find((item) => item.isCurrent) ?? null;
+    const targetL4Name = selectedPath?.level4 || activeL4?.name || level4[0].name;
+    const targetL4 = level4.find((item) => item.name === targetL4Name) || activeL4 || level4[0];
 
     // Level 5: Prana = (L4_years * sub_years) / 96
     const level5: DashaLevelItem[] = [];
@@ -2652,7 +2652,7 @@ export class Sthira5LevelEngine {
       l5CurrentMs += durMs;
     }
 
-    const activeL5 = level5.find((item) => item.isCurrent) || level5[0];
+    const activeL5 = level5.find((item) => item.isCurrent) ?? null;
 
     return {
       systemName: "Sthira",
@@ -2749,9 +2749,9 @@ export class Mandooka5LevelEngine {
       currentMs += durMs;
     }
 
-    const activeL1 = level1.find((item) => item.isCurrent) || level1[0];
-    const targetL1Name = selectedPath?.level1 || activeL1.name;
-    const targetL1 = level1.find((item) => item.name === targetL1Name) || activeL1;
+    const activeL1 = level1.find((item) => item.isCurrent) ?? null;
+    const targetL1Name = selectedPath?.level1 || activeL1?.name || level1[0].name;
+    const targetL1 = level1.find((item) => item.name === targetL1Name) || activeL1 || level1[0];
 
     // Level 2: Antardashas = (L1_years * sub_years) / 96
     const level2: DashaLevelItem[] = [];
@@ -2791,9 +2791,9 @@ export class Mandooka5LevelEngine {
       l2CurrentMs += durMs;
     }
 
-    const activeL2 = level2.find((item) => item.isCurrent) || level2[0];
-    const targetL2Name = selectedPath?.level2 || activeL2.name;
-    const targetL2 = level2.find((item) => item.name === targetL2Name) || activeL2;
+    const activeL2 = level2.find((item) => item.isCurrent) ?? null;
+    const targetL2Name = selectedPath?.level2 || activeL2?.name || level2[0].name;
+    const targetL2 = level2.find((item) => item.name === targetL2Name) || activeL2 || level2[0];
 
     // Level 3: Pratyantardashas = (L2_years * sub_years) / 96
     const level3: DashaLevelItem[] = [];
@@ -2834,9 +2834,9 @@ export class Mandooka5LevelEngine {
       l3CurrentMs += durMs;
     }
 
-    const activeL3 = level3.find((item) => item.isCurrent) || level3[0];
-    const targetL3Name = selectedPath?.level3 || activeL3.name;
-    const targetL3 = level3.find((item) => item.name === targetL3Name) || activeL3;
+    const activeL3 = level3.find((item) => item.isCurrent) ?? null;
+    const targetL3Name = selectedPath?.level3 || activeL3?.name || level3[0].name;
+    const targetL3 = level3.find((item) => item.name === targetL3Name) || activeL3 || level3[0];
 
     // Level 4: Sookshma = (L3_years * sub_years) / 96
     const level4: DashaLevelItem[] = [];
@@ -2877,9 +2877,9 @@ export class Mandooka5LevelEngine {
       l4CurrentMs += durMs;
     }
 
-    const activeL4 = level4.find((item) => item.isCurrent) || level4[0];
-    const targetL4Name = selectedPath?.level4 || activeL4.name;
-    const targetL4 = level4.find((item) => item.name === targetL4Name) || activeL4;
+    const activeL4 = level4.find((item) => item.isCurrent) ?? null;
+    const targetL4Name = selectedPath?.level4 || activeL4?.name || level4[0].name;
+    const targetL4 = level4.find((item) => item.name === targetL4Name) || activeL4 || level4[0];
 
     // Level 5: Prana = (L4_years * sub_years) / 96
     const level5: DashaLevelItem[] = [];
@@ -2920,7 +2920,7 @@ export class Mandooka5LevelEngine {
       l5CurrentMs += durMs;
     }
 
-    const activeL5 = level5.find((item) => item.isCurrent) || level5[0];
+    const activeL5 = level5.find((item) => item.isCurrent) ?? null;
 
     return {
       systemName: "Mandooka",

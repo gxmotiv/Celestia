@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'">
+  <meta name="theme-color" content="#0b1220">
+  <title>Celestia Offline</title>
+  <style>
+    :root { color-scheme: dark; --bg:#09111e; --panel:#111d2d; --panel2:#162438; --line:#2a3b52; --ink:#edf2f8; --muted:#a7b5c8; --gold:#f0bd67; --blue:#8cc8ff; --red:#ff9d9d; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:radial-gradient(ellipse at 50% -10%,#24344b 0%,var(--bg) 48%); color:var(--ink); font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+    .wrap { width:min(100% - 28px,900px); margin:0 auto; padding:22px 0 44px; }
+    header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; }
+    .brand { font-family:Georgia,serif; font-size:28px; letter-spacing:.08em; color:#f5d9a5; }
+    .state { border:1px solid #46634f; border-radius:999px; padding:5px 11px; color:#a9e0b7; font-size:12px; white-space:nowrap; }
+    h1 { font:25px/1.2 Georgia,serif; margin:8px 0; }
+    h2 { font:20px/1.25 Georgia,serif; margin:0 0 12px; color:#f5d9a5; }
+    h3 { font-size:14px; margin:0 0 10px; color:var(--blue); letter-spacing:.03em; }
+    p { color:var(--muted); margin:7px 0 14px; }
+    .panel { background:linear-gradient(145deg,rgba(20,34,52,.97),rgba(13,24,38,.97)); border:1px solid var(--line); border-radius:16px; padding:17px; margin:14px 0; box-shadow:0 12px 36px rgba(0,0,0,.18); }
+    .notice { border-left:3px solid var(--gold); padding:10px 12px; background:#2a251d; border-radius:8px; color:#f0d7ad; font-size:13px; margin:12px 0; }
+    .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+    .field { min-width:0; display:flex; flex-direction:column; gap:5px; }
+    .field.full { grid-column:1/-1; }
+    label { color:#c4d0df; font-size:12px; font-weight:650; }
+    input,select { width:100%; min-height:43px; padding:10px 11px; border-radius:9px; border:1px solid #3a4d65; background:#091321; color:var(--ink); font:inherit; }
+    input:focus,select:focus { outline:2px solid rgba(240,189,103,.45); border-color:var(--gold); }
+    input:disabled { opacity:.45; }
+    .hint { color:#8fa1b8; font-size:11px; line-height:1.4; }
+    .check { display:flex; align-items:center; gap:9px; min-height:43px; }
+    .check input { width:18px; min-height:18px; accent-color:var(--gold); }
+    .check label { font-size:13px; }
+    .actions { display:flex; flex-wrap:wrap; gap:9px; margin-top:15px; }
+    button,.linkbtn { border:1px solid #8b6b3e; border-radius:9px; padding:10px 14px; background:linear-gradient(120deg,#f1c678,#d99b49); color:#101a28; font-weight:750; font-size:13px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; min-height:42px; }
+    button.secondary,.linkbtn.secondary { background:#1a2a3e; color:#dce7f4; border-color:#40536c; }
+    button.danger { background:#392029; color:#ffd6d6; border-color:#74404b; }
+    button:disabled { opacity:.45; cursor:not-allowed; }
+    .small { font-size:12px; color:var(--muted); }
+    .status { color:#b9d9f5; font-size:13px; min-height:20px; margin-top:10px; }
+    #results[hidden] { display:none; }
+    .cards { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+    .metric { border:1px solid var(--line); border-radius:12px; padding:12px; background:#0b1726; min-width:0; }
+    .metric span { display:block; color:var(--muted); font-size:11px; }
+    .metric strong { display:block; font:19px/1.3 Georgia,serif; color:#f4d7a1; overflow-wrap:anywhere; }
+    .metric em { display:block; font-size:11px; color:#8fa1b8; font-style:normal; margin-top:3px; }
+    .tablewrap { overflow-x:auto; }
+    table { border-collapse:collapse; width:100%; min-width:460px; font-size:12px; }
+    th,td { padding:8px 9px; border-bottom:1px solid #26384e; text-align:left; white-space:nowrap; }
+    th { color:#9fcfff; font-weight:700; }
+    td { color:#dce5f0; }
+    .pillars { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+    .pillar { border:1px solid #3a4a60; background:#0a1727; border-radius:11px; padding:11px 7px; text-align:center; }
+    .pillar span { display:block; color:var(--muted); font-size:10px; }
+    .pillar strong { display:block; font-size:17px; color:#f3d5a0; }
+    .section { margin-top:22px; }
+    .foot { text-align:center; color:#8092a8; font-size:11px; padding:10px 16px; }
+    @media (max-width:560px) { .grid { grid-template-columns:1fr; } .field.full { grid-column:auto; } .pillars { grid-template-columns:repeat(2,minmax(0,1fr)); } .brand { font-size:23px; } .panel { padding:14px; } }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <div class="brand">CELESTIA</div>
+      <div class="state">● OFFLINE · ON-DEVICE</div>
+    </header>
+
+    <section>
+      <h1>Your local astrology workspace</h1>
+      <p>Birth-chart calculations run on this phone using Celestia's existing calculation modules. Your saved offline profiles stay in this app's local storage.</p>
+      <div class="notice">
+        <strong>Timezone accuracy:</strong> Enter the UTC offset that applied at the birth place and date. This offline form does not guess historical daylight-saving or local-time rules from a city name. The offset will be marked as manually supplied.
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Birth details</h2>
+      <form id="birth-form">
+        <div class="grid">
+          <div class="field full">
+            <label for="fullName">Full name</label>
+            <input id="fullName" name="fullName" type="text" autocomplete="name" placeholder="Name used for numerology">
+          </div>
+          <div class="field">
+            <label for="birthDate">Birth date</label>
+            <input id="birthDate" name="birthDate" type="date" required>
+          </div>
+          <div class="field">
+            <label for="birthTime">Local birth time</label>
+            <input id="birthTime" name="birthTime" type="time" value="12:00" required>
+          </div>
+          <div class="field full">
+            <div class="check">
+              <input id="isTimeUnknown" name="isTimeUnknown" type="checkbox">
+              <label for="isTimeUnknown">Birth time is unknown (12:00 will be used only as a placeholder)</label>
+            </div>
+          </div>
+          <div class="field">
+            <label for="cityName">Birth city</label>
+            <input id="cityName" name="cityName" type="text" placeholder="City (optional)">
+          </div>
+          <div class="field">
+            <label for="country">Country</label>
+            <input id="country" name="country" type="text" placeholder="Country (optional)">
+          </div>
+          <div class="field">
+            <label for="latitude">Latitude (north +)</label>
+            <input id="latitude" name="latitude" type="number" min="-90" max="90" step="0.000001" required placeholder="e.g. 28.6139">
+          </div>
+          <div class="field">
+            <label for="longitude">Longitude (east +)</label>
+            <input id="longitude" name="longitude" type="number" min="-180" max="180" step="0.000001" required placeholder="e.g. 77.2090">
+          </div>
+          <div class="field">
+            <label for="timezoneOffsetHours">UTC offset at birth (hours)</label>
+            <input id="timezoneOffsetHours" name="timezoneOffsetHours" type="number" min="-14" max="14" step="0.000001" required placeholder="e.g. 5.5">
+            <div class="hint">East of UTC is positive. India Standard Time is +5.5. Verify historical offsets independently.</div>
+          </div>
+          <div class="field">
+            <label for="houseSystem">Western house system</label>
+            <select id="houseSystem" name="houseSystem">
+              <option value="Placidus">Placidus</option>
+              <option value="WholeSign">Whole Sign</option>
+              <option value="Equal">Equal House</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="baziTimeBasis">BaZi clock basis</label>
+            <select id="baziTimeBasis" name="baziTimeBasis">
+              <option value="local-mean-solar">Local mean solar time</option>
+              <option value="local-apparent-solar">Local apparent solar time</option>
+              <option value="civil-clock">Civil clock time</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="baziDayBoundaryPolicy">BaZi day boundary</label>
+            <select id="baziDayBoundaryPolicy" name="baziDayBoundaryPolicy">
+              <option value="pure-zi">Pure Zi (midnight)</option>
+              <option value="early-late-zi">Early/Late Zi</option>
+            </select>
+          </div>
+        </div>
+        <div class="actions">
+          <button id="calculate-button" type="submit">Calculate on this device</button>
+          <button id="save-button" class="secondary" type="button" disabled>Save profile locally</button>
+          <button class="secondary" type="button" onclick="window.print()">Print results</button>
+        </div>
+        <div id="form-status" class="status" role="status" aria-live="polite"></div>
+      </form>
+    </section>
+
+    <section class="panel">
+      <h2>Saved on this device</h2>
+      <div class="grid">
+        <div class="field">
+          <label for="saved-profiles">Choose a saved profile</label>
+          <select id="saved-profiles">
+            <option value="">No saved profiles yet</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Profile storage</label>
+          <div class="small">Stored locally in this Android app. It is not uploaded or synced. Clearing app data or uninstalling the app can erase it.</div>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="load-profile" class="secondary" type="button">Load selected</button>
+        <button id="delete-profile" class="danger" type="button">Delete selected</button>
+        <button id="clear-profiles" class="danger" type="button">Delete all offline profiles</button>
+      </div>
+      <div id="storage-status" class="status" role="status" aria-live="polite"></div>
+    </section>
+
+    <section id="results" class="panel" hidden aria-live="polite">
+      <h2>Calculation results</h2>
+      <div id="birth-context" class="notice"></div>
+
+      <div class="section">
+        <h3>WESTERN · TROPICAL</h3>
+        <div id="western-summary" class="cards"></div>
+        <div class="tablewrap" style="margin-top:12px">
+          <table><thead><tr><th>Planet / point</th><th>Position</th><th>House</th><th>Motion</th></tr></thead><tbody id="western-planets"></tbody></table>
+        </div>
+      </div>
+
+      <div class="section">
+        <h3>VEDIC · SIDEREAL / LAHIRI-STYLE</h3>
+        <div id="vedic-summary" class="cards"></div>
+        <div class="tablewrap" style="margin-top:12px">
+          <table><thead><tr><th>Graha</th><th>Rashi position</th><th>Nakshatra</th><th>Pada</th><th>House</th><th>Dignity</th></tr></thead><tbody id="vedic-planets"></tbody></table>
+        </div>
+        <h3 style="margin-top:16px">VIMSHOTTARI MAHADASHA</h3>
+        <div class="tablewrap">
+          <table><thead><tr><th>Planet</th><th>Start</th><th>End</th><th>Status</th></tr></thead><tbody id="dasha-periods"></tbody></table>
+        </div>
+      </div>
+
+      <div class="section">
+        <h3>NUMEROLOGY</h3>
+        <div id="numerology-summary" class="cards"></div>
+      </div>
+
+      <div class="section">
+        <h3>CHINESE BAZI · FOUR PILLARS</h3>
+        <div id="bazi-pillars" class="pillars"></div>
+        <div id="bazi-summary" class="cards" style="margin-top:10px"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Online features</h2>
+      <p>AI readings, live research, external city/time-zone lookup, cloud features and online-only pages need an internet connection. This local screen currently covers the core Western, Vedic, numerology and BaZi natal calculation pipeline.</p>
+      <div class="actions">
+        <a class="linkbtn" href="https://celestia.gagandeep-hwr.workers.dev/">Open Celestia online</a>
+      </div>
+    </section>
+
+    <div class="foot">Celestia Android · Offline calculation mode · No analytics or network calls from this offline screen</div>
+  </main>
+
+  <script src="./celestia-offline.js"></script>
+  <script>
+    (function () {
+      "use strict";
+      const STORAGE_KEY = "celestia_android_offline_profiles_v1";
+      const byId = (id) => document.getElementById(id);
+      const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (ch) => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+      })[ch]);
+      let latestInput = null;
+      let latestResult = null;
+
+      const form = byId("birth-form");
+      const timeInput = byId("birthTime");
+      const unknownInput = byId("isTimeUnknown");
+      const savedSelect = byId("saved-profiles");
+      const formStatus = byId("form-status");
+
+      function readProfiles() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          const value = raw ? JSON.parse(raw) : [];
+          return Array.isArray(value) ? value.filter((item) => item && item.id && item.input) : [];
+        } catch (error) {
+          byId("storage-status").textContent = "Local profile storage is unavailable in this WebView.";
+          return [];
+        }
+      }
+
+      function writeProfiles(profiles) {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(profiles));
+          return true;
+        } catch (error) {
+          byId("storage-status").textContent = "Could not save: device storage may be full or unavailable.";
+          return false;
+        }
+      }
+
+      function refreshProfiles() {
+        const profiles = readProfiles();
+        savedSelect.innerHTML = profiles.length
+          ? profiles.map((item) => '<option value="' + esc(item.id) + '">' + esc(item.label) + '</option>').join("")
+          : '<option value="">No saved profiles yet</option>';
+        return profiles;
+      }
+
+      function readInput() {
+        const data = new FormData(form);
+        return {
+          fullName: String(data.get("fullName") || ""),
+          birthDate: String(data.get("birthDate") || ""),
+          birthTime: String(data.get("birthTime") || ""),
+          isTimeUnknown: unknownInput.checked,
+          cityName: String(data.get("cityName") || ""),
+          country: String(data.get("country") || ""),
+          latitude: Number(data.get("latitude")),
+          longitude: Number(data.get("longitude")),
+          timezoneOffsetHours: Number(data.get("timezoneOffsetHours")),
+          houseSystem: String(data.get("houseSystem")),
+          baziTimeBasis: String(data.get("baziTimeBasis")),
+          baziDayBoundaryPolicy: String(data.get("baziDayBoundaryPolicy"))
+        };
+      }
+
+      function setForm(input) {
+        Object.keys(input).forEach((key) => {
+          const element = form.elements.namedItem(key);
+          if (!element) return;
+          if (key === "isTimeUnknown") element.checked = Boolean(input[key]);
+          else element.value = String(input[key] ?? "");
+        });
+        timeInput.disabled = unknownInput.checked;
+        timeInput.required = !unknownInput.checked;
+      }
+
+      function metric(label, value, detail) {
+        return '<div class="metric"><span>' + esc(label) + '</span><strong>' + esc(value) + '</strong>' +
+          (detail ? '<em>' + esc(detail) + '</em>' : '') + '</div>';
+      }
+
+      function render(result) {
+        const western = result.westernData;
+        const vedic = result.vedicData;
+        const numerology = result.numerologyData;
+        const bazi = result.baziData;
+        const sun = western.planets.find((p) => p.name === "Sun");
+        const moon = western.planets.find((p) => p.name === "Moon");
+        const vedicMoon = vedic.planets.find((p) => p.name === "Moon");
+
+        byId("birth-context").textContent =
+          "UTC instant: " + result.birthTimeContext.utcInstant +
+          " · Manual UTC offset: " + result.birthTimeContext.offsetHours +
+          " hours. " + result.birthTimeContext.warning;
+
+        byId("western-summary").innerHTML = [
+          metric("Western Sun", sun?.signDegreeFormatted || "Unavailable", sun?.isRetrograde ? "Retrograde" : "Direct"),
+          metric("Western Moon", moon?.signDegreeFormatted || "Unavailable", moon ? "House " + moon.house : ""),
+          metric("Ascendant", western.ascendant?.signDegreeFormatted || "Unavailable", "House system: " + western.houseSystem),
+          metric("Midheaven", western.midheaven?.signDegreeFormatted || "Unavailable", "Tropical longitude")
+        ].join("");
+
+        byId("western-planets").innerHTML = western.planets.map((p) =>
+          "<tr><td>" + esc(p.name) + "</td><td>" + esc(p.signDegreeFormatted) +
+          "</td><td>" + esc(p.house) + "</td><td>" + (p.isRetrograde ? "Retrograde" : "Direct") + "</td></tr>"
+        ).join("");
+
+        byId("vedic-summary").innerHTML = [
+          metric("Lagna", vedic.lagna?.rasiDegreeFormatted || "Unavailable", "Sidereal ascendant"),
+          metric("Moon Rashi", vedic.moonSignRasi || "Unavailable", vedic.birthNakshatra || ""),
+          metric("Birth Nakshatra", vedic.birthNakshatra || "Unavailable", "Pada " + vedic.birthPada),
+          metric("Lahiri-style ayanamsa", vedic.ayanamsaFormatted || "Unavailable", "Approximation; see project methodology")
+        ].join("");
+
+        byId("vedic-planets").innerHTML = vedic.planets.map((p) =>
+          "<tr><td>" + esc(p.name) + "</td><td>" + esc(p.rasiDegreeFormatted) +
+          "</td><td>" + esc(p.nakshatraName) + "</td><td>" + esc(p.pada) +
+          "</td><td>" + esc(p.house) + "</td><td>" + esc(p.dignity) + "</td></tr>"
+        ).join("");
+
+        byId("dasha-periods").innerHTML = vedic.vimshottariDashas.slice(0, 9).map((p) =>
+          "<tr><td>" + esc(p.planet) + "</td><td>" + esc(p.startDate) +
+          "</td><td>" + esc(p.endDate) + "</td><td>" + (p.isCurrent ? "Current" : "—") + "</td></tr>"
+        ).join("");
+
+        byId("numerology-summary").innerHTML = [
+          metric("Life Path", numerology.lifePathNumber, numerology.lifePathRaw),
+          metric("Expression", numerology.expressionNumber, numerology.detailedInterpretations.expression?.archetype || ""),
+          metric("Soul Urge", numerology.soulUrgeNumber, numerology.detailedInterpretations.soulUrge?.archetype || ""),
+          metric("Personality", numerology.personalityNumber, numerology.detailedInterpretations.personality?.archetype || ""),
+          metric("Birthday", numerology.birthdayNumber, "Birth-day number"),
+          metric("Personal Year", numerology.personalYearNumber, "Year " + numerology.currentYear)
+        ].join("");
+
+        byId("bazi-pillars").innerHTML = [
+          ["Year", bazi.yearPillar], ["Month", bazi.monthPillar],
+          ["Day", bazi.dayPillar], ["Hour", bazi.hourPillar]
+        ].map(([label, pillar]) =>
+          '<div class="pillar"><span>' + esc(label) + '</span><strong>' + esc(pillar?.combinedName || "—") +
+          '</strong><span>' + esc((pillar?.stem?.name || "") + " · " + (pillar?.branch?.animal || "")) + '</span></div>'
+        ).join("");
+
+        byId("bazi-summary").innerHTML = [
+          metric("Day Master", bazi.dayMaster?.stem?.name || "Unavailable", bazi.dayMaster?.strength || ""),
+          metric("Zodiac animal", bazi.zodiacAnimal || "Unavailable", "Year pillar"),
+          metric("Favorable elements", (bazi.dayMaster?.favorableElements || []).join(", ") || "Not available", "Traditional BaZi framework"),
+          metric("Element balance", Object.entries(bazi.elementsBalance || {}).map(([k,v]) => k + " " + v + "%").join(" · "), "Calculated distribution")
+        ].join("");
+
+        byId("results").hidden = false;
+        byId("save-button").disabled = false;
+      }
+
+      unknownInput.addEventListener("change", () => {
+        timeInput.disabled = unknownInput.checked;
+        timeInput.required = !unknownInput.checked;
+        if (unknownInput.checked) timeInput.value = "12:00";
+      });
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        if (!form.reportValidity()) return;
+        if (!window.CelestiaOffline || typeof window.CelestiaOffline.calculate !== "function") {
+          formStatus.textContent = "Offline calculation bundle is missing. Rebuild the Android APK from GitHub Actions.";
+          return;
+        }
+        try {
+          const input = readInput();
+          formStatus.textContent = "Calculating locally on this device…";
+          const result = window.CelestiaOffline.calculate(input);
+          latestInput = input;
+          latestResult = result;
+          render(result);
+          formStatus.textContent = "Calculation completed locally. No internet request was made.";
+          byId("results").scrollIntoView({ behavior: "smooth", block: "start" });
+        } catch (error) {
+          formStatus.textContent = error instanceof Error ? error.message : "Calculation failed. Check the birth details.";
+          byId("results").hidden = true;
+          byId("save-button").disabled = true;
+        }
+      });
+
+      byId("save-button").addEventListener("click", () => {
+        if (!latestInput) return;
+        const profiles = readProfiles();
+        const id = String(Date.now()) + "-" + Math.random().toString(36).slice(2, 8);
+        const label = (latestInput.fullName.trim() || "Unnamed") + " · " + latestInput.birthDate;
+        profiles.unshift({ id, label, input: latestInput });
+        if (writeProfiles(profiles)) {
+          refreshProfiles();
+          savedSelect.value = id;
+          byId("storage-status").textContent = "Saved on this device only.";
+        }
+      });
+
+      byId("load-profile").addEventListener("click", () => {
+        const profile = refreshProfiles().find((item) => item.id === savedSelect.value);
+        if (!profile) {
+          byId("storage-status").textContent = "Choose a saved profile first.";
+          return;
+        }
+        setForm(profile.input);
+        byId("storage-status").textContent = "Profile loaded. Select Calculate to regenerate its charts.";
+        formStatus.textContent = "";
+      });
+
+      byId("delete-profile").addEventListener("click", () => {
+        const profiles = refreshProfiles();
+        const next = profiles.filter((item) => item.id !== savedSelect.value);
+        if (next.length === profiles.length) {
+          byId("storage-status").textContent = "Choose a saved profile first.";
+          return;
+        }
+        writeProfiles(next);
+        refreshProfiles();
+        byId("storage-status").textContent = "Selected offline profile deleted.";
+      });
+
+      byId("clear-profiles").addEventListener("click", () => {
+        if (!window.confirm("Delete all locally saved Celestia offline profiles from this device?")) return;
+        writeProfiles([]);
+        refreshProfiles();
+        byId("storage-status").textContent = "All offline profiles deleted from this app's local storage.";
+      });
+
+      refreshProfiles();
+      if (!window.CelestiaOffline) {
+        formStatus.textContent = "Offline calculation bundle not found. Please install the latest Android APK build.";
+      }
+    })();
+  </script>
+</body>
+</html>

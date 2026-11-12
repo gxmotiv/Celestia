@@ -45,6 +45,7 @@ interface VedicChartProps {
   vedicData: VedicChartData;
   birthDate?: string;
   birthTime?: string;
+  birthUtcInstant?: string;
   westernData?: WesternChartData;
   numerologyData?: NumerologyProfile;
   baziData?: BaZiProfile;
@@ -57,6 +58,7 @@ export function VedicChart({
   vedicData,
   birthDate = "1990-01-01",
   birthTime = "12:00",
+  birthUtcInstant,
   westernData,
   numerologyData,
   baziData,
@@ -436,6 +438,9 @@ export function VedicChart({
                 ))}
               </select>
             </div>
+            <p className="text-[10px] leading-relaxed text-slate-500 sm:max-w-[220px]">
+              This selector contains the 16 classical Shodashavarga charts. It is not every possible numbered division from D1 to D60.
+            </p>
           </div>
 
           {/* Top Banner: Lahiri Ayanamsa & Core Vedic Pillars (Dynamically changes with D1 vs D9) */}
@@ -1083,6 +1088,7 @@ export function VedicChart({
             vedicData={vedicData}
             birthDate={birthDate}
             birthTime={birthTime}
+            birthUtcInstant={birthUtcInstant}
           />
         )}
 

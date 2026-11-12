@@ -170,12 +170,18 @@ export function AIReadingView({
       });
 
       const data = await res.json();
-      if (data.success && data.reading) {
+      if (!res.ok || !data.success) {
+        throw new Error(typeof data.error === "string" ? data.error : "The AI gateway could not complete this reading.");
+      }
+      if (data.reading) {
         setReadingText(data.reading);
         setIsAiGenerated(data.isAiGenerated);
       }
     } catch (err) {
-      console.error("Failed to generate AI reading:", err);
+      const message = err instanceof Error ? err.message : "Unknown error.";
+      console.error("Failed to generate AI reading:", err instanceof Error ? err.name : "unknown_error");
+      setReadingText("### AI request not completed\n" + message + "\n\nYour calculated chart data has not been changed.");
+      setIsAiGenerated(false);
     } finally {
       setIsLoading(false);
     }
@@ -296,7 +302,7 @@ export function AIReadingView({
               <div>
                 <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-amber-400" />
-                  AI Interpretation Engine (Gemini 3.8 Flash Synthesis)
+                  AI Interpretation Engine (NaraRouter Dual-Model Gateway)
                 </h3>
                 <p className="text-xs text-slate-400">
                   Select an interpretive focus area or interrogate the multi-system matrix directly.
@@ -398,7 +404,7 @@ export function AIReadingView({
         {/* Primary Generate Trigger */}
         <div className="flex items-center justify-between pt-2">
           <span className="text-xs text-slate-400">
-            Engineered with Gemini 3.8 Flash & Grounded Mathematical Ephemeris
+            Grounded in Celestia chart calculations · NaraRouter AI
           </span>
 
           <button
@@ -542,7 +548,7 @@ export function AIReadingView({
           <div className="pt-6 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-2">
             <div className="flex items-center gap-2">
               <span className="font-mono text-amber-400/90">
-                {isAiGenerated ? "Generated via Gemini 3.8 Intelligence" : "Calculated via Astronomical Synthesizer"}
+                {isAiGenerated ? "Generated via AI Gateway" : "Calculated via Astronomical Synthesizer"}
               </span>
               <span aria-hidden="true">·</span>
               <span>{readingLength === "detailed" ? "Comprehensive Dossier" : "Executive Brief"}</span>

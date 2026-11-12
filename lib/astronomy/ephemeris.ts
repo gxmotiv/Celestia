@@ -1,8 +1,10 @@
 /**
- * High-Precision Ephemeris and Astrological Calculations Engine
- * Computes geocentric ecliptic coordinates for the Sun, Moon, 8 planets, Lunar Nodes,
- * Midheaven (MC), Ascendant (ASC), and 12 House Cusps (Placidus, Equal, Whole Sign).
- * Fully client-side, self-contained, and compliant with astronomical standards (VSOP/Meeus).
+ * Natal-chart calculation and formatting layer.
+ *
+ * Planetary positions are supplied by the astronomy-engine-backed compatibility
+ * facade in ./swissEphemeris. The legacy facade name does not mean native Swiss
+ * Ephemeris/libswe is installed or called. Display rounding is not a guarantee of
+ * physical ephemeris accuracy; consult the project accuracy audit for limitations.
  */
 
 import { swissEphemeris } from "./swissEphemeris";
@@ -63,8 +65,10 @@ export interface WesternChartData {
   descendant: number;
   imumCoeli: number;
   julianDay: number;
-  siderealTime: number; // RAMC in degrees
+  siderealTime: number; // local sidereal time / RAMC in degrees
   obliquity: number;
+  birthLatitude?: number;
+  birthLongitude?: number; // east-positive degrees
   houseSystem: "Placidus" | "Equal" | "WholeSign";
   asteroids?: AsteroidPositions;
   additionalPoints?: AdditionalPoints;
@@ -124,6 +128,42 @@ export function normalizeDegrees(deg: number): number {
   let d = deg % 360.0;
   if (d < 0) d += 360.0;
   return d;
+}
+
+/**
+ * Determines whether a moving longitude is closing on an aspect to a fixed
+ * reference longitude. relativeSpeed is longitude1 minus longitude2 in degrees/day.
+ * Returns false for a stationary/unknown speed and at exactness, where direction
+ * cannot be inferred from a single instant.
+ */
+export function isAngularAspectApplying(
+  longitude1: number,
+  longitude2: number,
+  aspectAngle: number,
+  relativeSpeed: number
+): boolean {
+  if (![longitude1, longitude2, aspectAngle, relativeSpeed].every(Number.isFinite) ||
+      Math.abs(relativeSpeed) < 1e-12) {
+    return false;
+  }
+
+  const separation = normalizeDegrees(longitude1 - longitude2);
+  const targets = aspectAngle === 0 || aspectAngle === 180
+    ? [normalizeDegrees(aspectAngle)]
+    : [normalizeDegrees(aspectAngle), normalizeDegrees(360 - aspectAngle)];
+
+  let nearestSignedError = 0;
+  let nearestMagnitude = Number.POSITIVE_INFINITY;
+  for (const target of targets) {
+    const signedError = normalizeDegrees(separation - target + 180) - 180;
+    if (Math.abs(signedError) < nearestMagnitude) {
+      nearestMagnitude = Math.abs(signedError);
+      nearestSignedError = signedError;
+    }
+  }
+
+  if (nearestMagnitude < 1e-9) return false;
+  return nearestSignedError * relativeSpeed < 0;
 }
 
 export function formatDegreeMinute(deg: number): string {
@@ -594,9 +634,9 @@ export function calculateAspects(planets: PlanetPosition[]): AspectData[] {
         const orbDiff = Math.abs(diff - asp.angle);
 
         if (orbDiff <= maxOrb) {
-          // Applying vs separating check based on relative speeds
-          const relativeSpeed = (p1.speed || 1) - (p2.speed || 0.5);
-          const isApplying = relativeSpeed > 0 ? diff < asp.angle : diff > asp.angle;
+          // Compare the signed angular error to the nearest aspect branch.
+          const relativeSpeed = (p1.speed ?? 0) - (p2.speed ?? 0);
+          const isApplying = isAngularAspectApplying(p1.longitude, p2.longitude, asp.angle, relativeSpeed);
 
           aspects.push({
             planet1: p1.name,
@@ -634,21 +674,22 @@ export function calculateWesternChart(
   houseSystem: "Placidus" | "Equal" | "WholeSign" = "Placidus",
   second: number = 0
 ): WesternChartData {
-  // High-precision Swiss Ephemeris calculation (0.001° accuracy)
-  // Unambiguously normalizes local birth time and timezone offset to UTC and computes Julian Day
+  // Convert the supplied local clock and fixed UTC offset to a UTC Julian Day.
+  // This lower-level API cannot infer historical IANA timezone transitions.
   const jd = swissEphemeris.calculateJulianDay(year, month, day, hour, minute, second, timezoneOffsetHours);
   const sysCode = houseSystem === "WholeSign" ? "W" : houseSystem === "Equal" ? "E" : "P";
-  const swissHouses = swissEphemeris.calculateHouses(jd, latitude, longitude, sysCode);
-  const rawCusps = swissHouses.houseCusps;
-  const asc = swissHouses.ascendant;
-  const mc = swissHouses.midheaven;
+  const houseResult = swissEphemeris.calculateHouses(jd, latitude, longitude, sysCode);
+  const rawCusps = houseResult.houseCusps;
+  const asc = houseResult.ascendant;
+  const mc = houseResult.midheaven;
 
   const T = (jd - 2451545.0) / 36525.0;
   const gmst = calculateGMST(jd);
   const ramc = normalizeDegrees(gmst + longitude);
   const obliquity = calculateObliquity(T);
 
-  // Compute all planets with Swiss Ephemeris
+  // Calculate positions through the astronomy-engine-backed compatibility facade.
+  // Default node convention is mean Rahu with Ketu exactly opposite that same node.
   const sp = swissEphemeris.calculateAllPlanets(jd, false);
 
   const planetsList: PlanetPosition[] = [];
@@ -663,10 +704,9 @@ export function calculateWesternChart(
   planetsList.push(formatPoint("Neptune", "Neptune", sp.neptune.longitude, rawCusps, sp.neptune.speed, sp.neptune.latitude));
   planetsList.push(formatPoint("Pluto", "Pluto", sp.pluto.longitude, rawCusps, sp.pluto.speed, sp.pluto.latitude));
 
-  // Lunar Nodes
+  // Lunar nodes are supplied as a consistent antipodal pair by the shared engine.
   planetsList.push(formatPoint("NorthNode", "NorthNode", sp.rahu.longitude, rawCusps, sp.rahu.speed));
-  const southNodeLon = normalizeDegrees(sp.rahu.longitude + 180.0);
-  planetsList.push(formatPoint("SouthNode", "SouthNode", southNodeLon, rawCusps, sp.rahu.speed));
+  planetsList.push(formatPoint("SouthNode", "SouthNode", sp.ketu.longitude, rawCusps, sp.ketu.speed));
 
   // Chiron calculation (~50.7-year orbit between Saturn and Uranus)
   const chironT = (jd - 2451545.0) / 36525.0;
@@ -739,7 +779,9 @@ export function calculateWesternChart(
 
   // Calculate Traditional Planetary Hours and Day Ruler
   const planetaryHoursCalc = new PlanetaryHoursCalculator();
-  const planetaryHours = planetaryHoursCalc.calculate(year, month, day, hour, minute, latitude);
+  const planetaryHours = planetaryHoursCalc.calculate(
+    year, month, day, hour, minute, latitude, longitude, timezoneOffsetHours
+  );
 
   // Calculate Ibn Ezra / Lilly Almuten Figuris (Ruler of Geniture)
   const almutenCalc = new AlmutenFigurisCalculator();
@@ -767,6 +809,8 @@ export function calculateWesternChart(
     julianDay: jd,
     siderealTime: ramc,
     obliquity,
+    birthLatitude: latitude,
+    birthLongitude: longitude,
     houseSystem,
     asteroids,
     additionalPoints,

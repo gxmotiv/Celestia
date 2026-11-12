@@ -51,7 +51,7 @@ const SYSTEM_TABS = [
   { id: "transits", label: "Transits & Bi-Wheel", icon: Zap, badge: "Timing" },
   { id: "numerology", label: "Universal Numerology", icon: Hash, badge: "6 Systems" },
   { id: "chinese", label: "Chinese BaZi", icon: Compass, badge: "Four Pillars" },
-  { id: "verification", label: "Verification Center", icon: CheckCircle2, badge: "108 Tests" },
+  { id: "verification", label: "Verification Center", icon: CheckCircle2, badge: "108 Checks" },
   { id: "aiSynthesis", label: "AI Cosmic Synthesis", icon: Sparkles, badge: "Synthesis" },
 ] as const;
 
@@ -78,6 +78,8 @@ export default function HomePage() {
   });
 
   const [activeTab, setActiveTab] = useState<SystemTabId>("western");
+  const [isStarterExample, setIsStarterExample] = useState(true);
+  const [birthFormRevision, setBirthFormRevision] = useState(0);
   const [isFormCollapsed, setIsFormCollapsed] = useState(true);
   const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
@@ -94,7 +96,21 @@ export default function HomePage() {
     if (calendarCheck.getUTCFullYear() !== year || calendarCheck.getUTCMonth() !== month - 1 || calendarCheck.getUTCDate() !== day) {
       throw new RangeError("Birth date is not a valid Gregorian calendar date.");
     }
-    const { hour, minute } = parseBirthClockTime(formData.birthTime);
+    // Unknown time is an explicit 12:00 placeholder, never an inferred birth time.
+    // Otherwise reject malformed legacy/profile values rather than silently charting noon.
+    let hour: number;
+    let minute: number;
+    if (formData.isTimeUnknown) {
+      hour = 12;
+      minute = 0;
+    } else {
+      const parsedClock = parseBirthClockTime(formData.birthTime);
+      if (parsedClock.usedFallback) {
+        throw new RangeError("Birth time is invalid or missing. Enter a valid HH:mm time or mark it as unknown.");
+      }
+      hour = parsedClock.hour;
+      minute = parsedClock.minute;
+    }
 
     let birthDateObj: Date;
     let offsetSeconds: number;
@@ -181,11 +197,21 @@ export default function HomePage() {
   }, [formData]);
 
   const handleFormSubmit = (data: BirthFormData) => {
+    if (!data.isTimeUnknown && parseBirthClockTime(data.birthTime).usedFallback) {
+      window.alert("Enter a valid birth time in HH:mm format, or mark the birth time as unknown.");
+      return;
+    }
     setFormData(data);
+    setIsStarterExample(false);
     setIsFormCollapsed(true);
   };
 
   const handleProfileSelect = (data: BirthFormData) => {
+    if (!data.isTimeUnknown && parseBirthClockTime(data.birthTime).usedFallback) {
+      window.alert("This saved profile has an invalid or missing birth time. Review it in the birth form before calculating.");
+      setIsFormCollapsed(false);
+      return;
+    }
     const mode = data.timezoneMode ?? (data.ianaTimezone ? "automatic" : "manual");
     if (mode === "automatic") {
       if (!data.ianaTimezone) {
@@ -196,7 +222,12 @@ export default function HomePage() {
       const [profileYear, profileMonth, profileDay] = data.birthDate.split("-").map(Number);
       let resolution;
       try {
-        const clock = parseBirthClockTime(data.birthTime);
+        const clock = data.isTimeUnknown
+          ? { hour: 12, minute: 0, usedFallback: true }
+          : parseBirthClockTime(data.birthTime);
+        if (clock.usedFallback && !data.isTimeUnknown) {
+          throw new RangeError("Saved birth time is invalid or missing.");
+        }
         resolution = resolveLocalDateTime({
           year: profileYear, month: profileMonth, day: profileDay,
           hour: clock.hour, minute: clock.minute,
@@ -230,7 +261,9 @@ export default function HomePage() {
       setIsFormCollapsed(false);
       return;
     }
+    setBirthFormRevision((revision) => revision + 1);
     setFormData(data);
+    setIsStarterExample(false);
   };
 
   const handleShareSummary = () => {
@@ -273,6 +306,11 @@ export default function HomePage() {
           <div className="hidden md:flex items-center gap-2 px-3.5 py-1.5 bg-slate-900/70 border border-slate-800 rounded-lg text-xs text-slate-300">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
             <strong className="font-medium text-slate-200">{formData.fullName}</strong>
+            {isStarterExample && (
+              <span className="text-[9px] font-bold tracking-wide text-amber-300 border border-amber-500/30 bg-amber-500/10 rounded px-1.5 py-0.5">
+                SAMPLE
+              </span>
+            )}
             <span className="text-slate-600">·</span>
             <span className="font-mono text-slate-400 text-[11px]">{formData.birthDate} ({formData.birthTime})</span>
             <span className="text-slate-600">·</span>
@@ -330,6 +368,11 @@ export default function HomePage() {
               <span className="text-amber-400 font-semibold flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>Natal Inception:</span>
+                {isStarterExample && (
+                  <span className="text-[9px] font-bold tracking-wide text-amber-300 border border-amber-500/30 bg-amber-500/10 rounded px-1.5 py-0.5">
+                    SAMPLE CHART
+                  </span>
+                )}
               </span>
               <strong className="text-slate-100">{formData.fullName}</strong>
               <span className="text-slate-600">·</span>
@@ -372,7 +415,7 @@ export default function HomePage() {
                 transition={{ duration: 0.25, ease: "easeInOut" }}
                 className="overflow-hidden border-t border-slate-800/80 p-5 bg-slate-950/90"
               >
-                <BirthForm initialData={formData} onSubmit={handleFormSubmit} />
+                <BirthForm key={birthFormRevision} initialData={formData} onSubmit={handleFormSubmit} />
               </motion.div>
             )}
           </AnimatePresence>
@@ -449,7 +492,8 @@ export default function HomePage() {
                 birthTime={formData.birthTime}
                 latitude={formData.latitude}
                 longitude={formData.longitude}
-                timezoneOffset={formData.timezoneOffset}
+                timezoneOffset={birthTimeContext.offsetSeconds / 3600}
+                birthUtcInstant={birthTimeContext.utcInstant}
               />
             )}
 
@@ -462,7 +506,7 @@ export default function HomePage() {
                 person1Lat={formData.latitude}
                 person1Lon={formData.longitude}
                 person1CityName={formData.cityName}
-                person1TimezoneOffset={formData.timezoneOffset}
+                person1TimezoneOffset={birthTimeContext.offsetSeconds / 3600}
                 person1UtcInstant={birthTimeContext.utcInstant}
               />
             )}
@@ -472,6 +516,7 @@ export default function HomePage() {
                 vedicData={vedicData}
                 birthDate={formData.birthDate}
                 birthTime={formData.birthTime}
+                birthUtcInstant={birthTimeContext.utcInstant}
                 westernData={westernData}
                 numerologyData={numerologyData}
                 baziData={baziData}

@@ -69,6 +69,44 @@ function normalizeDeg(deg: number): number {
 }
 
 /**
+ * Degree within the selected divisional sign. Equal-width vargas map each
+ * subdivision linearly to 0°–30°. D30 uses its traditional unequal segments.
+ */
+export function calculateDivisionalDegreeInSign(
+  siderealLon: number,
+  divisionCode: string
+): number {
+  const normalized = normalizeDeg(siderealLon);
+  const signIndex = Math.floor(normalized / 30);
+  const degreeInRasi = normalized - signIndex * 30;
+
+  if (divisionCode === "D30") {
+    const isOddSign = signIndex % 2 === 0;
+    const segments = isOddSign
+      ? [5, 5, 8, 7, 5]
+      : [5, 7, 8, 5, 5];
+    let segmentStart = 0;
+    for (const width of segments) {
+      if (degreeInRasi < segmentStart + width || segmentStart + width >= 30) {
+        return Math.min(29.999999999, Math.max(0, ((degreeInRasi - segmentStart) / width) * 30));
+      }
+      segmentStart += width;
+    }
+    return 0;
+  }
+
+  const harmonic = DIVISIONAL_CHARTS_CONFIG[divisionCode]?.harmonic ?? 1;
+  return (degreeInRasi * harmonic) % 30;
+}
+
+function formatDivisionalDegree(degree: number): string {
+  const safeDegree = Math.min(29.999999999, Math.max(0, degree));
+  const wholeDegrees = Math.floor(safeDegree);
+  const minutes = Math.floor((safeDegree - wholeDegrees) * 60);
+  return `${wholeDegrees}°${minutes.toString().padStart(2, "0")}′`;
+}
+
+/**
  * Calculates the divisional sign index (0-11) for a given sidereal longitude.
  */
 export function calculateDivisionalSignIndex(
@@ -249,7 +287,7 @@ export function calculateDivisionalChart(
       if (signIdx === 0) dignity = "Exalted";
       else if (signIdx === 6) dignity = "Debilitated";
       else if (signIdx === 4) dignity = "Own Sign";
-      else if ([8, 0, 7].includes(signIdx)) dignity = "Friendly";
+      else if ([3, 8, 0, 7, 11].includes(signIdx)) dignity = "Friendly";
     } else if (p.name === "Moon") {
       if (signIdx === 1) dignity = "Exalted";
       else if (signIdx === 7) dignity = "Debilitated";
@@ -282,9 +320,7 @@ export function calculateDivisionalChart(
       else if ([1, 2, 5].includes(signIdx)) dignity = "Friendly";
     }
 
-    const degInSign = (p.siderealLongitude * config.harmonic) % 30;
-    const dInt = Math.floor(degInSign);
-    const mInt = Math.floor((degInSign - dInt) * 60);
+    const degInSign = calculateDivisionalDegreeInSign(p.siderealLongitude, divisionCode);
 
     divisionalPlanets.push({
       name: p.name,
@@ -293,7 +329,7 @@ export function calculateDivisionalChart(
       sign: signName,
       signIndex: signIdx,
       degreeInSign: degInSign,
-      degreeFormatted: `${dInt}°${mInt.toString().padStart(2, "0")}'`,
+      degreeFormatted: formatDivisionalDegree(degInSign),
       house,
       dignity,
       isRetrograde: p.isRetrograde,
@@ -324,7 +360,7 @@ export function calculateDivisionalChart(
     ascendant: {
       sign: ascSignName,
       signIndex: ascSignIdx,
-      degreeFormatted: `${Math.floor(ascendantSiderealLon % 30)}°`,
+      degreeFormatted: formatDivisionalDegree(calculateDivisionalDegreeInSign(ascendantSiderealLon, divisionCode)),
     },
     planets: divisionalPlanets,
     houses,

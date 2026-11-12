@@ -6,6 +6,7 @@
  */
 
 import { WesternChartData, normalizeDegrees } from "./ephemeris";
+import { swissEphemeris } from "./swissEphemeris";
 import { D9Chart, D9ChartEngine } from "../vedic/d9NavamsaEngine";
 import { JaiminiKarakasEngine, JaiminiKarakasResult } from "../vedic/jaiminiKarakas";
 import { TaraBalaEngine, TaraBalaResult } from "../vedic/taraBala";
@@ -164,13 +165,12 @@ const PLANET_SANSKRIT: Record<string, string> = {
 };
 
 /**
- * Calculates Lahiri Ayanamsa for a given Julian Day
+ * Uses the shared Lahiri-style ayanamsa approximation from the astronomy facade.
+ * This keeps Western sidereal positions and Vedic chart conversion on one model.
+ * The shared model is not a native Swiss Ephemeris SE_SIDM_LAHIRI calculation.
  */
 export function calculateLahiriAyanamsa(jd: number): number {
-  const T = (jd - 2451545.0) / 36525.0;
-  // Standard Lahiri Ayanamsa: 23°51'25.53" at J2000.0 + 50.290966" * years
-  const ayanamsa = 23.85709 + 1.39697 * T + 0.000308 * T * T;
-  return ayanamsa;
+  return swissEphemeris.getAyanamsa(jd);
 }
 
 /**

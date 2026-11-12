@@ -189,75 +189,128 @@ export class EclipseAnalyzer {
 export interface MedicalIndicator {
   systemName: string;
   signRuler: string;
-  governedAnatomy: string;
-  stressLevel: "Low" | "Moderate" | "Elevated";
-  preventiveAdvice: string;
+  traditionalBodyCorrespondence: string;
+  chartEmphasis: "Key" | "Additional";
+  traditionalInterpretation: string;
 }
 
 export interface MedicalAstrologyReport {
-  vitalityConstitution: string;
-  vulnerableSystems: MedicalIndicator[];
-  sixthHouseNote: string;
-  twelfthHouseNote: string;
-  preventivePractices: string[];
+  traditionalSummary: string;
+  traditionalCorrespondences: MedicalIndicator[];
+  sixthHouseTheme: string;
+  twelfthHouseTheme: string;
 }
 
+/**
+ * Historical medical-astrology symbolism only.
+ *
+ * This deliberately does not infer disease, clinical risk, symptoms, or treatment
+ * from a chart. Astrological body correspondences are cultural/historical
+ * associations and have no diagnostic or predictive medical validity.
+ */
 export class MedicalAstrologyEngine {
-  private static readonly BODY_RULERS: Record<string, { system: string; anatomy: string; advice: string }> = {
-    Aries: { system: "Cranio-Facial & Neural Vitality", anatomy: "Brain, skull, eyes, adrenal adrenaline surges", advice: "Maintain balanced hydration, avoid excessive caffeine, and practice active stress release." },
-    Taurus: { system: "Thyroid & Vocal/Cervical Spine", anatomy: "Neck, throat, thyroid gland, vocal cords", advice: "Support thyroid health with iodine/selenium, practice neck stretching, and soothe vocal strain." },
-    Gemini: { system: "Respiratory & Nervous Branching", anatomy: "Lungs, bronchial tubes, shoulders, arms, peripheral nerves", advice: "Practice deep pranayama breathing, protect against nervous burnout, and take digital detoxes." },
-    Cancer: { system: "Digestive Core & Epigastric Sanctuary", anatomy: "Stomach, epigastrium, breasts, lymphatic fluid", advice: "Nourish the gut microbiome, consume warm soothing broths, and avoid eating under emotional stress." },
-    Leo: { system: "Cardiovascular & Spinal Axis", anatomy: "Heart, thoracic spine, aorta, solar vitality", advice: "Prioritize heart-healthy cardio, support spinal alignment, and nurture emotional joy." },
-    Virgo: { system: "Enteric & Intestinal Assimilation", anatomy: "Small intestine, spleen, autonomic assimilation", advice: "Consume fiber-rich, unrefined whole foods; avoid hypochondriac worrying; prioritize calm digestion." },
-    Libra: { system: "Renal & Acid-Base Equilibrium", anatomy: "Kidneys, adrenal cortex, lumbar region, skin filtration", advice: "Drink abundant alkaline water, limit sodium spikes, and maintain peaceful aesthetic surroundings." },
-    Scorpio: { system: "Urogenital & Regenerative Excretion", anatomy: "Reproductive organs, prostate, colon, cellular detox", advice: "Support lymphatic and colon detoxification, honor emotional release, and drink clean herbal teas." },
-    Sagittarius: { system: "Hepatic & Locomotor Musculature", anatomy: "Liver, hips, thighs, sciatic nerve, arterial system", advice: "Cleanse liver with milk thistle/bitters, avoid over-indulgence in rich foods, and maintain athletic walking." },
-    Capricorn: { system: "Skeletal, Joint & Dermal Framework", anatomy: "Bones, knees, joints, teeth, connective tissue, skin", advice: "Ensure adequate calcium and magnesium intake, support joint mobility, and respect adequate rest." },
-    Aquarius: { system: "Circulatory & Bio-Electric Pathways", anatomy: "Circulation, calves, ankles, neurological synapses", advice: "Elevate legs, stimulate healthy venous circulation, and ground nervous electrical tension." },
-    Pisces: { system: "Lymphatic, Immune & Somatic Receptors", anatomy: "Feet, lymphatic drainage, pineal gland, autoimmune sensitivity", advice: "Practice Epsom salt foot soaks, strengthen mucosal immunity, and protect subtle energetic boundaries." },
+  private static readonly BODY_RULERS: Record<string, {
+    system: string;
+    correspondence: string;
+    interpretation: string;
+  }> = {
+    Aries: {
+      system: "Head & face symbolism",
+      correspondence: "Head, face and eyes",
+      interpretation: "Some historical medical-astrology traditions associate Aries with the head and face. This does not provide evidence of a health condition or risk.",
+    },
+    Taurus: {
+      system: "Neck & throat symbolism",
+      correspondence: "Neck, throat and voice",
+      interpretation: "Some historical traditions associate Taurus with the neck and throat. This does not indicate thyroid disease or a vocal-cord condition.",
+    },
+    Gemini: {
+      system: "Shoulder & breath symbolism",
+      correspondence: "Shoulders, arms and breathing",
+      interpretation: "Some historical traditions associate Gemini with the shoulders, arms and breath. This does not assess lung or nerve function.",
+    },
+    Cancer: {
+      system: "Chest & stomach symbolism",
+      correspondence: "Chest and stomach",
+      interpretation: "Some historical traditions associate Cancer with the chest and stomach. This does not assess digestive or breast health.",
+    },
+    Leo: {
+      system: "Heart & upper-back symbolism",
+      correspondence: "Heart symbolism and upper back",
+      interpretation: "Some historical traditions associate Leo with the heart and upper back. This does not indicate cardiac health or risk.",
+    },
+    Virgo: {
+      system: "Digestive symbolism",
+      correspondence: "Intestinal and digestive symbolism",
+      interpretation: "Some historical traditions associate Virgo with digestion and the intestines. This does not assess gut, spleen or other organ function.",
+    },
+    Libra: {
+      system: "Kidney & lower-back symbolism",
+      correspondence: "Kidney symbolism and lower back",
+      interpretation: "Some historical traditions associate Libra with the kidneys and lower back. This does not assess renal function.",
+    },
+    Scorpio: {
+      system: "Reproductive & eliminative symbolism",
+      correspondence: "Reproductive and eliminative symbolism",
+      interpretation: "Some historical traditions associate Scorpio with reproductive and eliminative themes. This does not assess reproductive or urological health.",
+    },
+    Sagittarius: {
+      system: "Hip & liver symbolism",
+      correspondence: "Hips, thighs and liver symbolism",
+      interpretation: "Some historical traditions associate Sagittarius with the hips, thighs and liver. This does not assess liver function or recommend a cleanse.",
+    },
+    Capricorn: {
+      system: "Bone & joint symbolism",
+      correspondence: "Bones, knees, joints and teeth",
+      interpretation: "Some historical traditions associate Capricorn with bones, knees, joints and teeth. This does not assess skeletal or dental conditions.",
+    },
+    Aquarius: {
+      system: "Calf & ankle symbolism",
+      correspondence: "Calves and ankles",
+      interpretation: "Some historical traditions associate Aquarius with the calves and ankles. This does not assess circulation or neurological function.",
+    },
+    Pisces: {
+      system: "Foot & fluid symbolism",
+      correspondence: "Feet and traditional fluid symbolism",
+      interpretation: "Some historical traditions associate Pisces with the feet and fluid symbolism. This does not assess immune, lymphatic or autoimmune conditions.",
+    },
   };
 
-  public analyzeHealth(chart: WesternChartData): MedicalAstrologyReport {
+  public analyzeTraditionalSymbolism(chart: WesternChartData): MedicalAstrologyReport {
     const sunSign = chart.planets.find((p) => p.name === "Sun")?.sign || "Aries";
     const moonSign = chart.planets.find((p) => p.name === "Moon")?.sign || "Taurus";
     const ascSign = chart.ascendant.sign;
-
-    const vulnerable: MedicalIndicator[] = [];
-
-    // Evaluate signs occupied by challenging aspects or Mars/Saturn
     const mars = chart.planets.find((p) => p.name === "Mars");
     const saturn = chart.planets.find((p) => p.name === "Saturn");
+    const keySigns = Array.from(new Set([
+      sunSign,
+      moonSign,
+      ascSign,
+      mars?.sign || "Aries",
+      saturn?.sign || "Capricorn",
+    ]));
 
-    const keySigns = Array.from(new Set([sunSign, moonSign, ascSign, mars?.sign || "Aries", saturn?.sign || "Capricorn"]));
-
-    keySigns.forEach((sign) => {
+    const traditionalCorrespondences: MedicalIndicator[] = keySigns.flatMap((sign) => {
       const data = MedicalAstrologyEngine.BODY_RULERS[sign];
-      if (data) {
-        const isStressed = sign === mars?.sign || sign === saturn?.sign;
-        vulnerable.push({
-          systemName: data.system,
-          signRuler: sign,
-          governedAnatomy: data.anatomy,
-          stressLevel: isStressed ? "Elevated" : "Moderate",
-          preventiveAdvice: data.advice,
-        });
-      }
+      if (!data) return [];
+      const isKeyChartFactor = sign === mars?.sign || sign === saturn?.sign;
+      return [{
+        systemName: data.system,
+        signRuler: sign,
+        traditionalBodyCorrespondence: data.correspondence,
+        chartEmphasis: isKeyChartFactor ? "Key" : "Additional",
+        traditionalInterpretation: data.interpretation,
+      }];
     });
 
     const house6 = chart.houses[5];
     const house12 = chart.houses[11];
 
     return {
-      vitalityConstitution: `Your somatic vitality combines ${ascSign} physical constitution with ${sunSign} solar recuperative force and ${moonSign} lunar emotional regulation.`,
-      vulnerableSystems: vulnerable,
-      sixthHouseNote: `House 6 starts in ${house6.sign}: Optimal daily healing routines flourish through disciplined ${house6.sign} wellness habits.`,
-      twelfthHouseNote: `House 12 starts in ${house12.sign}: Guard against hidden exhaustion; regenerative healing occurs through quiet retreat and sound sleep.`,
-      preventivePractices: [
-        "Align daily rhythm with constitutional somatic needs.",
-        "Emphasize targeted hydration and seasonal nutrient-dense foods.",
-        "Integrate grounding restorative movement to disperse planetary nervous tension.",
-      ],
+      traditionalSummary: `In historical medical-astrology symbolism, the Ascendant (${ascSign}), Sun (${sunSign}), and Moon (${moonSign}) are interpreted as symbolic themes. They do not describe physical condition and do not diagnose illness or estimate medical risk.`,
+      traditionalCorrespondences,
+      sixthHouseTheme: `The sixth house begins in ${house6.sign}. In this tradition it is associated with routines, service and illness symbolism; this is not a clinical indicator.`,
+      twelfthHouseTheme: `The twelfth house begins in ${house12.sign}. In this tradition it is associated with retreat and hidden matters; it does not indicate hidden illness or exhaustion.`,
     };
   }
 }
@@ -266,12 +319,18 @@ export class MedicalAstrologyEngine {
 // 4. ASTROCARTOGRAPHY POWER LINES
 // ---------------------------------------------------------------------------
 
+export interface AstrocartographyCoordinate {
+  latitude: number;
+  longitude: number; // east-positive degrees in [-180, 180]
+}
+
 export interface AstrocartographyLine {
   planet: string;
   symbol: string;
   lineType: "AC (Ascendant)" | "DC (Descendant)" | "MC (Midheaven)" | "IC (Imum Coeli)";
-  longitudeTarget: number; // Approximate terrestrial longitude where this angle aligns
+  longitudeTarget: number; // reference longitude; for AC/DC this is the equator crossing
   longitudeStr: string;
+  coordinates: AstrocartographyCoordinate[];
   theme: string;
   bestFor: string;
 }
@@ -279,67 +338,114 @@ export interface AstrocartographyLine {
 export interface AstrocartographyReport {
   powerLines: AstrocartographyLine[];
   topDestinations: Array<{ purpose: string; suggestedRegion: string; planetaryLine: string }>;
+  calculationNote: string;
 }
 
 export class AstrocartographyEngine {
   public calculatePowerLines(chart: WesternChartData): AstrocartographyReport {
     const lines: AstrocartographyLine[] = [];
+    const radians = (degrees: number) => degrees * Math.PI / 180;
+    const degrees = (value: number) => value * 180 / Math.PI;
+    const toSignedLongitude = (value: number) => {
+      const normalized = normalizeDegrees(value);
+      return normalized > 180 ? normalized - 360 : normalized;
+    };
+    const formatLongitude = (value: number) => {
+      const signed = toSignedLongitude(value);
+      return `${Math.abs(signed).toFixed(1)}° ${signed >= 0 ? "E" : "W"}`;
+    };
 
-    chart.planets.forEach((p) => {
-      // Calculate longitude on Earth where planetary right ascension aligns with Midheaven
-      // Simple approximate astrocartography mapping:
-      const mcLon = normalizeDegrees(p.longitude - 90);
-      const icLon = normalizeDegrees(mcLon + 180);
-      const acLon = normalizeDegrees(p.longitude);
-      const dcLon = normalizeDegrees(p.longitude + 180);
+    if (!Number.isFinite(chart.julianDay) || !Number.isFinite(chart.siderealTime) ||
+        !Number.isFinite(chart.obliquity) || !Number.isFinite(chart.birthLongitude)) {
+      return {
+        powerLines: [],
+        topDestinations: [],
+        calculationNote: "A valid UTC birth instant, local sidereal time, obliquity and east-positive birth longitude are required. No lines were generated.",
+      };
+    }
 
-      const formatCoord = (deg: number) => {
-        const lonRel = deg > 180 ? deg - 360 : deg;
-        const hemi = lonRel >= 0 ? "E" : "W";
-        return `${Math.abs(lonRel).toFixed(1)}° ${hemi}`;
+    // siderealTime is the local RAMC (= GMST + east-positive birth longitude).
+    const birthLongitude = chart.birthLongitude;
+    if (typeof birthLongitude !== "number" || !Number.isFinite(birthLongitude)) {
+      return {
+        powerLines: [],
+        topDestinations: [],
+        calculationNote: "Birth longitude is unavailable. No geographic lines were generated.",
+      };
+    }
+    const greenwichSidereal = normalizeDegrees(chart.siderealTime - birthLongitude);
+    const obliquity = radians(chart.obliquity);
+    const standardPlanets = new Set(["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto"]);
+
+    chart.planets.filter((planet) => standardPlanets.has(planet.name)).forEach((planet) => {
+      const lambda = radians(planet.longitude);
+      const beta = radians(planet.latitude ?? 0);
+      // Ecliptic to equatorial rotation using the chart's obliquity of date.
+      const x = Math.cos(beta) * Math.cos(lambda);
+      const y = Math.cos(beta) * Math.sin(lambda) * Math.cos(obliquity) - Math.sin(beta) * Math.sin(obliquity);
+      const z = Math.cos(beta) * Math.sin(lambda) * Math.sin(obliquity) + Math.sin(beta) * Math.cos(obliquity);
+      const rightAscension = normalizeDegrees(degrees(Math.atan2(y, x)));
+      const declination = Math.asin(Math.max(-1, Math.min(1, z)));
+
+      const addLine = (
+        lineType: AstrocartographyLine["lineType"],
+        coordinates: AstrocartographyCoordinate[],
+        theme: string,
+        bestFor: string,
+        longitudeStr: string,
+        longitudeTarget: number
+      ) => {
+        if (coordinates.length === 0) return;
+        lines.push({
+          planet: planet.name,
+          symbol: planet.symbol,
+          lineType,
+          longitudeTarget: toSignedLongitude(longitudeTarget),
+          longitudeStr,
+          coordinates,
+          theme,
+          bestFor,
+        });
       };
 
-      if (["Sun", "Moon", "Venus", "Jupiter", "Mars", "Saturn"].includes(p.name)) {
-        lines.push({
-          planet: p.name,
-          symbol: p.symbol,
-          lineType: "MC (Midheaven)",
-          longitudeTarget: mcLon,
-          longitudeStr: formatCoord(mcLon),
-          theme: `Peak public acclaim, career authority, and vocational purpose under ${p.name}.`,
-          bestFor: "Career advancement & public reputation",
-        });
+      // MC/IC are meridians: local sidereal time equals RA (or RA + 180°).
+      const mcLongitude = toSignedLongitude(rightAscension - greenwichSidereal);
+      const icLongitude = toSignedLongitude(mcLongitude + 180);
+      const meridianLatitudes = Array.from({ length: 33 }, (_, index) => -80 + index * 5);
+      addLine("MC (Midheaven)", meridianLatitudes.map((latitude) => ({ latitude, longitude: mcLongitude })),
+        `In traditional astrocartography, ${planet.name} is on the upper meridian.`, "Career and public-role symbolism", formatLongitude(mcLongitude), mcLongitude);
+      addLine("IC (Imum Coeli)", meridianLatitudes.map((latitude) => ({ latitude, longitude: icLongitude })),
+        `In traditional astrocartography, ${planet.name} is on the lower meridian.`, "Home and private-life symbolism", formatLongitude(icLongitude), icLongitude);
 
-        lines.push({
-          planet: p.name,
-          symbol: p.symbol,
-          lineType: "AC (Ascendant)",
-          longitudeTarget: acLon,
-          longitudeStr: formatCoord(acLon),
-          theme: `Direct physical embodiment, magnetic presence, and personal empowerment under ${p.name}.`,
-          bestFor: "Self-expression, confidence & vitality",
-        });
-
-        lines.push({
-          planet: p.name,
-          symbol: p.symbol,
-          lineType: "DC (Descendant)",
-          longitudeTarget: dcLon,
-          longitudeStr: formatCoord(dcLon),
-          theme: `Fated partnerships, meeting significant others, and magnetic social connection.`,
-          bestFor: "Love, romance & collaborative alliances",
-        });
+      // AC/DC are horizon curves. Rising uses negative hour angle; setting positive.
+      const ascendantPoints: AstrocartographyCoordinate[] = [];
+      const descendantPoints: AstrocartographyCoordinate[] = [];
+      for (let latitude = -89; latitude <= 89; latitude += 1) {
+        const latitudeRadians = radians(latitude);
+        const cosHourAngle = -Math.tan(latitudeRadians) * Math.tan(declination);
+        if (!Number.isFinite(cosHourAngle) || cosHourAngle < -1 || cosHourAngle > 1) continue;
+        const absoluteHourAngle = Math.acos(Math.max(-1, Math.min(1, cosHourAngle)));
+        const risingHourAngle = -degrees(absoluteHourAngle);
+        const settingHourAngle = degrees(absoluteHourAngle);
+        ascendantPoints.push({ latitude, longitude: toSignedLongitude(rightAscension + risingHourAngle - greenwichSidereal) });
+        descendantPoints.push({ latitude, longitude: toSignedLongitude(rightAscension + settingHourAngle - greenwichSidereal) });
       }
+      const equatorAsc = ascendantPoints.find((point) => point.latitude === 0);
+      const equatorDesc = descendantPoints.find((point) => point.latitude === 0);
+      addLine("AC (Ascendant)", ascendantPoints,
+        `Geometric rising curve for ${planet.name}; line exists only at latitudes where the planet crosses the horizon.`,
+        "Identity and outward-expression symbolism", equatorAsc ? `Equator: ${formatLongitude(equatorAsc.longitude)}; curve varies by latitude` : "Latitude-dependent curve; no equator crossing", equatorAsc?.longitude ?? 0);
+      addLine("DC (Descendant)", descendantPoints,
+        `Geometric setting curve for ${planet.name}; line exists only at latitudes where the planet crosses the horizon.`,
+        "Partnership and encounter symbolism", equatorDesc ? `Equator: ${formatLongitude(equatorDesc.longitude)}; curve varies by latitude` : "Latitude-dependent curve; no equator crossing", equatorDesc?.longitude ?? 0);
     });
 
     return {
       powerLines: lines,
-      topDestinations: [
-        { purpose: "Career & Executive Success", suggestedRegion: "Regions along your Sun-MC or Jupiter-MC line", planetaryLine: "Sun / Jupiter Midheaven" },
-        { purpose: "Romance & Marriage Magnetism", suggestedRegion: "Regions along your Venus-DC or Moon-DC line", planetaryLine: "Venus / Moon Descendant" },
-        { purpose: "Spiritual Peace & Domestic Healing", suggestedRegion: "Regions along your Moon-IC or Jupiter-IC line", planetaryLine: "Moon / Jupiter Imum Coeli" },
-        { purpose: "Courage, Sports & Athletic Mastery", suggestedRegion: "Regions along your Mars-AC line", planetaryLine: "Mars Ascendant" },
-      ],
+      // City/region recommendations require a geospatial database and distance-to-line
+      // calculation. Do not fabricate destination regions from planetary longitudes.
+      topDestinations: [],
+      calculationNote: "Lines use geocentric ecliptic coordinates converted to equatorial RA/declination, local sidereal time and geometric horizon curves. AC/DC curves terminate where no horizon crossing exists. This is an astronomy-based line geometry; astrological interpretations are traditional symbolism, not evidence-based location effects. The current UI does not yet calculate nearest cities or line-distance orbs.",
     };
   }
 }

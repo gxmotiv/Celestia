@@ -9,7 +9,7 @@
  */
 
 import { swissEphemeris, SwissPlanetPosition } from "./swissEphemeris";
-import { WesternChartData, normalizeDegrees, ZODIAC_SIGNS } from "./ephemeris";
+import { WesternChartData, normalizeDegrees, ZODIAC_SIGNS, isAngularAspectApplying } from "./ephemeris";
 import { VedicChartData } from "./vedic";
 import { CompleteBaZiEngine, BaZiChart } from "./baziEngine";
 
@@ -978,7 +978,12 @@ export class MultiSystemTransitEngine {
               orb: Math.round(orb * 100) / 100,
               maxOrb: spec.orb,
               strength,
-              isApplying: true,
+              isApplying: isAngularAspectApplying(
+                transitingPlanet.rawLongitude,
+                nat.longitude,
+                spec.angle,
+                transitingPlanet.speed
+              ),
               nature: spec.nature,
               system: this.config.aspectSystem,
               description: `${transitingPlanet.name} in ${transitingPlanet.sign} forms a ${spec.type} (${Math.round(orb * 10) / 10}° orb) to natal ${nat.name} in ${nat.sign}.`,
@@ -1057,7 +1062,8 @@ export class MultiSystemTransitEngine {
             orb: Math.abs(angle - (houseDistance - 1) * 30),
             maxOrb: 15.0,
             strength: drishtiStrength,
-            isApplying: true,
+            // Whole-sign Graha Drishti is sign/house based; it has no degree-orb applying state.
+            isApplying: false,
             nature: drishtiTitle.includes("Amrita")
               ? "Harmonious"
               : drishtiTitle.includes("Special")

@@ -175,7 +175,7 @@ export interface ChaldeanCompoundMeaning {
   occultSignificance: string;
   warning: string;
   advice: string;
-  fortuneCategory: "Extremely Fortunate" | "Fortunate" | "Karmic Trial / Warning" | "Mystic / Dual" | "Caution Required";
+  fortuneCategory: "Extremely Fortunate" | "Fortunate" | "Karmic Trial / Warning" | "Mystic / Dual" | "Caution Required" | "Neutral";
 }
 
 export interface ChaldeanNameComponent {

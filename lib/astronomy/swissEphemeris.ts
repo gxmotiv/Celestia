@@ -8,8 +8,8 @@
 import * as Astronomy from "astronomy-engine";
 
 export interface SwissPlanetPosition {
-  longitude: number;      // Exact position (0.001° accuracy)
-  latitude: number;       // Declination / celestial latitude
+  longitude: number;      // Ecliptic longitude in degrees, rounded for display (not an accuracy guarantee)
+  latitude: number;       // Ecliptic latitude in degrees (not declination)
   distance: number;       // AU from Earth
   speed: number;          // Degrees per day (retrograde detection)
   isRetrograde: boolean;  // True if retrograde
@@ -17,6 +17,9 @@ export interface SwissPlanetPosition {
   degree: number;         // 0 to 29.999° in sign
   house: number | null;   // Assigned house number (1-12)
 }
+
+/** Selects which ascending lunar node model is used for the Rahu/Ketu pair. */
+export type LunarNodeType = "mean" | "true";
 
 export interface SwissAllPlanets {
   sun: SwissPlanetPosition;
@@ -111,13 +114,25 @@ export class SwissEphemerisEngine {
   }
 
   /**
-   * Calculates the exact Chitra Paksha (Lahiri) Ayanamsa for a given Julian Day
+   * Returns the application's polynomial Lahiri/Chitrapaksha-style ayanamsa
+   * approximation for a Julian Day. This is not a native Swiss Ephemeris call
+   * and is not independently certified as an exact value for every epoch.
    */
   public getAyanamsa(julianDay: number): number {
+    if (!Number.isFinite(julianDay)) {
+      throw new RangeError("Julian Day must be finite.");
+    }
     const T = (julianDay - 2451545.0) / 36525.0;
-    // IAU Chitra Paksha / Lahiri Ayanamsa: 23°51'25.53" at J2000.0 (23.85709°)
-    const ayanamsa = 23.85709 + 1.396971 * T - 0.0003086 * T * T;
-    return ayanamsa;
+    // IAE 1989 precession polynomial relative to J2000, applied to this app's
+    // Lahiri-style J2000 zero point. Coefficients are arcseconds per century
+    // (and higher powers thereof). This is an approximation, not native
+    // Swiss Ephemeris SE_SIDM_LAHIRI and does not add a full nutation model.
+    const ayanamsaArcseconds =
+      85885.53 +
+      5029.0966 * T +
+      1.11161 * T * T -
+      0.000113 * T * T * T;
+    return ayanamsaArcseconds / 3600.0;
   }
 
   /**
@@ -279,7 +294,9 @@ export class SwissEphemerisEngine {
   }
 
   /**
-   * Calculate EXACT planetary position with 0.001° precision
+   * Calculate an apparent geocentric position using astronomy-engine.
+   * Returned coordinates are rounded to 0.0001°; decimal places do not
+   * represent the underlying ephemeris accuracy.
    */
   public calculatePlanetPosition(
     planet: number,
@@ -309,7 +326,7 @@ export class SwissEphemerisEngine {
     let speed = 0;
 
     if (body !== null) {
-      // Calculate apparent geocentric ecliptic coordinates (including light-time aberration & nutation)
+      // Request the library's apparent geocentric vector, then transform it to ecliptic coordinates.
       const vec = Astronomy.GeoVector(body, time, true);
       const ecl = Astronomy.Ecliptic(vec);
       lon = (ecl.elon % 360 + 360) % 360;
@@ -325,7 +342,8 @@ export class SwissEphemerisEngine {
       if (diff < -180) diff += 360;
       speed = diff * 24.0;
     } else if (planet === this.MEAN_NODE || planet === this.TRUE_NODE) {
-      // High precision Lunar Nodes based on Swiss Ephemeris / Meeus formulas
+      // Mean-node polynomial and this application's approximate true-node
+      // periodic corrections. These are not calls to Swiss Ephemeris/libswe.
       const T = (julianDay - 2451545.0) / 36525.0;
       let omega = 125.04452 - 1934.136261 * T + 0.0020708 * T * T + (T * T * T) / 450000;
 
@@ -343,7 +361,7 @@ export class SwissEphemerisEngine {
       }
 
       lon = (omega % 360 + 360) % 360;
-      speed = -0.05295; // Mean node retrograde motion
+      speed = -0.05295; // Approximate mean retrograde rate (also used for this true-node approximation)
       dist = 0.00257; // Average lunar distance in AU
     }
 
@@ -382,9 +400,37 @@ export class SwissEphemerisEngine {
   }
 
   /**
-   * Calculate ALL planets at once (Tropical or Sidereal)
+   * Return the ten major planetary positions and one internally consistent
+   * Rahu/Ketu pair. Ketu is always exactly 180° from the selected ascending
+   * node model; it is never calculated from a different node model.
+   *
+   * The default preserves the prior chart convention (mean node). Pass "true"
+   * to use this engine's approximate true-node formula for both ends.
    */
-  public calculateAllPlanets(julianDay: number, isSidereal: boolean = false): SwissAllPlanets {
+  public calculateAllPlanets(
+    julianDay: number,
+    isSidereal: boolean = false,
+    nodeType: LunarNodeType = "mean"
+  ): SwissAllPlanets {
+    if (nodeType !== "mean" && nodeType !== "true") {
+      throw new RangeError("Lunar node type must be 'mean' or 'true'.");
+    }
+
+    const ascendingNode = this.calculatePlanetPosition(
+      nodeType === "mean" ? this.MEAN_NODE : this.TRUE_NODE,
+      julianDay,
+      isSidereal
+    );
+    const ketuLongitude = Math.round((((ascendingNode.longitude + 180) % 360) + 360) % 360 * 10000) / 10000;
+    const ketu: SwissPlanetPosition = {
+      ...ascendingNode,
+      longitude: ketuLongitude,
+      sign: this.getZodiacSign(ketuLongitude),
+      degree: Math.round((ketuLongitude % 30) * 10000) / 10000,
+      latitude: 0,
+      isRetrograde: ascendingNode.speed < 0,
+    };
+
     return {
       sun: this.calculatePlanetPosition(this.SUN, julianDay, isSidereal),
       moon: this.calculatePlanetPosition(this.MOON, julianDay, isSidereal),
@@ -396,8 +442,8 @@ export class SwissEphemerisEngine {
       uranus: this.calculatePlanetPosition(this.URANUS, julianDay, isSidereal),
       neptune: this.calculatePlanetPosition(this.NEPTUNE, julianDay, isSidereal),
       pluto: this.calculatePlanetPosition(this.PLUTO, julianDay, isSidereal),
-      rahu: this.calculatePlanetPosition(this.MEAN_NODE, julianDay, isSidereal),
-      ketu: this.calculatePlanetPosition(this.TRUE_NODE, julianDay, isSidereal),
+      rahu: ascendingNode,
+      ketu,
     };
   }
 
@@ -417,9 +463,14 @@ export class SwissEphemerisEngine {
     // Right Ascension of Midheaven (RAMC) in degrees
     const ramc = ((gstHours * 15.0 + longitude) % 360.0 + 360.0) % 360.0;
 
-    // True Obliquity of the Ecliptic with nutation
-    const T = (julianDay - 2451545.0) / 36525.0;
-    const epsDeg = 23.4392911 - 0.0130042 * T - 0.00000016 * T * T + 0.000000504 * T * T * T;
+    // SiderealTime() returns Greenwich Apparent Sidereal Time (GAST), whose
+    // reference equinox includes nutation. Use the matching true obliquity of
+    // date rather than mixing GAST with a mean-obliquity polynomial.
+    const earthTilt = Astronomy.e_tilt(time);
+    const epsDeg = earthTilt.tobl;
+    if (!Number.isFinite(epsDeg)) {
+      throw new RangeError("Astronomy Engine returned an invalid true obliquity.");
+    }
     const eps = epsDeg * (Math.PI / 180.0);
     const phi = latitude * (Math.PI / 180.0);
     const radRamc = ramc * (Math.PI / 180.0);
