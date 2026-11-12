@@ -256,6 +256,14 @@ for (const entry of [
     entry[0] + " keeps the 1st/7th axis antipodal"
   );
 }
+const belowPolarFallback = swiss.calculateHouses(2451545, 66.5, 15, "P");
+if (belowPolarFallback.houseSystemUsed === "O") {
+  const belowPolarChart = calculateWesternChart(2000, 1, 1, 12, 0, 66.5, 15, 0, "Placidus");
+  check(belowPolarChart.houseSystem === "Porphyry",
+    "Numerical Placidus fallback reports Porphyry as the actual house system");
+  check(Boolean(belowPolarChart.houseSystemNote && belowPolarChart.houseSystemNote.includes("numerically")),
+    "Numerical Placidus fallback is disclosed to the chart user");
+}
 const polarAuto = calculateWesternChart(2000, 1, 1, 12, 0, 70, 0, 0, "Auto");
 check(polarAuto.houseSystem === "Porphyry", "Auto switches to Porphyry at polar latitude where Placidus is undefined");
 check(Boolean(polarAuto.houseSystemNote && polarAuto.houseSystemNote.includes("polar")),
