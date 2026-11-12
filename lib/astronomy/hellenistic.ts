@@ -89,9 +89,17 @@ export function calculateHellenisticAnalysis(western: WesternChartData): Helleni
     { planet: "Saturn", joyHouse: 12 },
   ];
 
+  const ascSignIdx = Math.floor(normalizeDeg(ascLon) / 30);
+  const getWholeSignHouseFromLon = (longitude: number) => {
+    const signIndex = Math.floor(normalizeDeg(longitude) / 30);
+    return ((signIndex - ascSignIdx + 12) % 12) + 1;
+  };
+
   const joys = traditionalJoys.map(j => {
     const pl = western.planets.find(p => p.name === j.planet);
-    const actualHouse = pl ? pl.house : 1;
+    // Hellenistic planetary joys are defined in Whole Sign houses. Do not
+    // reuse the Western wheel's Placidus/Equal house number here.
+    const actualHouse = pl ? getWholeSignHouseFromLon(pl.longitude) : 1;
     return {
       planet: j.planet,
       joyHouse: j.joyHouse,
@@ -128,13 +136,9 @@ export function calculateHellenisticAnalysis(western: WesternChartData): Helleni
     ? normalizeDeg(ascLon + fortuneLon - mercuryLon)
     : normalizeDeg(ascLon + mercuryLon - fortuneLon);
 
-  // Whole Sign house determination from Ascendant sign
-  const ascSignIdx = Math.floor(normalizeDeg(ascLon) / 30);
-
-  const getHouseFromLon = (lon: number) => {
-    const pSignIdx = Math.floor(normalizeDeg(lon) / 30);
-    return ((pSignIdx - ascSignIdx + 12) % 12) + 1;
-  };
+  // Whole Sign house determination from Ascendant sign. This is independent
+  // of the display house system used by the Western natal chart.
+  const getHouseFromLon = getWholeSignHouseFromLon;
 
   const fortuneInfo = getSignAndDegree(fortuneLon);
   const spiritInfo = getSignAndDegree(spiritLon);
