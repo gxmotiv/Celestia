@@ -181,6 +181,15 @@ check(isSunAboveHorizonInChart(syntheticSectChart(180)) === false,
 
 // 2. Western house systems resolve consistently and polar fallbacks are explicit.
 const swiss = new SwissEphemerisEngine();
+// Independent Swiss Ephemeris house-cusp reference for 2000-01-01 12:00 UT,
+// Greenwich Observatory latitude 51.4769° N, longitude 0° E.
+const placidusReference = swiss.calculateHouses(2451545.0, 51.4769, 0, "P");
+close(placidusReference.ascendant, 24.265235, 0.005, "Placidus reference Ascendant matches Swiss Ephemeris fixture");
+close(placidusReference.midheaven, 279.611088, 0.005, "Placidus reference Midheaven matches Swiss Ephemeris fixture");
+close(placidusReference.houseCusps[1], 61.141524, 0.005, "Placidus 2nd cusp matches Swiss Ephemeris fixture");
+close(placidusReference.houseCusps[2], 82.020398, 0.005, "Placidus 3rd cusp matches Swiss Ephemeris fixture");
+close(placidusReference.houseCusps[10], 299.062295, 0.005, "Placidus 11th cusp matches Swiss Ephemeris fixture");
+close(placidusReference.houseCusps[11], 327.701257, 0.005, "Placidus 12th cusp matches Swiss Ephemeris fixture");
 const args = [2000, 1, 1, 12, 0, 40.7128, -74.006, -5] as const;
 const autoChart = calculateWesternChart(...args, "Auto");
 check(autoChart.requestedHouseSystem === "Auto", "Auto selection is preserved as the requested mode");
