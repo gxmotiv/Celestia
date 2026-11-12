@@ -461,7 +461,7 @@ export function AdvancedWesternPanel({
                   <th className="py-2.5 px-3">Planetary Axis</th>
                   <th className="py-2.5 px-3">Zodiac Position</th>
                   <th className="py-2.5 px-3">90° Dial</th>
-                  <th className="py-2.5 px-3">Catalyzed By</th>
+                  <th className="py-2.5 px-3">Aspected by</th>
                   <th className="py-2.5 px-3">Psychological Interpretation</th>
                 </tr>
               </thead>
@@ -573,7 +573,7 @@ export function AdvancedWesternPanel({
         <div className="space-y-4">
           <div className="flex items-center justify-between text-xs px-3 py-2 bg-slate-950/80 border border-slate-800 rounded-lg text-slate-400">
             <span>
-              Out of Bounds (OOB) Planets (&gt; 23°26&apos;):{" "}
+              Out of Bounds (OOB) Planets (&gt; {Math.abs(chartData.obliquity).toFixed(3)}° obliquity of date):{" "}
               <strong className={declinationReport.outOfBoundsCount > 0 ? "text-rose-400" : "text-slate-200"}>
                 {declinationReport.outOfBoundsCount} detected
               </strong>
