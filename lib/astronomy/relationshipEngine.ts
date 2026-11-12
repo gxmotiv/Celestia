@@ -91,7 +91,7 @@ export interface CompatibilityScores {
 export interface KarmicIndicator {
   type: "Node Contact" | "Vertex Contact" | "Saturnian Bond" | "Chironic Healing";
   description: string;
-  intensity: "Mild" | "Moderate" | "Profound" | "Life-Altering";
+  intensity: "Tight orb" | "Moderate orb";
 }
 
 export interface SynastryReport {
@@ -294,28 +294,28 @@ export const SYNASTRY_INTERPRETATIONS: Record<
     advice: "Tackle ambitious long-range milestones, home building, or fitness goals as a team.",
   },
   "Sun-NorthNode-Conjunction": {
-    title: "Fated Evolutionary Catalyst",
+    title: "Nodal Growth Theme",
     score: 9.7,
     category: "Growth & Purpose",
     nature: "Karmic",
-    description: "A potent destiny contact. Person 1's core presence acts as a direct beacon pulling Person 2 toward their future soul purpose.",
+    description: "Some modern astrology traditions interpret this close Sun–Node contact as a symbolic growth or life-direction theme. It does not establish destiny or determine either person's future.",
     advice: "Embrace the accelerated personal growth that this union triggers in both lives.",
   },
   "Moon-NorthNode-Conjunction": {
-    title: "Soulmate Nodal Embrace",
+    title: "Nodal Emotional Resonance",
     score: 9.8,
     category: "Growth & Purpose",
     nature: "Karmic",
-    description: "Immediate uncanny familiarity, as though your souls scheduled this meeting before incarnation. Emotional evolution is accelerated.",
+    description: "Some modern astrology traditions interpret this Moon–Node contact as symbolic emotional familiarity or shared growth themes. It is not evidence of a pre-incarnation agreement.",
     advice: "Honor this deep psychic connection with gratitude and emotional authenticity.",
   },
   "Venus-NorthNode-Conjunction": {
-    title: "Karmic Lovers & Destined Affection",
+    title: "Venus–Node Affection Theme",
     score: 9.6,
     category: "Romance & Chemistry",
     nature: "Karmic",
-    description: "Meeting feels planned by the cosmos. Love acts as the central vehicle through which both souls fulfill their destiny.",
-    advice: "A classic sign of soulmates meeting to learn higher love, artistic expression, or mutual devotion.",
+    description: "Some astrology traditions read this Venus–Node contact as a symbolic affection or relationship-growth theme. It does not show that a meeting was destined or guarantee a relationship.",
+    advice: "Use this symbolism as a prompt to discuss affection, shared values and expectations; it does not identify soulmates.",
   },
   "Sun-Saturn-Trine": {
     title: "Pillar of Respect & Endurance",
@@ -854,8 +854,8 @@ export class SynastryEngine {
       if (a.nature === "Karmic" || a.planet1.includes("Node") || a.planet2.includes("Node")) {
         karmicConnections.push({
           type: "Node Contact",
-          description: `${a.planet1} aspecting ${a.planet2} (${a.aspectName}): Soul evolutionary contract.`,
-          intensity: a.orb < 2.0 ? "Life-Altering" : "Profound",
+          description: `${a.planet1} ${a.aspectName} ${a.planet2}: a close nodal contact sometimes interpreted as a karmic theme in modern astrology. This is not evidence of a soul contract or past-life bond.`,
+          intensity: a.orb < 2.0 ? "Tight orb" : "Moderate orb",
         });
       }
 
@@ -864,7 +864,7 @@ export class SynastryEngine {
         (a.planet1 === "Moon" && a.planet2 === "Sun") ||
         (a.planet1 === "Venus" && a.planet2 === "Mars" && a.aspectName === "Conjunction")
       ) {
-        soulmateIndicators.push(`${a.title}: Archetypal soul contact.`);
+        soulmateIndicators.push(`${a.title}: A Sun–Moon or Venus–Mars contact sometimes read as a symbolic affinity theme; it does not establish a soulmate bond.`);
       }
     });
 
