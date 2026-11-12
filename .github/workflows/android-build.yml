@@ -6,7 +6,6 @@ on:
       - deploy/cloudflare-workers-free
       - feat/android-offline-mode
       - fix/celestia-calculation-integrity
-      - fix/western-house-sect-predictive-integrity
     paths:
       - "android/**"
       - "lib/android/**"
