@@ -142,7 +142,8 @@ export interface CalculatedAspect {
   orb: number;
   maxOrb: number;
   strength: number; // 0 to 1
-  isApplying: boolean;
+  /** Null for sign/house-based aspects where applying/separating is not defined. */
+  isApplying: boolean | null;
   nature: "Harmonious" | "Challenging" | "Potent" | "Karmic Full Sight" | "Special Drishti";
   system: AspectSystem;
   description: string;
@@ -1061,7 +1062,7 @@ export class MultiSystemTransitEngine {
             maxOrb: 15.0,
             strength: drishtiStrength,
             // Whole-sign Graha Drishti is sign/house based; it has no degree-orb applying state.
-            isApplying: false,
+            isApplying: null,
             nature: drishtiTitle.includes("Amrita")
               ? "Harmonious"
               : drishtiTitle.includes("Special")
