@@ -116,9 +116,11 @@ export class ArabianPartsCalculator {
     jupiter: number;
     saturn: number;
     houseCusps: number[];
+    /** Prefer the astronomical horizon result supplied by the natal chart engine. */
+    isDayChart?: boolean;
   }): ArabianPartsResult {
-    const { ascendant: ASC, sun: Sun, moon: Moon, venus: Venus, mars: Mars, saturn: Saturn, houseCusps } = params;
-    const isDay = this.isDayChart(Sun, ASC);
+    const { ascendant: ASC, sun: Sun, moon: Moon, mercury: Mercury, venus: Venus, mars: Mars, jupiter: Jupiter, saturn: Saturn, houseCusps } = params;
+    const isDay = typeof params.isDayChart === "boolean" ? params.isDayChart : this.isDayChart(Sun, ASC);
 
     const cusp8 = houseCusps[7] ?? normalizeDegrees(ASC + 210);
     const cusp9 = houseCusps[8] ?? normalizeDegrees(ASC + 240);
@@ -221,12 +223,19 @@ export class ArabianPartsCalculator {
     );
 
     // 9. Part of Travel & Pilgrimage
-    const travelLon = isDay ? ASC + cusp9 - (cusp9 - 30) : ASC + (cusp9 - 30) - cusp9;
+    const ninthSignIndex = Math.floor(normalizeDegrees(cusp9) / 30);
+    const traditionalSignRulers = ["Mars", "Venus", "Mercury", "Moon", "Sun", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Saturn", "Jupiter"];
+    const ninthLordName = traditionalSignRulers[ninthSignIndex];
+    const ninthLordLongitude: Record<string, number> = {
+      Sun, Moon, Mercury, Venus, Mars, Jupiter, Saturn,
+    };
+    const ninthLordLon = ninthLordLongitude[ninthLordName];
+    const travelLon = isDay ? ASC + cusp9 - ninthLordLon : ASC + ninthLordLon - cusp9;
     const partOfTravel = this.buildPart(
       "travel",
       "Part of Travel & Horizons",
-      "ASC + Cusp 9 - Moon (approx.)",
-      ASC + cusp9 - Moon,
+      isDay ? `ASC + 9th Cusp - 9th Lord (${ninthLordName}) (Day)` : `ASC + 9th Lord (${ninthLordName}) - 9th Cusp (Night)`,
+      travelLon,
       houseCusps,
       "Indicates journeys across distant seas, philosophical awakening, foreign lands, and pilgrimage.",
       "✈"
