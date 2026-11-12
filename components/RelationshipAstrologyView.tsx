@@ -164,11 +164,11 @@ const RELATIONSHIP_CATEGORIES: {
   },
   {
     id: "karmic",
-    label: "Karmic Soul Bond / Spiritual Connection",
+    label: "Karmic-theme symbolism",
     shortLabel: "Karmic",
     icon: "🔮",
     badgeColor: "border-purple-500/40 text-purple-300 bg-purple-500/10",
-    description: "Soul contracts, past-life resonance, destiny timing, and evolutionary growth",
+    description: "Modern astrological symbolism around nodal contacts and themes of meaning; not evidence of past lives or destiny",
   },
   {
     id: "stranger",
@@ -176,7 +176,7 @@ const RELATIONSHIP_CATEGORIES: {
     shortLabel: "Stranger / Random",
     icon: "⚡",
     badgeColor: "border-cyan-500/40 text-cyan-300 bg-cyan-500/10",
-    description: "Instant resonance, fated synchronicity, curiosity, and passing crossroads",
+    description: "Symbolic reflection on brief encounters and curiosity; not evidence that an encounter was fated",
   },
 ];
 
@@ -628,7 +628,9 @@ export function RelationshipAstrologyView({
           </p>
         </div>
 
-        {/* View Tabs */}
+        <p className="text-[11px] text-slate-400 bg-slate-950/50 border border-slate-800 rounded-lg p-3">Synastry, composite and Davison charts are astrological interpretation frameworks. Their labels, scores and karmic/soulmate themes are not scientific measures of compatibility, probability of success, destiny or past-life connection. Use them as prompts for reflection and communication, not as a decision rule for relationships.</p>
+
+      {/* View Tabs */}
         <div className="flex items-center gap-1.5 flex-wrap">
           {[
             { id: "synastry", label: "Synastry & Affinity", icon: "⚯" },
