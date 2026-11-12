@@ -404,9 +404,12 @@ export function AdvancedWesternPanel({
       {activeSubTab === "arabian" && arabian && (
         <div className="space-y-4">
           <div className="flex items-center justify-between text-xs px-2 py-1.5 bg-slate-950/80 border border-slate-800 rounded-lg text-slate-400">
-            <span>Chart Sect: <strong className="text-amber-300">{arabian.isDayChart ? "Diurnal (Day Chart - Sun Above Horizon)" : "Nocturnal (Night Chart - Sun Below Horizon)"}</strong></span>
-            <span>Total Arabian Lots: <strong className="text-slate-200 font-mono">{arabian.allParts.length} calculated</strong></span>
+            <span>Chart Sect: <strong className="text-amber-300">{arabian.isDayChart ? "Diurnal (Sun above horizon)" : "Nocturnal (Sun below horizon)"}</strong></span>
+            <span>Lots: <strong className="text-slate-200 font-mono">{arabian.allParts.length} calculated</strong></span>
           </div>
+          <p className="text-[11px] text-amber-200/80 bg-amber-950/20 border border-amber-700/30 rounded-lg p-3">
+            The seven Hermetic Lots (Fortune, Spirit, Eros, Necessity, Courage, Victory and Nemesis) are shown alongside selected supplementary medieval formula variants. Lots are calculated sensitive points, not physical bodies; authors and traditions use different formulas. Health, death and Mars–Saturn lots are historical/experimental symbolism only and do not predict illness, death, surgery or injury.
+          </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {arabian.allParts.map((part) => (
