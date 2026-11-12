@@ -343,7 +343,8 @@ check(nightLots.partOfTravel.formula.includes("Night"), "Travel Lot formula labe
 
 // 8. Transit direction and forecast outputs must be computed, not invented.
 const transitDate = new Date("2026-11-12T00:00:00.000Z");
-const baseTransitEngine = new TransitEngine(benchmarkChart, transitDate);
+const transitFixtureChart = calculateWesternChart(2000, 1, 1, 12, 0, 51.4769, 0, 0, "Placidus");
+const baseTransitEngine = new TransitEngine(transitFixtureChart, transitDate);
 const transitingSun = baseTransitEngine.getPlanetaryPositions(transitDate).Sun;
 const applyingNatal = {
   ...benchmarkChart.planets[0],
@@ -353,7 +354,7 @@ const applyingNatal = {
   sign: "Synthetic",
   signDegreeFormatted: "Synthetic natal point",
 };
-const applyingChart = { ...benchmarkChart, planets: [applyingNatal] };
+const applyingChart = { ...transitFixtureChart, planets: [applyingNatal] };
 const applyingTransit = new TransitEngine(applyingChart, transitDate)
   .getCurrentTransits(transitDate)
   .find((item) => item.transitingPlanet === "Sun" && item.natalPlanet === "SyntheticNatal" && item.aspect === "Sextile");
@@ -366,7 +367,7 @@ const separatingNatal = {
   ...applyingNatal,
   longitude: normalizeDegrees(transitingSun.longitude - 61),
 };
-const separatingChart = { ...benchmarkChart, planets: [separatingNatal] };
+const separatingChart = { ...transitFixtureChart, planets: [separatingNatal] };
 const separatingTransit = new TransitEngine(separatingChart, transitDate)
   .getCurrentTransits(transitDate)
   .find((item) => item.transitingPlanet === "Sun" && item.natalPlanet === "SyntheticNatal" && item.aspect === "Sextile");
@@ -375,18 +376,18 @@ check(separatingTransit?.isApplying === false,
 check(Boolean(separatingTransit?.peak.includes("Separating")),
   "Separating transit is not falsely assigned a future exact peak");
 check(
-  new TransitEngine(benchmarkChart, transitDate).calculateTransitDuration("Saturn", "Square").includes("not solved"),
+  new TransitEngine(transitFixtureChart, transitDate).calculateTransitDuration("Saturn", "Square").includes("not solved"),
   "Transit duration is not presented as an exact solved interval when ingress/exact/egress are not calculated"
 );
 
-const dailySnapshot = new DailyHoroscope(benchmarkChart).generateDailyHoroscope(transitDate);
+const dailySnapshot = new DailyHoroscope(transitFixtureChart).generateDailyHoroscope(transitDate);
 check(dailySnapshot.activeTransitCount >= 0, "Daily snapshot reports a geometric active-transit count");
 check(dailySnapshot.transitSummary.includes("not a score"), "Daily snapshot discloses that aspect count is not a fortune/energy score");
 check(!("overallEnergy" in dailySnapshot), "Daily snapshot no longer emits a fabricated numeric energy score");
 check(dailySnapshot.luckyHours.startsWith("Not calculated"),
   "Daily snapshot does not invent lucky-clock hours without location and sunrise/sunset calculation");
 
-const monthlyCalendar = new DailyHoroscope(benchmarkChart).generateMonthlyForecast(10, 2026);
+const monthlyCalendar = new DailyHoroscope(transitFixtureChart).generateMonthlyForecast(10, 2026);
 check(monthlyCalendar.highlights.some((item) => item.title === "Astronomical New Moon"),
   "Monthly calendar contains a dynamically searched astronomical New Moon");
 check(monthlyCalendar.highlights.some((item) => item.title === "Astronomical Full Moon"),
@@ -396,7 +397,7 @@ check(monthlyCalendar.highlights.every((item) => {
   return time >= Date.UTC(2026, 10, 1) && time < Date.UTC(2026, 11, 1);
 }), "Monthly lunar-phase events are inside the selected UTC month");
 
-const timingWindows = new TransitEngine(benchmarkChart, transitDate).getTimingWindows();
+const timingWindows = new TransitEngine(transitFixtureChart, transitDate).getTimingWindows();
 check(Object.values(timingWindows).every((window) =>
   window.bestTimes.length === 0 && window.challengingTimes.length === 0 &&
   window.nextOpportunity === "Not calculated"
