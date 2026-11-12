@@ -848,29 +848,28 @@ export class TransitEngine {
         nextOpportunity: "Next Taurus/Scorpio or 2nd/8th House Full Moon",
       },
       health: {
-        title: "Health & Vitality Timing",
+        title: "Well-being Reflection (Non-medical)",
         category: "health",
-        currentPhase:
-          sunHouse === 1 || sunHouse === 6 ? "High Vitality & Routine Optimization" : "Restorative Maintenance",
+        currentPhase: "Routine reflection only",
         bestTimes: [
           {
-            period: "Sun in 1st House",
-            description: "Peak physical stamina, natural glow, and swift recovery.",
+            period: "Review daily routines",
+            description: "Use this as a symbolic prompt to review rest, workload and sustainable daily habits.",
           },
           {
-            period: "Mars Harmonious to Natal Sun",
-            description: "Personal records in fitness, muscular tone, and energetic drive.",
+            period: "Plan restorative activities",
+            description: "Consider scheduling ordinary breaks, recreation and time away from screens.",
           },
         ],
         challengingTimes: [
           {
-            period: "Saturn Conjunct/Square Natal Mars",
-            description: "Risk of bone, joint, or tooth fatigue; prioritize deep sleep and slow down.",
+            period: "High-pressure periods",
+            description: "Use this only as a general reminder to avoid overloading your schedule. A chart cannot identify physical symptoms, illness or medical risk.",
           },
         ],
         advice:
-          "Treat your physical body like the sacred temple of your consciousness. Hydrate and honor circadian rhythm.",
-        nextOpportunity: "Sun entering your 1st House or Spring Equinox",
+          "Astrological symbolism cannot assess health, diagnose illness, estimate medical risk or guide treatment. For symptoms or health decisions, use qualified clinical care.",
+        nextOpportunity: "Choose a practical routine review date",
       },
       spiritual: {
         title: "Spiritual & Inner Growth Timing",
