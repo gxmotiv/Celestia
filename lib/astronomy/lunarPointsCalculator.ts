@@ -70,23 +70,9 @@ export class LunarPointsCalculator {
    * This is NOT a full osculating-apogee solution from lunar position/velocity vectors.
    */
   public calculateTrueLilithLon(jd: number): { lon: number; speed: number } {
-    const T = (jd - 2451545.0) / 36525.0;
-    const mean = this.calculateMeanLilithLon(jd).lon;
-
-    // Solar mean anomaly
-    const M_sun = normalizeDegrees(357.5291 + 35999.0503 * T) * DEG2RAD;
-    // Lunar mean anomaly
-    const M_moon = normalizeDegrees(134.9634 + 477198.8676 * T) * DEG2RAD;
-    // Mean elongation of Moon from Sun (D)
-    const D = normalizeDegrees(297.8502 + 445267.1115 * T) * DEG2RAD;
-
-    // Main periodic oscillations (evection perturbation on lunar apogee reaches ~11.5°)
-    const correction =
-      11.69 * Math.sin(2 * D - M_moon) +
-      2.05 * Math.sin(M_sun) +
-      1.25 * Math.sin(2 * D) -
-      0.68 * Math.sin(M_moon);
-
+    if (!Number.isFinite(jd)) {
+      throw new RangeError("Approximate True Lilith requires a finite Julian Day.");
+    }
     const correctedLongitude = (atJd: number) => {
       const t = (atJd - 2451545.0) / 36525.0;
       const meanLongitude = this.meanApogeeLongitude(atJd);
@@ -99,13 +85,12 @@ export class LunarPointsCalculator {
       return normalizeDegrees(meanLongitude + periodic);
     };
     const stepDays = 0.5;
-    const trueLon = correctedLongitude(jd);
+    const longitude = correctedLongitude(jd);
     const before = correctedLongitude(jd - stepDays);
     const after = correctedLongitude(jd + stepDays);
     const signedDelta = normalizeDegrees(after - before + 180) - 180;
-    return { lon: trueLon, speed: signedDelta / (2 * stepDays) };
+    return { lon: longitude, speed: signedDelta / (2 * stepDays) };
   }
-
   /**
    * Symbolic White Moon / Selena convention.
    * This is not a known physical body or an astronomical lunar orbit; multiple
