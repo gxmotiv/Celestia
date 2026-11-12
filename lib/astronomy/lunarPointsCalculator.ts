@@ -11,6 +11,7 @@
  */
 
 import { PlanetPosition, formatDegreeMinute, normalizeDegrees, ZODIAC_SIGNS } from "./ephemeris";
+import { calculateEastPointLongitude, calculateVertexLongitude } from "./anglePoints";
 
 export interface LilithPositions {
   meanLilith: PlanetPosition;
@@ -110,20 +111,15 @@ export class LunarPointsCalculator {
    * tan(V) = -cos(RAMC) / (sin(obliquity) * tan(lat) + cos(obliquity) * sin(RAMC))
    */
   public calculateVertexLon(ramc: number, lat: number, obliquity: number): number {
-    const ramcRad = ramc * DEG2RAD;
-    const latRad = lat * DEG2RAD;
-    const epsRad = obliquity * DEG2RAD;
+    return calculateVertexLongitude(ramc, lat, obliquity);
+  }
 
-    // Vertex is in the western hemisphere:
-    const num = -Math.cos(ramcRad);
-    const den = Math.sin(epsRad) * Math.tan(latRad) + Math.cos(epsRad) * Math.sin(ramcRad);
-
-    let vRad = Math.atan2(num, den);
-    let vDeg = normalizeDegrees(vRad * RAD2DEG);
-
-    // Vertex is traditionally on the western side of the meridian
-    if (vDeg < 0) vDeg += 360;
-    return vDeg;
+  /**
+   * Astrological East Point: ecliptic longitude whose right ascension is RAMC + 90°.
+   * It is distinct from the equatorial point on the eastern horizon.
+   */
+  public calculateEastPointLon(ramc: number, obliquity: number): number {
+    return calculateEastPointLongitude(ramc, obliquity);
   }
 
   /**
