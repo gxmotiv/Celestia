@@ -106,7 +106,7 @@ export class MidpointCalculator {
     }
 
     const first = activations[0];
-    return `${baseMeaning} Directly catalyzed by ${first.planet} (${first.aspectType}, orb ${first.orb}°), focusing external events through this axis.`;
+    return `${baseMeaning} The midpoint is also aspected by ${first.planet} (${first.aspectType}, orb ${first.orb}°). Interpretive meanings are traditional astrological symbolism, not a demonstrated causal effect.`;
   }
 
   /**
@@ -217,7 +217,7 @@ export class HarmonicChartCalculator {
       HarmonicChartCalculator.KEY_HARMONICS[harmonicNumber] || {
         name: `${harmonicNumber}th Harmonic (H${harmonicNumber})`,
         theme: `Harmonic Division ${harmonicNumber}`,
-        description: `Micro-resonant frequency exploring the ${harmonicNumber}-fold wave division of consciousness.`,
+        description: `Mathematical harmonic chart produced by multiplying ecliptic longitudes by ${harmonicNumber} and reducing them to 0–360°. Astrological interpretations vary by school; these are not measured physical or neurological frequencies.`,
       };
 
     const harmonicPlanets: HarmonicPlanet[] = planets.map((p) => {
@@ -251,9 +251,9 @@ export class HarmonicChartCalculator {
             planet1: hp1.name,
             planet2: hp2.name,
             orb: Math.round(diff * 100) / 100,
-            interpretation: `In the H${harmonicNumber} chart, ${hp1.name} merges with ${hp2.name} within ${diff.toFixed(
+            interpretation: `In the H${harmonicNumber} chart, ${hp1.name} and ${hp2.name} are separated by ${diff.toFixed(
               2
-            )}°, vibrating in exact resonance on this energetic frequency.`,
+            )}°. This is a mathematical harmonic proximity; its astrological meaning depends on the interpretive tradition.`,
           });
         }
       }
