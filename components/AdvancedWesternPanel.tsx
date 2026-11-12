@@ -1222,6 +1222,26 @@ export function AdvancedWesternPanel({
                   <div><span className="text-slate-500 block">Longitude error</span><strong>{(report.longitudeErrorDegrees * 3600).toFixed(2)}″</strong></div>
                   <div><span className="text-slate-500 block">Resolved house frame</span><strong>{report.houseSystem}</strong></div>
                 </div>
+                <div className="pt-2 border-t border-slate-800 space-y-2">
+                  <h6 className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Return chart core</h6>
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
+                    <div className="flex justify-between gap-2"><span className="text-slate-500">Sun</span><span className="text-slate-200">{report.chart.planets.find((point) => point.name === "Sun")?.signDegreeFormatted ?? "N/A"}</span></div>
+                    <div className="flex justify-between gap-2"><span className="text-slate-500">Moon</span><span className="text-slate-200">{report.chart.planets.find((point) => point.name === "Moon")?.signDegreeFormatted ?? "N/A"}</span></div>
+                    <div className="flex justify-between gap-2"><span className="text-slate-500">Ascendant</span><span className="text-slate-200">{report.chart.ascendant.signDegreeFormatted}</span></div>
+                    <div className="flex justify-between gap-2"><span className="text-slate-500">Midheaven</span><span className="text-slate-200">{report.chart.midheaven.signDegreeFormatted}</span></div>
+                  </div>
+                  <details className="text-[10px]">
+                    <summary className="cursor-pointer text-slate-400 hover:text-slate-200">Show all 12 house cusps</summary>
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-1 pt-2">
+                      {report.chart.houses.map((house) => (
+                        <div key={house.house} className="flex justify-between gap-2">
+                          <span className="text-slate-500">House {house.house}</span>
+                          <span className="text-slate-200">{house.signDegreeFormatted}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                </div>
                 <p className="text-[10px] text-slate-500">{report.methodNote}</p>
               </div>
             ))}
