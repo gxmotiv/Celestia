@@ -540,7 +540,7 @@ export class TransitEngine {
       houseInterpretation: this.getSaturnHouseInterpretation(satHouse),
       lessons: this.getSaturnLessons(satHouse),
       advice: this.getSaturnAdvice(satHouse),
-      duration: "Active Phase (2025–2027)",
+      duration: "Current position snapshot; sign ingress, exact aspect dates and house-exit timing are not solved.",
     };
 
     // 2. JUPITER (1-Year Cycle)
@@ -561,7 +561,7 @@ export class TransitEngine {
       ],
       advice:
         "Plant bold seeds in this house sector. Say yes to opportunities that stretch your comfort zone.",
-      duration: "Annual Blessing Window (2026)",
+      duration: "Current position snapshot; sign ingress, exact aspect dates and house-exit timing are not solved.",
     };
 
     // 3. URANUS (7-Year Cycle)
@@ -582,7 +582,7 @@ export class TransitEngine {
       ],
       advice:
         "Do not fight sudden shifts here; innovate alongside them. Your true genius lies on the other side of conformity.",
-      duration: "Long-term Metamorphosis",
+      duration: "Current position snapshot; sign ingress and house-exit dates are not solved.",
     };
 
     // 4. PLUTO (Generational Cycle)
@@ -603,11 +603,11 @@ export class TransitEngine {
       ],
       advice:
         "Allow what is obsolete to decompose gracefully. The rebirth in this area will grant you generational power.",
-      duration: "Generational Transmutation (Through 2043)",
+      duration: "Current position snapshot; sign ingress and house-exit dates are not solved.",
     };
 
     // 5. ECLIPSE DETECTIONS
-    const eclipses = this.getEclipseTransits();
+    const eclipses = this.getEclipseTransits(targetDate);
 
     return {
       saturn: saturnData,
@@ -718,10 +718,10 @@ export class TransitEngine {
   /**
    * Detect current astronomical eclipse cycles affecting the chart
    */
-  public getEclipseTransits(): EclipseTransit[] {
+  public getEclipseTransits(referenceDate: Date = this.currentDate): EclipseTransit[] {
     // Use the same dynamic Astronomy Engine event search as the Advanced
     // Western panel. Never substitute an expired hard-coded eclipse calendar.
-    const events = new EclipseAnalyzer().analyzeEclipses(this.birthChart, this.currentDate);
+    const events = new EclipseAnalyzer().analyzeEclipses(this.birthChart, referenceDate);
     return events.map((event) => {
       const longitude = event.degree;
       const natalAspects: string[] = [];
@@ -752,155 +752,36 @@ export class TransitEngine {
    * Calculate Timing Windows (When to Act!)
    */
   public getTimingWindows(): Record<string, TimingWindow> {
-    const currentPlanets = this.getPlanetaryPositions(this.currentDate);
-    const jupHouse = this.getHouse(currentPlanets.Jupiter.longitude);
-    const satHouse = this.getHouse(currentPlanets.Saturn.longitude);
-    const sunHouse = this.getHouse(currentPlanets.Sun.longitude);
-
-    // Career Phase
-    let careerPhase = "Foundation & Strategic Discipline";
-    if (jupHouse === 10 || sunHouse === 10) careerPhase = "Harvest & High Visibility";
-    else if (jupHouse === 1 || jupHouse === 2) careerPhase = "Expansion & Resource Growth";
-    else if (satHouse === 10) careerPhase = "Mastery & High Accountability";
-
-    // Love Climate
-    const venHouse = this.getHouse(currentPlanets.Venus.longitude);
-    let loveClimate = "Stable & Contemplative";
-    if (venHouse === 7 || venHouse === 5) loveClimate = "Peak Magnetic Romance & Connection";
-    else if (jupHouse === 7) loveClimate = "Golden Partnership & Union Window";
+    // The current project does not yet solve future exact transits, ingresses,
+    // stations and egresses for each life category. Returning hard-coded
+    // "best days" or "next opportunities" would be fabricated precision.
+    const unavailable = (
+      title: string,
+      category: TimingWindow["category"]
+    ): TimingWindow => ({
+      title,
+      category,
+      currentPhase: "No date-specific timing window is calculated",
+      bestTimes: [],
+      challengingTimes: [],
+      advice: "Use the displayed current transit contacts as symbolic reflection only. This panel does not calculate a dated event window or predict an outcome.",
+      nextOpportunity: "Not calculated",
+    });
 
     return {
-      career: {
-        title: "Career & Ambition Timing",
-        category: "career",
-        currentPhase: careerPhase,
-        bestTimes: [
-          {
-            period: "Sun transiting 10th House (Annual Peak)",
-            description: "High visibility with executive leadership and public recognition.",
-          },
-          {
-            period: "Jupiter Trine Natal Midheaven",
-            description: "Effortless promotions, lucrative client acquisitions, and career expansion.",
-          },
-        ],
-        challengingTimes: [
-          {
-            period: "Mercury Retrograde windows",
-            description: "Double-check contracts; avoid rash product launches; review workflows.",
-          },
-          {
-            period: "Saturn Square Midheaven",
-            description: "Endure heavy workload; prove competency; avoid hasty resignations.",
-          },
-        ],
-        advice:
-          "Build systematic excellence today. Deliver measurable results while Jupiter expands your professional reputation.",
-        nextOpportunity: "Upcoming New Moon in your Career / Income sector",
-      },
-      love: {
-        title: "Love & Partnership Timing",
-        category: "love",
-        currentPhase: loveClimate,
-        bestTimes: [
-          {
-            period: "Venus Transiting 5th & 7th Houses",
-            description: "Effortless mutual attraction, tender romance, and joyous dates.",
-          },
-          {
-            period: "Jupiter Aspecting Natal Venus",
-            description: "Golden romantic synchronicity, commitments, and generous affection.",
-          },
-        ],
-        challengingTimes: [
-          {
-            period: "Venus Retrograde (every 18 months)",
-            description: "Ex-partners resurface; reassess relationship values and self-worth.",
-          },
-          {
-            period: "Mars Square Natal Venus",
-            description: "Emotional friction or impatience; practice conscious de-escalation.",
-          },
-        ],
-        advice:
-          "Show up authentically without masking. The right partnership honors your sacred sovereignty.",
-        nextOpportunity: "Venus-Jupiter conjunction window",
-      },
-      finance: {
-        title: "Finance & Wealth Timing",
-        category: "finance",
-        currentPhase:
-          jupHouse === 2 || jupHouse === 8
-            ? "High Prosperity & Resource Expansion"
-            : "Strategic Budgeting & Asset Fortification",
-        bestTimes: [
-          {
-            period: "Jupiter Transiting 2nd or 8th House",
-            description: "Lucrative investments, bonuses, client expansions, and passive income gains.",
-          },
-          {
-            period: "Sun & Mercury in 2nd House",
-            description: "Ideal time to negotiate raises, revise fee structures, and audit accounts.",
-          },
-        ],
-        challengingTimes: [
-          {
-            period: "Saturn in 2nd House",
-            description: "Budget rigorously; eliminate frivolous overhead; build emergency cash.",
-          },
-        ],
-        advice:
-          "Cultivate multiple uncorrelated income streams. Invest in appreciating skills and tangible assets.",
-        nextOpportunity: "Next Taurus/Scorpio or 2nd/8th House Full Moon",
-      },
+      career: unavailable("Career & Ambition Timing", "career"),
+      love: unavailable("Love & Partnership Timing", "love"),
+      finance: unavailable("Finance & Wealth Timing", "finance"),
       health: {
         title: "Well-being Reflection (Non-medical)",
         category: "health",
-        currentPhase: "Routine reflection only",
-        bestTimes: [
-          {
-            period: "Review daily routines",
-            description: "Use this as a symbolic prompt to review rest, workload and sustainable daily habits.",
-          },
-          {
-            period: "Plan restorative activities",
-            description: "Consider scheduling ordinary breaks, recreation and time away from screens.",
-          },
-        ],
-        challengingTimes: [
-          {
-            period: "High-pressure periods",
-            description: "Use this only as a general reminder to avoid overloading your schedule. A chart cannot identify physical symptoms, illness or medical risk.",
-          },
-        ],
-        advice:
-          "Astrological symbolism cannot assess health, diagnose illness, estimate medical risk or guide treatment. For symptoms or health decisions, use qualified clinical care.",
-        nextOpportunity: "Choose a practical routine review date",
+        currentPhase: "No health timing is calculated",
+        bestTimes: [],
+        challengingTimes: [],
+        advice: "Astrology cannot assess health, diagnose illness, estimate medical risk or guide treatment. For symptoms or health decisions, use qualified clinical care.",
+        nextOpportunity: "Not calculated",
       },
-      spiritual: {
-        title: "Spiritual & Inner Growth Timing",
-        category: "spiritual",
-        currentPhase: "Deep Intuitive Awakening",
-        bestTimes: [
-          {
-            period: "Neptune Trine Natal Sun/Moon",
-            description: "Profound mystical downloads, prophetic dreams, and artistic channeled flow.",
-          },
-          {
-            period: "Sun in 12th House (Month before birthday)",
-            description: "Sacred retreat, meditation, and karmic closure.",
-          },
-        ],
-        challengingTimes: [
-          {
-            period: "Pluto Square Natal Moon",
-            description: "Subconscious purge; requires deep therapy, breathwork, or shadow work.",
-          },
-        ],
-        advice:
-          "Daily silence is not a luxury; it is your ultimate strategic advantage. Listen to your gut whisper.",
-        nextOpportunity: "Upcoming Pisces/Neptune alignment",
-      },
+      spiritual: unavailable("Spiritual & Inner Growth Timing", "spiritual"),
     };
   }
 }
