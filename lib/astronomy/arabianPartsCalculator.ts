@@ -230,11 +230,13 @@ export class ArabianPartsCalculator {
       Sun, Moon, Mercury, Venus, Mars, Jupiter, Saturn,
     };
     const ninthLordLon = ninthLordLongitude[ninthLordName];
-    const travelLon = isDay ? ASC + cusp9 - ninthLordLon : ASC + ninthLordLon - cusp9;
+    // Abū Maʿshar / al-Qabīsī give this travel Lot from the 9th-house
+    // lord to the degree of the 9th house in both day and night charts.
+    const travelLon = ASC + cusp9 - ninthLordLon;
     const partOfTravel = this.buildPart(
       "travel",
-      "Part of Travel & Horizons",
-      isDay ? `ASC + 9th Cusp - 9th Lord (${ninthLordName}) (Day)` : `ASC + 9th Lord (${ninthLordName}) - 9th Cusp (Night)`,
+      "Part of Foreign Travel (Abū Maʿshar / al-Qabīsī)",
+      `ASC + 9th Cusp - 9th Lord (${ninthLordName}) (same by day and night)`,
       travelLon,
       houseCusps,
       "Indicates journeys across distant seas, philosophical awakening, foreign lands, and pilgrimage.",
