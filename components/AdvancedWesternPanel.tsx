@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   WesternChartData,
   PlanetPosition,
@@ -88,6 +88,12 @@ export function AdvancedWesternPanel({
   const [selectedReleasingLot, setSelectedReleasingLot] = useState<"spirit" | "fortune">("spirit");
   const [firdariaNightOrder, setFirdariaNightOrder] = useState<FirdariaNightOrder>("nodes-after-planets");
   const [selectedReturnYear, setSelectedReturnYear] = useState<number>(new Date().getUTCFullYear());
+  const [returnLatitude, setReturnLatitude] = useState<number>(latitude);
+  const [returnLongitude, setReturnLongitude] = useState<number>(longitude);
+  useEffect(() => {
+    setReturnLatitude(latitude);
+    setReturnLongitude(longitude);
+  }, [latitude, longitude]);
   const [activeSubTab, setActiveSubTab] = useState<
     | "asteroids"
     | "lilith"
@@ -181,17 +187,17 @@ export function AdvancedWesternPanel({
   const returnEngine = useMemo(() => new WesternReturnEngine(), []);
   const solarReturnReport: ReturnChartReport = useMemo(
     () => returnEngine.calculateSolarReturn(
-      chartData, selectedReturnYear, latitude, longitude,
+      chartData, selectedReturnYear, returnLatitude, returnLongitude,
       chartData.requestedHouseSystem ?? chartData.houseSystem
     ),
-    [returnEngine, chartData, selectedReturnYear, latitude, longitude]
+    [returnEngine, chartData, selectedReturnYear, returnLatitude, returnLongitude]
   );
   const lunarReturnReport: ReturnChartReport = useMemo(
     () => returnEngine.calculateNextLunarReturn(
-      chartData, nowObj, latitude, longitude,
+      chartData, nowObj, returnLatitude, returnLongitude,
       chartData.requestedHouseSystem ?? chartData.houseSystem
     ),
-    [returnEngine, chartData, nowObj, latitude, longitude]
+    [returnEngine, chartData, nowObj, returnLatitude, returnLongitude]
   );
 
   // Hellenistic Profections
@@ -1203,13 +1209,29 @@ export function AdvancedWesternPanel({
           <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
             <h4 className="text-xs font-bold text-amber-300">Exact Return Charts</h4>
             <p className="text-[11px] text-slate-300">Return instants are solved when the transiting geocentric ecliptic longitude reaches the natal Sun or Moon longitude. Chart houses are recalculated for the selected reference location.</p>
-            <label className="flex items-center gap-2 text-[11px] text-slate-300">
-              Solar return year
-              <select value={selectedReturnYear} onChange={(event) => setSelectedReturnYear(Number(event.target.value))} className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-amber-200">
-                {Array.from({ length: 11 }, (_, index) => new Date().getUTCFullYear() - 2 + index).map((year) => <option key={year} value={year}>{year}</option>)}
-              </select>
-            </label>
-            <p className="text-[10px] text-slate-500">Return location: {latitude.toFixed(4)}°, {longitude.toFixed(4)}° · House system: {solarReturnReport.houseSystem}. Moving location changes houses and angles, not the exact geocentric return instant.</p>
+            <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-300">
+              <label className="flex items-center gap-2">
+                Solar return year
+                <select value={selectedReturnYear} onChange={(event) => setSelectedReturnYear(Number(event.target.value))} className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-amber-200">
+                  {Array.from({ length: 11 }, (_, index) => new Date().getUTCFullYear() - 2 + index).map((year) => <option key={year} value={year}>{year}</option>)}
+                </select>
+              </label>
+              <label className="flex items-center gap-2">
+                Return latitude
+                <input type="number" min="-90" max="90" step="0.0001" value={returnLatitude} onChange={(event) => {
+                  const value = Number(event.target.value);
+                  if (event.target.value !== "" && Number.isFinite(value) && value >= -90 && value <= 90) setReturnLatitude(value);
+                }} className="w-24 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-amber-200"/>
+              </label>
+              <label className="flex items-center gap-2">
+                Return longitude
+                <input type="number" min="-180" max="180" step="0.0001" value={returnLongitude} onChange={(event) => {
+                  const value = Number(event.target.value);
+                  if (event.target.value !== "" && Number.isFinite(value) && value >= -180 && value <= 180) setReturnLongitude(value);
+                }} className="w-24 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-amber-200"/>
+              </label>
+            </div>
+            <p className="text-[10px] text-slate-500">Return location: {returnLatitude.toFixed(4)}°, {returnLongitude.toFixed(4)}° · Resolved house system: {solarReturnReport.houseSystem}. Moving location changes houses and angles, not the exact geocentric return instant.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {[solarReturnReport, lunarReturnReport].map((report) => (
