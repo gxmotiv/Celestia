@@ -366,7 +366,11 @@ export class ZodiacalReleasingEngine {
     const totalL2Months = (currentL1End - currentL1Start) / (30 * ZodiacalReleasingEngine.DAY_MS);
     const allL2Periods: ReleasingPeriod[] = [];
     let elapsedMonths = 0;
-    let l2SignIndex = ZodiacalReleasingEngine.SIGN_NAMES.indexOf(currentL1.sign);
+    const currentL1SignIndex = ZodiacalReleasingEngine.SIGN_NAMES.findIndex((name) => name === currentL1.sign);
+    if (currentL1SignIndex < 0) {
+      throw new RangeError("The active Zodiacal Releasing sign is not a recognized zodiac sign.");
+    }
+    let l2SignIndex = currentL1SignIndex;
     let loosingOfBondApplied = false;
 
     for (let guard = 0; elapsedMonths < totalL2Months - 1e-9 && guard < 36; guard++) {
@@ -374,7 +378,7 @@ export class ZodiacalReleasingEngine {
       if (guard === 12 && totalL2Months > ZodiacalReleasingEngine.TOTAL_SIGN_PERIOD_UNITS) {
         // After the first complete 12-sign L2 circuit, jump to the sign
         // opposite the parent L1 sign instead of repeating the parent sign.
-        l2SignIndex = (ZodiacalReleasingEngine.SIGN_NAMES.indexOf(currentL1.sign) + 6) % 12;
+        l2SignIndex = (currentL1SignIndex + 6) % 12;
         isLoosingOfBond = true;
         loosingOfBondApplied = true;
       }
