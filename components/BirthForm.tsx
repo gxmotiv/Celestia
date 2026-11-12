@@ -74,27 +74,9 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const citySearchRequestRef = useRef(0);
 
-  // A saved profile can be selected while this form stays mounted. Keep the
-  // editor synchronized with the selected profile instead of showing stale fields.
-  useEffect(() => {
-    citySearchRequestRef.current += 1;
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-      searchTimeoutRef.current = null;
-    }
-    setFormData({
-      ...initialData,
-      timezoneMode: initialData.timezoneMode ?? (initialData.ianaTimezone ? "automatic" : "manual"),
-      manualOffsetConfirmed: initialData.manualOffsetConfirmed ?? false,
-    });
-    setCitySearchQuery(initialData.cityName ? `${initialData.cityName}, ${initialData.country}` : "");
-    setCityResults([]);
-    setShowCityDropdown(false);
-    setIsSearchingCity(false);
-    setShowCustomCoords(false);
-    setGpsError("");
-    setTimezoneError("");
-  }, [initialData]);
+  // Profile changes remount this editor via its identity key in the parent.
+  // Keep effects here for external cleanup only; do not synchronously reset React state.
+
 
   useEffect(() => {
     return () => {
