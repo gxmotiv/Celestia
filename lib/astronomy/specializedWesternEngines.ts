@@ -142,12 +142,24 @@ export class EclipseAnalyzer {
     const endDate = new Date(referenceDate.getTime());
     endDate.setUTCFullYear(endDate.getUTCFullYear() + yearsAhead);
 
+    let usedWholeSignFallback = false;
     const getHouse = (longitude: number) => {
       const cusps = chart.houses;
-      if (!cusps || cusps.length !== 12) return 1;
-      for (let i = 0; i < cusps.length; i++) {
+      const hasCompleteCusps = Array.isArray(cusps) &&
+        cusps.length === 12 &&
+        cusps.every((cusp) => Number.isFinite(cusp?.longitude));
+      if (!hasCompleteCusps) {
+        // Legacy/imported charts may contain no complete house-cusp array.
+        // Use a deterministic Whole Sign fallback from the supplied Ascendant,
+        // and disclose it in the event note rather than inventing house 1.
+        usedWholeSignFallback = true;
+        const ascSign = Math.floor(normalizeDegrees(chart.ascendant.longitude) / 30);
+        const pointSign = Math.floor(normalizeDegrees(longitude) / 30);
+        return ((pointSign - ascSign + 12) % 12) + 1;
+      }
+      for (let i = 0; i < 12; i++) {
         const current = cusps[i].longitude;
-        const nextCusp = cusps[(i + 1) % cusps.length].longitude;
+        const nextCusp = cusps[(i + 1) % 12].longitude;
         if (current < nextCusp) {
           if (longitude >= current && longitude < nextCusp) return i + 1;
         } else if (longitude >= current || longitude < nextCusp) {
@@ -248,7 +260,7 @@ export class EclipseAnalyzer {
         intensity,
         theme: info.theme,
         recommendations: info.recs,
-        visibilityNote: "This is a global astronomical eclipse event. Local visibility depends on geographic location and is not implied by this natal-chart overlay.",
+        visibilityNote: "This is a global astronomical eclipse event. Local visibility depends on geographic location and is not implied by this natal-chart overlay." + (usedWholeSignFallback ? " Natal house is a disclosed Whole Sign fallback because the imported chart has incomplete house cusps." : ""),
       };
     });
   }
