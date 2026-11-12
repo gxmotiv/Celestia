@@ -162,7 +162,7 @@ export function PrintDossier({
               </div>
               <div>
                 <span className="text-slate-500 block">House System / Ephemeris:</span>
-                <strong className="text-slate-900">{formData.houseSystem} / astronomy-engine</strong>
+                <strong className="text-slate-900">{western.houseSystem} / astronomy-engine</strong>
               </div>
             </div>
           </div>
