@@ -9,6 +9,7 @@
  */
 
 import { calculateWesternChart, WesternChartData, normalizeDegrees } from "./ephemeris";
+import { isSunAboveHorizonInChart } from "./horizon";
 import { swissEphemeris } from "./swissEphemeris";
 import { MinorAspectsEngine } from "./minorAspects";
 import { AsteroidCalculator } from "./asteroidCalculator";
@@ -223,7 +224,12 @@ export class WesternBenchmarkRunner {
     });
 
     // Test 6: Whole Sign House System validation
-    const wsHouses = swissEphemeris.calculateHouses(chart.julianDay, 43.7844, 10.9253, "W");
+    const wsHouses = swissEphemeris.calculateHouses(
+      chart.julianDay,
+      chart.birthLatitude ?? 43.7844,
+      chart.birthLongitude ?? 10.9253,
+      "W"
+    );
     const ascSignIdx = Math.floor(chart.ascendant.longitude / 30);
     const expectedH1Ws = ascSignIdx * 30.0;
     const wsDiff = Math.abs(wsHouses.houseCusps[0] - expectedH1Ws);
@@ -288,7 +294,7 @@ export class WesternBenchmarkRunner {
       standardReference: "Ptolemy Tetrabiblos Book I, Ch. 13",
       expected: "0°, 30°, 60°, 90°, 120°, 150°, 180° exact",
       actual: anglesValid ? "All aspects conform to standard nominal angles" : "Mismatch found",
-      passed: anglesValid,
+      passed: aspects.length > 0 && anglesValid,
       details: "Ptolemaic and Keplerian aspects must adhere strictly to their canonical geometric arc divisions.",
     });
 
@@ -308,7 +314,7 @@ export class WesternBenchmarkRunner {
       standardReference: "Mathematical Aspect Definition",
       expected: "|actualDiff - nominalAngle| == orb",
       actual: orbsCorrect ? "Verified: orbs computed with 100% mathematical consistency" : "Mismatch found",
-      passed: orbsCorrect,
+      passed: aspects.length > 0 && orbsCorrect,
       details: "Orb represents the exact deviation of the planetary separation from the true geometric aspect angle.",
     });
 
@@ -366,7 +372,7 @@ export class WesternBenchmarkRunner {
     // Test 13: Diurnal vs Nocturnal Sect Detection (Day vs Night Chart)
     // Sun in House 7..12 = Diurnal; Sun in House 1..6 = Nocturnal
     const sunHouse = chart.planets.find((p) => p.name === "Sun")?.house || 1;
-    const isDiurnalExpected = sunHouse >= 7 && sunHouse <= 12;
+    const isDiurnalExpected = isSunAboveHorizonInChart(chart);
     const firdariaRep = this.firdariaEngine.calculateFirdaria(chart, 30);
     results.push({
       id: "W-PRED-02",
@@ -475,7 +481,10 @@ export class WesternBenchmarkRunner {
       standardReference: "Celestial Mechanics (Max Solar Obliquity ε = 23°26')",
       expected: "Parallels / Contraparallels evaluated against 23.439° limit",
       actual: `${decRep.parallels.length} Parallels, ${decRep.contraparallels.length} Contraparallels, ${decRep.outOfBoundsCount} OOB planets`,
-      passed: decRep.parallels.length >= 0 && Array.isArray(decRep.declinations),
+      passed: decRep.declinations.length === chart.planets.length &&
+        decRep.declinations.every((entry) => Number.isFinite(entry.declination)) &&
+        decRep.outOfBoundsCount >= 0 && decRep.outOfBoundsCount <= chart.planets.length &&
+        Math.abs(this.declinationCalculator.calculateDeclination(90, 0, chart.obliquity) - chart.obliquity) < 1e-6,
       details: "Planets exceeding the Sun's maximum declination of ~23°26' are deemed Out of Bounds (OOB), acting with unbounded autonomy.",
     });
 
@@ -559,7 +568,8 @@ export class WesternBenchmarkRunner {
     const p2Sun = partnerChart.planets[0].longitude;
     const expCompSun = this.midpointCalculator.calculateMidpoint(p1Sun, p2Sun);
     const actualCompSun = compRep.planets.find((p) => p.name === "Sun")?.longitude || 0;
-    const compSunDiff = Math.abs(expCompSun - actualCompSun);
+    const rawCompSunDiff = Math.abs(expCompSun - actualCompSun);
+    const compSunDiff = Math.min(rawCompSunDiff, 360 - rawCompSunDiff);
     results.push({
       id: "W-REL-02",
       name: "Composite Chart Mathematical Midpoint Invariant",
