@@ -1129,7 +1129,7 @@ export function RelationshipAstrologyView({
           <p className="text-[11px] text-slate-400 bg-slate-950/50 border border-slate-800 rounded-lg p-3">These values are a hand-designed astrology index, not a compatibility probability, psychometric test or measured relationship outcome. Each dimension starts at 70 and is adjusted by selected planetary aspects, aspect type and orb using fixed heuristic weights. They are symbolic prompts only, not a basis for deciding whether a relationship is suitable.</p>
 
           {/* Compatibility Radar Scores */}
-          <div className="p-4 sm:p-5 bg-slate-950/80 border border-slate-800 rounded-xl space-y-4>
+          <div className="p-4 sm:p-5 bg-slate-950/80 border border-slate-800 rounded-xl space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div>
                 <span className="text-[10px] font-mono text-rose-400 uppercase tracking-widest block">
