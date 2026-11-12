@@ -6,7 +6,7 @@
  */
 
 import { swissEphemeris, SwissPlanetPosition } from "./swissEphemeris";
-import { WesternChartData, PlanetPosition, HouseCusp, ZODIAC_SIGNS } from "./ephemeris";
+import { WesternChartData, PlanetPosition, HouseCusp, ZODIAC_SIGNS, normalizeDegrees } from "./ephemeris";
 import { EclipseAnalyzer } from "./specializedWesternEngines";
 import { isAngularAspectApplying } from "./ephemeris";
 import * as Astronomy from "astronomy-engine";
@@ -87,7 +87,7 @@ export interface DailyHoroscopeData {
   };
   /** Number of current transiting-to-natal aspects within configured orbs. */
   activeTransitCount: number;
-  energyMood: string;
+  transitSummary: string;
   focus: string;
   luckyHours: string;
   challenges: string[];
@@ -222,7 +222,13 @@ export class TransitEngine {
    */
   public getHouse(longitude: number): number {
     const cusps = this.birthChart.houses.map((h) => h.longitude);
-    if (!cusps || cusps.length < 12) return 1;
+    if (cusps.length !== 12 || !cusps.every(Number.isFinite)) {
+      // Imported/legacy chart fallback: use Whole Sign houses from the supplied
+      // Ascendant and do not falsely assign every transit to house 1.
+      const ascendantSign = Math.floor(normalizeDegrees(this.birthChart.ascendant.longitude) / 30);
+      const transitSign = Math.floor(normalizeDegrees(longitude) / 30);
+      return ((transitSign - ascendantSign + 12) % 12) + 1;
+    }
 
     for (let i = 0; i < 12; i++) {
       const currentCusp = cusps[i];
@@ -945,73 +951,44 @@ export class DailyHoroscope {
    * Generate complete daily horoscope for a target date
    */
   public generateDailyHoroscope(targetDate: Date = new Date()): DailyHoroscopeData {
+    if (!Number.isFinite(targetDate.getTime())) {
+      throw new RangeError("Daily transit snapshot requires a valid target date.");
+    }
     const planets = this.transitEngine.getPlanetaryPositions(targetDate);
     const transits = this.transitEngine.getCurrentTransits(targetDate);
-
     const moonPos = planets.Moon;
     const sunPos = planets.Sun;
     const moonPhase = this.getMoonPhase(sunPos.longitude, moonPos.longitude);
 
-    // Calculate energy score from transits
-    let energyScore = 65;
-    transits.slice(0, 10).forEach((t) => {
-      if (t.nature === "Harmonious") energyScore += t.exactness * 6;
-      else if (t.nature === "Challenging") energyScore -= t.exactness * 4;
-      else energyScore += t.exactness * 2;
-    });
-    energyScore = Math.max(30, Math.min(98, Math.round(energyScore)));
-
-    let energyMood = "Balanced & Strategic Flow";
-    if (energyScore >= 85) energyMood = "Radiant, Expansive & High-Momentum";
-    else if (energyScore >= 70) energyMood = "Productive, Optimistic & Social";
-    else if (energyScore >= 50) energyMood = "Reflective, Disciplined & Steady";
-    else energyMood = "Introspective Calibration & Grounding";
-
-    // Focus area based on transiting Sun & Moon houses
     const sunHouse = this.transitEngine.getHouse(sunPos.longitude);
     const moonHouse = this.transitEngine.getHouse(moonPos.longitude);
-
-    const FOCUS_AREAS: Record<number, string> = {
-      1: "Personal Vitality, Image & Decisive Leadership",
-      2: "Financial Fortification & Self-Worth Recognition",
-      3: "Intellectual Agility, Writing & Strategic Networking",
-      4: "Domestic Sanctuary, Family Grounding & Emotional Rest",
-      5: "Creative Passion, Playful Self-Expression & Romance",
-      6: "Routine Optimization, High-Level Craftsmanship & Wellness",
-      7: "Diplomatic Cooperation, Partnership Alignment & Contracts",
-      8: "Deep Psychological Focus, Shared Resources & Rebirth",
-      9: "Big-Picture Vision, Higher Studies & Adventurous Horizons",
-      10: "Career Milestones, Public Authority & Executive Execution",
-      11: "Community Impact, Meaningful Alliances & Future Goals",
-      12: "Subconscious Healing, Sacred Solitude & Meditation",
+    const focusAreas: Record<number, string> = {
+      1: "Identity and self-presentation",
+      2: "Resources and personal values",
+      3: "Learning and communication",
+      4: "Home and foundations",
+      5: "Creativity and enjoyment",
+      6: "Work and daily routines",
+      7: "Partnerships and agreements",
+      8: "Shared resources and change",
+      9: "Study and worldview",
+      10: "Public role and vocation",
+      11: "Community and long-range goals",
+      12: "Rest and reflection",
     };
+    const focus = `Moon in natal house ${moonHouse}: ${focusAreas[moonHouse] || "General reflection"} (symbolic house theme only)`;
 
-    const focus = FOCUS_AREAS[moonHouse] || FOCUS_AREAS[sunHouse] || "Creative & Professional Mastery";
-
-    // Lucky hours based on planetary hours
-    const luckyHourMap = [
-      "09:15 AM – 11:30 AM (Solar-Jupiter Peak)",
-      "02:00 PM – 04:30 PM (Mercury-Venus Alignment)",
-      "10:00 AM – 12:45 PM (Lunar-Mars Focus)",
-      "03:30 PM – 05:45 PM (Golden Hour Harmony)",
-      "11:00 AM – 01:15 PM (High-Vibration Window)",
-    ];
-    const luckyHours = luckyHourMap[targetDate.getDay() % luckyHourMap.length];
-
-    // Affirmation
     const affirmations = [
-      "I align my sovereign will with the harmonious rhythms of the cosmos. Opportunities flow to me effortlessly.",
-      "My mind is clear, my boundaries are firm, and my actions build lasting legacy.",
-      "I welcome transformative challenges as fertile soil for my inevitable triumph.",
-      "I honor my unique cosmic blueprint; abundance and authentic love surround me today.",
-      "I navigate today's planetary currents with calm wisdom, poise, and playful grace.",
+      "I can approach today's decisions with clarity and patience.",
+      "I can focus on what is within my control and let the rest wait.",
+      "I can make steady progress through thoughtful, practical action.",
+      "I can listen carefully, ask clear questions and respect my boundaries.",
+      "I can balance ambition with rest and realistic expectations.",
     ];
-    const affirmation = affirmations[(targetDate.getDate() + targetDate.getMonth()) % affirmations.length];
-
-    // Top highlight transit
+    const affirmation = affirmations[(targetDate.getUTCDate() + targetDate.getUTCMonth()) % affirmations.length];
     const highlightTransit = transits.length > 0
       ? `${transits[0].transitingPlanet} ${transits[0].aspectSymbol} Natal ${transits[0].natalPlanet}`
-      : "Sun Harmonic Alignment";
+      : "No current aspect within the configured transit orbs";
 
     return {
       date: targetDate.toLocaleDateString("en-US", {
@@ -1019,38 +996,36 @@ export class DailyHoroscope {
         month: "long",
         day: "numeric",
         year: "numeric",
+        timeZone: "UTC",
       }),
       dateObj: targetDate,
       moonSign: moonPos.sign,
       moonDegree: moonPos.degree,
       moonSignFormatted: `${moonPos.degree.toFixed(1)}° ${moonPos.sign}`,
-      moonPhase: moonPhase,
-      overallEnergy: energyScore,
-      energyMood: energyMood,
-      focus: focus,
-      luckyHours: luckyHours,
+      moonPhase,
+      activeTransitCount: transits.length,
+      transitSummary: `${transits.length} current transit aspects fall within the configured orbs. This is a geometric count, not a score or prediction of how the day will go.`,
+      focus,
+      luckyHours: "Not calculated: this view has no selected location and precision sunrise/sunset planetary-hour calculation.",
       challenges: [
-        "Avoid imposter syndrome or knee-jerk emotional reactions.",
-        "Refrain from taking on extra tasks that dilute your primary focus.",
+        "No personal challenge forecast is calculated from these positions.",
+        "Use current aspects as symbolic reflection, not as a prediction of events.",
       ],
       opportunities: [
-        "Initiate crucial conversations during your Lucky Hours.",
-        "Pitch ambitious concepts; influential peers are receptive.",
-        "Ground creative inspiration into concrete, actionable steps.",
+        "No personal opportunity forecast is calculated from these positions.",
+        "Review the exact transit contacts and their applying/separating status instead.",
       ],
-      affirmation: affirmation,
+      affirmation,
       bestActions: [
-        "Draft the blueprint for your primary goal",
-        "Reach out to an admired mentor or collaborator",
-        "Take a brisk 20-minute walk in natural sunlight",
-        "Set clear boundaries around deep-work hours",
+        "Choose one realistic priority for the day.",
+        "Check important facts before making a consequential decision.",
+        "Keep a workable balance between focused effort and rest.",
       ],
       avoidActions: [
-        "Doom-scrolling or getting distracted by internet drama",
-        "Making impulsive purchases to soothe temporary anxiety",
-        "Saying yes out of people-pleasing guilt",
+        "Avoid treating astrological symbolism as certainty.",
+        "Avoid making medical, legal or financial decisions solely from a horoscope.",
       ],
-      highlightTransit: highlightTransit,
+      highlightTransit,
     };
   }
 
@@ -1070,9 +1045,9 @@ export class DailyHoroscope {
         dayName: i === 0 ? "Today" : dayNames[d.getDay()],
         dateString: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
         moonSign: horoscope.moonSign,
-        energyScore: horoscope.overallEnergy,
-        theme: horoscope.energyMood.split("&")[0].trim(),
-        keyTransit: horoscope.highlightTransit || "Harmonic Alignment",
+        activeTransitCount: horoscope.activeTransitCount,
+        theme: horoscope.focus,
+        keyTransit: horoscope.highlightTransit || "No current aspect within configured orbs",
       });
     }
 
@@ -1084,47 +1059,59 @@ export class DailyHoroscope {
    */
   public generateMonthlyForecast(targetMonth?: number, targetYear?: number): MonthlyForecastOverview {
     const now = new Date();
-    const month = targetMonth !== undefined ? targetMonth : now.getMonth();
-    const year = targetYear !== undefined ? targetYear : now.getFullYear();
+    const month = targetMonth ?? now.getUTCMonth();
+    const year = targetYear ?? now.getUTCFullYear();
+    if (!Number.isInteger(month) || month < 0 || month > 11 || !Number.isInteger(year) || year < 1600 || year > 2600) {
+      throw new RangeError("Monthly phase calendar requires month 0–11 and a supported Gregorian year.");
+    }
 
     const monthNames = [
       "January", "February", "March", "April", "May", "June",
       "July", "August", "September", "October", "November", "December",
     ];
+    const startDate = new Date(Date.UTC(year, month, 1));
+    const endDate = new Date(Date.UTC(year, month + 1, 1));
+    const daysInMonth = Math.round((endDate.getTime() - startDate.getTime()) / 86400000);
+
+    // Astronomy Engine defines new/full moon from the geocentric ecliptic
+    // longitude difference of Moon and Sun (0° and 180° respectively).
+    const newMoon = Astronomy.SearchMoonPhase(0, startDate, daysInMonth);
+    const fullMoon = Astronomy.SearchMoonPhase(180, startDate, daysInMonth);
+    const dateInsideMonth = (event: Astronomy.AstroTime | null): string | null => {
+      if (!event) return null;
+      const eventDate = event.date;
+      if (eventDate.getTime() < startDate.getTime() || eventDate.getTime() >= endDate.getTime()) return null;
+      return eventDate.toISOString();
+    };
+    const newMoonIso = dateInsideMonth(newMoon);
+    const fullMoonIso = dateInsideMonth(fullMoon);
+    const toDateLabel = (iso: string | null) => iso ? iso.slice(0, 10) + " UTC" : "Not found in this month";
+
+    const highlights: MonthlyForecastOverview["highlights"] = [];
+    if (newMoonIso) {
+      highlights.push({
+        date: newMoonIso.slice(0, 10),
+        title: "Astronomical New Moon",
+        description: "Geocentric Sun–Moon ecliptic longitude separation reaches 0°. Astrological interpretations are not calculated by this calendar.",
+        impact: "Medium",
+      });
+    }
+    if (fullMoonIso) {
+      highlights.push({
+        date: fullMoonIso.slice(0, 10),
+        title: "Astronomical Full Moon",
+        description: "Geocentric Sun–Moon ecliptic longitude separation reaches 180°. Astrological interpretations are not calculated by this calendar.",
+        impact: "Medium",
+      });
+    }
 
     return {
       monthName: monthNames[month],
-      year: year,
-      newMoonDate: `${monthNames[month]} 12`,
-      fullMoonDate: `${monthNames[month]} 27`,
-      generalTheme:
-        "A transformative chapter marked by structural discipline, strategic relationship alignment, and decisive professional momentum.",
-      highlights: [
-        {
-          date: `${monthNames[month]} 4`,
-          title: "Mercury Ingress & Intellectual Flow",
-          description: "Clear communication, sharp negotiation skills, and commercial synergy.",
-          impact: "Medium",
-        },
-        {
-          date: `${monthNames[month]} 12`,
-          title: "New Moon Intentions Portal",
-          description: "Prime day to plant ambitious seeds and launch long-term projects.",
-          impact: "High",
-        },
-        {
-          date: `${monthNames[month]} 19`,
-          title: "Sun-Jupiter Planetary Harmony",
-          description: "Peak good fortune, optimistic breakthroughs, and social magnetism.",
-          impact: "High",
-        },
-        {
-          date: `${monthNames[month]} 27`,
-          title: "Full Moon Culmination & Revelation",
-          description: "Climax of ongoing negotiations; celebrate wins and release what no longer serves.",
-          impact: "High",
-        },
-      ],
+      year,
+      newMoonDate: toDateLabel(newMoonIso),
+      fullMoonDate: toDateLabel(fullMoonIso),
+      generalTheme: "This calendar reports calculated astronomical lunar phases only. It does not predict personal events, opportunities or outcomes.",
+      highlights,
     };
   }
 }
