@@ -643,7 +643,7 @@ export class WesternBenchmarkRunner {
     });
 
     // Test 26: Historical Leonardo da Vinci Classical Chart (April 15, 1452, Vinci, Italy)
-    // Leonardo da Vinci's historical horoscope has Sun in early/mid Taurus in Gregorian or 25° Aries in Julian calendar
+    // Historical date/time conventions are not independently validated by this sample.
     const leoChart = calculateWesternChart(1452, 4, 15, 22, 0, 43.7844, 10.9253, 1, "Placidus");
     const leoSun = leoChart.planets.find((p) => p.name === "Sun")!;
     const leoMoon = leoChart.planets.find((p) => p.name === "Moon")!;
@@ -655,11 +655,11 @@ export class WesternBenchmarkRunner {
       expected: "At least ten planetary points and twelve house cusps",
       actual: `Sun: ${leoSun.signDegreeFormatted}, Moon: ${leoMoon.signDegreeFormatted}, ASC: ${leoChart.ascendant.signDegreeFormatted}`,
       passed: leoChart.planets.length >= 10 && leoChart.houses.length === 12 && Boolean(leoSun) && Boolean(leoMoon),
-      details: "Matches historical archival birth records documented by Leonardo's grandfather in the State Archives of Florence.",
+      details: "The source record uses a historical Julian/Florentine local-time convention. This Gregorian fixed-offset sample is not a validated conversion and the test checks output structure only.",
     });
 
     // Test 27: Royal Archangel Fixed Star Regulus Longitude Calibration
-    // Regulus entered Virgo 0°00' in 2011; J2000 longitude was 150.08° (29°50' Leo)
+    // Regulus J2000 tropical longitude is approximately Leo 29°50 (149.83°).
     const regulus = FixedStarsEngine.FIXED_STARS.find((s) => s.name.includes("Regulus"));
     results.push({
       id: "W-BENCH-03",
