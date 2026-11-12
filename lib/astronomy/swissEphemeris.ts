@@ -6,6 +6,7 @@
  */
 
 import * as Astronomy from "astronomy-engine";
+import { calculateEastPointLongitude, calculateVertexLongitude } from "./anglePoints";
 
 export interface SwissPlanetPosition {
   longitude: number;      // Ecliptic longitude in degrees, rounded for display (not an accuracy guarantee)
@@ -46,6 +47,7 @@ export interface SwissHouseResult {
   /** True obliquity of date in degrees, matching Astronomy Engine GAST. */
   obliquity: number;
   houseSystemUsed: "P" | "W" | "E" | "O";
+  equatorialAscendant: number;
 }
 
 export interface SwissAspect {
@@ -494,13 +496,8 @@ export class SwissEphemerisEngine {
     ) * (180.0 / Math.PI);
     if (asc < 0) asc += 360.0;
 
-    // Vertex calculation (western electric axis)
-    const ramcVertex = (ramc + 180.0) * (Math.PI / 180.0);
-    let vertex = Math.atan2(
-      Math.cos(ramcVertex),
-      -Math.sin(ramcVertex) * Math.cos(eps) + (1 / Math.tan(phi || 0.0001)) * Math.sin(eps)
-    ) * (180.0 / Math.PI);
-    if (vertex < 0) vertex += 360.0;
+    const vertex = calculateVertexLongitude(ramc, latitude, epsDeg);
+    const equatorialAscendant = calculateEastPointLongitude(ramc, epsDeg);
 
     // Placidus is undefined at polar-circle latitudes. Use the standard Porphyry
     // quadrant fallback explicitly instead of allowing a trigonometric result to
@@ -647,6 +644,7 @@ export class SwissEphemerisEngine {
       localSiderealTime: round4(ramc),
       obliquity: round4(epsDeg),
       houseSystemUsed: systemUsed,
+      equatorialAscendant: round4(equatorialAscendant),
     };
   }
 
