@@ -23,6 +23,7 @@ jobs:
       matrix:
         script:
           - testAstrologySuite.ts
+          - testWesternIntegritySuite.ts
           - testBaZiSuite.ts
           - testGeocodeSuite.ts
           - testPdfGenerationSuite.ts
