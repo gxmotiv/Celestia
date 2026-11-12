@@ -415,9 +415,9 @@ const nightLots = lotsCalculator.calculateAll({ ...lotParams, isDayChart: false 
 close(dayLots.partOfFortune.longitude, 65, 1e-9, "Day Fortune uses ASC + Moon - Sun");
 close(nightLots.partOfFortune.longitude, 325, 1e-9, "Night Fortune reverses luminary arc");
 close(dayLots.partOfTravel.longitude, 70, 1e-9, "Day Travel Lot uses ASC + 9th cusp - 9th ruler");
-close(nightLots.partOfTravel.longitude, 320, 1e-9, "Night Travel Lot reverses 9th cusp and ruler");
+close(nightLots.partOfTravel.longitude, 70, 1e-9, "Abū Maʿshar / al-Qabīsī Travel Lot uses the same 9th-cusp minus 9th-ruler arc by night");
 check(dayLots.partOfTravel.formula.includes("Day"), "Travel Lot formula label exposes day convention");
-check(nightLots.partOfTravel.formula.includes("Night"), "Travel Lot formula label exposes night convention");
+check(nightLots.partOfTravel.formula.includes("same by day and night"), "Travel Lot formula label identifies the documented invariant sect convention");
 
 // 8. Transit direction and forecast outputs must be computed, not invented.
 const transitDate = new Date("2026-11-12T00:00:00.000Z");
