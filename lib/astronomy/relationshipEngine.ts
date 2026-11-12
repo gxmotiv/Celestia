@@ -82,7 +82,7 @@ export interface CompatibilityScores {
   communication: number; // Mercury/Moon contacts
   valuesAlignment: number;// Venus/Jupiter contacts
   longTermPotential: number;// Saturn contacts
-  overall: number;       // Weighted composite affinity (0-100)
+  overall: number;       // Heuristic weighted astrology index (25-99), not a probability
   verdict: string;
   dimensions: AffinityDimension[];
   relationshipContextSummary: string;
@@ -394,7 +394,7 @@ export class SynastryEngine {
       }
       if (this.relType === "stranger") {
         if (rawCategory === "Romance & Chemistry") return "Instant Vibe & Spark";
-        if (rawCategory === "Commitment & Longevity") return "Destined Crossroad";
+        if (rawCategory === "Commitment & Longevity") return "Unexpected Encounters";
         return rawCategory;
       }
       if (this.relType === "mentor") {
@@ -599,7 +599,7 @@ export class SynastryEngine {
             : "Shared progressive visions, social communities, community impact, and future hopes.";
         case 12:
           return isStranger
-            ? "Uncanny deja-vu feeling. A fleeting or sudden encounter carrying subconscious or past-life reverberations."
+            ? "A sudden or familiar-feeling encounter; some astrologers associate this with past-life symbolism, but it is not evidence of a prior connection."
             : "Subconscious soul-merging, dream telepathy, unspoken empathy, and spiritual transcendence.";
         default:
           return "Active astrological house overlay.";
@@ -711,7 +711,7 @@ export class SynastryEngine {
       overall = Math.round(em * 0.28 + sat * 0.20 + comm * 0.20 + val * 0.16 + men * 0.10 + phys * 0.06);
       dimensions = [
         { key: "nurturing", label: "Parental Warmth & Holding (Moon)", val: em, color: "bg-blue-500", description: "Providing emotional safety, unconditional love, and comforting presence" },
-        { key: "growth", label: "Self-Actualization & Talents (Sun/Jupiter)", val: val, color: "bg-emerald-500", description: "Encouraging the child's authentic destiny, talents, and joy" },
+        { key: "growth", label: "Self-Actualization & Talents (Sun/Jupiter)", val: val, color: "bg-emerald-500", description: "Encouraging the child's interests, talents, autonomy and joy" },
         { key: "comm", label: "Openhearted Listening (Mercury)", val: comm, color: "bg-cyan-500", description: "Creating a safe space where the child expresses feelings without fear" },
         { key: "anchor", label: "Steadfast Anchor & Structure (Saturn)", val: sat, color: "bg-purple-500", description: "Consistent rules and loving boundaries that provide psychological security" },
         { key: "learning", label: "Curiosity & Wonder (Mercury)", val: men, color: "bg-amber-500", description: "Encouraging exploration, education, and lively intellectual curiosity" },
@@ -775,10 +775,10 @@ export class SynastryEngine {
         { key: "spark", label: "Energetic Magnetism (Mars/Sun)", val: phys, color: "bg-rose-500", description: "The sudden spark that makes this passing encounter memorable" },
         { key: "curiosity", label: "Intellectual Intrigue (Mercury)", val: men, color: "bg-amber-500", description: "Curiosity to learn who this person is and what they represent" },
         { key: "flow", label: "Effortless Dialogue", val: comm, color: "bg-cyan-500", description: "Talking as if you already know each other from another lifetime" },
-        { key: "karmic", label: "Synchronicity Node (Saturn)", val: sat, color: "bg-purple-500", description: "A meaningful crossroads encounter engineered by planetary timing" },
+        { key: "karmic", label: "Synchronicity Node (Saturn)", val: sat, color: "bg-purple-500", description: "A timing or responsibility theme sometimes explored through Saturn symbolism; it is not evidence that an encounter was engineered or fated." },
         { key: "worldview", label: "Philosophical Mirror (Jupiter)", val: val, color: "bg-emerald-500", description: "A serendipitous conversation that offers a fresh perspective on life" },
       ];
-      verdict = overall >= 85 ? "Fated Synchronistic Encounter with Instant Resonance" : overall >= 72 ? "Intriguing Passing Mirror with Fresh Insights" : "Brief Celestial Intersection with Curious Dynamics";
+      verdict = overall >= 85 ? "Strong Symbolic Resonance & Mutual Curiosity" : overall >= 72 ? "Interesting Encounter with Fresh Perspectives" : "Brief Connection with Different Rhythms";
       relationshipContextSummary = `Meeting as strangers or acquaintances, this synastry shows why the universe brought your paths together. Even a brief interaction can act as a catalyst for new self-awareness.`;
     } else if (this.relType === "mentor") {
       overall = Math.round(men * 0.28 + val * 0.22 + comm * 0.2 + sat * 0.16 + em * 0.08 + phys * 0.06);
@@ -802,7 +802,7 @@ export class SynastryEngine {
         { key: "values", label: "Value Harmony & Vision (Jupiter)", val: val, color: "bg-emerald-500", description: "Shared life ideals, moral alignment, and mutual expansion" },
         { key: "longevity", label: "Marital Longevity (Saturn)", val: sat, color: "bg-purple-500", description: "Enduring commitment, shared responsibility, and devotion" },
       ];
-      verdict = overall >= 88 ? "Extraordinary Soulmate Affinity & Enduring Resonance" : overall >= 78 ? "Strong Natural Compatibility & Deep Chemistry" : overall >= 68 ? "Balanced Dynamic Attraction with Growth Edges" : "High-Growth Karmic Crucible Requiring Conscious Communication";
+      verdict = overall >= 88 ? "Strong Romantic Affinity Themes" : overall >= 78 ? "Prominent Chemistry & Shared Themes" : overall >= 68 ? "Mixed Attraction and Growth Themes" : "Contrasting Patterns Calling for Clear Communication";
       relationshipContextSummary = `This romantic synastry reveals powerful attraction and emotional depth. Planetary alignments offer both thrilling chemistry and the grounding required for enduring partnership.`;
     }
 
