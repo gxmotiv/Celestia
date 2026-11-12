@@ -235,9 +235,10 @@ check(zrAtOneYear.currentL1Period.sign === "Aries", "ZR L1 identifies active Ari
 check(zrAtOneYear.currentL2Period.sign === "Aries", "ZR L2 starts from parent L1 sign");
 check(zrAtOneYear.currentL1Period.angleFromFortune === 11, "ZR angularity is counted from Lot of Fortune");
 check(zrAtOneYear.currentL1Period.isPeak === false, "ZR does not mark 11th from Fortune as a peak");
-const zrAfterLoB = new Date(zrBirth.getTime() + (23 * 360 + 211 * 30 + 5) * 86400000);
+const zrGeminiStart = new Date(zrBirth.getTime() + 23 * 360 * 86400000);
+const zrAfterLoB = new Date(zrGeminiStart.getTime() + (211 * 30 + 5) * 86400000);
 const zrLoBReport = zr.calculateReleasing(
-  zrBirth,
+  zrGeminiStart,
   65,
   "Spirit (Career & Purpose)",
   zrAfterLoB,
