@@ -598,6 +598,38 @@ export class SwissEphemerisEngine {
       }
     }
 
+    const hasTwelveFiniteCusps = () =>
+      Array.from({ length: 12 }, (_, index) => cusps[index]).every(Number.isFinite);
+
+    if (!hasTwelveFiniteCusps() && systemUsed !== "O") {
+      // Math functions return NaN rather than throwing for some invalid
+      // semi-arc configurations. Detect that explicitly and resolve using
+      // the documented Porphyry quadrant fallback.
+      systemUsed = "O";
+      const ascendant = asc;
+      const descendant = (asc + 180.0) % 360.0;
+      const ic = (mc + 180.0) % 360.0;
+      const forwardArc = (from: number, to: number) => ((to - from) % 360 + 360) % 360;
+      const quadrants = [
+        [ascendant, ic],
+        [ic, descendant],
+        [descendant, mc],
+        [mc, ascendant],
+      ] as const;
+      for (let quadrant = 0; quadrant < 4; quadrant++) {
+        const [start, end] = quadrants[quadrant];
+        const arc = forwardArc(start, end);
+        const base = quadrant * 3;
+        cusps[base] = start;
+        cusps[base + 1] = (start + arc / 3) % 360;
+        cusps[base + 2] = (start + 2 * arc / 3) % 360;
+      }
+    }
+
+    if (!hasTwelveFiniteCusps() || !Number.isFinite(asc) || !Number.isFinite(mc)) {
+      throw new RangeError("House calculation could not produce twelve finite cusps and valid angles.");
+    }
+
     const round4 = (v: number) => Math.round(v * 10000) / 10000;
 
     return {
