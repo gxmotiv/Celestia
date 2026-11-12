@@ -10,7 +10,7 @@ import {
   calculateSolarAltitudeDegrees,
   isSunAboveHorizonInChart,
 } from "../lib/astronomy/horizon";
-import { calculateHellenisticAnalysis } from "../lib/astronomy/hellenistic";
+import { calculateHellenisticAnalysis, calculateSiderealComparison } from "../lib/astronomy/hellenistic";
 import { ArabianPartsCalculator } from "../lib/astronomy/arabianPartsCalculator";
 import {
   FirdariaEngine,
@@ -127,6 +127,18 @@ try {
 check(invalidHarmonicRejected, "Harmonic number zero is rejected");
 
 
+
+// 0b. Fagan-Bradley comparison is calculated at the natal epoch, not from a fixed current constant.
+const faganReferenceChart = calculateWesternChart(2026, 10, 1, 0, 0, 51.4769, 0, 0, "Placidus");
+const siderealComparison = calculateSiderealComparison(faganReferenceChart);
+close(siderealComparison.faganBradleyAyanamsa, 25.1128, 0.01,
+  "Fagan-Bradley ayanamsa on 2026-10-01 agrees with the Swiss Ephemeris reference near 25°06'46");
+check(siderealComparison.referenceUtc.startsWith("2026-10-01"),
+  "Sidereal comparison exposes the UTC epoch used for the ayanamsa");
+const oldEpochChart = calculateWesternChart(2000, 1, 1, 12, 0, 51.4769, 0, 0, "Placidus");
+const oldEpochSidereal = calculateSiderealComparison(oldEpochChart);
+check(oldEpochSidereal.faganBradleyAyanamsa < siderealComparison.faganBradleyAyanamsa,
+  "Fagan-Bradley ayanamsa changes across epochs rather than using a timeless constant");
 
 // 1. Solar altitude and sect are based on real horizon geometry, not house numbers.
 close(
