@@ -167,7 +167,7 @@ check(oldEpochSidereal.faganBradleyAyanamsa < siderealComparison.faganBradleyAya
 const progressionBirth = new Date("1990-07-14T10:30:00.000Z");
 const progressionNow = new Date("2026-01-10T10:30:00.000Z");
 const progressionReport = new ProgressionsEngine().calculateProgressions(
-  progressionBirth, progressionNow, 51.4769, 0, 0
+  progressionBirth, progressionNow, 51.4769, 0
 );
 check(progressionReport.age === 35, "Secondary progression age uses elapsed tropical years");
 check(progressionReport.progressedDate === new Date(
