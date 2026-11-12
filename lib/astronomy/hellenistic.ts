@@ -1,4 +1,5 @@
 import { WesternChartData, PlanetPosition } from "./ephemeris";
+import { isSunAboveHorizonInChart } from "./horizon";
 
 export interface HellenisticAnalysis {
   isDiurnal: boolean;
@@ -68,8 +69,9 @@ export function calculateHellenisticAnalysis(western: WesternChartData): Helleni
   const moon = western.planets.find(p => p.name === "Moon");
   const ascLon = western.ascendant.longitude;
 
-  // Diurnal check: Sun is above horizon (Houses 7 through 12 in quadrant, or relative to Asc/Dsc)
-  const isDiurnal = sun ? (sun.house >= 7 && sun.house <= 12) : true;
+  // Sect depends on the Sun crossing the real local horizon, not the selected
+  // zodiacal house-number framework (Whole Sign, Equal, Placidus, etc.).
+  const isDiurnal = isSunAboveHorizonInChart(western);
 
   const sectLight = isDiurnal ? "Sun" : "Moon";
   const beneficOfSect = isDiurnal ? "Jupiter" : "Venus";
