@@ -25,6 +25,7 @@ import { isSunAboveHorizonInChart } from "./horizon";
 
 export interface MoonSignChangeEvent {
   age: number;
+  /** UTC calendar year in which this secondary-progressed life-year begins (birth year + age). */
   year: number;
   fromSign: string;
   toSign: string;
@@ -78,7 +79,8 @@ export class ProgressionsEngine {
       lat,
       lon,
       0,
-      "Placidus"
+      "Placidus",
+      progDateObj.getUTCSeconds()
     );
 
     const progSun = progChart.planets.find((p) => p.name === "Sun") || progChart.planets[0];
@@ -123,8 +125,8 @@ export class ProgressionsEngine {
       const d1 = new Date(checkTimeMs);
       const d2 = new Date(nextTimeMs);
 
-      const jd1 = swissEphemeris.calculateJulianDay(d1.getUTCFullYear(), d1.getUTCMonth() + 1, d1.getUTCDate(), d1.getUTCHours(), d1.getUTCMinutes());
-      const jd2 = swissEphemeris.calculateJulianDay(d2.getUTCFullYear(), d2.getUTCMonth() + 1, d2.getUTCDate(), d2.getUTCHours(), d2.getUTCMinutes());
+      const jd1 = swissEphemeris.calculateJulianDay(d1.getUTCFullYear(), d1.getUTCMonth() + 1, d1.getUTCDate(), d1.getUTCHours(), d1.getUTCMinutes(), d1.getUTCSeconds(), 0);
+      const jd2 = swissEphemeris.calculateJulianDay(d2.getUTCFullYear(), d2.getUTCMonth() + 1, d2.getUTCDate(), d2.getUTCHours(), d2.getUTCMinutes(), d2.getUTCSeconds(), 0);
 
       const moonPos1 = swissEphemeris.calculatePlanetPosition(swissEphemeris.MOON, jd1);
       const moonPos2 = swissEphemeris.calculatePlanetPosition(swissEphemeris.MOON, jd2);
