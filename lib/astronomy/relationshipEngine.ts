@@ -58,8 +58,9 @@ export interface SynastryAspect {
   symbol: string;
   angle: number;
   orb: number;
-  isApplying: boolean;
-  score: number; // 1 to 10
+  /** Cross-chart natal aspects compare two static birth snapshots; applying/separating is not defined here. */
+  isApplying: boolean | null;
+  score: number; // Interpretive heuristic weight, not measured compatibility
   nature: "Harmonious" | "Challenging" | "Dynamic" | "Karmic";
   category: string;
   title: string;
@@ -479,7 +480,7 @@ export class SynastryEngine {
               symbol: def.symbol,
               angle: def.angle,
               orb: Math.round(orbDiff * 100) / 100,
-              isApplying: true,
+              isApplying: null,
               score: interp.score,
               nature: interp.nature,
               category: adjustedCategory,
