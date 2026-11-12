@@ -154,6 +154,17 @@ check(polarExplicitPlacidus.houseSystem === "Porphyry",
   "Explicit Placidus request reports Porphyry when polar fallback is used");
 check(swiss.calculateHouses(2451545, 70, 0, "O").houseSystemUsed === "O",
   "Porphyry system code is recorded in house-calculation metadata");
+for (const latitude of [-66.5, -60, -30, 0, 30, 60, 66.5]) {
+  const result = swiss.calculateHouses(2451545, latitude, 15, "P");
+  check(
+    result.houseCusps.length === 12 && result.houseCusps.every(Number.isFinite),
+    "Placidus/explicit fallback returns twelve finite cusps at latitude " + latitude
+  );
+  check(
+    result.houseSystemUsed === "P" || result.houseSystemUsed === "O",
+    "Numerically resolved Placidus latitude " + latitude + " reports the system actually used"
+  );
+}
 let invalidCoordinatesRejected = false;
 try {
   calculateWesternChart(2000, 1, 1, 12, 0, 91, 0, 0, "Auto");
@@ -216,6 +227,10 @@ check(dayVenusMercury.activeSubLord === "Mercury", "Venus major sub-periods foll
 const dayNode = firdaria.calculateFirdaria(dayChart, 72);
 check(dayNode.activeMajorLord === "NorthNode", "Age 72 is within the North Node major period");
 check(dayNode.activeSubLord.includes("No sub-period"), "Node major is not divided into seven false sub-periods");
+check(
+  dayNode.interpretation.includes("some medieval presentations"),
+  "Firdaria report discloses the selected node-order variant"
+);
 const repeatedCycle = firdaria.calculateFirdaria(dayChart, 76);
 check(repeatedCycle.activeMajorLord === "Sun", "The 75-year Firdaria cycle repeats from the beginning");
 const nightStart = firdaria.calculateFirdaria(nightChart, 0);
