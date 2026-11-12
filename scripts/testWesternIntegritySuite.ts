@@ -76,6 +76,51 @@ function syntheticSectChart(localSiderealTime: number): WesternChartData {
 
 console.log("Western calculation integrity regression suite");
 
+// 0. Advanced coordinate/point integrity: mean apogee reference, OOB threshold, axes and harmonic labels.
+const lunarPoints = new LunarPointsCalculator();
+const meanApogee2024 = lunarPoints.calculateMeanLilithLon(2460310.5);
+close(meanApogee2024.lon, 159.9732, 0.02,
+  "Mean Black Moon Lilith is near the Swiss Ephemeris 2024-01-01 mean-apogee reference");
+check(Number.isFinite(meanApogee2024.speed) && meanApogee2024.speed > 0.10 && meanApogee2024.speed < 0.12,
+  "Mean lunar-apogee speed is derived from the changing mean-apogee model");
+const approxTrueApogee = lunarPoints.calculateTrueLilithLon(2460310.5);
+check(Number.isFinite(approxTrueApogee.speed) && approxTrueApogee.speed !== 0.111,
+  "Approximate True Lilith speed is derived from the model rather than fixed to 0.111°/day");
+
+const declinationEngine = new DeclinationCalculator();
+const obliquityDateFixture = {
+  ...syntheticSun(90),
+  latitude: 0,
+};
+const dateObliquityReport = declinationEngine.calculateAll([obliquityDateFixture], 23.5);
+check(dateObliquityReport.declinations[0].isOutOfBounds === false,
+  "OOB threshold follows the supplied obliquity of date instead of a fixed J2000 constant");
+const midpointEngine = new MidpointCalculator();
+const midpointChart = calculateWesternChart(2000, 1, 1, 12, 0, 51.4769, 0, 0, "Placidus");
+const allMidpointPoints = [
+  ...midpointChart.planets,
+  midpointChart.ascendant,
+  midpointChart.midheaven,
+];
+const midpointRows = midpointEngine.calculateAllMidpoints(allMidpointPoints);
+check(midpointRows.some((item) =>
+  (item.planet1 === "Sun" && item.planet2 === "Ascendant") ||
+  (item.planet2 === "Sun" && item.planet1 === "Ascendant")
+), "Midpoint set includes the Sun/Ascendant axis");
+check(midpointRows.some((item) =>
+  (item.planet1 === "Sun" && item.planet2 === "Midheaven") ||
+  (item.planet2 === "Sun" && item.planet1 === "Midheaven")
+), "Midpoint set includes the Sun/Midheaven axis");
+let invalidHarmonicRejected = false;
+try {
+  new HarmonicChartCalculator().calculateHarmonic(midpointChart.planets, 0);
+} catch {
+  invalidHarmonicRejected = true;
+}
+check(invalidHarmonicRejected, "Harmonic number zero is rejected");
+
+
+
 // 1. Solar altitude and sect are based on real horizon geometry, not house numbers.
 close(
   calculateSolarAltitudeDegrees({
