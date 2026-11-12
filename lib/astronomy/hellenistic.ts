@@ -1,5 +1,6 @@
 import { WesternChartData, PlanetPosition } from "./ephemeris";
 import { isSunAboveHorizonInChart } from "./horizon";
+import { calculateAyanamsaValue } from "./MultiSystemTransitEngine";
 
 export interface HellenisticAnalysis {
   isDiurnal: boolean;
@@ -27,7 +28,9 @@ export interface HellenisticAnalysis {
 }
 
 export interface SiderealComparison {
+  /** Fagan–Bradley ayanāṃśa evaluated at this chart's UTC epoch. */
   faganBradleyAyanamsa: number;
+  referenceUtc: string;
   planets: Array<{
     name: string;
     tropicalSign: string;
@@ -202,8 +205,16 @@ export function calculateHellenisticAnalysis(western: WesternChartData): Helleni
 }
 
 export function calculateSiderealComparison(western: WesternChartData): SiderealComparison {
-  // Fagan-Bradley Ayanamsa is approximately 24.8° currently
-  const faganBradleyAyanamsa = 24.84;
+  if (!Number.isFinite(western.julianDay)) {
+    throw new RangeError("Sidereal comparison requires a finite natal Julian Day.");
+  }
+  // Ayanamsa changes with epoch. Use the same date-dependent Fagan-Bradley
+  // model as the multi-system engine instead of a stale hard-coded constant.
+  const referenceDate = new Date((western.julianDay - 2440587.5) * 86400000);
+  if (!Number.isFinite(referenceDate.getTime())) {
+    throw new RangeError("Sidereal comparison could not resolve the natal UTC epoch.");
+  }
+  const faganBradleyAyanamsa = calculateAyanamsaValue("fagan-bradley", referenceDate);
 
   const planets = western.planets.map(p => {
     const tropicalSign = p.sign;
@@ -224,6 +235,7 @@ export function calculateSiderealComparison(western: WesternChartData): Sidereal
 
   return {
     faganBradleyAyanamsa,
+    referenceUtc: referenceDate.toISOString(),
     planets,
   };
 }
