@@ -78,7 +78,7 @@ export function TransitView({
 
   // Custom House System Override (for Western)
   const [selectedHouseSystem, setSelectedHouseSystem] = useState<
-    "placidus" | "whole-sign" | "equal" | "koch"
+    "placidus" | "whole-sign" | "equal" | "porphyry"
   >("placidus");
 
   // BaZi Gender (for Da Yun progression direction)
@@ -281,10 +281,10 @@ export function TransitView({
                   onChange={(e) => setSelectedHouseSystem(e.target.value as any)}
                   className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-amber-300 text-xs font-medium focus:outline-none focus:border-amber-400 cursor-pointer"
                 >
-                  <option value="placidus">Placidus (Time Semi-Arcs)</option>
-                  <option value="whole-sign">Whole Sign (Ancient Signs)</option>
-                  <option value="equal">Equal House (30° Asc)</option>
-                  <option value="koch">Koch (Ascension Time)</option>
+                  <option value="placidus">Placidus (Quadrant)</option>
+                  <option value="porphyry">Porphyry (Equal Quadrants)</option>
+                  <option value="whole-sign">Whole Sign (Hellenistic)</option>
+                  <option value="equal">Equal House (30° from Ascendant)</option>
                 </select>
               </div>
             )}
