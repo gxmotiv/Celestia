@@ -413,7 +413,7 @@ export default function HomePage() {
                 transition={{ duration: 0.25, ease: "easeInOut" }}
                 className="overflow-hidden border-t border-slate-800/80 p-5 bg-slate-950/90"
               >
-                <BirthForm initialData={formData} onSubmit={handleFormSubmit} />
+                <BirthForm key={`${formData.fullName}|${formData.birthDate}|${formData.birthTime}|${formData.cityName}|${formData.latitude}|${formData.longitude}`} initialData={formData} onSubmit={handleFormSubmit} />
               </motion.div>
             )}
           </AnimatePresence>
