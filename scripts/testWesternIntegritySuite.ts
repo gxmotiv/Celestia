@@ -340,16 +340,25 @@ check(dayVenusMercury.activeSubLord === "Mercury", "Venus major sub-periods foll
 const dayNode = firdaria.calculateFirdaria(dayChart, 72);
 check(dayNode.activeMajorLord === "NorthNode", "Age 72 is within the North Node major period");
 check(dayNode.activeSubLord.includes("No sub-period"), "Node major is not divided into seven false sub-periods");
-check(
-  dayNode.interpretation.includes("some medieval presentations"),
-  "Firdaria report discloses the selected node-order variant"
-);
+check(dayNode.nightOrder === "nodes-after-planets",
+  "Firdaria report records the default node-order variant");
 const repeatedCycle = firdaria.calculateFirdaria(dayChart, 76);
 check(repeatedCycle.activeMajorLord === "Sun", "The 75-year Firdaria cycle repeats from the beginning");
 const nightStart = firdaria.calculateFirdaria(nightChart, 0);
 check(!nightStart.isDiurnal, "Firdaria detects night chart from actual solar altitude");
 check(nightStart.activeMajorLord === "Moon", "Night Firdaria begins with Moon major");
 check(nightStart.activeSubLord === "Moon", "Night Moon major begins with Moon sub-period");
+check(nightStart.nightOrder === "nodes-after-planets", "Standard nocturnal Firdaria order is explicit");
+const nightNodesAfterMars = firdaria.calculateFirdaria(nightChart, 39, "nodes-after-mars");
+check(nightNodesAfterMars.activeMajorLord === "NorthNode",
+  "Alternative nocturnal order places the North Node after the first four planetary majors");
+check(nightNodesAfterMars.activeSubLord.includes("No sub-period"),
+  "Alternative nocturnal node major has no invented seven-planet sub-periods");
+check(nightNodesAfterMars.nightOrder === "nodes-after-mars",
+  "Alternative nocturnal order is recorded in the Firdaria report");
+const nightStandardAge39 = firdaria.calculateFirdaria(nightChart, 39, "nodes-after-planets");
+check(nightStandardAge39.activeMajorLord === "Sun",
+  "Standard nocturnal order places the Sun after the seven planetary majors");
 
 // 6. Zodiacal Releasing: active L1/L2, 360-day year, angularity from Fortune and LoB.
 const zr = new ZodiacalReleasingEngine();
