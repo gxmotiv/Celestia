@@ -51,7 +51,7 @@ const SYSTEM_TABS = [
   { id: "transits", label: "Transits & Bi-Wheel", icon: Zap, badge: "Timing" },
   { id: "numerology", label: "Universal Numerology", icon: Hash, badge: "6 Systems" },
   { id: "chinese", label: "Chinese BaZi", icon: Compass, badge: "Four Pillars" },
-  { id: "verification", label: "Verification Center", icon: CheckCircle2, badge: "108 Tests" },
+  { id: "verification", label: "Verification Center", icon: CheckCircle2, badge: "108 Checks" },
   { id: "aiSynthesis", label: "AI Cosmic Synthesis", icon: Sparkles, badge: "Synthesis" },
 ] as const;
 
@@ -78,6 +78,7 @@ export default function HomePage() {
   });
 
   const [activeTab, setActiveTab] = useState<SystemTabId>("western");
+  const [isStarterExample, setIsStarterExample] = useState(true);
   const [isFormCollapsed, setIsFormCollapsed] = useState(true);
   const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
@@ -200,6 +201,7 @@ export default function HomePage() {
       return;
     }
     setFormData(data);
+    setIsStarterExample(false);
     setIsFormCollapsed(true);
   };
 
@@ -259,6 +261,7 @@ export default function HomePage() {
       return;
     }
     setFormData(data);
+    setIsStarterExample(false);
   };
 
   const handleShareSummary = () => {
@@ -301,6 +304,11 @@ export default function HomePage() {
           <div className="hidden md:flex items-center gap-2 px-3.5 py-1.5 bg-slate-900/70 border border-slate-800 rounded-lg text-xs text-slate-300">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
             <strong className="font-medium text-slate-200">{formData.fullName}</strong>
+            {isStarterExample && (
+              <span className="text-[9px] font-bold tracking-wide text-amber-300 border border-amber-500/30 bg-amber-500/10 rounded px-1.5 py-0.5">
+                SAMPLE
+              </span>
+            )}
             <span className="text-slate-600">·</span>
             <span className="font-mono text-slate-400 text-[11px]">{formData.birthDate} ({formData.birthTime})</span>
             <span className="text-slate-600">·</span>
@@ -358,6 +366,11 @@ export default function HomePage() {
               <span className="text-amber-400 font-semibold flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>Natal Inception:</span>
+                {isStarterExample && (
+                  <span className="text-[9px] font-bold tracking-wide text-amber-300 border border-amber-500/30 bg-amber-500/10 rounded px-1.5 py-0.5">
+                    SAMPLE CHART
+                  </span>
+                )}
               </span>
               <strong className="text-slate-100">{formData.fullName}</strong>
               <span className="text-slate-600">·</span>
@@ -400,7 +413,7 @@ export default function HomePage() {
                 transition={{ duration: 0.25, ease: "easeInOut" }}
                 className="overflow-hidden border-t border-slate-800/80 p-5 bg-slate-950/90"
               >
-                <BirthForm initialData={formData} onSubmit={handleFormSubmit} />
+                <BirthForm key={`${formData.fullName}|${formData.birthDate}|${formData.birthTime}|${formData.cityName}|${formData.latitude}|${formData.longitude}`} initialData={formData} onSubmit={handleFormSubmit} />
               </motion.div>
             )}
           </AnimatePresence>

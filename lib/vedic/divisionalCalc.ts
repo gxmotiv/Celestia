@@ -287,7 +287,7 @@ export function calculateDivisionalChart(
       if (signIdx === 0) dignity = "Exalted";
       else if (signIdx === 6) dignity = "Debilitated";
       else if (signIdx === 4) dignity = "Own Sign";
-      else if ([8, 0, 7].includes(signIdx)) dignity = "Friendly";
+      else if ([3, 8, 0, 7, 11].includes(signIdx)) dignity = "Friendly";
     } else if (p.name === "Moon") {
       if (signIdx === 1) dignity = "Exalted";
       else if (signIdx === 7) dignity = "Debilitated";

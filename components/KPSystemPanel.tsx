@@ -347,12 +347,15 @@ export function KPSystemPanel({
                 </p>
               </div>
 
-              {/* Probability & Verdict Badge */}
+              {/* Rule Score & Verdict Badge */}
               <div className="flex items-center gap-3 self-start sm:self-auto">
                 <div className="text-right">
-                  <span className="text-[10px] text-slate-400 uppercase block font-semibold">KP Probability</span>
+                  <span className="text-[10px] text-slate-400 uppercase block font-semibold">KP Rule Score</span>
                   <span className="text-xl font-bold font-mono text-amber-300">
-                    {currentPrediction.probability}%
+                    {currentPrediction.heuristicScore}%
+                  </span>
+                  <span className="text-[9px] text-slate-500 block max-w-[190px]">
+                    Rule-weighted heuristic, not calibrated against real-world outcomes.
                   </span>
                 </div>
 
@@ -992,12 +995,15 @@ export function KPSystemPanel({
                 </h3>
               </div>
 
-              {/* Confidence & Verdict Badge */}
+              {/* Horary Rule Score & Verdict Badge */}
               <div className="flex items-center gap-3">
                 <div className="text-right">
-                  <span className="text-[10px] text-slate-400 uppercase block font-semibold">Confidence</span>
+                  <span className="text-[10px] text-slate-400 uppercase block font-semibold">Horary Rule Score</span>
                   <span className="text-xl font-bold font-mono text-cyan-300">
-                    {horaryResult.confidenceScore}%
+                    {horaryResult.heuristicScore}%
+                  </span>
+                  <span className="text-[9px] text-slate-500 block max-w-[190px]">
+                    Rule-weighted heuristic, not calibrated confidence.
                   </span>
                 </div>
 

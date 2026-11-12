@@ -73,91 +73,36 @@ export function PrintModal({
   const fileNamePdf = `Celestia_MultiSystem_Astrology_Report_${safeSubjectName}.pdf`;
   const fileNameHtml = `Celestia_MultiSystem_Astrology_Report_${safeSubjectName}.html`;
 
-  // 1. Dual-Engine PDF Generation (Server-Side Vector PDFKit + Client Fallback)
+  // Render the complete multi-section dossier from the visible report component.
+  // The server PDF endpoint is a concise chart summary and is not a substitute for
+  // the full 10-section dossier shown in this preview.
   const handleDownloadPdf = async () => {
-    try {
-      setIsGeneratingPdf(true);
-      setErrorMessage(null);
-      setDownloadSuccess(false);
-      setPdfProgressText("Preparing chart calculations...");
-      setPdfProgressPercent(20);
+    setIsGeneratingPdf(true);
+    setErrorMessage(null);
+    setDownloadSuccess(false);
+    setPdfProgressText("Preparing the complete dossier...");
+    setPdfProgressPercent(10);
 
-      // Attempt Server-Side Vector PDF Generation via API
-      const response = await fetch("/api/pdf/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userData: formData,
-          western,
-          vedic,
-          numerology,
-          chinese,
-        }),
+    try {
+      if (!dossierContainerRef.current) {
+        throw new Error("The report preview is not ready.");
+      }
+
+      await generateAndDownloadPdf(dossierContainerRef.current, {
+        fileName: fileNamePdf,
+        onProgress: (text, pct) => {
+          setPdfProgressText(text);
+          setPdfProgressPercent(pct);
+        },
       });
 
-      if (response.ok) {
-        setPdfProgressText("Compiling Vector PDF Report...");
-        setPdfProgressPercent(75);
-
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        const downloadAnchor = document.createElement("a");
-        downloadAnchor.href = url;
-        downloadAnchor.download = fileNamePdf;
-        downloadAnchor.style.display = "none";
-        document.body.appendChild(downloadAnchor);
-        downloadAnchor.click();
-
-        setTimeout(() => {
-          document.body.removeChild(downloadAnchor);
-          URL.revokeObjectURL(url);
-        }, 3000);
-
-        setPdfProgressText("Download Complete!");
-        setPdfProgressPercent(100);
-        setDownloadSuccess(true);
-        setTimeout(() => setDownloadSuccess(false), 5000);
-        return;
-      }
-
-      // If Server Route returned non-200, fallback to Client-side html2canvas-pro + jsPDF
-      console.warn("Server generation returned error, falling back to client-side renderer...");
-      setPdfProgressText("Rendering High-Resolution Layout...");
-      setPdfProgressPercent(45);
-
-      if (dossierContainerRef.current) {
-        await generateAndDownloadPdf(dossierContainerRef.current, {
-          fileName: fileNamePdf,
-          onProgress: (text, pct) => {
-            setPdfProgressText(text);
-            setPdfProgressPercent(pct);
-          },
-        });
-        setDownloadSuccess(true);
-        setTimeout(() => setDownloadSuccess(false), 5000);
-      }
+      setDownloadSuccess(true);
+      setTimeout(() => setDownloadSuccess(false), 5000);
     } catch (err: unknown) {
-      console.error("Server PDF generation failed, attempting client fallback:", err);
-
-      try {
-        if (dossierContainerRef.current) {
-          setPdfProgressText("Rendering Client Document...");
-          await generateAndDownloadPdf(dossierContainerRef.current, {
-            fileName: fileNamePdf,
-            onProgress: (text, pct) => {
-              setPdfProgressText(text);
-              setPdfProgressPercent(pct);
-            },
-          });
-          setDownloadSuccess(true);
-          setTimeout(() => setDownloadSuccess(false), 5000);
-        } else {
-          setErrorMessage("Could not generate PDF. Please try 'Save HTML' below.");
-        }
-      } catch (fallbackErr) {
-        console.error("All PDF generation paths failed:", fallbackErr);
-        setErrorMessage("Direct PDF creation encountered an error. You can click 'Save HTML' for instant export.");
-      }
+      console.error("Full dossier PDF generation failed:", err);
+      setErrorMessage(
+        "The complete PDF could not be rendered on this device. No shortened summary was substituted. Use Save HTML or Print Dialog to keep the full report."
+      );
     } finally {
       setIsGeneratingPdf(false);
     }
@@ -198,7 +143,7 @@ export function PrintModal({
                 Download Professional Multi-System Astrological Report
               </h2>
               <p className="text-xs text-slate-400">
-                10-Section Publication-Grade Dossier (Western, Vedic, Hellenistic, BaZi, Numerology & Predictive Timeline)
+                10-Section Multi-System Dossier (Western, Vedic, Hellenistic, BaZi, Numerology & Predictive Timeline)
               </p>
             </div>
           </div>
@@ -343,7 +288,7 @@ export function PrintModal({
                 Publication Report Layout Preview (10 Comprehensive Sections)
               </span>
               <span className="text-[11px] text-slate-500 hidden sm:inline flex items-center gap-1">
-                A4 Portrait · Vector chart calculations
+                A4 Portrait · Full-dossier capture
               </span>
             </div>
 

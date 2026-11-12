@@ -13,6 +13,17 @@ export interface GeocodeResult {
   source: "geoapify" | "built-in";
 }
 
+function parseCoordinate(value: string | null): number | null {
+  if (value === null) return null;
+  const trimmed = value.trim();
+  // Permit ordinary decimal/scientific notation, but not hex, suffixes, or blank values.
+  if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(trimmed)) {
+    return null;
+  }
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 /**
  * Calculates great-circle distance between two coordinates in kilometers (Haversine formula).
  */
@@ -61,12 +72,18 @@ export async function GET(req: NextRequest) {
   // Read Geoapify key exclusively from environment variable with NO literal fallback
   const apiKey = process.env.GEOAPIFY_API_KEY?.trim() || "";
 
+  // Reverse geocoding requires both coordinates; a partial pair is never
+  // reinterpreted as a forward city search.
+  if ((latStr === null) !== (lonStr === null)) {
+    return NextResponse.json({ error: "Both latitude and longitude are required" }, { status: 400 });
+  }
+
   // Reverse Geocoding (e.g. from GPS)
   if (latStr !== null && lonStr !== null) {
-    const lat = parseFloat(latStr);
-    const lon = parseFloat(lonStr);
+    const lat = parseCoordinate(latStr);
+    const lon = parseCoordinate(lonStr);
 
-    if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+    if (lat === null || lon === null || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
       return NextResponse.json({ error: "Invalid coordinates" }, { status: 400 });
     }
 
@@ -76,12 +93,15 @@ export async function GET(req: NextRequest) {
         const geoUrl = `https://api.geoapify.com/v1/geocode/reverse?lat=${lat}&lon=${lon}&apiKey=${apiKey}`;
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 3500);
-
-        const res = await fetch(geoUrl, {
-          signal: controller.signal,
-          next: { revalidate: 3600 },
-        });
-        clearTimeout(timeoutId);
+        let res: Response;
+        try {
+          res = await fetch(geoUrl, {
+            signal: controller.signal,
+            next: { revalidate: 3600 },
+          });
+        } finally {
+          clearTimeout(timeoutId);
+        }
 
         if (res.ok) {
           const data = await res.json();
@@ -166,6 +186,9 @@ export async function GET(req: NextRequest) {
   }
 
   const queryTrimmed = q.trim();
+  if (queryTrimmed.length > 160) {
+    return NextResponse.json({ error: "Query is too long (maximum 160 characters)." }, { status: 400 });
+  }
   const lowerQ = queryTrimmed.toLowerCase();
 
   // 1. Get high-relevance built-in matches first
@@ -196,18 +219,37 @@ export async function GET(req: NextRequest) {
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3500);
-
-      const res = await fetch(geoUrl, {
-        signal: controller.signal,
-        next: { revalidate: 3600 },
-      });
-      clearTimeout(timeoutId);
+      let res: Response;
+      try {
+        res = await fetch(geoUrl, {
+          signal: controller.signal,
+          next: { revalidate: 3600 },
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
 
       if (res.ok) {
         const data = await res.json();
         if (data?.features && Array.isArray(data.features) && data.features.length > 0) {
-          externalResults = data.features.map((f: any) => {
-            const props = f.properties || {};
+          // Reject incomplete or out-of-range provider coordinates. Never replace
+          // missing coordinates with 0,0: that would fabricate a valid-looking location.
+          externalResults = data.features.flatMap((f: any): GeocodeResult[] => {
+            const props = f?.properties;
+            if (!props) return [];
+            const lat = props.lat;
+            const lng = props.lon;
+            if (
+              typeof lat !== "number" ||
+              typeof lng !== "number" ||
+              !Number.isFinite(lat) ||
+              !Number.isFinite(lng) ||
+              lat < -90 || lat > 90 ||
+              lng < -180 || lng > 180
+            ) {
+              return [];
+            }
+
             const city =
               props.city ||
               props.name ||
@@ -226,17 +268,17 @@ export async function GET(req: NextRequest) {
               tzOffset = props.timezone.offset_STD_seconds / 3600;
             }
 
-            return {
+            return [{
               city,
               country,
               formatted,
-              lat: typeof props.lat === "number" ? Math.round(props.lat * 10000) / 10000 : 0,
-              lng: typeof props.lon === "number" ? Math.round(props.lon * 10000) / 10000 : 0,
+              lat: Math.round(lat * 10000) / 10000,
+              lng: Math.round(lng * 10000) / 10000,
               ...(tzOffset !== undefined ? { tz: tzOffset } : {}),
               tzName,
               ianaTimezone: tzName || undefined,
               source: "geoapify" as const,
-            };
+            }];
           });
         }
       } else {

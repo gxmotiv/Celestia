@@ -25,6 +25,7 @@ jobs:
           - testAstrologySuite.ts
           - testBaZiSuite.ts
           - testGeocodeSuite.ts
+          - testPdfGenerationSuite.ts
           - testMinorAspectsSuite.ts
           - testNavamsaSuite.ts
           - testNumerologySuite.ts
@@ -43,6 +44,9 @@ jobs:
           - testTransitAspectDirectionSuite.ts
           - testPlanetaryHoursSuite.ts
           - testDashaExpiredPeriodSuite.ts
+          - testMedicalAstrologySymbolismSuite.ts
+          - testHouseFrameConsistencySuite.ts
+          - testDivisionalDignitySuite.ts
           - testAndroidOfflineSuite.ts
     steps:
       - uses: actions/checkout@v4
