@@ -245,7 +245,12 @@ export class WesternBenchmarkRunner {
     });
 
     // Test 7: Equal House System 30° Spacing Invariant
-    const eqHouses = swissEphemeris.calculateHouses(chart.julianDay, 43.7844, 10.9253, "E");
+    const eqHouses = swissEphemeris.calculateHouses(
+      chart.julianDay,
+      chart.birthLatitude ?? 43.7844,
+      chart.birthLongitude ?? 10.9253,
+      "E"
+    );
     let eqPassed = true;
     for (let i = 0; i < 12; i++) {
       const expectedDeg = normalizeDegrees(chart.ascendant.longitude + i * 30.0);
