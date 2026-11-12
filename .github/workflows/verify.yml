@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - fix/celestia-calculation-integrity
+      - fix/western-house-sect-predictive-integrity
 
 permissions:
   contents: write
