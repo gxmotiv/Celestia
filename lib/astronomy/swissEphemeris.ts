@@ -41,6 +41,10 @@ export interface SwissHouseResult {
   midheaven: number;
   houseCusps: number[]; // Array of 12 house cusps (1-indexed semantics: [0..11] or 12 items)
   vertex: number;
+  /** Local apparent sidereal time / RAMC in degrees, using the same model as house cusps. */
+  localSiderealTime: number;
+  /** True obliquity of date in degrees, matching Astronomy Engine GAST. */
+  obliquity: number;
 }
 
 export interface SwissAspect {
@@ -454,7 +458,7 @@ export class SwissEphemerisEngine {
     julianDay: number,
     latitude: number,
     longitude: number,
-    system: "P" | "W" | "E" = "P"
+    system: "P" | "W" | "E" | "O" = "P"
   ): SwissHouseResult {
     const time = new Astronomy.AstroTime(julianDay - 2451545.0);
 
@@ -507,9 +511,33 @@ export class SwissEphemerisEngine {
       for (let i = 0; i < 12; i++) {
         cusps[i] = (asc + i * 30.0) % 360.0;
       }
+    } else if (system === "E") {
+      // Equal House System: each cusp advances 30° from the Ascendant.
+      for (let i = 0; i < 12; i++) cusps[i] = (asc + i * 30.0) % 360.0;
+    } else if (system === "O") {
+      // Porphyry: divide each ecliptic quadrant into three equal arcs.
+      const ascendant = asc;
+      const descendant = (asc + 180.0) % 360.0;
+      const ic = (mc + 180.0) % 360.0;
+      const forwardArc = (from: number, to: number) => ((to - from) % 360 + 360) % 360;
+      const q1 = forwardArc(ascendant, ic);
+      const q2 = forwardArc(ic, descendant);
+      const q3 = forwardArc(descendant, mc);
+      const q4 = forwardArc(mc, ascendant);
+      cusps[0] = ascendant;
+      cusps[1] = (ascendant + q1 / 3) % 360;
+      cusps[2] = (ascendant + 2 * q1 / 3) % 360;
+      cusps[3] = ic;
+      cusps[4] = (ic + q2 / 3) % 360;
+      cusps[5] = (ic + 2 * q2 / 3) % 360;
+      cusps[6] = descendant;
+      cusps[7] = (descendant + q3 / 3) % 360;
+      cusps[8] = (descendant + 2 * q3 / 3) % 360;
+      cusps[9] = mc;
+      cusps[10] = (mc + q4 / 3) % 360;
+      cusps[11] = (mc + 2 * q4 / 3) % 360;
     } else {
       // Placidus House System
-      cusps[9] = mc; // 10th house
       cusps[3] = (mc + 180.0) % 360.0; // 4th house (IC)
       cusps[0] = asc; // 1st house
       cusps[6] = (asc + 180.0) % 360.0; // 7th house (DESC)
@@ -554,6 +582,8 @@ export class SwissEphemerisEngine {
       midheaven: round4(mc),
       houseCusps: cusps.map(round4),
       vertex: round4(vertex),
+      localSiderealTime: round4(ramc),
+      obliquity: round4(epsDeg),
     };
   }
 
