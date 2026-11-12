@@ -416,7 +416,7 @@ close(dayLots.partOfFortune.longitude, 65, 1e-9, "Day Fortune uses ASC + Moon - 
 close(nightLots.partOfFortune.longitude, 325, 1e-9, "Night Fortune reverses luminary arc");
 close(dayLots.partOfTravel.longitude, 70, 1e-9, "Day Travel Lot uses ASC + 9th cusp - 9th ruler");
 close(nightLots.partOfTravel.longitude, 70, 1e-9, "Abū Maʿshar / al-Qabīsī Travel Lot uses the same 9th-cusp minus 9th-ruler arc by night");
-check(dayLots.partOfTravel.formula.includes("Day"), "Travel Lot formula label exposes day convention");
+check(dayLots.partOfTravel.formula.includes("same by day and night"), "Travel Lot formula label identifies the documented invariant sect convention by day");
 check(nightLots.partOfTravel.formula.includes("same by day and night"), "Travel Lot formula label identifies the documented invariant sect convention");
 close(dayLots.partOfNecessity.longitude, 0, 1e-9, "Day Necessity uses ASC + Fortune - Mercury");
 close(nightLots.partOfNecessity.longitude, 130, 1e-9, "Night Necessity reverses the Mercury/Fortune arc");
