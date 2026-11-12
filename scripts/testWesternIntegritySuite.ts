@@ -32,6 +32,7 @@ import {
   MidpointCalculator,
 } from "../lib/astronomy/advancedWesternCalculators";
 import { DailyHoroscope, TransitEngine } from "../lib/astronomy/transits";
+import { SolarArcDirectionsEngine, WesternReturnEngine } from "../lib/astronomy/westernDirectionsAndReturns";
 
 let assertions = 0;
 function check(condition: unknown, message: string): void {
@@ -177,6 +178,43 @@ check(progressionReport.moonSignChanges.every((event) => event.year === 1990 + e
   "Progressed Moon sign-change calendar year is derived from birth year plus life age");
 check(progressionReport.moonSignChanges.every((event) => event.age >= 0),
   "Progressed Moon forecast does not report pre-birth sign changes");
+
+// 0d. Solar Arc Directions and exact solar/lunar return event solvers.
+const directedBirth = new Date("2000-06-01T12:00:00.000Z");
+const directedAtAgeTen = new Date("2010-06-01T12:00:00.000Z");
+const directedFixture = calculateWesternChart(2000, 6, 1, 12, 0, 51.4769, 0, 0, "Placidus");
+const solarArcReport = new SolarArcDirectionsEngine().calculate(directedFixture, directedBirth, directedAtAgeTen, 1);
+close(solarArcReport.ageYears, 10, 1e-8, "Solar arc age is elapsed tropical years");
+close(solarArcReport.arcDegrees, 9.8564733, 1e-6, "Naibod solar arc uses 0.98564733 degrees per year");
+close(
+  solarArcReport.directedPlanets.find((point) => point.name === "Sun")?.longitude ?? Number.NaN,
+  normalizeDegrees((directedFixture.planets.find((point) => point.name === "Sun")?.longitude ?? 0) + 9.8564733),
+  1e-6,
+  "Solar arc shifts the natal Sun by the calculated Naibod arc"
+);
+close(
+  solarArcReport.directedAngles.find((point) => point.name === "Ascendant")?.longitude ?? Number.NaN,
+  normalizeDegrees(directedFixture.ascendant.longitude + 9.8564733),
+  1e-6,
+  "Solar arc shifts the Ascendant by the same Naibod arc"
+);
+const returnEngine = new WesternReturnEngine();
+const solarReturn = returnEngine.calculateSolarReturn(directedFixture, 2026, 51.4769, 0, "Placidus");
+check(solarReturn.exactUtc.startsWith("2026-"), "Solar return solver finds the requested calendar-year return");
+check(solarReturn.longitudeErrorDegrees < 0.002,
+  "Solar return event solves to within 0.002 degrees of the natal Sun longitude");
+check(solarReturn.chart.houseSystem === "Placidus" && solarReturn.chart.houses.length === 12,
+  "Solar return chart recalculates twelve Placidus cusps at its reference location");
+const lunarReturnReference = new Date("2026-11-12T00:00:00.000Z");
+const lunarReturn = returnEngine.calculateNextLunarReturn(directedFixture, lunarReturnReference, 51.4769, 0, "WholeSign");
+check(new Date(lunarReturn.exactUtc).getTime() > lunarReturnReference.getTime(),
+  "Lunar return solver finds the next return strictly after the reference date");
+check(new Date(lunarReturn.exactUtc).getTime() - lunarReturnReference.getTime() <= 36 * 86400000,
+  "Next lunar return falls within the expected 36-day search interval");
+check(lunarReturn.longitudeErrorDegrees < 0.01,
+  "Lunar return event solves to within 0.01 degrees of the natal Moon longitude");
+check(lunarReturn.chart.houseSystem === "WholeSign" && lunarReturn.chart.houses.length === 12,
+  "Lunar return chart honors the selected Whole Sign system");
 
 // 1. Solar altitude and sect are based on real horizon geometry, not house numbers.
 close(
