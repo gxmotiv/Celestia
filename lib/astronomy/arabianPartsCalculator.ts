@@ -101,7 +101,7 @@ export class ArabianPartsCalculator {
   }
 
   /**
-   * Calculate all 12 major classical Arabian Parts
+   * Calculate seven Hermetic Lots plus selected additional medieval formula variants
    */
   public calculateAll(params: {
     ascendant: number;
@@ -113,7 +113,6 @@ export class ArabianPartsCalculator {
     jupiter: number;
     saturn: number;
     houseCusps: number[];
-    /** Prefer the astronomical horizon result supplied by the natal chart engine. */
     /** Must be derived from actual solar altitude, never inferred from ecliptic arc alone. */
     isDayChart: boolean;
   }): ArabianPartsResult {
@@ -168,7 +167,7 @@ export class ArabianPartsCalculator {
       isDay ? "ASC + DSC - Venus (Day)" : "ASC + Venus - DSC (Night)",
       marriageLon,
       houseCusps,
-      "Highlights union, contractual partnership, loyalty covenants, and emotional fidelity.",
+      "A selected partnership formula variant. Historical authors give multiple marriage Lots and methods; this point is not a universal formula or a prediction of marriage.",
       "⚭"
     );
 
@@ -216,7 +215,7 @@ export class ArabianPartsCalculator {
       "ASC + Cusp 8 - Moon",
       deathLon,
       houseCusps,
-      "Indicates profound existential crisis points, inheritance, psychic rebirth, and release of mortal fear.",
+      "A historical Lot associated with death-related topics in some sources. It does not predict death, lifespan or a fatal event.",
       "†"
     );
 
@@ -228,7 +227,7 @@ export class ArabianPartsCalculator {
       isDay ? "ASC + Moon - Venus (Day)" : "ASC + Venus - Moon (Night)",
       motherLon,
       houseCusps,
-      "Illuminates the maternal lineage, ancestral nurturing, domestic roots, and primal emotional protection.",
+      "A selected historical family Lot associated with maternal topics; its formula and interpretation vary by author.",
       "☾"
     );
 
@@ -240,7 +239,7 @@ export class ArabianPartsCalculator {
       isDay ? "ASC + Sun - Saturn (Day)" : "ASC + Saturn - Sun (Night)",
       fatherLon,
       houseCusps,
-      "Reveals patriarchal legacy, moral structure, authority figures, and inherited discipline.",
+      "A selected historical family Lot associated with paternal topics; its formula and interpretation vary by author.",
       "♄"
     );
 
@@ -252,7 +251,7 @@ export class ArabianPartsCalculator {
       isDay ? "ASC + Moon - Saturn (Day)" : "ASC + Saturn - Moon (Night)",
       careerLon,
       houseCusps,
-      "Guides public achievement, authoritative standing, mastery of social roles, and public honors.",
+      "A selected career-related Lot formula variant. It is an interpretive technique, not a forecast of employment or public honors.",
       "⚖"
     );
 
@@ -273,7 +272,7 @@ export class ArabianPartsCalculator {
       `ASC + 9th Cusp - 9th Lord (${ninthLordName}) (same by day and night)`,
       travelLon,
       houseCusps,
-      "Indicates journeys across distant seas, philosophical awakening, foreign lands, and pilgrimage.",
+      "A medieval Lot associated with foreign travel in Abū Maʿshar and al-Qabīsī. It is a traditional symbolic topic, not a guarantee of travel or migration.",
       "✈"
     );
 
@@ -285,7 +284,7 @@ export class ArabianPartsCalculator {
       isDay ? "ASC + Mars - Saturn (Day)" : "ASC + Saturn - Mars (Night)",
       healthLon,
       houseCusps,
-      "A selected historical formula sometimes associated with illness symbolism. It cannot identify bodily vulnerability, diagnose disease or estimate health risk."
+      "A selected historical formula sometimes associated with illness symbolism. It cannot identify bodily vulnerability, diagnose disease or estimate health risk.",
       "⚕"
     );
 
@@ -297,7 +296,7 @@ export class ArabianPartsCalculator {
       isDay ? "ASC + Saturn - Mars (Day)" : "ASC + Mars - Saturn (Night)",
       surgeryLon,
       houseCusps,
-      "An experimental Mars–Saturn formula. It does not predict surgery, operations, injury or medical treatment."
+      "An experimental Mars–Saturn formula. It does not predict surgery, operations, injury or medical treatment.",
       "✂"
     );
 
@@ -309,7 +308,7 @@ export class ArabianPartsCalculator {
       isDay ? "ASC + Fortune - Saturn (Day)" : "ASC + Saturn - Fortune (Night)",
       catastropheLon,
       houseCusps,
-      "The Hermetic Lot associated with Saturn: traditional symbolism of limits, adversity and accountability. It does not guarantee misfortune."
+      "The Hermetic Lot associated with Saturn: traditional symbolism of limits, adversity and accountability. It does not guarantee misfortune.",
       "⚡"
     );
 
