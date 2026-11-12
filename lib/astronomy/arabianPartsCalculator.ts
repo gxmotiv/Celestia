@@ -118,9 +118,16 @@ export class ArabianPartsCalculator {
   }): ArabianPartsResult {
     const { ascendant: ASC, sun: Sun, moon: Moon, mercury: Mercury, venus: Venus, mars: Mars, jupiter: Jupiter, saturn: Saturn, houseCusps, isDayChart } = params;
     const isDay = isDayChart;
+    const coordinates = [ASC, Sun, Moon, Mercury, Venus, Mars, Jupiter, Saturn];
+    if (!coordinates.every(Number.isFinite)) {
+      throw new RangeError("Lot calculations require finite planetary and Ascendant longitudes.");
+    }
+    if (houseCusps.length !== 12 || !houseCusps.every(Number.isFinite)) {
+      throw new RangeError("Lot calculations require exactly twelve finite house cusps.");
+    }
 
-    const cusp8 = houseCusps[7] ?? normalizeDegrees(ASC + 210);
-    const cusp9 = houseCusps[8] ?? normalizeDegrees(ASC + 240);
+    const cusp8 = houseCusps[7];
+    const cusp9 = houseCusps[8];
     const DSC = normalizeDegrees(ASC + 180);
 
     // 1. Part of Fortune (Pars Fortunae)
@@ -263,6 +270,9 @@ export class ArabianPartsCalculator {
       Sun, Moon, Mercury, Venus, Mars, Jupiter, Saturn,
     };
     const ninthLordLon = ninthLordLongitude[ninthLordName];
+    if (!Number.isFinite(ninthLordLon)) {
+      throw new RangeError("The selected ninth-sign ruler has no supplied planetary longitude.");
+    }
     // Abū Maʿshar / al-Qabīsī give this travel Lot from the 9th-house
     // lord to the degree of the 9th house in both day and night charts.
     const travelLon = ASC + cusp9 - ninthLordLon;
