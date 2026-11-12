@@ -184,17 +184,19 @@ const directedBirth = new Date("2000-06-01T12:00:00.000Z");
 const directedAtAgeTen = new Date("2010-06-01T12:00:00.000Z");
 const directedFixture = calculateWesternChart(2000, 6, 1, 12, 0, 51.4769, 0, 0, "Placidus");
 const solarArcReport = new SolarArcDirectionsEngine().calculate(directedFixture, directedBirth, directedAtAgeTen, 1);
-close(solarArcReport.ageYears, 10, 1e-8, "Solar arc age is elapsed tropical years");
-close(solarArcReport.arcDegrees, 9.8564733, 1e-6, "Naibod solar arc uses 0.98564733 degrees per year");
+const expectedProgressedAge = (directedAtAgeTen.getTime() - directedBirth.getTime()) / (365.2422 * 86400000);
+const expectedSolarArc = expectedProgressedAge * 0.98564733;
+close(solarArcReport.ageYears, expectedProgressedAge, 1e-10, "Solar arc age is computed from elapsed tropical years including leap days");
+close(solarArcReport.arcDegrees, expectedSolarArc, 1e-8, "Naibod solar arc uses 0.98564733 degrees per tropical year");
 close(
   solarArcReport.directedPlanets.find((point) => point.name === "Sun")?.longitude ?? Number.NaN,
-  normalizeDegrees((directedFixture.planets.find((point) => point.name === "Sun")?.longitude ?? 0) + 9.8564733),
+  normalizeDegrees((directedFixture.planets.find((point) => point.name === "Sun")?.longitude ?? 0) + expectedSolarArc),
   1e-6,
   "Solar arc shifts the natal Sun by the calculated Naibod arc"
 );
 close(
   solarArcReport.directedAngles.find((point) => point.name === "Ascendant")?.longitude ?? Number.NaN,
-  normalizeDegrees(directedFixture.ascendant.longitude + 9.8564733),
+  normalizeDegrees(directedFixture.ascendant.longitude + expectedSolarArc),
   1e-6,
   "Solar arc shifts the Ascendant by the same Naibod arc"
 );
