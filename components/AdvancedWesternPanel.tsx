@@ -158,8 +158,8 @@ export function AdvancedWesternPanel({
   // Secondary Progressions
   const progEngine = useMemo(() => new ProgressionsEngine(), []);
   const progressionsReport: ProgressedChartResult = useMemo(() => {
-    return progEngine.calculateProgressions(birthDateObj, nowObj, latitude, longitude, timezoneOffset);
-  }, [progEngine, birthDateObj, nowObj, latitude, longitude, timezoneOffset]);
+    return progEngine.calculateProgressions(birthDateObj, nowObj, latitude, longitude);
+  }, [progEngine, birthDateObj, nowObj, latitude, longitude]);
 
   // Hellenistic Profections
   const profEngine = useMemo(() => new ProfectionsEngine(), []);
