@@ -1569,14 +1569,14 @@ export function TransitView({
               </div>
 
               <div className="text-right">
-                <span className="text-xs font-bold text-amber-400">Energy Score: {dailyData.overallEnergy}%</span>
-                <p className="text-[10px] text-slate-400">{dailyData.energyMood}</p>
+                <span className="text-xs font-bold text-amber-400">Active aspects: {dailyData.activeTransitCount}</span>
+                <p className="text-[10px] text-slate-400">{dailyData.transitSummary}</p>
               </div>
             </div>
 
             <div className="p-4 rounded-xl bg-amber-950/20 border border-amber-600/30 space-y-2">
               <span className="text-xs font-bold text-amber-400 uppercase tracking-wider block">
-                Daily Affirmation & Mental Mantra:
+                Personal Reflection Prompt (not a prediction):
               </span>
               <p className="text-sm font-serif italic text-amber-200">
                 &ldquo;{dailyData.affirmation}&rdquo;
@@ -1587,7 +1587,7 @@ export function TransitView({
               <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
                 <span className="font-bold text-emerald-400 block uppercase tracking-wider text-[11px] flex items-center gap-1.5">
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  Best Actions for Today:
+                  Practical Reflection Prompts:
                 </span>
                 <ul className="space-y-1 list-disc list-inside text-slate-300">
                   {dailyData.bestActions.map((act, i) => (
@@ -1599,7 +1599,7 @@ export function TransitView({
               <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
                 <span className="font-bold text-rose-400 block uppercase tracking-wider text-[11px] flex items-center gap-1.5">
                   <XCircle className="w-3.5 h-3.5" />
-                  Pitfalls to Avoid:
+                  General Cautions (not chart predictions):
                 </span>
                 <ul className="space-y-1 list-disc list-inside text-slate-300">
                   {dailyData.avoidActions.map((act, i) => (
