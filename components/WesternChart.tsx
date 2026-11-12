@@ -1013,7 +1013,7 @@ export function WesternChart({
                   <span className="font-semibold text-amber-300">
                     {selectedAspect.planet1} {selectedAspect.aspectName} {selectedAspect.planet2} ({selectedAspect.symbol} {selectedAspect.angle}°)
                   </span>
-                  <span className="text-slate-400">Orb: {selectedAspect.orb}° ({selectedAspect.isApplying ? "Applying" : "Separating"})</span>
+                  <span className="text-slate-400">Orb: {selectedAspect.orb}° ({selectedAspect.isApplying === null ? "Direction unavailable" : selectedAspect.isApplying ? "Applying" : "Separating"})</span>
                 </div>
                 <p className="text-slate-300">
                   {ASPECT_INTERPRETATIONS[selectedAspect.aspectName]}
@@ -1053,7 +1053,9 @@ export function WesternChart({
                       </td>
                       <td className="py-2 px-3 tabular-nums">{asp.orb}°</td>
                       <td className="py-2 px-3 font-sans">
-                        {asp.isApplying ? (
+                        {asp.isApplying === null ? (
+                          <span className="text-slate-500">N/A</span>
+                        ) : asp.isApplying ? (
                           <span className="text-amber-400/90">Applying</span>
                         ) : (
                           <span className="text-slate-400">Separating</span>
