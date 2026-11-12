@@ -147,7 +147,8 @@ export class EclipseAnalyzer {
       const cusps = chart.houses;
       const hasCompleteCusps = Array.isArray(cusps) &&
         cusps.length === 12 &&
-        cusps.every((cusp) => Number.isFinite(cusp?.longitude));
+        Array.from({ length: 12 }, (_, index) => cusps[index])
+          .every((cusp) => Number.isFinite(cusp?.longitude));
       if (!hasCompleteCusps) {
         // Legacy/imported charts may contain no complete house-cusp array.
         // Use a deterministic Whole Sign fallback from the supplied Ascendant,
