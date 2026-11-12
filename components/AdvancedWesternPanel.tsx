@@ -221,7 +221,7 @@ export function AdvancedWesternPanel({
         <div>
           <h3 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-amber-400" />
-            Complete Western Astrology Architecture
+            Western Astrology Techniques & Calculations
           </h3>
           <p className="text-[11px] text-slate-400">
             Asteroids · Shadow Axis · Arabian Parts · Midpoints · Harmonics · Declinations · Progressions · Profections · Releasing · Firdaria · Fixed Stars · Eclipses · Medical · Astrocartography
@@ -265,6 +265,7 @@ export function AdvancedWesternPanel({
       {/* SUB-TAB 1: 4 MAJOR ASTEROIDS */}
       {activeSubTab === "asteroids" && asteroids && (
         <div className="space-y-4">
+          <p className="text-[11px] text-amber-200/80 bg-amber-950/20 border border-amber-700/30 rounded-lg p-3">Asteroid longitudes use a simplified Keplerian model with fixed J2000 orbital elements. They are illustrative and are not equivalent to a current high-precision small-body ephemeris.</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[
               {
@@ -334,6 +335,7 @@ export function AdvancedWesternPanel({
       {/* SUB-TAB 2: LUNAR POINTS & SHADOW AXIS */}
       {activeSubTab === "lilith" && points && (
         <div className="space-y-4">
+          <p className="text-[11px] text-amber-200/80 bg-amber-950/20 border border-amber-700/30 rounded-lg p-3">Calculation quality: Mean Lilith uses an empirical approximation; True Lilith uses a simplified periodic correction, not a full osculating lunar-orbit solution. Chiron is a rough illustrative model, not an ephemeris-grade position. White Moon/Selena and Proserpine are symbolic or tradition-dependent points, not known physical bodies. Vertex and East Point are geometric chart angles.</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[
               {
@@ -346,31 +348,31 @@ export function AdvancedWesternPanel({
                 data: points.trueLilith,
                 name: "True Lilith (Osculating Apogee)",
                 symbol: "⚸*",
-                desc: "High-precision osculating apogee with solar perturbations: points directly to volatile flashpoints of raw instinct.",
+                desc: "Approximate lunar-apogee longitude with a compact periodic correction; this is not a full osculating-apogee solution. Interpretive meanings are symbolic."
               },
               {
                 data: points.whiteMoon,
                 name: "White Moon Selena",
                 symbol: "☽*",
-                desc: "7-year cycle of divine protection, selfless service, karmic grace, and instinctive moral integrity.",
+                desc: "A hypothetical White Moon/Selena point used by some modern esoteric traditions. Its cycle and epoch are convention-dependent; it is not a physical Moon or evidence of divine protection."
               },
               {
                 data: points.vertex,
                 name: "Vertex (Axis of Destiny)",
                 symbol: "Vx",
-                desc: "Western Prime Vertical intersection: the electric gateway of fated encounters, sudden turning points, and synchronicity.",
+                desc: "Ecliptic intersection with the western prime vertical. Traditional astrology gives it symbolic associations with encounters; these are interpretations, not guaranteed events."
               },
               {
                 data: points.eastPoint,
-                name: "East Point (Equatorial Ascendant)",
+                name: "East Point (ecliptic)",
                 symbol: "EP",
-                desc: "Equatorial horizon intersection: the conscious mental self-projection and how you perceive reality.",
+                desc: "Ecliptic point whose right ascension is RAMC + 90°. It is distinct from the equatorial point on the eastern horizon; its meanings are interpretive symbolism."
               },
               {
                 data: points.proserpine,
                 name: "Proserpine (Symbolic Regeneration)",
                 symbol: "⚹P",
-                desc: "Theoretical outer octave of Pluto: total cellular regeneration, psychological rebirth, and spiritual immortality.",
+                desc: "A hypothetical symbolic longitude used in some modern astrology; it has no verified physical orbit or astronomical ephemeris. Interpretive meanings are archetypal."
               },
             ].map((p) => (
               <div
@@ -496,9 +498,9 @@ export function AdvancedWesternPanel({
         <div className="space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
-              <h4 className="text-xs font-semibold text-slate-200">Wave Harmonics of Consciousness</h4>
+              <h4 className="text-xs font-semibold text-slate-200">Harmonic Charts</h4>
               <p className="text-[11px] text-slate-400">
-                Multiplying natal longitudes by harmonic frequency numbers unveils specialized soul frequencies.
+                Multiplying natal longitudes by an integer and reducing them to 0–360° lets astrologers examine aspect patterns in harmonic space. These are mathematical chart transformations, not measured physical or neurological frequencies.
               </p>
             </div>
 
