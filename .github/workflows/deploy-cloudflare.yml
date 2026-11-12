@@ -63,10 +63,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Bun for the OpenNext deploy command
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
+      - name: Install pinned Bun for the OpenNext deploy command
+        run: |
+          npm install --global bun@1.4.4
+          test "$(bun --version)" = "1.4.4"
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -95,6 +95,15 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Configure NaraRouter Worker secret
+        env:
+          NARAROUTER_API_KEY: ${{ secrets.NARAROUTER_API_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$NARAROUTER_API_KEY" || { echo "Missing NARAROUTER_API_KEY repository secret"; exit 1; }
+          printf '%s' "$NARAROUTER_API_KEY" | npx wrangler secret put NARAROUTER_API_KEY --name celestia
       - name: Verify the public website responds after deployment
         shell: bash
         run: |

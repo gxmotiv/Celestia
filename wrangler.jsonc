@@ -3,7 +3,12 @@
   "main": ".open-next/worker.js",
   "name": "celestia",
   "compatibility_date": "2026-11-06",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": ["nodejs_compat", "nodejs_compat_populate_process_env"],
+  "vars": {
+    "NARAROUTER_BASE_URL": "https://router.bynara.id/v1",
+    "NARAROUTER_VISION_MODEL": "agnes-2.5-flash",
+    "NARAROUTER_CODE_MODEL": "laguna-s-2.1"
+  },
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"

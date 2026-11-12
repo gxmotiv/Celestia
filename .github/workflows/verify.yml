@@ -48,6 +48,7 @@ jobs:
           - testHouseFrameConsistencySuite.ts
           - testDivisionalDignitySuite.ts
           - testAndroidOfflineSuite.ts
+          - testNaraRouterRoutingSuite.ts
     steps:
       - uses: actions/checkout@v4
       - name: Install pinned Bun from npm

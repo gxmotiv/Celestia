@@ -79,6 +79,7 @@ export default function HomePage() {
 
   const [activeTab, setActiveTab] = useState<SystemTabId>("western");
   const [isStarterExample, setIsStarterExample] = useState(true);
+  const [birthFormRevision, setBirthFormRevision] = useState(0);
   const [isFormCollapsed, setIsFormCollapsed] = useState(true);
   const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
@@ -260,6 +261,7 @@ export default function HomePage() {
       setIsFormCollapsed(false);
       return;
     }
+    setBirthFormRevision((revision) => revision + 1);
     setFormData(data);
     setIsStarterExample(false);
   };
@@ -413,7 +415,7 @@ export default function HomePage() {
                 transition={{ duration: 0.25, ease: "easeInOut" }}
                 className="overflow-hidden border-t border-slate-800/80 p-5 bg-slate-950/90"
               >
-                <BirthForm key={`${formData.fullName}|${formData.birthDate}|${formData.birthTime}|${formData.cityName}|${formData.latitude}|${formData.longitude}`} initialData={formData} onSubmit={handleFormSubmit} />
+                <BirthForm key={birthFormRevision} initialData={formData} onSubmit={handleFormSubmit} />
               </motion.div>
             )}
           </AnimatePresence>
