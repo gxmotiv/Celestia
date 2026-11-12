@@ -628,7 +628,7 @@ export function RelationshipAstrologyView({
           </p>
         </div>
 
-        <p className="text-[11px] text-slate-400 bg-slate-950/50 border border-slate-800 rounded-lg p-3">Synastry, composite and Davison charts are astrological interpretation frameworks. Their labels, scores and karmic/soulmate themes are not scientific measures of compatibility, probability of success, destiny or past-life connection. Use them as prompts for reflection and communication, not as a decision rule for relationships.</p>
+        <p className="text-[11px] text-slate-400 bg-slate-950/50 border border-slate-800 rounded-lg p-3">Synastry, composite and Davison charts are astrological interpretation frameworks. Their labels, heuristic scores and karmic/soulmate themes are not scientific measures of compatibility, probability of success, destiny or past-life connection. Vedic Milan points are also tradition-specific rules, not a measured probability. Use these systems as prompts for reflection and communication, not as decision rules for relationships.</p>
 
       {/* View Tabs */}
         <div className="flex items-center gap-1.5 flex-wrap">
@@ -1279,7 +1279,7 @@ export function RelationshipAstrologyView({
                               : "bg-purple-500/10 text-purple-400 border-purple-500/30"
                           }`}
                         >
-                          {asp.nature} ({asp.score}/10)
+                          {asp.nature} · interpretive weight {asp.score}/10
                         </span>
                       </div>
                     </div>
