@@ -27,6 +27,7 @@ import {
   TrendingUp,
   BookOpen,
 } from "lucide-react";
+import { compressNaraImage } from "@/lib/ai/imageCompression";
 
 interface MasterAIAstrologerCockpitProps {
   vedicData: VedicChartData;
@@ -50,6 +51,8 @@ interface ChatMessage {
   text: string;
   timestamp: string;
   isAiGenerated?: boolean;
+  provider?: string;
+  model?: string;
 }
 
 const PLANETARY_REMEDIES: Record<
@@ -286,6 +289,8 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
   ]);
 
   const [inputQuery, setInputQuery] = useState("");
+  const [modelOverride, setModelOverride] = useState<"auto" | "agnes-2.5-flash" | "laguna-s-2.1">("auto");
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [isConsulting, setIsConsulting] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState<"consultation" | "timingConvergence" | "classicalRemedies" | "yogas">("consultation");
@@ -300,7 +305,7 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
   ];
 
   const handleSendQuery = async (queryText?: string) => {
-    const textToSend = queryText || inputQuery;
+    const textToSend = queryText || inputQuery || (imageFile ? "Please analyze the attached screenshot and explain the relevant details." : "");
     if (!textToSend.trim() || isConsulting) return;
 
     const userMsg: ChatMessage = {
@@ -369,35 +374,106 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
         },
       };
 
+      const imageDataUrl = imageFile ? await compressNaraImage(imageFile) : undefined;
       const res = await fetch("/api/astrology/master-oracle", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, modelOverride, imageDataUrl, stream: true }),
       });
 
-      const data = await res.json();
-      const reply = data.reply || "The stars illuminate your path. Focus on grounding your current planetary energies.";
+      if (!res.ok) {
+        let message = "The AI gateway could not complete this request. Please try again.";
+        try {
+          const errorData = await res.json();
+          if (typeof errorData?.error === "string") message = errorData.error;
+          else if (typeof errorData?.error?.message === "string") message = errorData.error.message;
+        } catch { /* Keep the safe generic message. */ }
+        throw new Error(message);
+      }
 
-      const oracleMsg: ChatMessage = {
-        id: "oracle-" + Date.now(),
-        sender: "oracle",
-        text: reply,
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        isAiGenerated: data.isAiGenerated,
-      };
+      const oracleMessageId = "oracle-" + Date.now();
+      const messageTimestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const selectedModel = res.headers.get("x-celestia-ai-model") || undefined;
+      const contentType = res.headers.get("content-type") || "";
 
-      setMessages((prev) => [...prev, oracleMsg]);
+      if (contentType.includes("text/event-stream")) {
+        setMessages((prev) => [...prev, {
+          id: oracleMessageId,
+          sender: "oracle",
+          text: "",
+          timestamp: messageTimestamp,
+          isAiGenerated: true,
+          provider: "NaraRouter",
+          model: selectedModel,
+        }]);
+
+        const reader = res.body?.getReader();
+        if (!reader) throw new Error("The AI stream could not be opened.");
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let streamedText = "";
+        let streamFinished = false;
+
+        const consumeSseLine = (line: string) => {
+          if (!line.startsWith("data:")) return;
+          const dataLine = line.slice(5).trim();
+          if (!dataLine) return;
+          if (dataLine === "[DONE]") { streamFinished = true; return; }
+          try {
+            const event = JSON.parse(dataLine);
+            const delta = event?.choices?.[0]?.delta?.content;
+            if (typeof delta === "string" && delta.length > 0) {
+              streamedText += delta;
+              setMessages((prev) => prev.map((message) =>
+                message.id === oracleMessageId ? { ...message, text: streamedText } : message
+              ));
+            } else if (typeof event?.error?.message === "string") {
+              throw new Error(event.error.message);
+            }
+          } catch (parseError) {
+            if (parseError instanceof Error && parseError.message !== "Unexpected end of JSON input") {
+              throw parseError;
+            }
+          }
+        };
+
+        while (!streamFinished) {
+          const chunk = await reader.read();
+          if (chunk.done) break;
+          buffer += decoder.decode(chunk.value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+          for (const line of lines) consumeSseLine(line.replace(/\r$/, ""));
+        }
+        buffer += decoder.decode();
+        if (buffer.trim()) consumeSseLine(buffer.replace(/\r$/, ""));
+        if (!streamedText.trim()) throw new Error("The AI provider returned an empty response.");
+      } else {
+        const data = await res.json();
+        const reply = data.reply || "The stars illuminate your path. Focus on grounding your current planetary energies.";
+        setMessages((prev) => [...prev, {
+          id: oracleMessageId,
+          sender: "oracle",
+          text: reply,
+          timestamp: messageTimestamp,
+          isAiGenerated: data.isAiGenerated,
+          provider: data.provider || (data.isAiGenerated ? "Gemini fallback" : "Local fallback"),
+          model: data.model,
+        }]);
+      }
+      setImageFile(null);
     } catch (err) {
-      console.error("Master Oracle consultation failed:", err);
-      const fallbackMsg: ChatMessage = {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error."; 
+      console.error("Master Oracle consultation failed:", err instanceof Error ? err.name : "unknown_error");
+      const errorMsg: ChatMessage = {
         id: "oracle-" + Date.now(),
         sender: "oracle",
-        text: `### Guidance from Acharya Celestia
-In reviewing your chart, your active **${currentMD?.planet || "Jupiter"} Mahadasha** and **${currentAD?.planet || "Saturn"} Antardasha** demand mindful discipline. Propitiate your active Dasha lord by chanting **${activeRemedy.beejaMantra}** 108 times daily and offering charitable daan of **${activeRemedy.charity}** on ${activeRemedy.fastingDay}s.`,
+        text: "### AI request not completed\n" + errorMessage + "\n\nYour saved chart data has not been changed.",
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         isAiGenerated: false,
+        provider: "Gateway status",
       };
-      setMessages((prev) => [...prev, fallbackMsg]);
+      setMessages((prev) => [...prev, errorMsg]);
     } finally {
       setIsConsulting(false);
     }
@@ -595,7 +671,7 @@ In reviewing your chart, your active **${currentMD?.planet || "Jupiter"} Mahadas
                       <span>{m.timestamp}</span>
                       {m.isAiGenerated && (
                         <span className="px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[9px]">
-                          Gemini 3.8
+                          {m.provider || "AI generated"}{m.model ? " · " + m.model : ""}
                         </span>
                       )}
                     </div>
@@ -644,23 +720,64 @@ In reviewing your chart, your active **${currentMD?.planet || "Jupiter"} Mahadas
               </div>
 
               {/* Chat Input Bar */}
-              <div className="mt-3 pt-3 border-t border-slate-800/80 flex items-center gap-2">
-                <input
-                  type="text"
-                  value={inputQuery}
-                  onChange={(e) => setInputQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSendQuery()}
-                  placeholder="Ask Acharya Celestia anything about your chart, dasha timing, or remedies..."
-                  className="flex-1 px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-500 transition-colors"
-                />
-                <button
-                  type="button"
-                  onClick={() => handleSendQuery()}
-                  disabled={isConsulting || !inputQuery.trim()}
-                  className="p-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20 disabled:opacity-50 transition-all cursor-pointer shrink-0"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
+              <div className="mt-3 pt-3 border-t border-slate-800/80 space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <label htmlFor="nara-model" className="text-[10px] text-slate-400">AI model</label>
+                  <select
+                    id="nara-model"
+                    value={modelOverride}
+                    onChange={(event) => setModelOverride(event.target.value as "auto" | "agnes-2.5-flash" | "laguna-s-2.1")}
+                    disabled={isConsulting}
+                    className="min-h-9 rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-[11px] text-slate-200"
+                    aria-label="Choose AI model"
+                  >
+                    <option value="auto">Auto route</option>
+                    <option value="agnes-2.5-flash">Agnes Vision / General</option>
+                    <option value="laguna-s-2.1">Laguna Code / Debug</option>
+                  </select>
+                  <label className="inline-flex min-h-9 cursor-pointer items-center rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-[11px] text-slate-300 hover:border-amber-500/50">
+                    Attach screenshot
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="sr-only"
+                      disabled={isConsulting}
+                      onChange={(event) => setImageFile(event.target.files?.[0] || null)}
+                      aria-label="Attach an image or screenshot"
+                    />
+                  </label>
+                  {imageFile && (
+                    <span className="max-w-[170px] truncate text-[10px] text-amber-300" title={imageFile.name}>
+                      {imageFile.name}
+                    </span>
+                  )}
+                  {imageFile && (
+                    <button type="button" onClick={() => setImageFile(null)} disabled={isConsulting} className="text-[10px] text-slate-400 underline underline-offset-2">
+                      Remove image
+                    </button>
+                  )}
+                </div>
+                <p className="text-[10px] leading-relaxed text-slate-500">
+                  Auto routes screenshots to Agnes and code/debugging tasks to Laguna. Images are compressed on this device before upload.
+                </p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={inputQuery}
+                    onChange={(e) => setInputQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSendQuery()}
+                    placeholder="Ask Acharya Celestia about your chart or attach a screenshot..."
+                    className="flex-1 px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-500 transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleSendQuery()}
+                    disabled={isConsulting || (!inputQuery.trim() && !imageFile)}
+                    className="p-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20 disabled:opacity-50 transition-all cursor-pointer shrink-0"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
