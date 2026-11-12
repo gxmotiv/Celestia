@@ -1,7 +1,7 @@
 /**
  * Specialized Western Astrology Engines:
- * 1. Fixed Stars Engine (35+ Classical, Royal & Archangel stars with orb detection & Ptolemaic natures)
- * 2. Eclipse Analyzer (Solar & Lunar eclipses affecting natal houses with 6-12 month impacts)
+ * 1. Fixed Stars Engine (20 symbolic reference entries; stored longitudes are not date-adjusted)
+ * 2. Eclipse Analyzer (Astronomy Engine global solar/lunar eclipse search with natal-house overlays)
  * 3. Medical Astrology Indicators (Zodiac bodily rulerships, stress aspects, 6th/12th house vitality analysis)
  * 4. Astrocartography Power Lines (Planetary lines on AC, DC, MC, IC across geographic coordinates)
  */
@@ -23,7 +23,7 @@ import {
 export interface FixedStar {
   name: string;
   constellation: string;
-  longitude: number; // J2000 longitude
+  longitude: number; // Approximate J2000 tropical ecliptic longitude; no proper-motion correction
   magnitude: number;
   nature: "Royal" | "Benefic" | "Malefic" | "Mixed";
   planetaryNature: string; // e.g. "Jupiter / Mars"
@@ -45,8 +45,11 @@ export interface StarContact {
 
 export class FixedStarsEngine {
   public static readonly FIXED_STARS: FixedStar[] = [
+    // 20 curated reference entries. Positions are illustrative J2000 tropical longitudes.
+    // They are NOT precessed to the chart epoch and do not include stellar proper motion.
+    // Do not represent these contacts as high-precision current-of-date fixed-star positions.
     // 4 Royal Archangel Stars of Persia
-    { name: "Regulus (Cor Leonis)", constellation: "Leo", longitude: 150.08, magnitude: 1.35, nature: "Royal", planetaryNature: "Mars / Jupiter", color: "White-Blue", meaning: "Archangel Raphael. Supreme leadership, royal honor, courage, and sudden fame; downfall only occurs if revenge is taken." },
+    { name: "Regulus (Cor Leonis)", constellation: "Leo", longitude: 149.83, magnitude: 1.35, nature: "Royal", planetaryNature: "Mars / Jupiter", color: "White-Blue", meaning: "Archangel Raphael. Supreme leadership, royal honor, courage, and sudden fame; downfall only occurs if revenge is taken." },
     { name: "Aldebaran", constellation: "Taurus", longitude: 69.95, magnitude: 0.85, nature: "Royal", planetaryNature: "Mars", color: "Orange", meaning: "Archangel Michael. Integrity brings glorious success in business, military, and statecraft; corruption brings rapid loss." },
     { name: "Antares (Cor Scorpionis)", constellation: "Scorpio", longitude: 249.93, magnitude: 0.96, nature: "Royal", planetaryNature: "Mars / Jupiter", color: "Fiery Red", meaning: "Archangel Uriel. Strategic boldness, fearless confrontation with danger, deep occult power, and triumphant transformation." },
     { name: "Fomalhaut", constellation: "Piscis Austrinus", longitude: 333.87, magnitude: 1.16, nature: "Royal", planetaryNature: "Venus / Mercury", color: "Pure White", meaning: "Archangel Gabriel. Fame through poetic artistry, visionary ideals, and spiritual magic; requires unwavering moral clarity." },
