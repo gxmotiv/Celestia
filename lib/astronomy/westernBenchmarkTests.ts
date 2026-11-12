@@ -335,20 +335,40 @@ export class WesternBenchmarkRunner {
       details: "Because the South Node is mathematically defined as North Node + 180°, counting their opposition as an aspect is redundant.",
     });
 
-    // Test 11: Minor Harmonic Aspects (Quintiles 72°, Septiles 51.43°, Noviles 40°)
-    const minorAsp = this.minorAspectsEngine.calculateMinorAspects(chart.planets);
-    const hasQuintileSeries = minorAsp.some(
-      (a) => a.aspectType.name.includes("Quintile") || a.aspectType.harmonicFamily === "quintile"
-    );
+    // Test 11: Controlled exact-angle fixtures for the 5th, 7th, 8th and 9th harmonic families.
+    const template = chart.planets[0];
+    const harmonicFixtures = [
+      { name: "Quintile", angle: 72 },
+      { name: "Septile", angle: 360 / 7 },
+      { name: "Semisquare", angle: 45 },
+      { name: "Novile", angle: 40 },
+    ];
+    const harmonicChecks = harmonicFixtures.map((fixture) => {
+      const syntheticPair = [
+        { ...template, id: "SyntheticA", name: "SyntheticA", longitude: 0, speed: 0.1 },
+        { ...template, id: "SyntheticB", name: "SyntheticB", longitude: fixture.angle, speed: 0.05 },
+      ];
+      const detected = this.minorAspectsEngine.calculateMinorAspects(syntheticPair, {
+        useMinorAspects: true,
+        minorOrbMultiplier: 1,
+        includeHarmonics: false,
+        harmonicNumber: 5,
+        showWeakAspects: true,
+        aspectTypes: [fixture.name],
+        filterNature: "all",
+      });
+      return detected.some((aspect) => aspect.aspectType.name === fixture.name && aspect.orb < 0.001);
+    });
+    const harmonicFamiliesPassed = harmonicChecks.every(Boolean);
     results.push({
       id: "W-ASP-04",
-      name: "Keplerian Harmonic Minor Aspects Engine",
+      name: "Controlled 5th, 7th, 8th and 9th Harmonic Geometry",
       category: "Aspects & Orbs",
-      standardReference: "Johannes Kepler (Harmonices Mundi, 1619)",
-      expected: "Engine detects 5th, 7th, 8th, and 9th harmonic series",
-      actual: `${minorAsp.length} minor aspects identified in chart`,
-      passed: minorAsp.length >= 0 && typeof hasQuintileSeries === "boolean",
-      details: "Kepler introduced harmonics 5 (quintile 72°), 7 (septile 51°25'), and 8 (semisquare 45°) to astrological science.",
+      standardReference: "Harmonic divisions: 360°/5, 360°/7, 360°/8, 360°/9",
+      expected: "Exact Quintile, Septile, Semisquare and Novile detected in synthetic two-point charts",
+      actual: harmonicChecks.map((passed, index) => `${harmonicFixtures[index].name}: ${passed ? "pass" : "fail"}`).join("; "),
+      passed: harmonicFamiliesPassed,
+      details: "Each harmonic family is tested with a controlled pair at its exact mathematical angle; this does not validate interpretive meaning.",
     });
   }
 
