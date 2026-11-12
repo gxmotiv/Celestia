@@ -107,8 +107,7 @@ export class LunarPointsCalculator {
   /**
    * Vertex calculation:
    * The Vertex is the western intersection of the Prime Vertical with the Ecliptic.
-   * Formula:
-   * tan(V) = -cos(RAMC) / (sin(obliquity) * tan(lat) + cos(obliquity) * sin(RAMC))
+   * Uses the same quadrant-aware prime-vertical intersection as the chart house-angle engine.
    */
   public calculateVertexLon(ramc: number, lat: number, obliquity: number): number {
     return calculateVertexLongitude(ramc, lat, obliquity);
@@ -120,21 +119,6 @@ export class LunarPointsCalculator {
    */
   public calculateEastPointLon(ramc: number, obliquity: number): number {
     return calculateEastPointLongitude(ramc, obliquity);
-  }
-
-  /**
-   * East Point (Equatorial Ascendant):
-   * The intersection of the eastern horizon and the celestial equator.
-   * Longitude = atan2(sin(RAMC), cos(RAMC) * cos(obliquity))
-   */
-  public calculateEastPointLon(ramc: number, obliquity: number): number {
-    const ramcRad = ramc * DEG2RAD;
-    const epsRad = obliquity * DEG2RAD;
-
-    const y = Math.sin(ramcRad);
-    const x = Math.cos(ramcRad) * Math.cos(epsRad);
-    let ep = normalizeDegrees(Math.atan2(y, x) * RAD2DEG);
-    return ep;
   }
 
   /**
