@@ -871,7 +871,7 @@ export function AdvancedWesternPanel({
             </div>
             {!firdariaReport.isDiurnal && (
               <label className="flex flex-wrap items-center gap-2 text-[11px] text-slate-300">
-                **Nocturnal sequence**
+                <strong>Nocturnal sequence</strong>
                 <select
                   value={firdariaNightOrder}
                   onChange={(event) => setFirdariaNightOrder(event.target.value as FirdariaNightOrder)}
