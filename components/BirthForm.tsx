@@ -4,6 +4,7 @@ import React, { useState, useMemo, useRef, useEffect } from "react";
 import { searchCities } from "@/lib/astronomy/cities";
 import { resolveLocalDateTime } from "@/lib/astronomy/historicalTimezone";
 import { parseBirthClockTime } from "@/lib/astronomy/timeInput";
+import { WesternHouseSystem } from "@/lib/astronomy/ephemeris";
 import {
   Compass,
   MapPin,
@@ -34,7 +35,7 @@ export interface BirthFormData {
   selectedUtcOffsetSeconds?: number;
   baziTimeBasis?: "civil-clock" | "local-mean-solar" | "local-apparent-solar";
   baziDayBoundaryPolicy?: "pure-zi" | "early-late-zi";
-  houseSystem: "Placidus" | "Equal" | "WholeSign";
+  houseSystem: WesternHouseSystem;
 }
 
 interface LocationOption {
@@ -748,9 +749,11 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
                 onChange={(e) => setFormData({ ...formData, houseSystem: e.target.value as BirthFormData["houseSystem"] })}
                 className="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded text-xs text-slate-100 focus:border-amber-500 focus:outline-none"
               >
+                <option value="Auto">Auto — system-aware (Western Placidus; Hellenistic/Vedic Whole Sign)</option>
                 <option value="Placidus">Placidus (Time-Proportional)</option>
-                <option value="WholeSign">Whole Sign (Classical Hellenistic)</option>
-                <option value="Equal">Equal House (30° from Asc)</option>
+                <option value="WholeSign">Whole Sign (Hellenistic / traditional)</option>
+                <option value="Equal">Equal House (30° from Ascendant)</option>
+                <option value="Porphyry">Porphyry (Equal Quadrants)</option>
               </select>
             </div>
           </div>
