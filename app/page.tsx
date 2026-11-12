@@ -386,6 +386,7 @@ export default function HomePage() {
               </span>
               <span className="text-slate-600">·</span>
               <span className="text-amber-300/80 font-mono text-[11px]">{westernData.houseSystem} Houses</span>
+              {westernData.houseSystemNote && <span className="text-[10px] text-amber-200/80">{westernData.houseSystemNote}</span>}
             </div>
 
             <button
