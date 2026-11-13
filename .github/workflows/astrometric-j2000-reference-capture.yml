@@ -1,0 +1,64 @@
+name: Western astrometric J2000 independent reference capture
+
+on:
+  push:
+    branches:
+      - research/jpl-western-ephemeris-benchmarks
+    paths:
+      - .github/workflows/astrometric-j2000-reference-capture.yml
+      - scripts/fetchAstrometricJ2000References.ts
+      - scripts/compareAstrometricJ2000References.ts
+      - scripts/testAstrometricJ2000Harness.ts
+      - lib/astronomy/astrometricJ2000Benchmarks.ts
+      - data/benchmarks/western-ephemeris-reference.json
+      - data/benchmarks/astrometric-j2000-western-reference.json
+
+permissions:
+  contents: write
+
+concurrency:
+  group: western-astrometric-j2000-reference-capture
+  cancel-in-progress: false
+
+jobs:
+  capture:
+    name: Capture or verify IMCCE INPOP19 and JPL astrometric J2000 vectors
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Bun
+        run: |
+          npm install --global bun@1.4.4
+          test "$(bun --version)" = "1.4.4"
+      - name: Install locked dependencies
+        run: bun install --frozen-lockfile
+      - name: Validate vector requests and parsers
+        run: bun run scripts/testAstrometricJ2000Harness.ts
+      - name: Capture provider data only when the fixed dataset is absent
+        run: |
+          if [ ! -s data/benchmarks/astrometric-j2000-western-reference.json ]; then
+            bun run scripts/fetchAstrometricJ2000References.ts --fetch
+          else
+            echo "Preserving existing fixed astrometric reference data."
+          fi
+      - name: Verify raw checksums and compare the two providers
+        run: bun run scripts/compareAstrometricJ2000References.ts
+      - name: Upload original responses and normalized fixtures
+        uses: actions/upload-artifact@v4
+        with:
+          name: western-astrometric-j2000-reference
+          path: |
+            data/benchmarks/astrometric-j2000-western-reference.json
+            data/benchmarks/astrometric-j2000-raw/*.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Commit captured vector data to the research branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/benchmarks/astrometric-j2000-western-reference.json data/benchmarks/astrometric-j2000-raw/*.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Capture matched astrometric J2000 INPOP and JPL vectors"
+            git push origin HEAD:research/jpl-western-ephemeris-benchmarks
+          fi
