@@ -57,7 +57,7 @@ Policy: keep changes on isolated branches; do not merge or deploy until the owne
 |---|---|---|
 | Synastry | Audit required | Verify aspect orbs, weights, house overlays, duplicated transformations and interpretation labels. |
 | Composite chart | Audit required | Independently verify midpoint conventions, circular longitude handling, time/date handling and house calculations. |
-| Davison chart | Priority audit | Verify exact UTC instants, temporal midpoint, geographic midpoint, longitude wrap, antipodal/near-antipodal handling and timezone seconds. Compare against independent examples. |
+| Davison chart | Partial / UTC integration corrected on follow-on branch | Engine accepts exact resolver-supplied UTC instants and the relationship screen passes them when available; legacy fixed-offset conversion remains for older callers. Strict local date/time and coordinate validation added. Independent fixtures for temporal/geographic midpoint, longitude wrap, antipodal handling and historical timezone seconds are still required. |
 | Numerology | Audit required | Verify name normalization, master-number rules, date conventions, and explain interpretive/non-empirical status. |
 | PDFs | Audit required | Compare every printed value with on-screen calculations; verify privacy, locale, fonts and missing-data behavior. |
 
