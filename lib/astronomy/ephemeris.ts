@@ -612,6 +612,8 @@ export function formatPoint(
  */
 export function calculateAspects(planets: PlanetPosition[]): AspectData[] {
   const aspects: AspectData[] = [];
+  // Refuse to derive aspects from explicitly approximate/symbolic placeholder positions.
+  const aspectablePlanets = planets.filter((planet) => !planet.calculationNote);
   const MAJOR_ASPECTS = [
     // The five classical Ptolemaic aspects. Quincunx and Semisextile
     // are classified and calculated by MinorAspectsEngine instead.
@@ -622,10 +624,10 @@ export function calculateAspects(planets: PlanetPosition[]): AspectData[] {
     { name: "Opposition", symbol: "☍", angle: 180, defaultOrb: 8, nature: "Challenging" as const },
   ];
 
-  for (let i = 0; i < planets.length; i++) {
-    for (let j = i + 1; j < planets.length; j++) {
-      const p1 = planets[i];
-      const p2 = planets[j];
+  for (let i = 0; i < aspectablePlanets.length; i++) {
+    for (let j = i + 1; j < aspectablePlanets.length; j++) {
+      const p1 = aspectablePlanets[i];
+      const p2 = aspectablePlanets[j];
 
       // Exclude North Node - South Node opposition (it's always 180° by definition)
       if (
