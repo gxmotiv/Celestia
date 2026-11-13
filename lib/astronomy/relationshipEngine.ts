@@ -1221,8 +1221,11 @@ export class DavisonChartEngine {
 
     const sign = lmtOffsetHours >= 0 ? "+" : "-";
     const absOffset = Math.abs(lmtOffsetHours);
-    const offH = Math.floor(absOffset);
-    const offM = Math.round((absOffset - offH) * 60);
+    // Round the complete offset to minutes before splitting it into hours and
+    // minutes. Rounding the fractional part separately can produce UTC+05:60.
+    const totalOffsetMinutes = Math.round(absOffset * 60);
+    const offH = Math.floor(totalOffsetMinutes / 60);
+    const offM = totalOffsetMinutes % 60;
     const offStr = `${sign}${String(offH).padStart(2, "0")}:${String(offM).padStart(2, "0")}`;
     const midpointLmt = `${lmtYear}-${lmtMonth}-${lmtDay} ${lmtHour}:${lmtMinute}:${lmtSecond} LMT (UTC${offStr})`;
 
