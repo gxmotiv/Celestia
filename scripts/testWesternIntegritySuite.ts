@@ -222,6 +222,20 @@ check(lunarReturn.longitudeErrorDegrees < 0.01,
   "Lunar return event solves to within 0.01 degrees of the natal Moon longitude");
 check(lunarReturn.chart.houseSystem === "WholeSign" && lunarReturn.chart.houses.length === 12,
   "Lunar return chart honors the selected Whole Sign system");
+const subsequentLunarReturn = returnEngine.calculateNextLunarReturn(
+  directedFixture, new Date(lunarReturn.exactUtc), 51.4769, 0, "WholeSign"
+);
+const firstLunarReturnTime = new Date(lunarReturn.exactUtc).getTime();
+const subsequentLunarReturnTime = new Date(subsequentLunarReturn.exactUtc).getTime();
+check(subsequentLunarReturnTime > firstLunarReturnTime,
+  "Using a solved Lunar Return instant as the next reference finds a later return, not the same crossing");
+check(
+  subsequentLunarReturnTime - firstLunarReturnTime > 20 * 86400000 &&
+  subsequentLunarReturnTime - firstLunarReturnTime <= 36 * 86400000,
+  "The subsequent Lunar Return is approximately one lunar cycle after the prior return"
+);
+check(subsequentLunarReturn.longitudeErrorDegrees < 0.01,
+  "The subsequent Lunar Return also solves to within 0.01 degrees of the natal Moon longitude");
 
 // 1. Solar altitude and sect are based on real horizon geometry, not house numbers.
 close(
@@ -311,8 +325,16 @@ if (belowPolarFallback.houseSystemUsed === "O") {
 }
 const polarAuto = calculateWesternChart(2000, 1, 1, 12, 0, 70, 0, 0, "Auto");
 check(polarAuto.houseSystem === "Porphyry", "Auto switches to Porphyry at polar latitude where Placidus is undefined");
-check(Boolean(polarAuto.houseSystemNote && polarAuto.houseSystemNote.includes("polar")),
-  "Polar fallback is disclosed to the user");
+check(Boolean(
+  polarAuto.houseSystemNote &&
+  polarAuto.houseSystemNote.includes("Celestia's conservative policy") &&
+  polarAuto.houseSystemNote.includes("not a claim")
+), "Polar fallback disclosure identifies the Celestia policy and avoids claiming universal Placidus impossibility");
+const polarSouthAuto = calculateWesternChart(2000, 1, 1, 12, 0, -70, 0, 0, "Auto");
+check(polarSouthAuto.houseSystem === "Porphyry",
+  "The same conservative polar fallback policy applies in the southern hemisphere");
+check(Boolean(polarSouthAuto.houseSystemNote && polarSouthAuto.houseSystemNote.includes("Celestia's conservative policy")),
+  "Southern polar fallback also discloses the application policy");
 check(polarAuto.houses.length === 12, "Polar fallback returns twelve cusps");
 check(polarAuto.houses.every((house) => Number.isFinite(house.longitude)), "Polar fallback returns twelve finite cusp longitudes");
 const polarExplicitPlacidus = calculateWesternChart(2000, 1, 1, 12, 0, 70, 0, 0, "Placidus");
@@ -559,6 +581,13 @@ check(
 
 // 10. Fixed-star data are explicitly reference entries, not a falsely claimed 35+ catalogue.
 check(FixedStarsEngine.FIXED_STARS.length === 20, "Fixed-star catalogue count matches the 20 implemented reference entries");
+const fixedStarsEngine = new FixedStarsEngine();
+check(fixedStarsEngine.isCatalogueEpochCompatible(oldEpochChart),
+  "J2000 fixed-star reference catalogue is compatible with a J2000 chart epoch");
+check(!fixedStarsEngine.isCatalogueEpochCompatible(faganReferenceChart),
+  "The J2000-only fixed-star catalogue is not marked compatible with a modern chart epoch");
+check(fixedStarsEngine.calculateStarContacts(faganReferenceChart).length === 0,
+  "Modern fixed-star contacts remain uncalculated rather than using unadjusted J2000 longitudes");
 const regulus = FixedStarsEngine.FIXED_STARS.find((star) => star.name.includes("Regulus"));
 check(Boolean(regulus && Math.abs(regulus.longitude - 149.83) < 0.05),
   "Regulus J2000 tropical longitude reference is near Leo 29 degrees 50 minutes");
