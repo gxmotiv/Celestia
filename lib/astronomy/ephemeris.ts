@@ -704,7 +704,7 @@ export function calculateWesternChart(
     : houseResult.houseSystemUsed === "E" ? "Equal"
     : houseResult.houseSystemUsed === "O" ? "Porphyry" : "Placidus";
   const houseSystemNote = polarPlacidusFallback
-    ? "Placidus is not geometrically defined at/above the polar circle here; Porphyry quadrant houses were used instead."
+    ? "Celestia's conservative policy selected Porphyry at |latitude| ≥ 66.5622°. This is an application fallback, not a claim that Placidus is impossible at every such location; other implementations may resolve it at some high-latitude dates and coordinates."
     : actualHouseSystem !== resolvedRequest
       ? "The requested Placidus calculation could not be resolved numerically for this place/date; Porphyry quadrant houses were used instead."
       : houseSystem === "Auto"

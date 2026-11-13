@@ -407,6 +407,21 @@ export class SwissEphemerisEngine {
   }
 
   /**
+   * Unrounded apparent geocentric tropical lunar longitude for event-time solving.
+   * The normal planet-position API rounds to 0.0001° for display; return searches
+   * must use the underlying longitude to avoid a several-tenths-of-a-second plateau.
+   */
+  public getApparentMoonLongitude(julianDay: number): number {
+    if (!Number.isFinite(julianDay)) {
+      throw new RangeError("Julian Day must be finite.");
+    }
+    const time = new Astronomy.AstroTime(julianDay - 2451545.0);
+    const vector = Astronomy.GeoVector(Astronomy.Body.Moon, time, true);
+    const ecliptic = Astronomy.Ecliptic(vector);
+    return ((ecliptic.elon % 360) + 360) % 360;
+  }
+
+  /**
    * Return the ten major planetary positions and one internally consistent
    * Rahu/Ketu pair. Ketu is always exactly 180° from the selected ascending
    * node model; it is never calculated from a different node model.

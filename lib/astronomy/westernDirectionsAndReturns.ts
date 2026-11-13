@@ -67,15 +67,20 @@ function julianDayUtc(date: Date): number {
     date.getUTCDate(),
     date.getUTCHours(),
     date.getUTCMinutes(),
-    date.getUTCSeconds(),
+    date.getUTCSeconds() + date.getUTCMilliseconds() / 1000,
     0
   );
 }
 
 function pointLongitude(body: "Sun" | "Moon", date: Date): number {
   const jd = julianDayUtc(date);
-  const id = body === "Sun" ? swissEphemeris.SUN : swissEphemeris.MOON;
-  return normalizeDegrees(swissEphemeris.calculatePlanetPosition(id, jd).longitude);
+  // Event solving uses unrounded apparent geocentric longitudes rather than
+  // the display-oriented 0.0001° values returned by calculatePlanetPosition.
+  return normalizeDegrees(
+    body === "Sun"
+      ? swissEphemeris.getApparentSunLongitude(jd)
+      : swissEphemeris.getApparentMoonLongitude(jd)
+  );
 }
 
 function signDegree(longitude: number): string {
@@ -179,7 +184,7 @@ export class WesternReturnEngine {
     targetLongitude: number,
     start: Date,
     maxDays: number,
-    minimumElapsedMilliseconds = 0
+    strictlyAfterStart = false
   ): { exactDate: Date; longitude: number; error: number } {
     const target = normalizeDegrees(targetLongitude);
     const stepMilliseconds = DAY_MS;
@@ -192,10 +197,10 @@ export class WesternReturnEngine {
       const right = new Date(Math.min(time, endTime));
       const rightDifference = signedLongitudeDifference(pointLongitude(body, right), target);
       if (
-        right.getTime() - start.getTime() >= minimumElapsedMilliseconds &&
         leftDifference <= 0 &&
         rightDifference >= 0 &&
-        (leftDifference < 0 || rightDifference > 0)
+        (leftDifference < 0 || rightDifference > 0) &&
+        (!strictlyAfterStart || leftDifference < 0)
       ) {
         bracket = { left, right };
         break;
@@ -211,14 +216,16 @@ export class WesternReturnEngine {
 
     let low = bracket.left.getTime();
     let high = bracket.right.getTime();
-    for (let iteration = 0; iteration < 60 && high - low > 250; iteration++) {
+    for (let iteration = 0; iteration < 60 && high - low > 1; iteration++) {
       const middle = low + Math.floor((high - low) / 2);
       const difference = signedLongitudeDifference(pointLongitude(body, new Date(middle)), target);
       if (difference < 0) low = middle;
       else high = middle;
     }
 
-    const exactDate = new Date(low + Math.floor((high - low) / 2));
+    // Return the upper edge of the bracket: it is on/after the crossing,
+    // so a subsequent strictly-after search cannot rediscover this return.
+    const exactDate = new Date(high);
     const longitude = pointLongitude(body, exactDate);
     const rawError = Math.abs(signedLongitudeDifference(longitude, target));
     return { exactDate, longitude, error: rawError };
@@ -243,7 +250,8 @@ export class WesternReturnEngine {
     const d = solved.exactDate;
     const chart = calculateWesternChart(
       d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate(),
-      d.getUTCHours(), d.getUTCMinutes(), latitude, longitude, 0, houseSystem, d.getUTCSeconds()
+      d.getUTCHours(), d.getUTCMinutes(), latitude, longitude, 0, houseSystem,
+      d.getUTCSeconds() + d.getUTCMilliseconds() / 1000
     );
     return {
       kind: "Solar Return",
@@ -268,11 +276,12 @@ export class WesternReturnEngine {
     validateDate(referenceDate, "Lunar return reference date");
     validateCoordinates(latitude, longitude);
     const natalMoon = natalChart.planets.find((p) => p.name === "Moon")?.longitude ?? Number.NaN;
-    const solved = this.findReturn("Moon", natalMoon, referenceDate, 36, DAY_MS);
+    const solved = this.findReturn("Moon", natalMoon, referenceDate, 36, true);
     const d = solved.exactDate;
     const chart = calculateWesternChart(
       d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate(),
-      d.getUTCHours(), d.getUTCMinutes(), latitude, longitude, 0, houseSystem, d.getUTCSeconds()
+      d.getUTCHours(), d.getUTCMinutes(), latitude, longitude, 0, houseSystem,
+      d.getUTCSeconds() + d.getUTCMilliseconds() / 1000
     );
     return {
       kind: "Lunar Return",
