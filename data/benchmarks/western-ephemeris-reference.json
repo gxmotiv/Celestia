@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "datasetStatus": "awaiting-reference-capture",
+  "source": {
+    "provider": "NASA/JPL Horizons",
+    "apiEndpoint": "https://ssd-api.jpl.nasa.gov/api/horizons.api",
+    "apiVersion": "1.3 (2025 June)",
+    "horizonsSystemVersion": "4.98e (2026-08-25, as reported by current manual)",
+    "currentPlanetaryEphemerisFamily": "DE440/DE441 (confirm the selected solution in each captured Horizons response header)",
+    "retrievalTool": "scripts/fetchJplWesternEphemerisReference.ts",
+    "retrievalCommand": "bun run scripts/fetchJplWesternEphemerisReference.ts --fetch",
+    "note": "No numerical reference rows are included until they have been retrieved and archived from Horizons. Do not substitute Celestia outputs or synthetic values for external reference data."
+  },
+  "query": {
+    "ephemerisType": "OBSERVER",
+    "targetCenter": "planet center where available",
+    "observerCenter": "500@399 (Earth geocenter)",
+    "quantity": "31 (observer-centered apparent ecliptic longitude and latitude)",
+    "angularUnits": "degrees",
+    "timeScale": "UT",
+    "timeInput": "CAL / Gregorian UTC labels",
+    "timeDigits": "FRACSEC",
+    "refSystem": "ICRF",
+    "apparentCorrection": "AIRLESS (no atmospheric refraction)",
+    "refraction": "disabled",
+    "referenceCoordinateFrame": "Earth ecliptic-of-date, IAU76/80 as defined by Horizons quantity 31"
+  },
+  "celestiaCoordinateConvention": {
+    "implementation": "astronomy-engine through SwissEphemerisEngine compatibility facade",
+    "vector": "geocentric GeoVector with light-time and aberration correction enabled",
+    "eclipticFrame": "Astronomy Engine true ecliptic of date",
+    "knownDifferences": "Horizons quantity 31 additionally models gravitational light deflection and uses its IAU76/80 ecliptic-of-date realization; Celestia does not claim these are identical pipelines. Residuals must be interpreted with this model difference and a documented tolerance."
+  },
+  "epochsUtc": [
+    "1987-03-14T12:00:00.000Z",
+    "2000-01-01T12:00:00.000Z",
+    "2024-02-29T00:00:00.000Z",
+    "2026-11-12T23:59:59.000Z",
+    "2026-11-13T00:00:00.000Z",
+    "2035-07-01T06:30:00.000Z"
+  ],
+  "bodies": [
+    {
+      "name": "Sun",
+      "targetId": "10"
+    },
+    {
+      "name": "Moon",
+      "targetId": "301"
+    },
+    {
+      "name": "Mercury",
+      "targetId": "199"
+    },
+    {
+      "name": "Venus",
+      "targetId": "299"
+    },
+    {
+      "name": "Mars",
+      "targetId": "499"
+    },
+    {
+      "name": "Jupiter",
+      "targetId": "599"
+    },
+    {
+      "name": "Saturn",
+      "targetId": "699"
+    },
+    {
+      "name": "Uranus",
+      "targetId": "799"
+    },
+    {
+      "name": "Neptune",
+      "targetId": "899"
+    },
+    {
+      "name": "Pluto",
+      "targetId": "999"
+    }
+  ],
+  "acceptanceThresholdsArcseconds": {},
+  "fixtures": []
+}
