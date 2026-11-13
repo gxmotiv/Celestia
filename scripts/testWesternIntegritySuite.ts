@@ -103,6 +103,20 @@ const stationaryAspect = calculateAspects([
 check(stationaryAspect?.isApplying === null,
   "A fully stationary relative aspect is not falsely labelled separating");
 
+const missingSpeedAspect = calculateAspects([
+  syntheticSun(0),
+  { ...syntheticSun(60), id: "MissingSpeedBody", name: "MissingSpeedBody", speed: undefined },
+]).find((aspect) => aspect.planet1 === "Sun" || aspect.planet2 === "Sun");
+check(missingSpeedAspect?.isApplying === null,
+  "Main natal aspect direction is unavailable when one point has no instantaneous speed");
+
+const stationaryAgainstMovingAspect = calculateAspects([
+  { ...syntheticSun(0), speed: 0 },
+  { ...syntheticSun(59), id: "MovingProbe", name: "MovingProbe", speed: 1 },
+]).find((aspect) => aspect.planet1 === "Sun" || aspect.planet2 === "Sun");
+check(stationaryAgainstMovingAspect?.isApplying === true,
+  "A real stationary body remains a valid zero speed when paired with a moving body");
+
 // The natal "Major Ptolemaic" table must contain only the five classical
 // Ptolemaic aspects. Quincunx and Semisextile belong to the minor-aspect engine.
 function natalAspectAt(longitude: number) {
