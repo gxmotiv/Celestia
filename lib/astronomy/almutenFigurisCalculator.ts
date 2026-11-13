@@ -48,8 +48,12 @@ export interface AlmutenFigurisResult {
   almutenFiguris: string;
   almutenSymbol: string;
   almutenScore: number;
+  /** @deprecated Compatibility alias for almutenFiguris; this is not a separate soul-ruler calculation. */
   lordOfSoul: string;
+  /** @deprecated Compatibility alias for runnerUpPlanet; this is not a separate temperament calculation. */
   lordOfTemperament: string;
+  runnerUpPlanet: string | null;
+  methodNote: string;
   sanDegree: number;
   sanType: "New Moon" | "Full Moon";
   sanFormatted: string;
@@ -450,6 +454,8 @@ export class AlmutenFigurisCalculator {
       almutenScore: winner.totalScore,
       lordOfSoul: winner.planet,
       lordOfTemperament: runnerUp ? runnerUp.planet : winner.planet,
+      runnerUpPlanet: runnerUp?.planet ?? null,
+      methodNote: "Celestia-specific hybrid weighting: the Ascendant, Sun, Moon, Part of Fortune and previous syzygy are scored using domicile +5, exaltation +4, the active Dorothean triplicity ruler +3, Egyptian term +2 and Chaldean face +1. Additional accidental points use Celestia’s custom 12-to-1 house ranking, plus custom +7 day-ruler and +6 hour-ruler bonuses. This combination is not an exact reproduction of one historical author’s complete scoring method. The labels Lord of Soul and Lord of Temperament are not separately calculated by this engine; the legacy fields are aliases for rank 1 and rank 2.",
       sanDegree: san.degree,
       sanType: san.type,
       sanFormatted,
@@ -459,7 +465,7 @@ export class AlmutenFigurisCalculator {
       hourRuler,
       points: pointAnalyses,
       scores,
-      significance: `According to Ibn Ezra's classical doctrine, ${winner.planet} holds supreme sovereignty over this geniture with ${winner.totalScore} dignity points (${winner.essentialScore} essential, ${winner.accidentalScore} house, ${winner.dayHourBonus} temporal).`,
+      significance: `Under Celestia’s configured weighted method, ${winner.planet} ranks first with ${winner.totalScore} total points (${winner.essentialScore} essential, ${winner.accidentalScore} house, ${winner.dayHourBonus} temporal). The ranking is method-dependent and should not be treated as a canonical result shared by all traditional schools.`,
     };
   }
 }
