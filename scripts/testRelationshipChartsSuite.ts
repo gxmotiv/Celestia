@@ -13,7 +13,7 @@
  * 10. Robust process exit behavior (exits with non-zero on failure).
  */
 
-import { DavisonChartEngine, DavisonPersonInput } from "../lib/astronomy/relationshipEngine";
+import { DavisonChartEngine, DavisonPersonInput, SynastryEngine, SynastryAspect } from "../lib/astronomy/relationshipEngine";
 import { swissEphemeris } from "../lib/astronomy/swissEphemeris";
 import { calculateWesternChart } from "../lib/astronomy/ephemeris";
 
@@ -479,6 +479,53 @@ console.log("\n[TEST GROUP 11] Legacy Fractional-Second Compatibility");
     "11.1 Legacy offset conversion accepts precise seconds and retains milliseconds",
     `Actual: ${result.midpointDateUtc}`
   );
+}
+
+// ---------------------------------------------------------------------------
+// TEST 12: Synastry compatibility scoring is invariant to chart order
+// ---------------------------------------------------------------------------
+console.log("\n[TEST GROUP 12] Synastry Chart-Order Invariance");
+{
+  const chartFixture = calculateWesternChart(2000, 1, 1, 12, 0, 0, 0, 0, "Placidus");
+  const synastryEngine = new SynastryEngine(chartFixture, chartFixture, "Person A", "Person B");
+  const makeAspect = (planet1: string, planet2: string): SynastryAspect => ({
+    planet1,
+    planet2,
+    symbol1: "A",
+    symbol2: "B",
+    aspectName: "Conjunction",
+    symbol: "☌",
+    angle: 0,
+    orb: 1,
+    isApplying: null,
+    score: 8,
+    nature: "Harmonious",
+    category: "Growth & Purpose",
+    title: "Order symmetry fixture",
+    description: "Synthetic deterministic scoring fixture.",
+    advice: "No interpretive claim.",
+  });
+
+  const cases: Array<{ left: string; right: string; dimension: "physical" | "valuesAlignment" }> = [
+    { left: "Sun", right: "Venus", dimension: "physical" },
+    { left: "Sun", right: "Mars", dimension: "physical" },
+    { left: "Sun", right: "Jupiter", dimension: "valuesAlignment" },
+  ];
+
+  cases.forEach(({ left, right, dimension }, index) => {
+    const forward = synastryEngine.computeCompatibilityScores([makeAspect(left, right)]);
+    const reversed = synastryEngine.computeCompatibilityScores([makeAspect(right, left)]);
+    assert(
+      forward[dimension] > 70 && reversed[dimension] > 70,
+      `12.${index + 1} ${left}-${right} contributes in both chart orders`,
+      `Forward: ${forward[dimension]}, reversed: ${reversed[dimension]}`
+    );
+    assert(
+      forward[dimension] === reversed[dimension] && forward.overall === reversed.overall,
+      `12.${index + 4} ${left}-${right} compatibility is identical when chart order is reversed`,
+      `Forward: ${forward[dimension]}/${forward.overall}, reversed: ${reversed[dimension]}/${reversed.overall}`
+    );
+  });
 }
 
 console.log("\n===============================================================================");
