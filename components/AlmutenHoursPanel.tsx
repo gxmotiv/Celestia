@@ -96,7 +96,8 @@ export function AlmutenHoursPanel({ chartData }: AlmutenHoursPanelProps) {
               <div className="p-2.5 bg-slate-950/50 border border-slate-800/80 rounded-lg">
                 <span className="text-[10px] text-slate-400 block">Pre-Natal Syzygy (SAN)</span>
                 <span className="text-xs font-semibold text-slate-200">{almuten.sanFormatted}</span>
-                <span className="text-[10px] text-amber-400/90 block">({almuten.sanType})</span>
+                <span className="text-[10px] text-amber-400/90 block">({almuten.sanType}) · {almuten.sanDaysBeforeBirth.toFixed(2)} days before birth</span>
+                <span className="text-[9px] text-slate-500 block">UTC: {almuten.sanUtcInstant}</span>
               </div>
               <div className="p-2.5 bg-slate-950/50 border border-slate-800/80 rounded-lg">
                 <span className="text-[10px] text-slate-400 block">Day Ruler (+7 pts)</span>

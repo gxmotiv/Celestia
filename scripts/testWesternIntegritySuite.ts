@@ -15,6 +15,7 @@ import {
 import { calculateHellenisticAnalysis, calculateSiderealComparison } from "../lib/astronomy/hellenistic";
 import { ProgressionsEngine } from "../lib/astronomy/predictiveHellenisticEngine";
 import { ArabianPartsCalculator } from "../lib/astronomy/arabianPartsCalculator";
+import { AlmutenFigurisCalculator } from "../lib/astronomy/almutenFigurisCalculator";
 import {
   FirdariaEngine,
   ZodiacalReleasingEngine,
@@ -291,6 +292,43 @@ check(
 );
 check(subsequentLunarReturn.longitudeErrorDegrees < 0.00001,
   "The subsequent Lunar Return also solves to within 0.00001 degrees of the natal Moon longitude");
+
+// Pre-natal syzygy must resolve the actual previous New/Full Moon crossing,
+// not estimate its Sun longitude using a fixed phase-angle multiplier.
+const sanEngine = new AlmutenFigurisCalculator();
+const sanReferenceEphemeris = new SwissEphemerisEngine();
+const april2024NewMoonBirth = sanReferenceEphemeris.calculateJulianDay(2024, 4, 9, 12, 0, 0, 0);
+const april2024NewMoonSan = sanEngine.calculatePreNatalSyzygy(april2024NewMoonBirth);
+check(april2024NewMoonSan.type === "New Moon",
+  "A birth after the 8 April 2024 New Moon identifies the previous syzygy as New Moon");
+const nasaAprilNewMoonJd = sanReferenceEphemeris.calculateJulianDay(2024, 4, 8, 18, 21, 0, 0);
+close(april2024NewMoonSan.julianDay, nasaAprilNewMoonJd, 0.02,
+  "Solved New Moon is within 0.02 day of NASA Sky Calendar 8 April 2024 18:21 UTC");
+close(
+  sanReferenceEphemeris.getApparentSunLongitude(april2024NewMoonSan.julianDay),
+  april2024NewMoonSan.degree,
+  1e-10,
+  "Pre-natal New Moon degree is the apparent solar longitude at the solved event instant"
+);
+const march2024FullMoonBirth = sanReferenceEphemeris.calculateJulianDay(2024, 3, 26, 12, 0, 0, 0);
+const march2024FullMoonSan = sanEngine.calculatePreNatalSyzygy(march2024FullMoonBirth);
+check(march2024FullMoonSan.type === "Full Moon",
+  "A birth after the 25 March 2024 Full Moon identifies the previous syzygy as Full Moon");
+const nasaMarchFullMoonJd = sanReferenceEphemeris.calculateJulianDay(2024, 3, 25, 7, 0, 0, 0);
+close(march2024FullMoonSan.julianDay, nasaMarchFullMoonJd, 0.02,
+  "Solved Full Moon is within 0.02 day of NASA Sky Calendar 25 March 2024 07:00 UTC");
+const beforeMarchFullMoonBirth = sanReferenceEphemeris.calculateJulianDay(2024, 3, 24, 12, 0, 0, 0);
+const beforeMarchFullMoonSan = sanEngine.calculatePreNatalSyzygy(beforeMarchFullMoonBirth);
+check(beforeMarchFullMoonSan.type === "New Moon" &&
+  beforeMarchFullMoonSan.daysBeforeBirth > 13.5 && beforeMarchFullMoonSan.daysBeforeBirth < 14.8,
+  "A birth before the March Full Moon correctly looks back to the prior March New Moon");
+let invalidSanDateRejected = false;
+try {
+  sanEngine.calculatePreNatalSyzygy(Number.NaN);
+} catch {
+  invalidSanDateRejected = true;
+}
+check(invalidSanDateRejected, "Pre-natal syzygy rejects a non-finite birth Julian Day");
 
 // 1. Solar altitude and sect are based on real horizon geometry, not house numbers.
 close(

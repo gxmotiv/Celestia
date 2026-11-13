@@ -836,6 +836,7 @@ export function calculateWesternChart(
     isDayChart: isBirthDaytime,
     dayRuler: planetaryHours.dayRuler,
     hourRuler: planetaryHours.currentHourRuler,
+    julianDay: jd,
   });
 
   return {
