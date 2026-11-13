@@ -1021,7 +1021,7 @@ export function WesternChart({
               </div>
             )}
 
-            <div className="overflow-x-auto">
+            <div className="max-h-[560px] overflow-auto">
               <table className="w-full text-left text-xs text-slate-300">
                 <thead className="bg-slate-950/60 text-slate-400 border-b border-slate-800 text-[11px]">
                   <tr>
@@ -1033,7 +1033,7 @@ export function WesternChart({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60 font-mono">
-                  {chartData.aspects.slice(0, 12).map((asp, idx) => (
+                  {chartData.aspects.map((asp, idx) => (
                     <tr
                       key={idx}
                       onClick={() => setSelectedAspect(asp)}
