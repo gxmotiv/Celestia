@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   calculateWesternChart,
   calculateAspects,
+  isAngularAspectApplying,
   normalizeDegrees,
   type PlanetPosition,
   type WesternChartData,
@@ -87,6 +88,22 @@ function syntheticSectChart(localSiderealTime: number): WesternChartData {
 }
 
 console.log("Western calculation integrity regression suite");
+
+// At the exact aspect instant, the phase cannot be inferred from a single
+// longitude snapshot even when relative speed is known.
+check(isAngularAspectApplying(0, 60, 60, 1) === null,
+  "The shared aspect helper reports an exact sextile as phase-indeterminate");
+check(isAngularAspectApplying(0, 59, 60, -1) === true,
+  "The shared aspect helper identifies a closing sextile before exactitude");
+check(isAngularAspectApplying(0, 61, 60, -1) === false,
+  "The shared aspect helper identifies a widening sextile after exactitude");
+
+const exactNatalAspect = calculateAspects([
+  syntheticSun(0),
+  { ...syntheticSun(60), id: "ExactAspectProbe", name: "ExactAspectProbe", speed: 1.5 },
+]).find((aspect) => aspect.planet1 === "Sun" || aspect.planet2 === "Sun");
+check(exactNatalAspect?.isApplying === null,
+  "An exact natal aspect is not mislabeled as separating");
 
 // Natal aspects to chart angles have no modeled angular speed. They must not be
 // reported as separating merely because angle points were stored with speed 0.
