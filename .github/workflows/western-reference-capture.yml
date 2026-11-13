@@ -7,11 +7,12 @@ on:
     paths:
       - .github/workflows/western-reference-capture.yml
       - scripts/fetchJplWesternEphemerisReference.ts
+      - scripts/compareJplWesternEphemeris.ts
       - lib/astronomy/westernEphemerisBenchmarks.ts
       - data/benchmarks/western-ephemeris-reference.json
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: western-jpl-reference-capture
@@ -41,3 +42,14 @@ jobs:
             data/benchmarks/raw/*.json
           if-no-files-found: error
           retention-days: 14
+      - name: Compare captured JPL references with Celestia
+        run: bun run scripts/compareJplWesternEphemeris.ts
+      - name: Commit captured reference data to the isolated benchmark branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/benchmarks/western-ephemeris-reference.json data/benchmarks/raw/*.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Capture checksummed JPL Horizons planetary references"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
