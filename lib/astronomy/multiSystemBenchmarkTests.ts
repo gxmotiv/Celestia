@@ -226,18 +226,19 @@ export class MultiSystemBenchmarkRunner {
       notes: "True Rahu-Ketu / Nodal axis is mathematically diametric.",
     });
 
-    // 16. Chiron & Lilith Inclusion
+    // 16. Chiron placeholder metadata smoke check — not an ephemeris accuracy test.
     const chiron = chart.planets.find((p) => p.name === "Chiron");
     list.push({
       id: "W-CHI-01",
       system: "Western",
-      name: "Chiron Centaur Coordinate",
+      name: "Chiron Approximate Placeholder Metadata",
       category: "Centaurs & Asteroids",
-      classicalAuthority: "Kowal (1977) / Modern Western Ephemeris",
-      expectedFormula: "Chiron longitude computed (0° to 360°)",
-      actualResult: chiron ? `${chiron.longitude.toFixed(2)}° in ${chiron.sign}` : "Missing",
-      passed: chiron !== undefined && chiron.longitude >= 0 && chiron.longitude < 360,
-      notes: "50.7-year chaotic orbit calculated via orbital perturbation model.",
+      classicalAuthority: "Discovered by Charles T. Kowal (1977); position method is a Celestia placeholder",
+      expectedFormula: "Placeholder longitude in [0°, 360°), explicit accuracy note, and unknown motion",
+      actualResult: chiron ? `${chiron.longitude.toFixed(2)}° in ${chiron.sign}; motion ${chiron.motionStatus ?? "not marked"}` : "Missing",
+      passed: chiron !== undefined && chiron.longitude >= 0 && chiron.longitude < 360 &&
+        chiron.motionStatus === "unknown" && Boolean(chiron.calculationNote),
+      notes: "Smoke test only. The current sine-formula placeholder is not an integrated/perturbed Chiron ephemeris and is not benchmarked for longitude or retrograde accuracy.",
     });
 
     // 17. 4 Major Asteroids (Ceres, Pallas, Juno, Vesta)
