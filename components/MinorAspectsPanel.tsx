@@ -470,7 +470,7 @@ export function MinorAspectsPanel({
                             : "bg-slate-800 text-slate-400 border border-slate-700"
                         }`}
                       >
-                        {aspect.applying ? "Applying" : "Separating"}
+                        {aspect.applying === null ? "Direction unavailable" : aspect.applying ? "Applying" : "Separating"}
                       </span>
 
                       <span className="text-slate-300 tabular-nums">
@@ -585,7 +585,7 @@ export function MinorAspectsPanel({
                           {Math.round(asp.strength * 100)}%
                         </span>
                         <span className="text-[9px] text-slate-500 uppercase">
-                          {asp.applying ? "Applying" : "Separating"}
+                          {asp.applying === null ? "Direction unavailable" : asp.applying ? "Applying" : "Separating"}
                         </span>
                       </div>
                     </div>

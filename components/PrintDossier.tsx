@@ -422,7 +422,7 @@ export function PrintDossier({
                     </td>
                     <td className="text-center font-mono text-[10px]">{asp.aspectType.angle}°</td>
                     <td className="text-right font-mono text-[10px]">{asp.orb.toFixed(2)}°</td>
-                    <td className="text-center text-[10px]">{asp.applying ? "Applying" : "Separating"}</td>
+                    <td className="text-center text-[10px]">{asp.applying === null ? "N/A" : asp.applying ? "Applying" : "Separating"}</td>
                     <td className="text-[10px] text-slate-600 max-w-xs truncate">
                       {asp.interpretation}
                     </td>
