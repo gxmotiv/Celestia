@@ -34,6 +34,7 @@ async function main(): Promise<void> {
 
   let failed = 0;
   let unthresholded = 0;
+  const residualsByBody = new Map<string, { longitude: number[]; latitude: number[] }>();
   for (const fixture of dataset.fixtures) {
     const date = new Date(fixture.epochUtc);
     if (!Number.isFinite(date.getTime())) {
@@ -61,6 +62,11 @@ async function main(): Promise<void> {
     if (!hasThreshold) unthresholded += 1;
     else if (!passed) failed += 1;
 
+    const bodyResiduals = residualsByBody.get(fixture.body) ?? { longitude: [], latitude: [] };
+    bodyResiduals.longitude.push(residual.longitudeArcseconds);
+    bodyResiduals.latitude.push(residual.latitudeArcseconds);
+    residualsByBody.set(fixture.body, bodyResiduals);
+
     const status = !hasThreshold ? "REVIEW" : passed ? "PASS" : "FAIL";
     console.log(
       status + " " + fixture.body + " " + fixture.epochUtc +
@@ -69,6 +75,34 @@ async function main(): Promise<void> {
       (hasThreshold
         ? " | limits λ/β=" + threshold.longitude + "/" + threshold.latitude + "″"
         : " | no calibrated acceptance threshold")
+    );
+  }
+
+  const summarize = (values: number[]) => {
+    const sorted = [...values].sort((a, b) => a - b);
+    const mean = values.reduce((total, value) => total + value, 0) / values.length;
+    const percentile95 = sorted[Math.max(0, Math.ceil(sorted.length * 0.95) - 1)];
+    return {
+      median: sorted[Math.floor(sorted.length / 2)],
+      p95: percentile95,
+      maximum: sorted[sorted.length - 1],
+      rms: Math.sqrt(values.reduce((total, value) => total + value * value, 0) / values.length),
+      mean,
+    };
+  };
+
+  console.log("Per-body residual summary (arcseconds; descriptive only until thresholds are calibrated):");
+  for (const [body, values] of residualsByBody) {
+    const longitude = summarize(values.longitude);
+    const latitude = summarize(values.latitude);
+    console.log(
+      body + " n=" + values.longitude.length +
+      " | longitude median/p95/max/RMS=" +
+      longitude.median.toFixed(2) + "/" + longitude.p95.toFixed(2) + "/" +
+      longitude.maximum.toFixed(2) + "/" + longitude.rms.toFixed(2) +
+      " | latitude median/p95/max/RMS=" +
+      latitude.median.toFixed(2) + "/" + latitude.p95.toFixed(2) + "/" +
+      latitude.maximum.toFixed(2) + "/" + latitude.rms.toFixed(2)
     );
   }
 
