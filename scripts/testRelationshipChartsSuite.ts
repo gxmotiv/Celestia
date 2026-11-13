@@ -15,7 +15,7 @@
  * 12. Robust process exit behavior (exits with non-zero on failure).
  */
 
-import { DavisonChartEngine, DavisonPersonInput, SynastryEngine, SynastryAspect } from "../lib/astronomy/relationshipEngine";
+import { DavisonChartEngine, DavisonPersonInput, SynastryEngine, SynastryAspect, CompositeChartEngine } from "../lib/astronomy/relationshipEngine";
 import { swissEphemeris } from "../lib/astronomy/swissEphemeris";
 import { calculateWesternChart } from "../lib/astronomy/ephemeris";
 
@@ -528,6 +528,59 @@ console.log("\n[TEST GROUP 12] Synastry Chart-Order Invariance");
       `Forward: ${forward[dimension]}/${forward.overall}, reversed: ${reversed[dimension]}/${reversed.overall}`
     );
   });
+}
+
+// ---------------------------------------------------------------------------
+// TEST 13: Composite antipodal midpoint is deterministic and chart-order invariant
+// ---------------------------------------------------------------------------
+console.log("\n[TEST GROUP 13] Composite Antipodal Midpoint Integrity");
+{
+  const base = calculateWesternChart(2000, 1, 1, 12, 0, 0, 0, 0, "Placidus");
+  const makeChart = (sunLongitude: number, ascLongitude: number, mcLongitude: number) => ({
+    ...base,
+    planets: base.planets.map((p) => p.name === "Sun" ? { ...p, longitude: sunLongitude } : p),
+    ascendant: { ...base.ascendant, longitude: ascLongitude },
+    midheaven: { ...base.midheaven, longitude: mcLongitude },
+  });
+  const engine = new CompositeChartEngine();
+  const chartA = makeChart(0, 0, 350);
+  const chartB = makeChart(180, 180, 10);
+  const forward = engine.calculateComposite(chartA, chartB);
+  const reversed = engine.calculateComposite(chartB, chartA);
+  const forwardSun = forward.planets.find((p) => p.name === "Sun");
+  const reversedSun = reversed.planets.find((p) => p.name === "Sun");
+
+  assert(
+    forwardSun?.longitude === 90 && reversedSun?.longitude === 90,
+    "13.1 Exactly antipodal Sun longitudes use the same deterministic midpoint in either chart order",
+    `Forward: ${forwardSun?.longitude}, reversed: ${reversedSun?.longitude}`
+  );
+  assert(
+    forward.ascendant.longitude === reversed.ascendant.longitude &&
+      forward.midheaven.longitude === reversed.midheaven.longitude,
+    "13.2 Exactly antipodal Ascendant and Midheaven midpoints are invariant under chart reversal",
+    `Forward: AC ${forward.ascendant.longitude}/MC ${forward.midheaven.longitude}; reversed: AC ${reversed.ascendant.longitude}/MC ${reversed.midheaven.longitude}`
+  );
+
+  const antiA = makeChart(350, 350, 350);
+  const antiB = makeChart(10, 10, 10);
+  const acrossZero = engine.calculateComposite(antiA, antiB);
+  const acrossZeroReversed = engine.calculateComposite(antiB, antiA);
+  assert(
+    acrossZero.planets.find((p) => p.name === "Sun")?.longitude === 0 &&
+      acrossZeroReversed.planets.find((p) => p.name === "Sun")?.longitude === 0,
+    "13.3 Shortest-arc midpoint across 0° remains correct and order invariant",
+    `Forward: ${acrossZero.planets.find((p) => p.name === "Sun")?.longitude}, reversed: ${acrossZeroReversed.planets.find((p) => p.name === "Sun")?.longitude}`
+  );
+
+  const invalid = makeChart(Number.NaN, 0, 0);
+  let rejected = false;
+  try {
+    engine.calculateComposite(invalid, chartB);
+  } catch {
+    rejected = true;
+  }
+  assert(rejected, "13.4 Non-finite composite planetary longitudes are rejected");
 }
 
 console.log("\n===============================================================================");
