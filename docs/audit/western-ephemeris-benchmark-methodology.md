@@ -22,17 +22,17 @@ Use NASA/JPL Horizons' public API:
 - Refraction: disabled with `APPARENT='AIRLESS'`
 - Target center IDs: Sun 10, Moon 301, Mercury 199, Venus 299, Mars 499, Jupiter 599, Saturn 699, Uranus 799, Neptune 899, Pluto 999
 
-Quantity 31 is not a geometric J2000 vector. Horizons describes it as apparent observer-centered longitude/latitude in its IAU76/80 ecliptic-of-date frame, corrected for light-time, gravitational deflection and stellar aberration (with atmospheric refraction optional). The API requires the ephemeris type, center, time list and requested quantity to be specified. Do not mix this output with heliocentric longitude, astrometric coordinates, or a J2000 ecliptic vector.
+Quantity 31 is not a geometric J2000 vector. Horizons defines it as apparent observer-centered longitude/latitude in the Earth ecliptic-of-date frame using its IAU76/80 model, corrected for light-time, gravitational deflection and stellar aberration (with atmospheric refraction optional). The Horizons manual describes IAU76 precession for 1799–2202, IAU80 nutation, and JPL Earth-orientation corrections for modern dates. It also documents DE441 as the basis of planetary barycenter motion data. The API requires the ephemeris type, center, time list and requested quantity to be specified. Do not mix this output with heliocentric longitude, astrometric coordinates, or a J2000 ecliptic vector.
 
 The stored manifest in `data/benchmarks/western-ephemeris-reference.json` specifies six UTC epochs, including a historical modern-era sample, the J2000 calendar date, a leap-day sample, a one-second midnight boundary, and a future sample. The J2000 calendar-date row is intentionally called a *calendar-date sample*, not J2000.0: J2000.0 is a dynamical epoch and must not be conflated with 2000-01-01 12:00 UTC.
 
 ## Celestia coordinate convention and known mismatches
 
-Celestia's Western planetary path calls the `astronomy-engine` library through the compatibility facade named `SwissEphemerisEngine`; this is not native Swiss Ephemeris/libswe. Its current apparent geocentric vector calculation applies light-time and stellar-aberration correction, then transforms into Astronomy Engine's true ecliptic-of-date coordinates.
+Celestia's Western planetary path calls the `astronomy-engine` library through the compatibility facade named `SwissEphemerisEngine`; this is not native Swiss Ephemeris/libswe. Its current apparent geocentric vector calculation applies light-time and stellar-aberration correction, then transforms into Astronomy Engine's true ecliptic-of-date coordinates. Horizons quantity 31 is defined in its Earth ecliptic-of-date IAU76/80 frame; those frame realizations and Earth-orientation corrections must not be assumed identical.
 
 The match is close in intent but not an identical implementation:
 - Horizons quantity 31 includes gravitational light deflection; Celestia's current Astronomy Engine call does not document that correction.
-- Horizons uses its IAU76/80 ecliptic-of-date realization. Astronomy Engine describes its output as true ecliptic of date; its precession/nutation model is not assumed identical to Horizons.
+- Horizons uses its Earth ecliptic-of-date IAU76/80 realization, with its documented precession, nutation and modern Earth-orientation corrections. Astronomy Engine describes its output as true ecliptic of date; its precession/nutation and frame realization are not assumed identical to Horizons.
 - Celestia rounds UI-facing planetary positions to 0.0001°. The benchmark method uses the new unrounded coordinate method so rounding does not dominate residuals.
 - The longitude residual must be circularly reduced to the shortest signed difference in [-180°, 180°]. Latitude residual is a direct difference.
 - Lunar nodes are mathematical orbital points, not the same as a directly observed major-body target. They are intentionally excluded from this ten-body Horizons capture and need a separate documented reference method.
