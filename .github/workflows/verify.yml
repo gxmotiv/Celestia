@@ -26,6 +26,7 @@ jobs:
           - testAstrologySuite.ts
           - testWesternIntegritySuite.ts
           - testWesternReferenceHarness.ts
+          - testInpopWesternEphemerisHarness.ts
           - testBaZiSuite.ts
           - testGeocodeSuite.ts
           - testPdfGenerationSuite.ts
