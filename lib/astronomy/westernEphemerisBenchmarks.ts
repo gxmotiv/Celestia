@@ -21,6 +21,55 @@ export const WESTERN_HORIZONS_BODIES = [
 
 export type WesternHorizonsBody = typeof WESTERN_HORIZONS_BODIES[number]["name"];
 
+
+const HORIZONS_API_ENDPOINT = "https://ssd.jpl.nasa.gov/api/horizons.api";
+
+/**
+ * Builds an observer-table query using Horizons' documented TLIST syntax:
+ * every calendar instant is individually quoted, and the list itself is
+ * space-delimited. Wrapping the entire list in one pair of quotes is invalid.
+ */
+export function buildJplWesternHorizonsQueryUrl(targetId: string, epochsUtc: string[]): string {
+  if (!/^\d+$/.test(targetId)) {
+    throw new RangeError("Horizons target id must contain decimal digits only.");
+  }
+  if (epochsUtc.length === 0) {
+    throw new RangeError("At least one UTC epoch is required for a Horizons query.");
+  }
+  const utcList = epochsUtc.map((value) => {
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value) ||
+        !Number.isFinite(Date.parse(value)) ||
+        new Date(value).toISOString() !== value) {
+      throw new Error("Invalid canonical UTC benchmark epoch: " + value);
+    }
+    return "'" + value.replace("T", " ").replace("Z", "") + "'";
+  }).join(" ");
+
+  const parameters: Record<string, string> = {
+    format: "json",
+    COMMAND: "'" + targetId + "'",
+    OBJ_DATA: "'NO'",
+    MAKE_EPHEM: "'YES'",
+    EPHEM_TYPE: "'OBSERVER'",
+    CENTER: "'500@399'",
+    TLIST: utcList,
+    TLIST_TYPE: "'CAL'",
+    TIME_TYPE: "'UT'",
+    TIME_DIGITS: "'FRACSEC'",
+    TIME_ZONE: "'+00:00'",
+    CAL_TYPE: "'GREGORIAN'",
+    ANG_FORMAT: "'DEG'",
+    REF_SYSTEM: "'ICRF'",
+    APPARENT: "'AIRLESS'",
+    QUANTITIES: "'31'",
+  };
+  const url = new URL(HORIZONS_API_ENDPOINT);
+  for (const [key, value] of Object.entries(parameters)) {
+    url.searchParams.set(key, value);
+  }
+  return url.toString();
+}
+
 export interface HorizonsEclipticRow {
   longitudeDegrees: number;
   latitudeDegrees: number;
