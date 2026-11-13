@@ -84,18 +84,23 @@ close(residual.longitudeArcseconds, 720, 1e-7,
 close(residual.latitudeArcseconds, 1800, 1e-7,
   "Coordinate comparison reports absolute latitude residual in arcseconds");
 
-assert.throws(() => parseHorizonsObserverEclipticRows("no table markers here", 1),
+assert.throws(() => parseHorizonsObserverEclipticRows("no table markers here", expectedEpochs),
   /valid.*SOE.*EOE/, "Parser rejects missing Horizons data markers");
 assertions += 1;
 assert.throws(() => parseHorizonsObserverEclipticRows(output, [expectedEpochs[1], expectedEpochs[0]]),
   /expected .* at row 1/, "Parser rejects a reordered Horizons epoch list");
 assertions += 1;
-assert.throws(() => parseHorizonsObserverEclipticRows(output, expectedEpochs.slice(0, 1)),
-  /expected 1/, "Parser rejects an unexpected observation-row count");
+const oneRowOutput = [
+  "$SOE",
+  " 2000-Jan-01 12:00:00.000          280.12345678   -0.00012345",
+  "$EOE",
+].join("\\n");
+assert.throws(() => parseHorizonsObserverEclipticRows(oneRowOutput, expectedEpochs),
+  /expected 2/, "Parser rejects an incomplete reference row set");
 assertions += 1;
 assert.throws(() => parseHorizonsObserverEclipticRows(
-  "$$SOE\n 2000-Jan-01 12:00:00.000 not-a-number 0.0\n$$EOE", 1
-), /numeric longitude\/latitude/, "Parser rejects non-numeric reference coordinates");
+  "$SOE\\n 2000-Jan-01 12:00:00.000 not-a-number 0.0\\n$EOE", [expectedEpochs[0]]
+), /numeric longitude\\/latitude/, "Parser rejects non-numeric reference coordinates");
 assertions += 1;
 
 check(WESTERN_HORIZONS_BODIES.length === 10,
