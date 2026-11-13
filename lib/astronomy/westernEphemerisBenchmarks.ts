@@ -74,10 +74,13 @@ export function buildJplWesternHorizonsQueryUrl(targetId: string, epochsUtc: str
   return url.toString().replace(/\+/g, "%20");
 }
 
-export interface HorizonsEclipticRow {
-  epochUtc: string;
+export interface EclipticCoordinate {
   longitudeDegrees: number;
   latitudeDegrees: number;
+}
+
+export interface HorizonsEclipticRow extends EclipticCoordinate {
+  epochUtc: string;
 }
 
 export interface EclipticResidual {
@@ -97,8 +100,8 @@ export function signedCircularDifferenceDegrees(
 }
 
 export function compareEclipticCoordinates(
-  actual: HorizonsEclipticRow,
-  reference: HorizonsEclipticRow
+  actual: EclipticCoordinate,
+  reference: EclipticCoordinate
 ): EclipticResidual {
   if (
     !Number.isFinite(actual.longitudeDegrees) ||
