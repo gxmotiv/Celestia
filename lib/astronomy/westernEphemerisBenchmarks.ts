@@ -75,6 +75,7 @@ export function buildJplWesternHorizonsQueryUrl(targetId: string, epochsUtc: str
 }
 
 export interface HorizonsEclipticRow {
+  epochUtc: string;
   longitudeDegrees: number;
   latitudeDegrees: number;
 }
@@ -120,12 +121,45 @@ export function compareEclipticCoordinates(
  * query requesting QUANTITIES=31 only. Observer quantity 31 is emitted as the
  * final two numeric fields: ecliptic longitude and latitude in degrees.
  */
+function parseHorizonsCalendarEpoch(dateToken: string, timeToken: string): string {
+  const dateMatch = /^(\d{4})-([A-Za-z]{3})-(\d{2})$/.exec(dateToken);
+  const timeMatch = /^(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?$/.exec(timeToken);
+  const monthIndex = dateMatch
+    ? ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+        .indexOf(dateMatch[2])
+    : -1;
+  if (!dateMatch || !timeMatch || monthIndex < 0) {
+    throw new Error("Unexpected Horizons calendar timestamp: " + dateToken + " " + timeToken);
+  }
+  const year = Number(dateMatch[1]);
+  const day = Number(dateMatch[3]);
+  const hour = Number(timeMatch[1]);
+  const minute = Number(timeMatch[2]);
+  const second = Number(timeMatch[3]);
+  const fraction = (timeMatch[4] ?? "").padEnd(3, "0");
+  const millisecond = Number(fraction.slice(0, 3));
+  const date = new Date(Date.UTC(year, monthIndex, day, hour, minute, second, millisecond));
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== monthIndex ||
+    date.getUTCDate() !== day ||
+    hour > 23 || minute > 59 || second > 60
+  ) {
+    throw new Error("Invalid Horizons calendar timestamp: " + dateToken + " " + timeToken);
+  }
+  return date.toISOString();
+}
+
+/**
+ * Parses quantity-31 observer rows and verifies every returned timestamp and
+ * its order against the requested UTC epoch list before returning coordinates.
+ */
 export function parseHorizonsObserverEclipticRows(
   outputText: string,
-  expectedRowCount: number
+  expectedEpochsUtc: string[]
 ): HorizonsEclipticRow[] {
-  if (!Number.isInteger(expectedRowCount) || expectedRowCount <= 0) {
-    throw new RangeError("Expected Horizons row count must be a positive integer.");
+  if (!Array.isArray(expectedEpochsUtc) || expectedEpochsUtc.length === 0) {
+    throw new RangeError("Expected Horizons epochs must be a non-empty UTC list.");
   }
   const startMarker = outputText.indexOf("$$SOE");
   const endMarker = outputText.indexOf("$$EOE");
@@ -141,22 +175,29 @@ export function parseHorizonsObserverEclipticRows(
     if (fields.length < 4) {
       throw new Error("Unexpected Horizons quantity-31 row: " + line);
     }
-    const longitudeToken = fields[fields.length - 2];
-    const latitudeToken = fields[fields.length - 1];
-    const longitudeDegrees = Number(longitudeToken);
-    const latitudeDegrees = Number(latitudeToken);
+    const epochUtc = parseHorizonsCalendarEpoch(fields[0], fields[1]);
+    const expectedEpochUtc = expectedEpochsUtc[rows.length];
+    if (epochUtc !== expectedEpochUtc) {
+      throw new Error(
+        "Horizons returned epoch " + epochUtc +
+        " at row " + (rows.length + 1) +
+        "; expected " + expectedEpochUtc + "."
+      );
+    }
+    const longitudeDegrees = Number(fields[fields.length - 2]);
+    const latitudeDegrees = Number(fields[fields.length - 1]);
     if (!Number.isFinite(longitudeDegrees) || !Number.isFinite(latitudeDegrees)) {
       throw new Error("Horizons quantity-31 row does not end in numeric longitude/latitude: " + line);
     }
     if (longitudeDegrees < 0 || longitudeDegrees >= 360 || latitudeDegrees < -90 || latitudeDegrees > 90) {
       throw new Error("Horizons returned ecliptic coordinates outside valid angular ranges: " + line);
     }
-    rows.push({ longitudeDegrees, latitudeDegrees });
+    rows.push({ epochUtc, longitudeDegrees, latitudeDegrees });
   }
 
-  if (rows.length !== expectedRowCount) {
+  if (rows.length !== expectedEpochsUtc.length) {
     throw new Error(
-      "Horizons returned " + rows.length + " data rows; expected " + expectedRowCount + "."
+      "Horizons returned " + rows.length + " data rows; expected " + expectedEpochsUtc.length + "."
     );
   }
   return rows;
