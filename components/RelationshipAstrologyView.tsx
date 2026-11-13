@@ -20,7 +20,7 @@ import { KundliMilanEngine, KundliMilanReport } from "@/lib/vedic/kundliMilanEng
 import { MasterKundliMilanOrchestrator, MasterKundliReport } from "@/lib/vedic/masterKundliMilan";
 import { VedicKundliMilanDashboard } from "@/components/VedicKundliMilanDashboard";
 import { searchCities } from "@/lib/astronomy/cities";
-import { parseBirthClockTime } from "@/lib/astronomy/timeInput";
+import { isRelationshipChartTimeReady, parseBirthClockTime } from "@/lib/astronomy/timeInput";
 import { resolveLocalDateTime } from "@/lib/astronomy/historicalTimezone";
 import { swissEphemeris } from "@/lib/astronomy/swissEphemeris";
 import {
@@ -344,19 +344,28 @@ export function RelationshipAstrologyView({
     ? partnerResolvedCandidate.offsetSeconds / 3600
     : partnerProfile.timezoneOffset;
 
+  const partnerTimeReady = isRelationshipChartTimeReady({
+    birthDate: partnerProfile.birthDate,
+    birthTime: partnerProfile.birthTime,
+    timezoneMode: partnerProfile.timezoneMode,
+    hasResolvedInstant: Boolean(partnerResolvedCandidate),
+    manualOffsetConfirmed: partnerProfile.manualOffsetConfirmed,
+    timezoneOffset: partnerProfile.timezoneOffset,
+  });
+
   const partnerTimezoneWarning = partnerProfile.timezoneMode === "automatic"
     ? partnerTimeResolution?.status === "nonexistent"
-      ? "This local birth time did not occur in the selected IANA timezone. The partner chart currently falls back to the saved numeric offset."
+      ? "This local clock time did not occur in the selected timezone. Correct it or choose Manual UTC Offset and confirm the offset; relationship reports are on hold."
       : partnerTimeResolution?.status === "ambiguous" && !partnerResolvedCandidate
-        ? "This local time occurs twice. Select the intended UTC instant; until then the chart uses the saved numeric offset."
+        ? "This local time occurs twice. Select the intended UTC instant; relationship reports are on hold until you choose one."
         : partnerTimeResolution?.status === "unsupported"
-          ? (partnerTimeResolution.reason + " The partner chart uses the saved numeric offset until corrected.")
-          : !partnerTimeResolution
-            ? "Select a supported IANA timezone to resolve this local time."
+          ? (partnerTimeResolution.reason + " Relationship reports are on hold until you select and confirm a manual offset.")
+          : !partnerResolvedCandidate
+            ? "A valid IANA-resolved UTC instant is required before relationship reports can be shown."
             : "IANA/ICU database-resolved; historical rules still require independent verification."
     : partnerProfile.manualOffsetConfirmed
       ? "Using an explicitly user-confirmed manual UTC offset; not independently historically verified."
-      : "Manual offset is not confirmed. The current partner chart is provisional.";
+      : "Confirm the manual UTC offset to display relationship reports.";
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -1078,6 +1087,8 @@ export function RelationshipAstrologyView({
         </div>
       )}
 
+      {partnerTimeReady ? (
+        <>
       {/* RELATIONSHIP CONTEXT INTRO BANNER */}
       <div className="p-4 bg-gradient-to-r from-rose-950/30 via-slate-950/60 to-purple-950/30 border border-rose-500/20 rounded-xl flex items-start gap-3">
         <span className="text-2xl pt-0.5">{currentRelMeta.icon}</span>
@@ -1417,6 +1428,15 @@ export function RelationshipAstrologyView({
           masterReport={masterKundliReport}
           milanReport={kundliMilanReport}
         />
+      )}
+          </>
+      ) : (
+        <div role="status" className="p-5 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+          <h4 className="text-sm font-semibold text-amber-200">Relationship charts are on hold</h4>
+          <p className="text-xs text-slate-300 leading-relaxed">
+            Complete Person 2&apos;s birth details in Settings. Choose a valid automatic IANA-resolved time, select the intended UTC instant when the local time is ambiguous, or switch to Manual UTC Offset and confirm a valid offset. Synastry, Composite, Davison and Vedic relationship reports stay hidden until the time is resolved or explicitly confirmed.
+          </p>
+        </div>
       )}
     </div>
   );
