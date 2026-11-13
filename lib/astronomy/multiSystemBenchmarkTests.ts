@@ -241,18 +241,21 @@ export class MultiSystemBenchmarkRunner {
       notes: "Smoke test only. The current sine-formula placeholder is not an integrated/perturbed Chiron ephemeris and is not benchmarked for longitude or retrograde accuracy.",
     });
 
-    // 17. 4 Major Asteroids (Ceres, Pallas, Juno, Vesta)
-    const hasAsteroids = chart.asteroids && chart.asteroids.ceres && chart.asteroids.pallas;
+    // 17. Four major asteroid approximation metadata smoke check.
+    const asteroidPositions = chart.asteroids ? Object.values(chart.asteroids) : [];
+    const hasAsteroids = asteroidPositions.length === 4 && asteroidPositions.every((planet) =>
+      Boolean(planet.calculationNote?.includes("fixed J2000-era Keplerian elements"))
+    );
     list.push({
       id: "W-AST-01",
       system: "Western",
-      name: "Four Major Goddess Asteroids (Asteroid Belt)",
+      name: "Four Major Asteroid Approximation Metadata",
       category: "Centaurs & Asteroids",
-      classicalAuthority: "Piazzi, Olbers, Harding (1801-1807)",
-      expectedFormula: "Ceres, Pallas, Juno, and Vesta calculated with houses",
-      actualResult: hasAsteroids ? "All 4 Asteroids verified" : "Incomplete",
-      passed: Boolean(hasAsteroids),
-      notes: "Complete sacred feminine archetype coordinates generated.",
+      classicalAuthority: "Piazzi, Olbers, Harding (1801-1807); current coordinates use a Celestia approximation",
+      expectedFormula: "Four fixed-element approximate positions with an explicit model limitation",
+      actualResult: hasAsteroids ? "4 approximate positions with model notes" : "Incomplete or missing model notes",
+      passed: hasAsteroids,
+      notes: "Smoke check only. This does not validate asteroid longitude accuracy. The model uses fixed J2000-era Keplerian elements and a simplified Earth orbit; it omits N-body perturbations and lacks an independent JPL Horizons benchmark.",
     });
 
     // 18. Part of Fortune Day/Night Diurnal/Nocturnal Invariant
