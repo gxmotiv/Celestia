@@ -74,8 +74,13 @@ function julianDayUtc(date: Date): number {
 
 function pointLongitude(body: "Sun" | "Moon", date: Date): number {
   const jd = julianDayUtc(date);
-  const id = body === "Sun" ? swissEphemeris.SUN : swissEphemeris.MOON;
-  return normalizeDegrees(swissEphemeris.calculatePlanetPosition(id, jd).longitude);
+  // Event solving uses unrounded apparent geocentric longitudes rather than
+  // the display-oriented 0.0001° values returned by calculatePlanetPosition.
+  return normalizeDegrees(
+    body === "Sun"
+      ? swissEphemeris.getApparentSunLongitude(jd)
+      : swissEphemeris.getApparentMoonLongitude(jd)
+  );
 }
 
 function signDegree(longitude: number): string {
@@ -211,7 +216,7 @@ export class WesternReturnEngine {
 
     let low = bracket.left.getTime();
     let high = bracket.right.getTime();
-    for (let iteration = 0; iteration < 60 && high - low > 250; iteration++) {
+    for (let iteration = 0; iteration < 60 && high - low > 1; iteration++) {
       const middle = low + Math.floor((high - low) / 2);
       const difference = signedLongitudeDifference(pointLongitude(body, new Date(middle)), target);
       if (difference < 0) low = middle;
