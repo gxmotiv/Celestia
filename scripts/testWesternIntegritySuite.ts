@@ -204,7 +204,7 @@ const returnEngine = new WesternReturnEngine();
 const solarReturn = returnEngine.calculateSolarReturn(directedFixture, 2026, 51.4769, 0, "Placidus");
 check(solarReturn.exactUtc.startsWith("2026-"), "Solar return solver finds the requested calendar-year return");
 check(solarReturn.longitudeErrorDegrees < 0.00001,
-  "Solar return event solves to within 0.002 degrees of the natal Sun longitude");
+  "Solar return event solves to within 0.00001 degrees of the natal Sun longitude");
 check(solarReturn.chart.houseSystem === "Placidus" && solarReturn.chart.houses.length === 12,
   "Solar return chart recalculates twelve Placidus cusps at its reference location");
 const relocatedSolarReturn = returnEngine.calculateSolarReturn(directedFixture, 2026, 40.7128, -74.006, "Placidus");
@@ -219,7 +219,7 @@ check(new Date(lunarReturn.exactUtc).getTime() > lunarReturnReference.getTime(),
 check(new Date(lunarReturn.exactUtc).getTime() - lunarReturnReference.getTime() <= 36 * 86400000,
   "Next lunar return falls within the expected 36-day search interval");
 check(lunarReturn.longitudeErrorDegrees < 0.00001,
-  "Lunar return event solves to within 0.01 degrees of the natal Moon longitude");
+  "Lunar return event solves to within 0.00001 degrees of the natal Moon longitude");
 check(lunarReturn.chart.houseSystem === "WholeSign" && lunarReturn.chart.houses.length === 12,
   "Lunar return chart honors the selected Whole Sign system");
 const subsequentLunarReturn = returnEngine.calculateNextLunarReturn(
@@ -235,7 +235,7 @@ check(
   "The subsequent Lunar Return is approximately one lunar cycle after the prior return"
 );
 check(subsequentLunarReturn.longitudeErrorDegrees < 0.00001,
-  "The subsequent Lunar Return also solves to within 0.01 degrees of the natal Moon longitude");
+  "The subsequent Lunar Return also solves to within 0.00001 degrees of the natal Moon longitude");
 
 // 1. Solar altitude and sect are based on real horizon geometry, not house numbers.
 close(
