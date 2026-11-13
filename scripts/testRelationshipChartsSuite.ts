@@ -583,6 +583,30 @@ console.log("\n[TEST GROUP 13] Composite Antipodal Midpoint Integrity");
   assert(rejected, "13.4 Non-finite composite planetary longitudes are rejected");
 }
 
+// ---------------------------------------------------------------------------
+// TEST 14: Local Mean Time offset formatting carries rounded minutes into hours
+// ---------------------------------------------------------------------------
+console.log("\n[TEST GROUP 14] LMT Offset Minute Carry");
+{
+  const nearSixHourOffset: DavisonPersonInput = {
+    birthDate: "2024-01-01",
+    birthTime: "12:00",
+    latitude: 0,
+    longitude: 89.999,
+    utcInstant: "2024-01-01T00:00:00.000Z",
+  };
+  const result = engine.calculateDavison(nearSixHourOffset, nearSixHourOffset);
+  assert(
+    result.midpointLmt.includes("UTC+06:00"),
+    "14.1 Offset rounding carries 60 minutes into the next hour",
+    `Actual: ${result.midpointLmt}`
+  );
+  assert(
+    !result.midpointLmt.includes("UTC+05:60"),
+    "14.2 LMT output never emits an invalid 60-minute offset field",
+    `Actual: ${result.midpointLmt}`
+  );
+}
 console.log("\n===============================================================================");
 console.log(`SUMMARY: ${passedCount} PASSED, ${failedCount} FAILED`);
 console.log("===============================================================================");
