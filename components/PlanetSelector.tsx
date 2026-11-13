@@ -52,10 +52,10 @@ export const CELESTIAL_GROUPS: BodyGroup[] = [
     tag: "The 4 Goddesses",
     color: "text-rose-400 border-rose-500/30 bg-rose-500/10",
     bodies: [
-      { id: "Ceres", name: "Ceres", symbol: "⚳", desc: "Nurturing, maternal grief, harvests & food security" },
-      { id: "Pallas", name: "Pallas Athena", symbol: "⚴", desc: "Strategic wisdom, creative pattern recognition & justice" },
-      { id: "Juno", name: "Juno", symbol: "⚵", desc: "Sacred marriage, commitment, fidelity & relational equality" },
-      { id: "Vesta", name: "Vesta", symbol: "⚶", desc: "Sacred focus, devotion to holy flame & spiritual solitude" },
+      { id: "Ceres", name: "Ceres", symbol: "⚳", desc: "Approximate fixed-J2000 Keplerian position; no independent precision ephemeris benchmark. Symbolic themes: nurturing and harvests." },
+      { id: "Pallas", name: "Pallas Athena", symbol: "⚴", desc: "Approximate fixed-J2000 Keplerian position; no independent precision ephemeris benchmark. Symbolic themes: strategy and pattern recognition." },
+      { id: "Juno", name: "Juno", symbol: "⚵", desc: "Approximate fixed-J2000 Keplerian position; no independent precision ephemeris benchmark. Symbolic themes: commitment and partnership." },
+      { id: "Vesta", name: "Vesta", symbol: "⚶", desc: "Approximate fixed-J2000 Keplerian position; no independent precision ephemeris benchmark. Symbolic themes: focus and devotion." },
     ],
   },
   {
@@ -66,7 +66,7 @@ export const CELESTIAL_GROUPS: BodyGroup[] = [
     bodies: [
       { id: "NorthNode", name: "North Node", symbol: "☊", desc: "Soul destiny, evolutionary growth vector" },
       { id: "SouthNode", name: "South Node", symbol: "☋", desc: "Past-life karma, innate talents & comfort trap" },
-      { id: "Chiron", name: "Chiron (approx.)", symbol: "⚷", desc: "Approximate illustrative orbit model only; not a precision Chiron ephemeris. Astrological interpretation is symbolic." },
+      { id: "Chiron", name: "Chiron (approx.)", symbol: "⚷", desc: "Illustrative sine-formula placeholder only; not an integrated Chiron ephemeris. Motion and retrograde state are unknown; excluded from aspect/midpoint calculations. Symbolic interpretation only." },
       { id: "MeanLilith", name: "Mean Lilith", symbol: "⚸", desc: "Primal independence, untamed feminine shadow" },
       { id: "TrueLilith", name: "True Lilith (Osc.)", symbol: "⚸*", desc: "Osculating lunar apogee, raw instinctive sovereignty" },
       { id: "WhiteMoon", name: "White Moon (symbolic)", symbol: "☽*", desc: "Hypothetical, tradition-dependent esoteric point; not a physical body or measured lunar orbit." },
