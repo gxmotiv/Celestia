@@ -45,7 +45,7 @@ export interface MinorAspect {
   orb: number; // difference from exact aspect angle
   maxOrb: number; // maximum allowed orb under active settings
   strength: number; // 0 to 1 (normalized tightness)
-  applying: boolean;
+  applying: boolean | null;
   interpretation: string;
   keywords: string[];
   harmonicFamily: string;
@@ -188,27 +188,6 @@ export class MinorAspectsEngine {
       divisionalOrder: "360° / 10",
     },
   ];
-
-  /**
-   * Average daily motion velocities (degrees per day) for fallback speed calculation
-   */
-  private static readonly AVERAGE_SPEEDS: Record<string, number> = {
-    Moon: 13.176,
-    Mercury: 1.2,
-    Venus: 1.0,
-    Sun: 0.9856,
-    Mars: 0.524,
-    Jupiter: 0.083,
-    Saturn: 0.033,
-    Uranus: 0.0117,
-    Neptune: 0.006,
-    Pluto: 0.004,
-    Chiron: 0.02,
-    NorthNode: -0.053,
-    SouthNode: -0.053,
-    Ascendant: 360.98,
-    Midheaven: 360.98,
-  };
 
   /**
    * Specific planet-pair interpretations for prominent minor aspect dynamics
@@ -360,39 +339,54 @@ export class MinorAspectsEngine {
   }
 
   /**
-   * Determine whether an aspect is applying (closing in on exactitude)
-   * or separating (moving away from exactitude)
+   * Determine whether the aspect orb is closing or widening from the supplied
+   * instantaneous longitude speeds (degrees per day).
+   *
+   * No average-speed fallback is used: zero is a real stationary speed, while
+   * a missing/non-finite speed means phase cannot be established. The sign of
+   * the shortest-arc separation derivative gives the instantaneous direction,
+   * avoiding a finite forward projection that could jump over exactitude.
    */
   public isAspectApplying(
     p1: PlanetPosition,
     p2: PlanetPosition,
     targetAngle: number
-  ): boolean {
-    const currentAngle = this.calculateAngle(p1, p2);
-    const currentOrb = Math.abs(currentAngle - targetAngle);
+  ): boolean | null {
+    if (
+      !Number.isFinite(p1.longitude) ||
+      !Number.isFinite(p2.longitude) ||
+      !Number.isFinite(targetAngle) ||
+      typeof p1.speed !== "number" ||
+      typeof p2.speed !== "number" ||
+      !Number.isFinite(p1.speed) ||
+      !Number.isFinite(p2.speed)
+    ) {
+      return null;
+    }
 
-    // Get planetary speeds in degrees per day (using real computed speeds or astronomical averages)
-    const speed1 =
-      p1.speed !== undefined && p1.speed !== 0
-        ? p1.speed
-        : MinorAspectsEngine.AVERAGE_SPEEDS[p1.name] ?? 0.5;
-    const speed2 =
-      p2.speed !== undefined && p2.speed !== 0
-        ? p2.speed
-        : MinorAspectsEngine.AVERAGE_SPEEDS[p2.name] ?? 0.5;
+    const relativeSpeed = p2.speed - p1.speed;
+    if (Math.abs(relativeSpeed) < 1e-12) return null;
 
-    // Project coordinates ahead by a fraction of a day (0.2 days = ~4.8 hours)
-    const dt = 0.2;
-    const futureLon1 = (p1.longitude + speed1 * dt + 360) % 360;
-    const futureLon2 = (p2.longitude + speed2 * dt + 360) % 360;
+    const directedDifference = ((p2.longitude - p1.longitude) % 360 + 360) % 360;
+    const currentAngle = Math.min(directedDifference, 360 - directedDifference);
+    const offsetFromAspect = currentAngle - targetAngle;
 
-    let futureDiff = Math.abs(futureLon1 - futureLon2);
-    if (futureDiff > 180) futureDiff = 360 - futureDiff;
+    // At exactitude, a non-stationary pair is leaving the exact aspect.
+    if (Math.abs(offsetFromAspect) < 1e-12) return false;
 
-    const futureOrb = Math.abs(futureDiff - targetAngle);
+    // Derivative of shortest angular separation. At 0°/180° the distance
+    // function has a cusp, so use its correct one-sided derivative.
+    const separationRate = directedDifference === 0
+      ? Math.abs(relativeSpeed)
+      : directedDifference === 180
+        ? -Math.abs(relativeSpeed)
+        : directedDifference < 180
+          ? relativeSpeed
+          : -relativeSpeed;
 
-    // If future orb is smaller, distance to exact aspect is shrinking -> Applying
-    return futureOrb < currentOrb;
+    // The absolute orb is |separation - targetAngle|.
+    const orbRate = Math.sign(offsetFromAspect) * separationRate;
+    return orbRate < 0;
   }
 
   /**
