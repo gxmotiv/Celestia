@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
+  buildJplWesternHorizonsQueryUrl,
   parseHorizonsObserverEclipticRows,
   WESTERN_HORIZONS_BODIES,
 } from "../lib/astronomy/westernEphemerisBenchmarks";
@@ -25,40 +26,6 @@ interface ReferenceFixture {
 const ROOT = process.cwd();
 const DATASET_PATH = path.join(ROOT, "data/benchmarks/western-ephemeris-reference.json");
 const RAW_DIR = path.join(ROOT, "data/benchmarks/raw");
-const API_ENDPOINT = "https://ssd.jpl.nasa.gov/api/horizons.api";
-
-export function buildJplHorizonsQueryUrl(targetId: string, epochsUtc: string[]): string {
-  const utcList = epochsUtc.map((value) => {
-    if (!/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$/.test(value) ||
-        !Number.isFinite(Date.parse(value))) {
-      throw new Error("Invalid UTC benchmark epoch: " + value);
-    }
-    return "'" + value.replace("T", " ").replace("Z", "") + "'";
-  }).join(" ");
-  const parameters: Record<string, string> = {
-    format: "json",
-    COMMAND: "'" + targetId + "'",
-    OBJ_DATA: "'NO'",
-    MAKE_EPHEM: "'YES'",
-    EPHEM_TYPE: "'OBSERVER'",
-    CENTER: "'500@399'",
-    TLIST: utcList,
-    TLIST_TYPE: "'CAL'",
-    TIME_TYPE: "'UT'",
-    TIME_DIGITS: "'FRACSEC'",
-    TIME_ZONE: "'+00:00'",
-    CAL_TYPE: "'GREGORIAN'",
-    ANG_FORMAT: "'DEG'",
-    REF_SYSTEM: "'ICRF'",
-    APPARENT: "'AIRLESS'",
-    QUANTITIES: "'31'",
-  };
-  const url = new URL(API_ENDPOINT);
-  for (const [key, value] of Object.entries(parameters)) {
-    url.searchParams.set(key, value);
-  }
-  return url.toString();
-}
 
 async function main(): Promise<void> {
   if (!process.argv.includes("--fetch")) {
@@ -89,7 +56,7 @@ async function main(): Promise<void> {
 
   // Query bodies sequentially to be polite to the public JPL service.
   for (const target of WESTERN_HORIZONS_BODIES) {
-    const url = buildJplHorizonsQueryUrl(target.targetId, dataset.epochsUtc);
+    const url = buildJplWesternHorizonsQueryUrl(target.targetId, dataset.epochsUtc);
     const response = await fetch(url, {
       headers: { Accept: "application/json", "User-Agent": "Celestia-Western-Ephemeris-Benchmark/1.0" },
       signal: AbortSignal.timeout(45000),
