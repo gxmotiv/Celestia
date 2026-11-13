@@ -1,7 +1,7 @@
 # Western Astrology Coverage and Accuracy Matrix
 
-**Audit date:** 12 November 2026  
-**Repository branch:** `fix/western-house-sect-predictive-integrity`  
+**Audit date:** 13 November 2026  
+**Repository branch:** `research/jpl-western-ephemeris-benchmarks`  
 **Purpose:** distinguish implemented calculations, approximate models, symbolic-only points, and methods that are not implemented. A feature name in the UI is not proof of a complete traditional technique.
 
 ## How to read this matrix
@@ -19,6 +19,7 @@ Passing software tests validates code against specified numerical fixtures and i
 | Area | Status | Current coverage and limits |
 |---|---|---|
 | Tropical geocentric planetary chart | Implemented | Uses Celestia's Astronomy Engine compatibility facade. It is not linked to the native Swiss Ephemeris library. |
+| Independent planetary ephemeris comparison | Reference fixtures captured; calibration pending | 60 JPL Horizons quantity-31 observations across ten bodies and six UTC epochs are committed with raw-response SHA-256 digests. Descriptive residual maximum is 12.14″ longitude / 18.72″ latitude; no acceptance threshold has been calibrated because the frame/correction pipelines differ and the 2035 sample is beyond current EOP prediction coverage. See `docs/audit/western-ephemeris-benchmark-methodology.md`. |
 | House systems | Partial | Placidus, Equal, Whole Sign and Porphyry are supported. Placidus falls back to Porphyry when its geometry/solver cannot be used; the actual resolved system is surfaced. |
 | Other house systems | Not implemented | Koch, Campanus, Regiomontanus, Alcabitius, Morinus, Meridian and Topocentric are not selectable calculation engines. |
 | Angles | Implemented with reference fixtures | Ascendant, Midheaven, Descendant, IC, Vertex and ecliptic East Point. The East Point is distinguished from the equatorial point on the eastern horizon. |
