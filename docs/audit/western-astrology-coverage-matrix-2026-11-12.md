@@ -24,7 +24,7 @@ Passing software tests validates code against specified numerical fixtures and i
 | Other house systems | Not implemented | Koch, Campanus, Regiomontanus, Alcabitius, Morinus, Meridian and Topocentric are not selectable calculation engines. |
 | Angles | Implemented with reference fixtures | Ascendant, Midheaven, Descendant, IC, Vertex and ecliptic East Point. The East Point is distinguished from the equatorial point on the eastern horizon. |
 | Planetary dignity | Partial | Selected dignity and rulership calculations exist; this is not a complete cross-author traditional dignity/decan/term/bounds implementation. |
-| Aspects | Partial | Major Ptolemaic aspects and selected minor aspects are available. Orbs are configured rules, not universal standards. Some natal planet-to-angle and stationary relative-motion applying/separating states are correctly reported as indeterminate. |
+| Aspects | Partial | The natal major-aspect engine uses the five classical Ptolemaic aspects only. Quincunx and semisextile are in the selected minor-aspect engine, avoiding duplicate major/minor rows. Other harmonic/minor aspects are available in a separate panel. Configured orbs are school-specific rules, not universal standards. Natal planet-to-angle and stationary relative-motion applying/separating states are represented as indeterminate where speed is unavailable. |
 | Declination | Implemented | Parallel/contra-parallel geometry is calculated from the available positions; this does not add missing physical ephemeris precision. |
 
 ## 2. Hellenistic and traditional timing
