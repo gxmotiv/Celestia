@@ -72,7 +72,7 @@ async function main(): Promise<void> {
       throw new Error("JPL Horizons response for " + target.name + " did not contain a result table.");
     }
 
-    const rows = parseHorizonsObserverEclipticRows(payload.result, dataset.epochsUtc.length);
+    const rows = parseHorizonsObserverEclipticRows(payload.result, dataset.epochsUtc);
     const rawName = "horizons-" + target.name.toLowerCase() + ".json";
     const rawPath = path.join(RAW_DIR, rawName);
     const rawJson = JSON.stringify(payload, null, 2) + "\n";
@@ -84,7 +84,7 @@ async function main(): Promise<void> {
       fixtures.push({
         body: target.name,
         targetId: target.targetId,
-        epochUtc: dataset.epochsUtc[index],
+        epochUtc: row.epochUtc,
         longitudeDegrees: row.longitudeDegrees,
         latitudeDegrees: row.latitudeDegrees,
         rawResponseFile: relativeRawPath,
