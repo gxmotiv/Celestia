@@ -6,7 +6,7 @@
     "apiEndpoint": "https://ssd.jpl.nasa.gov/api/horizons.api",
     "apiVersion": "1.3 (2025 June)",
     "horizonsSystemVersion": "4.98e (2026-08-25, as reported by current manual)",
-    "currentPlanetaryEphemerisFamily": "DE440/DE441 (confirm the selected solution in each captured Horizons response header)",
+    "currentPlanetaryEphemerisFamily": "DE441 (Horizons manual states DE441 is used for planetary-system barycenter motion; target-center availability/solutions may differ)",
     "retrievalTool": "scripts/fetchJplWesternEphemerisReference.ts",
     "retrievalCommand": "bun run scripts/fetchJplWesternEphemerisReference.ts --fetch",
     "note": "No numerical reference rows are included until they have been retrieved and archived from Horizons. Do not substitute Celestia outputs or synthetic values for external reference data."
