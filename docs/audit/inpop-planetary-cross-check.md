@@ -47,11 +47,11 @@ The offline comparator fits a first-order three-axis rigid rotation mapping INPO
 
 | Epoch UTC | Pole rotation magnitude | Z rotation | Fit RMS | Max fit residual |
 |---|---:|---:|---:|---:|
-| 1987-03-14 | 9.586″ | +0.059″ | 0.011″ | 0.019″ |
-| 2000-01-01 | 5.759″ | +0.074″ | 0.013″ | 0.021″ |
-| 2024-02-29 | 9.219″ | +0.012″ | 0.046″ | 0.083″ |
-| 2026-11-13 | 7.346″ | −0.006″ | 0.062″ | 0.113″ |
-| 2035-07-01 | 9.132″ | −0.042″ | 0.104″ | 0.206″ |
+| 1987-03-14 | 9.586″ | −0.059″ | 0.011″ | 0.019″ |
+| 2000-01-01 | 5.759″ | −0.074″ | 0.013″ | 0.021″ |
+| 2024-02-29 | 9.219″ | −0.012″ | 0.046″ | 0.083″ |
+| 2026-11-13 | 7.346″ | +0.006″ | 0.062″ | 0.113″ |
+| 2035-07-01 | 9.132″ | +0.042″ | 0.104″ | 0.206″ |
 
 The fit explains most of the cross-provider latitude pattern as a common small coordinate rotation at each sampled epoch. The fitted rotation changes with epoch. Because only three outer planets are used (three residual degrees of freedom per epoch), this is a strong diagnostic clue but not proof of the exact cause. The likely investigation area is the time-dependent ecliptic/equator frame realization and apparent-place conventions, not a body-specific correction to Saturn, Uranus or Neptune.
 
