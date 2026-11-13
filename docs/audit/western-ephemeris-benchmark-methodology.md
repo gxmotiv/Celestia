@@ -8,7 +8,7 @@ This workstream measures Celestia's astronomical coordinates against an external
 
 Use NASA/JPL Horizons' public API:
 
-- Endpoint: `https://ssd-api.jpl.nasa.gov/api/horizons.api`
+- Endpoint: `https://ssd.jpl.nasa.gov/api/horizons.api`
 - API documentation: https://ssd-api.jpl.nasa.gov/doc/horizons.html
 - System manual: https://ssd.jpl.nasa.gov/horizons/manual.html
 - Ephemeris type: `OBSERVER`
@@ -18,6 +18,7 @@ Use NASA/JPL Horizons' public API:
 - Time type: `UT`; all manifest samples are post-1962 UTC labels, where Horizons defines UT output as UTC
 - Calendar: Gregorian
 - Time precision: fractional seconds
+- Discrete time list: every calendar epoch is individually single-quoted and the quoted values are separated by URL-encoded spaces (`%20`), with `TLIST_TYPE='CAL'`; the downloader test asserts this exact URL-decoded syntax.
 - Refraction: disabled with `APPARENT='AIRLESS'`
 - Target center IDs: Sun 10, Moon 301, Mercury 199, Venus 299, Mars 499, Jupiter 599, Saturn 699, Uranus 799, Neptune 899, Pluto 999
 
