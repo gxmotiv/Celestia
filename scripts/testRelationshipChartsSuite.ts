@@ -362,6 +362,125 @@ console.log("\n[TEST GROUP 8] Backward Compatibility");
   );
 }
 
+// ---------------------------------------------------------------------------
+// TEST 9: Exact resolved UTC instants take precedence over numeric offsets
+// ---------------------------------------------------------------------------
+console.log("\n[TEST GROUP 9] Resolved UTC Instant Preservation");
+{
+  const instant = "2024-03-14T20:00:30.250Z";
+  const p1: DavisonPersonInput = {
+    birthDate: "2000-01-01",
+    birthTime: "12:00",
+    latitude: 28.6139,
+    longitude: 77.209,
+    timezoneOffset: 5.5,
+    utcInstant: instant,
+  };
+  const p2: DavisonPersonInput = {
+    birthDate: "2000-01-01",
+    birthTime: "12:00",
+    latitude: 28.6139,
+    longitude: 77.209,
+    timezoneOffset: -8,
+    utcInstant: instant,
+  };
+  const result = engine.calculateDavison(p1, p2);
+  assert(
+    result.midpointDateUtc === instant,
+    "9.1 Explicit UTC instants override conflicting legacy local clocks and offsets",
+    `Actual: ${result.midpointDateUtc}`
+  );
+  assert(
+    result.midpointDateUtc.endsWith(".250Z"),
+    "9.2 Explicit UTC instant preserves millisecond precision",
+    `Actual: ${result.midpointDateUtc}`
+  );
+}
+
+// ---------------------------------------------------------------------------
+// TEST 10: Strict validation prevents invalid civil times and coordinates
+// ---------------------------------------------------------------------------
+console.log("\n[TEST GROUP 10] Davison Input Validation");
+{
+  const valid: DavisonPersonInput = {
+    birthDate: "2024-01-01",
+    birthTime: "12:00",
+    latitude: 0,
+    longitude: 0,
+    timezoneOffset: 0,
+  };
+  const rejects = (action: () => unknown): boolean => {
+    try {
+      action();
+      return false;
+    } catch {
+      return true;
+    }
+  };
+
+  assert(
+    rejects(() => engine.calculateDavison({ ...valid, birthDate: "2024-02-30" }, valid)),
+    "10.1 Invalid Gregorian dates are rejected instead of normalized"
+  );
+  assert(
+    rejects(() => engine.calculateDavison({ ...valid, birthTime: "24:00" }, valid)),
+    "10.2 Out-of-range clock hours are rejected"
+  );
+  assert(
+    rejects(() => engine.calculateDavison({ ...valid, birthTime: "12:60" }, valid)),
+    "10.3 Out-of-range clock minutes are rejected"
+  );
+  assert(
+    rejects(() => engine.calculateDavison({ ...valid, birthTime: "12:00:60" }, valid)),
+    "10.4 Leap-second-style values are not silently normalized as civil birth times"
+  );
+  assert(
+    rejects(() => engine.calculateDavison({ ...valid, timezoneOffset: Number.NaN }, valid)),
+    "10.5 Non-finite numeric UTC offsets are rejected"
+  );
+  assert(
+    rejects(() => engine.calculateDavison({ ...valid, timezoneOffset: 24.5 }, valid)),
+    "10.6 Numeric UTC offsets outside the supported range are rejected"
+  );
+  assert(
+    rejects(() => engine.calculateDavison({ ...valid, latitude: 90.1 }, valid)),
+    "10.7 Latitude outside the terrestrial range is rejected"
+  );
+  assert(
+    rejects(() => engine.calculateDavison({ ...valid, longitude: 180.1 }, valid)),
+    "10.8 Longitude outside the accepted range is rejected"
+  );
+  assert(
+    rejects(() => engine.calculateDavison({ ...valid, utcInstant: "2024-02-30T00:00:00.000Z" }, valid)),
+    "10.9 Invalid ISO UTC instants are rejected"
+  );
+  assert(
+    rejects(() => engine.calculateDavison({ ...valid, birthDate: "2024-02-30", utcInstant: "2024-03-01T00:00:00.000Z" }, valid)),
+    "10.10 Invalid local civil dates are still rejected when a fallback/resolved UTC instant is present"
+  );
+}
+
+// ---------------------------------------------------------------------------
+// TEST 11: Strict legacy offset path still preserves fractional local seconds
+// ---------------------------------------------------------------------------
+console.log("\n[TEST GROUP 11] Legacy Fractional-Second Compatibility");
+{
+  const p1: DavisonPersonInput = {
+    birthDate: "2024-03-15",
+    birthTime: "01:30:10.500",
+    latitude: 28.6139,
+    longitude: 77.209,
+    timezoneOffset: 5.5,
+  };
+  const p2: DavisonPersonInput = { ...p1 };
+  const result = engine.calculateDavison(p1, p2);
+  assert(
+    result.midpointDateUtc === "2024-03-14T20:00:10.500Z",
+    "11.1 Legacy offset conversion accepts precise seconds and retains milliseconds",
+    `Actual: ${result.midpointDateUtc}`
+  );
+}
+
 console.log("\n===============================================================================");
 console.log(`SUMMARY: ${passedCount} PASSED, ${failedCount} FAILED`);
 console.log("===============================================================================");

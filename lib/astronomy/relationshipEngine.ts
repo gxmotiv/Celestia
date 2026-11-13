@@ -1033,11 +1033,14 @@ export class CompositeChartEngine {
 // ---------------------------------------------------------------------------
 
 export interface DavisonPersonInput {
-  birthDate: string; // YYYY-MM-DD
-  birthTime: string; // HH:MM or HH:MM:SS
+  birthDate: string; // YYYY-MM-DD; used when utcInstant is absent
+  birthTime: string; // HH:MM, HH:MM:SS, or HH:MM:SS.sss; used when utcInstant is absent
   latitude: number;
   longitude: number;
-  timezoneOffset?: number; // Numeric UTC offset in decimal hours (e.g. -5 for EST, +5.5 for IST). Defaults to 0 if undefined.
+  /** Exact, already-resolved UTC instant. Takes precedence over local date/time and numeric offset. */
+  utcInstant?: string;
+  /** Fixed numeric UTC offset in decimal hours for legacy callers only; defaults to 0. */
+  timezoneOffset?: number;
 }
 
 export interface DavisonChartResult {
@@ -1051,19 +1054,68 @@ export interface DavisonChartResult {
 }
 
 /**
- * Converts a person's local birth date, time, and timezone offset to a precise UTC timestamp (in milliseconds).
- * Accounts for date rollovers, month/year boundaries, leap years, and fractional offsets.
+ * Converts a Davison input to a UTC timestamp.
+ * Prefer the exact UTC instant already resolved by the birth-time timezone flow.
+ * The numeric-offset path remains for legacy callers and validates all civil fields
+ * before the normalizer is allowed to perform date rollover arithmetic.
  */
-function parsePersonToUtcMs(
-  birthDate: string,
-  birthTime: string,
-  timezoneOffsetHours: number = 0
-): number {
-  const [year, month, day] = birthDate.split("-").map(Number);
-  const timeParts = birthTime.split(":").map(Number);
-  const hour = timeParts[0] || 0;
-  const minute = timeParts[1] || 0;
-  const second = timeParts[2] || 0;
+function parsePersonToUtcMs(person: DavisonPersonInput, label: string): number {
+  // Validate the displayed local civil fields even when an exact UTC instant is
+  // supplied. This prevents the UI's provisional fallback Date from masking an
+  // invalid or impossible calendar date/time.
+  const dateMatch = typeof person.birthDate === "string"
+    ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(person.birthDate)
+    : null;
+  if (!dateMatch) {
+    throw new RangeError(`${label} birth date must use YYYY-MM-DD.`);
+  }
+  const year = Number(dateMatch[1]);
+  const month = Number(dateMatch[2]);
+  const day = Number(dateMatch[3]);
+  if (year < 1 || year > 9999 || month < 1 || month > 12 || day < 1 || day > 31) {
+    throw new RangeError(`${label} birth date is outside the supported calendar range.`);
+  }
+
+  const calendarDate = new Date(0);
+  calendarDate.setUTCHours(0, 0, 0, 0);
+  calendarDate.setUTCFullYear(year, month - 1, day);
+  if (
+    calendarDate.getUTCFullYear() !== year ||
+    calendarDate.getUTCMonth() !== month - 1 ||
+    calendarDate.getUTCDate() !== day
+  ) {
+    throw new RangeError(`${label} birth date is not a valid Gregorian calendar date.`);
+  }
+
+  const timeMatch = typeof person.birthTime === "string"
+    ? /^(?:([01]\d|2[0-3])):([0-5]\d)(?::([0-5]\d)(?:\.(\d{1,3}))?)?$/.exec(person.birthTime)
+    : null;
+  if (!timeMatch) {
+    throw new RangeError(`${label} birth time must use HH:MM, HH:MM:SS, or HH:MM:SS.sss (24-hour time).`);
+  }
+  const hour = Number(timeMatch[1]);
+  const minute = Number(timeMatch[2]);
+  const wholeSecond = Number(timeMatch[3] ?? 0);
+  const fractionMs = Number((timeMatch[4] ?? "").padEnd(3, "0"));
+  const second = wholeSecond + fractionMs / 1000;
+
+  // Exact instants from the historical timezone resolver are authoritative.
+  // Canonical ISO formatting makes precision and UTC ("Z") explicit.
+  if (person.utcInstant !== undefined) {
+    if (typeof person.utcInstant !== "string") {
+      throw new TypeError(`${label} UTC instant must be an ISO-8601 UTC string.`);
+    }
+    const instant = new Date(person.utcInstant);
+    if (!Number.isFinite(instant.getTime()) || instant.toISOString() !== person.utcInstant) {
+      throw new RangeError(`${label} UTC instant must be a valid canonical ISO-8601 timestamp ending in Z.`);
+    }
+    return instant.getTime();
+  }
+
+  const timezoneOffsetHours = person.timezoneOffset ?? 0;
+  if (!Number.isFinite(timezoneOffsetHours) || Math.abs(timezoneOffsetHours) > 24) {
+    throw new RangeError(`${label} numeric UTC offset must be finite and within -24 to +24 hours.`);
+  }
 
   const { utcYear, utcMonth, utcDay, utcDecimalHour } = swissEphemeris.normalizeLocalToUTC(
     year,
@@ -1075,13 +1127,22 @@ function parsePersonToUtcMs(
     timezoneOffsetHours
   );
 
-  const baseDate = new Date(Date.UTC(utcYear, utcMonth - 1, utcDay, 0, 0, 0, 0));
-  if (utcYear >= 0 && utcYear <= 99) {
-    baseDate.setUTCFullYear(utcYear);
+  const baseDate = new Date(0);
+  baseDate.setUTCHours(0, 0, 0, 0);
+  baseDate.setUTCFullYear(utcYear, utcMonth - 1, utcDay);
+  const utcMilliseconds = baseDate.getTime() + Math.round(utcDecimalHour * 3600 * 1000);
+  if (!Number.isFinite(utcMilliseconds)) {
+    throw new RangeError(`${label} birth date/time is outside the supported timestamp range.`);
   }
-
-  const msInDay = Math.round(utcDecimalHour * 3600 * 1000);
-  return baseDate.getTime() + msInDay;
+  return utcMilliseconds;
+}
+function validateDavisonCoordinates(person: DavisonPersonInput, label: string): void {
+  if (!Number.isFinite(person.latitude) || person.latitude < -90 || person.latitude > 90) {
+    throw new RangeError(`${label} latitude must be a finite value from -90 to +90 degrees.`);
+  }
+  if (!Number.isFinite(person.longitude) || person.longitude < -180 || person.longitude > 180) {
+    throw new RangeError(`${label} longitude must be a finite value from -180 to +180 degrees.`);
+  }
 }
 
 export class DavisonChartEngine {
@@ -1089,11 +1150,12 @@ export class DavisonChartEngine {
     person1: DavisonPersonInput,
     person2: DavisonPersonInput
   ): DavisonChartResult {
-    // 1. Timezone-normalized UTC birth instants (in ms)
-    const tz1 = person1.timezoneOffset ?? 0;
-    const tz2 = person2.timezoneOffset ?? 0;
-    const time1 = parsePersonToUtcMs(person1.birthDate, person1.birthTime, tz1);
-    const time2 = parsePersonToUtcMs(person2.birthDate, person2.birthTime, tz2);
+    // 1. Preserve the same resolved UTC instants used by the natal and Vedic chart paths.
+    // Legacy numeric-offset conversion is used only when an exact instant was not supplied.
+    validateDavisonCoordinates(person1, "Person 1");
+    validateDavisonCoordinates(person2, "Person 2");
+    const time1 = parsePersonToUtcMs(person1, "Person 1");
+    const time2 = parsePersonToUtcMs(person2, "Person 2");
 
     // 2. Exact Time Midpoint
     const midTimeMs = (time1 + time2) / 2;
