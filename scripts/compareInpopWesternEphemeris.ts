@@ -1,10 +1,27 @@
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { swissEphemeris } from "../lib/astronomy/swissEphemeris";
 import { signedCircularDifferenceDegrees } from "../lib/astronomy/westernEphemerisBenchmarks";
-import type { InpopReferenceFixture } from "../lib/astronomy/inpopWesternEphemerisBenchmarks";
+import {
+  fitSmallEclipticFrameRotation,
+  type InpopReferenceFixture,
+} from "../lib/astronomy/inpopWesternEphemerisBenchmarks";
 
-interface Dataset { schemaVersion: number; fixtures: InpopReferenceFixture[]; }
+interface ResponseMetadata {
+  body: string;
+  responseFile: string;
+  responseSha256: string;
+  reportedTheory: string;
+  timeScale: string;
+  coordinateMode: string;
+  referenceFrame: { type: string; plane: string; center: string };
+}
+interface Dataset {
+  schemaVersion: number;
+  fixtures: InpopReferenceFixture[];
+  responseMetadata: ResponseMetadata[];
+}
 interface JplFixture { body: string; epochUtc: string; longitudeDegrees: number; latitudeDegrees: number; }
 interface JplDataset { schemaVersion: number; fixtures: JplFixture[]; }
 
@@ -33,6 +50,30 @@ function summarize(values: number[]): string {
     "″; RMS=" + rms.toFixed(2) + "″";
 }
 
+async function verifyRawResponses(dataset: Dataset): Promise<void> {
+  if (!Array.isArray(dataset.responseMetadata) || dataset.responseMetadata.length !== 3) {
+    throw new Error("INPOP dataset must contain exactly three raw-response metadata records.");
+  }
+  for (const metadata of dataset.responseMetadata) {
+    if (
+      !metadata.responseFile.startsWith("data/benchmarks/inpop-raw/") ||
+      !/^[0-9a-f]{64}$/i.test(metadata.responseSha256) ||
+      !metadata.reportedTheory.toUpperCase().includes("INPOP") ||
+      metadata.timeScale.toUpperCase() !== "UTC" ||
+      !metadata.coordinateMode.toLowerCase().includes("rectangular") ||
+      !metadata.referenceFrame.plane.toLowerCase().includes("ecliptic") ||
+      !metadata.referenceFrame.center.toLowerCase().includes("geocenter")
+    ) throw new Error("Invalid or unexpected INPOP capture metadata for " + metadata.body + ".");
+    const raw = await readFile(path.join(ROOT, metadata.responseFile));
+    const actual = createHash("sha256").update(raw).digest("hex");
+    if (actual !== metadata.responseSha256) {
+      throw new Error("INPOP raw response checksum mismatch for " + metadata.body +
+        ": expected " + metadata.responseSha256 + ", received " + actual);
+    }
+    console.log("CHECKSUM PASS " + metadata.body + " " + actual);
+  }
+}
+
 async function main(): Promise<void> {
   const inpop = JSON.parse(await readFile(INPOP_PATH, "utf8")) as Dataset;
   const jpl = JSON.parse(await readFile(JPL_PATH, "utf8")) as JplDataset;
@@ -41,12 +82,17 @@ async function main(): Promise<void> {
     throw new Error("Invalid independent-reference dataset schema.");
   }
   if (inpop.fixtures.length === 0) throw new Error("No INPOP fixtures have been captured.");
+  await verifyRawResponses(inpop);
   const jplByKey = new Map(jpl.fixtures.map((row) => [row.body + "|" + row.epochUtc, row]));
   const grouped = new Map<string, {
     aeInpopLon: number[]; aeInpopLat: number[];
     aeJplLon: number[]; aeJplLat: number[];
     inpopJplLon: number[]; inpopJplLat: number[];
   }>();
+  const frameSamples = new Map<string, Array<{
+    source: { longitudeDegrees: number; latitudeDegrees: number };
+    target: { longitudeDegrees: number; latitudeDegrees: number };
+  }>>();
 
   for (const fixture of inpop.fixtures) {
     const referenceJpl = jplByKey.get(fixture.body + "|" + fixture.epochUtc);
@@ -60,10 +106,7 @@ async function main(): Promise<void> {
       date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds() + date.getUTCMilliseconds() / 1000, 0
     );
     const position = swissEphemeris.getApparentGeocentricEclipticPosition(fixture.body, jd);
-    const astronomyEngine = {
-      longitudeDegrees: position.longitude,
-      latitudeDegrees: position.latitude,
-    };
+    const astronomyEngine = { longitudeDegrees: position.longitude, latitudeDegrees: position.latitude };
     const aeInpop = signedCoordinateDifference(astronomyEngine, fixture);
     const aeJpl = signedCoordinateDifference(astronomyEngine, referenceJpl);
     const inpopJpl = signedCoordinateDifference(fixture, referenceJpl);
@@ -78,6 +121,9 @@ async function main(): Promise<void> {
     values.inpopJplLon.push(inpopJpl.longitude);
     values.inpopJplLat.push(inpopJpl.latitude);
     grouped.set(fixture.body, values);
+    const samples = frameSamples.get(fixture.epochUtc) ?? [];
+    samples.push({ source: fixture, target: referenceJpl });
+    frameSamples.set(fixture.epochUtc, samples);
     console.log(
       "REVIEW " + fixture.body + " " + fixture.epochUtc +
       " | AE−INPOP λ/β=" + aeInpop.longitude.toFixed(2) + "″/" + aeInpop.latitude.toFixed(2) + "″" +
@@ -95,6 +141,19 @@ async function main(): Promise<void> {
     console.log("  Astronomy Engine − JPL latitude:    " + summarize(values.aeJplLat));
     console.log("  INPOP − JPL longitude:              " + summarize(values.inpopJplLon));
     console.log("  INPOP − JPL latitude:               " + summarize(values.inpopJplLat));
+  }
+  console.log("Per-epoch small rigid-frame-rotation diagnostic (INPOP source → JPL target):");
+  for (const [epoch, samples] of frameSamples) {
+    const fit = fitSmallEclipticFrameRotation(samples);
+    console.log(
+      "FRAME REVIEW " + epoch + " bodies=" + fit.sampleCount +
+      " rotationXYZ=" + fit.rotationXArcsec.toFixed(3) + "/" +
+      fit.rotationYArcsec.toFixed(3) + "/" + fit.rotationZArcsec.toFixed(3) +
+      "″ pole=" + fit.poleRotationArcsec.toFixed(3) +
+      "″ RMS=" + fit.rmsResidualArcsec.toFixed(3) +
+      "″ max=" + fit.maxAbsoluteResidualArcsec.toFixed(3) +
+      "″ dof=" + fit.residualDegreesOfFreedom
+    );
   }
   console.log("Rows: " + inpop.fixtures.length +
     "; compared against both INPOP and JPL; all outputs remain REVIEW, not accuracy PASS.");

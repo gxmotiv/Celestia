@@ -1,61 +1,73 @@
-# Independent outer-planet cross-check: IMCCE INPOP
+# Independent outer-planet cross-check: IMCCE INPOP19
 
-Status: capture automation and offline comparison are being added; measured INPOP results are pending the GitHub Actions run.
+Status: **18 external reference rows captured and checksummed; three-way comparison completed; interpretation remains REVIEW**.
 
 ## Why a second provider is necessary
 
-The first benchmark compares Celestia's Astronomy Engine implementation with NASA/JPL Horizons. That comparison is valuable but has two important limitations for root-cause analysis: it is one external ephemeris provider, and Horizons quantity 31 uses its own IAU76/80 Earth ecliptic-of-date realization and apparent-place corrections.
-
-The second provider is the IMCCE LTE Miriade positional-ephemeris service, with its planetary theory explicitly set to INPOP. IMCCE documents INPOP as its default planetary theory for planets and lists it separately from JPL DE403/405/406/430/431. The aim is to compare a second dynamical solution against Astronomy Engine and then compare INPOP to the already archived JPL values at identical body/epoch pairs.
+The first benchmark compares Celestia's Astronomy Engine implementation with NASA/JPL Horizons. The second provider is IMCCE LTE Miriade with its planetary theory requested as INPOP; the actual responses identify the model as **INPOP19**. This gives a second independent planetary solution for the outer-planet check.
 
 Primary documentation:
 - Miriade ephemcc API: https://ssp.imcce.fr/webservices/miriade/api/ephemcc/
 - Miriade ephemcc how-to: https://ssp.imcce.fr/webservices/miriade/howto/ephemcc/
 - INPOP project: https://www.imcce.fr/recherche/equipes/astronomie-dynamique/inpop/
+- JPL Horizons manual: https://ssd.jpl.nasa.gov/horizons/manual.html
 
-## Fixed request definition
+## Captured dataset and coordinate metadata
 
-The capture script sends a multipart POST to the official Miriade ephemcc endpoint. It uses the same six UTC epochs already committed in data/benchmarks/western-ephemeris-reference.json; the epoch file is sent as the documented epochs upload field. It queries Saturn, Uranus and Neptune individually to keep response identity and archival checksums unambiguous.
-
-Requested parameters:
-- Target: p:Saturn, p:Uranus, p:Neptune
-- Theory: INPOP (the exact returned model label is preserved in metadata)
-- Observer: 500, the Earth geocenter
+Capture time: **2026-11-13T05:19:16.059Z**. The dataset contains six shared UTC epochs for Saturn, Uranus and Neptune: 18 observations total. Three raw JSON files and their SHA-256 digests are committed alongside the normalized fixture file. Each response explicitly reported:
+- Planetary theory: INPOP19
 - Time scale: UTC
-- Ephemeris type: 2, apparent of date
-- Coordinate type: 2, rectangular
-- Reference plane: 2, ecliptic
-- Output: JSON, ISO timestamps
+- Output: rectangular coordinates, position columns px, py, pz in AU
+- Observer: Earth geocenter
+- Reference frame: apparent (true equator; equinoxe of the date), ecliptic plane
+- Coordinate-system metadata: ec_ICRF, epoch/equinox J2000
 
-The parser requires the returned metadata to identify an INPOP theory, UTC, rectangular apparent-of-date coordinates, an ecliptic plane, and the geocenter. It derives spherical longitude and latitude from the provider's geocentric rectangular vector and rejects missing, reordered, duplicated or extra epoch rows. Raw response files are archived with SHA-256 digests.
+The Miriade reference_frame and coosys metadata must both be retained. The ec_ICRF J2000 coordinate-system tag is not interchangeable by assumption with the reference-frame label apparent (true equator; equinoxe of the date). JPL Horizons quantity 31 documents its own observer-centered IAU76/80 ecliptic-of-date realization. The providers are not yet proven to implement an identical date-frame realization or identical apparent-place correction pipeline.
 
 ## Three-way comparison
 
-For every outer-planet/body/epoch tuple, the offline comparator reports:
-1. Astronomy Engine minus IMCCE INPOP.
-2. Astronomy Engine minus the already archived JPL Horizons quantity-31 row.
-3. IMCCE INPOP minus the JPL Horizons quantity-31 row.
+For each matched outer-planet/body/epoch tuple, the comparator reports:
+1. Astronomy Engine minus IMCCE INPOP19.
+2. Astronomy Engine minus JPL Horizons quantity 31.
+3. IMCCE INPOP19 minus JPL Horizons quantity 31.
 
-Longitude uses the shortest signed circular difference; latitude uses a direct signed difference. Each pair is summarized with absolute median, 95th percentile and maximum, plus signed bias and RMS. No acceptance thresholds are set. All rows remain REVIEW.
+All residuals below are arcseconds. Longitude uses the shortest signed circular difference; latitude uses a direct signed difference. No acceptance thresholds are defined; results remain REVIEW.
 
-This is a diagnostic triangulation, not a declaration that either external provider is an absolute ground truth. The requested apparent coordinate modes and ecliptic plane are aligned as far as documented, but reference-frame realizations and apparent-place correction details still need to be checked against the returned metadata and provider documentation. A provider-to-provider residual that is itself large must not be attributed to Celestia alone.
+| Body | AE−INPOP longitude max | INPOP−JPL longitude max | AE−INPOP latitude max | INPOP−JPL latitude max |
+|---|---:|---:|---:|---:|
+| Saturn | 10.59″ | 0.35″ | 28.20″ | 9.48″ |
+| Uranus | 11.05″ | 0.26″ | 26.08″ | 9.55″ |
+| Neptune | 11.87″ | 0.28″ | 12.07″ | 9.50″ |
 
-## Interpretation rules
+The INPOP−JPL longitude maximum is at most 0.35″ for these 18 matched rows, whereas latitude differences reach 9.55″. This strongly suggests longitude orbital-model disagreement is not the dominant explanation for the sampled cross-provider latitude spread.
 
-- If Astronomy Engine is close to INPOP but materially farther from JPL, investigate the Horizons frame/correction realization before changing the planetary implementation.
-- If Astronomy Engine is close to JPL but materially farther from INPOP, inspect the INPOP model version, time scale, frame and output convention.
-- If Astronomy Engine is displaced similarly from both providers while INPOP and JPL agree closely, investigate Celestia's planetary theory implementation and time conversion.
-- If INPOP and JPL disagree materially, classify the epoch/body as a reference-model or convention discrepancy and do not use it to calibrate a pass limit.
+## Common small-rotation diagnostic
 
-These are investigation heuristics only; compare the actual signed residual distributions before drawing a conclusion.
+The offline comparator fits a first-order three-axis rigid rotation mapping INPOP coordinates toward JPL coordinates separately at each epoch. It uses longitude and latitude residuals from three bodies (six angular measurements) to estimate three rotation parameters, leaving three residual degrees of freedom. This is a compact diagnostic, not a frame transformation applied to the chart engine and not an independent validation of either provider.
 
-## Reproduction
+| Epoch UTC | Pole rotation magnitude | Z rotation | Fit RMS | Max fit residual |
+|---|---:|---:|---:|---:|
+| 1987-03-14 | 9.586″ | +0.059″ | 0.011″ | 0.019″ |
+| 2000-01-01 | 5.759″ | +0.074″ | 0.013″ | 0.021″ |
+| 2024-02-29 | 9.219″ | +0.012″ | 0.046″ | 0.083″ |
+| 2026-11-13 | 7.346″ | −0.006″ | 0.062″ | 0.113″ |
+| 2035-07-01 | 9.132″ | −0.042″ | 0.104″ | 0.206″ |
 
-After the branch-scoped capture workflow completes:
+The fit explains most of the cross-provider latitude pattern as a common small coordinate rotation at each sampled epoch. The fitted rotation changes with epoch. Because only three outer planets are used (three residual degrees of freedom per epoch), this is a strong diagnostic clue but not proof of the exact cause. The likely investigation area is the time-dependent ecliptic/equator frame realization and apparent-place conventions, not a body-specific correction to Saturn, Uranus or Neptune.
+
+The 2035-07-01 point is a long-range stress sample. The previous JPL capture recorded EOP prediction coverage only through 2027-02-07, with constant last-predicted values thereafter. Do not mix this point into near-term accuracy calibration.
+
+## Integrity and reproduction
+
+The comparator verifies every raw Miriade response SHA-256 digest against the committed dataset manifest before producing residuals. It also validates the INPOP response metadata before trusting the rows.
+
+Run:
 - bun run scripts/testInpopWesternEphemerisHarness.ts
 - bun run scripts/compareInpopWesternEphemeris.ts
 
-The live capture command is intentionally separate:
-- bun run scripts/fetchInpopWesternEphemerisReference.ts --fetch
+Live data recapture is deliberately separate:
+- bun run scripts/fetchInpopWesternEphemerisReference.ts --fetch --overwrite
 
-Ordinary CI uses synthetic parser fixtures and committed benchmark data only; it does not query IMCCE. The capture workflow runs only on the isolated benchmark branch and archives the external responses. No production deployment is part of this workstream.
+The branch-scoped capture workflow skips recapture when the committed INPOP dataset already exists; it rechecks the archived raw files and reruns the offline comparison on subsequent code/documentation updates. This avoids accidental replacement of a reproducible fixed dataset on every push.
+
+No production deployment is part of this workstream.

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   buildInpopApiUrl,
+  fitSmallEclipticFrameRotation,
   formatInpopEpochFile,
   parseInpopRectangularRows,
   validateInpopEpochs,
@@ -92,5 +93,45 @@ assert.throws(() => parseInpopRectangularRows(
 ), /zero or non-finite/, "Parser rejects a zero vector");
 assertions += 1;
 
+const rotation = { x: 2.25, y: -1.5, z: 0.4 };
+const coordinates = [
+  { longitudeDegrees: 10, latitudeDegrees: -2 },
+  { longitudeDegrees: 132, latitudeDegrees: 0.8 },
+  { longitudeDegrees: 247, latitudeDegrees: 1.2 },
+  { longitudeDegrees: 310, latitudeDegrees: -0.5 },
+];
+const transformed = coordinates.map((source) => {
+  const longitude = source.longitudeDegrees * Math.PI / 180;
+  const latitude = source.latitudeDegrees * Math.PI / 180;
+  const deltaLongitude = (
+    -Math.tan(latitude) * Math.cos(longitude) * rotation.x -
+    Math.tan(latitude) * Math.sin(longitude) * rotation.y + rotation.z
+  ) / 3600;
+  const deltaLatitude = (
+    Math.sin(longitude) * rotation.x - Math.cos(longitude) * rotation.y
+  ) / 3600;
+  return {
+    source,
+    target: {
+      longitudeDegrees: source.longitudeDegrees + deltaLongitude,
+      latitudeDegrees: source.latitudeDegrees + deltaLatitude,
+    },
+  };
+});
+const fitted = fitSmallEclipticFrameRotation(transformed);
+close(fitted.rotationXArcsec, rotation.x, 1e-7, "Rotation fit recovers x-axis rotation");
+close(fitted.rotationYArcsec, rotation.y, 1e-7, "Rotation fit recovers y-axis rotation");
+close(fitted.rotationZArcsec, rotation.z, 1e-7, "Rotation fit recovers z-axis rotation");
+close(fitted.rmsResidualArcsec, 0, 1e-8, "Synthetic rigid rotation leaves near-zero residual");
+check(fitted.residualDegreesOfFreedom === 5, "Fit reports angular residual degrees of freedom");
+assert.throws(() => fitSmallEclipticFrameRotation([transformed[0]]),
+  /At least two coordinate pairs/, "Fit rejects too few coordinate pairs");
+assertions += 1;
+assert.throws(() => fitSmallEclipticFrameRotation([
+  { source: { longitudeDegrees: 0, latitudeDegrees: 90 }, target: { longitudeDegrees: 0, latitudeDegrees: 90 } },
+  { source: { longitudeDegrees: 90, latitudeDegrees: 0 }, target: { longitudeDegrees: 90, latitudeDegrees: 0 } },
+]), /singular near an ecliptic pole/, "Fit rejects singular ecliptic-pole samples");
+assertions += 1;
+
 console.log("Independent INPOP harness passed: " + assertions +
-  " assertions. It validates request configuration and response parsing only, not astronomical accuracy.");
+  " assertions. It validates the request/parser and diagnostic fit only, not astronomical accuracy.");

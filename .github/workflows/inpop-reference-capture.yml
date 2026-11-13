@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   capture:
-    name: Capture independent IMCCE INPOP reference responses
+    name: Capture or verify IMCCE INPOP reference responses
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -31,16 +31,21 @@ jobs:
           test "$(bun --version)" = "1.4.4"
       - name: Install locked dependencies
         run: bun install --frozen-lockfile
-      - name: Validate INPOP parser and request contract
+      - name: Validate INPOP parser and diagnostic fit
         run: bun run scripts/testInpopWesternEphemerisHarness.ts
-      - name: Query IMCCE Miriade INPOP and archive raw responses
-        run: bun run scripts/fetchInpopWesternEphemerisReference.ts --fetch
-      - name: Compare Astronomy Engine with independent INPOP and JPL references
+      - name: Capture IMCCE data only when the committed dataset is absent
+        run: |
+          if [ ! -s data/benchmarks/inpop-western-ephemeris-reference.json ]; then
+            bun run scripts/fetchInpopWesternEphemerisReference.ts --fetch
+          else
+            echo "Using committed INPOP capture; live recapture requires the explicit --overwrite command."
+          fi
+      - name: Verify raw checksums and compare Astronomy Engine, INPOP and JPL
         run: bun run scripts/compareInpopWesternEphemeris.ts
       - name: Upload source responses and normalized fixtures
         uses: actions/upload-artifact@v4
         with:
-          name: western-imcce-inpop-reference
+          name: western-imcce-inpop-reference-${{ github.sha }}
           path: |
             data/benchmarks/inpop-western-ephemeris-reference.json
             data/benchmarks/inpop-raw/*.json
@@ -53,5 +58,5 @@ jobs:
           git add data/benchmarks/inpop-western-ephemeris-reference.json data/benchmarks/inpop-raw/*.json
           if ! git diff --cached --quiet; then
             git commit -m "Capture independent IMCCE INPOP outer-planet references"
-            git push origin HEAD:research/jpl-western-ephemeris-benchmarks
+            git push origin "HEAD:${GITHUB_REF_NAME}"
           fi

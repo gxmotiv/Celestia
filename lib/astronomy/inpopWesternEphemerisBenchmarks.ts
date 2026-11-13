@@ -1,5 +1,6 @@
 import {
   compareEclipticCoordinates,
+  signedCircularDifferenceDegrees,
   type EclipticCoordinate,
   type EclipticResidual,
 } from "./westernEphemerisBenchmarks";
@@ -28,6 +29,101 @@ export interface InpopPayload {
   unit?: Record<string, string>;
 }
 
+export interface FrameRotationSample {
+  source: EclipticCoordinate;
+  target: EclipticCoordinate;
+}
+
+export interface SmallFrameRotationFit {
+  sampleCount: number;
+  rotationXArcsec: number;
+  rotationYArcsec: number;
+  rotationZArcsec: number;
+  poleRotationArcsec: number;
+  rmsResidualArcsec: number;
+  maxAbsoluteResidualArcsec: number;
+  residualDegreesOfFreedom: number;
+}
+
+function solveThreeByThree(matrix: number[][], vector: number[]): number[] {
+  const augmented = matrix.map((row, index) => [...row, vector[index]]);
+  for (let column = 0; column < 3; column += 1) {
+    let pivot = column;
+    for (let row = column + 1; row < 3; row += 1) {
+      if (Math.abs(augmented[row][column]) > Math.abs(augmented[pivot][column])) pivot = row;
+    }
+    [augmented[column], augmented[pivot]] = [augmented[pivot], augmented[column]];
+    const divisor = augmented[column][column];
+    if (!Number.isFinite(divisor) || Math.abs(divisor) < 1e-12) {
+      throw new Error("Frame-rotation fit is rank deficient.");
+    }
+    for (let index = column; index < 4; index += 1) augmented[column][index] /= divisor;
+    for (let row = 0; row < 3; row += 1) {
+      if (row === column) continue;
+      const factor = augmented[row][column];
+      for (let index = column; index < 4; index += 1) {
+        augmented[row][index] -= factor * augmented[column][index];
+      }
+    }
+  }
+  return augmented.map((row) => row[3]);
+}
+
+/** First-order rigid rotation from source to target; diagnostic only, never applied to chart positions. */
+export function fitSmallEclipticFrameRotation(samples: FrameRotationSample[]): SmallFrameRotationFit {
+  if (!Array.isArray(samples) || samples.length < 2) {
+    throw new RangeError("At least two coordinate pairs are required for a frame-rotation fit.");
+  }
+  const design: number[][] = [];
+  const observations: number[] = [];
+  for (const sample of samples) {
+    const { longitudeDegrees, latitudeDegrees } = sample.source;
+    const target = sample.target;
+    for (const value of [longitudeDegrees, latitudeDegrees, target.longitudeDegrees, target.latitudeDegrees]) {
+      if (!Number.isFinite(value)) throw new TypeError("Frame-rotation samples must contain finite coordinates.");
+    }
+    if (Math.abs(latitudeDegrees) >= 89.999999) {
+      throw new RangeError("Frame-rotation longitude equation is singular near an ecliptic pole.");
+    }
+    const longitude = longitudeDegrees * Math.PI / 180;
+    const latitude = latitudeDegrees * Math.PI / 180;
+    const deltaLongitude = signedCircularDifferenceDegrees(target.longitudeDegrees, longitudeDegrees) * 3600;
+    const deltaLatitude = (target.latitudeDegrees - latitudeDegrees) * 3600;
+    // First-order rotation equations, with all unknowns and observations in arcseconds.
+    design.push([
+      -Math.tan(latitude) * Math.cos(longitude),
+      -Math.tan(latitude) * Math.sin(longitude),
+      1,
+    ]);
+    observations.push(deltaLongitude);
+    design.push([Math.sin(longitude), -Math.cos(longitude), 0]);
+    observations.push(deltaLatitude);
+  }
+  const normal = Array.from({ length: 3 }, (_, row) =>
+    Array.from({ length: 3 }, (_, column) =>
+      design.reduce((sum, values) => sum + values[row] * values[column], 0)
+    )
+  );
+  const right = Array.from({ length: 3 }, (_, row) =>
+    design.reduce((sum, values, index) => sum + values[row] * observations[index], 0)
+  );
+  const rotation = solveThreeByThree(normal, right);
+  const residuals = observations.map((value, index) =>
+    value - design[index].reduce((sum, component, axis) => sum + component * rotation[axis], 0)
+  );
+  const rms = Math.sqrt(residuals.reduce((sum, value) => sum + value * value, 0) / residuals.length);
+  return {
+    sampleCount: samples.length,
+    rotationXArcsec: rotation[0],
+    rotationYArcsec: rotation[1],
+    rotationZArcsec: rotation[2],
+    poleRotationArcsec: Math.hypot(rotation[0], rotation[1]),
+    rmsResidualArcsec: rms,
+    maxAbsoluteResidualArcsec: Math.max(...residuals.map(Math.abs)),
+    residualDegreesOfFreedom: residuals.length - 3,
+  };
+}
+
 export function buildInpopApiUrl(body: InpopOuterPlanet): string {
   const url = new URL("https://ssp.imcce.fr/webservices/miriade/api/ephemcc.php");
   const parameters: Record<string, string> = {
@@ -54,14 +150,12 @@ export function formatInpopEpochFile(epochsUtc: string[]): string {
         "Miriade ISO input supports integer seconds only; benchmark epoch has non-zero milliseconds: " + epoch
       );
     }
-    // Miriade's ISO parser expects integer seconds (no fractional-second suffix or terminal Z).
     return epoch.slice(0, -5);
   }).join("\n") + "\n";
 }
 
 function parseUtcDate(value: unknown): string {
   if (typeof value === "number" && Number.isFinite(value)) {
-    // Miriade JSON may encode epoch as a Julian day when ISO output is not applied.
     const milliseconds = (value - 2440587.5) * 86400000;
     const date = new Date(milliseconds);
     if (Number.isFinite(date.getTime())) return date.toISOString();
@@ -71,9 +165,7 @@ function parseUtcDate(value: unknown): string {
   }
   const candidate = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(value) ? value : value + "Z";
   const date = new Date(candidate);
-  if (!Number.isFinite(date.getTime())) {
-    throw new Error("Miriade returned an invalid UTC date: " + value);
-  }
+  if (!Number.isFinite(date.getTime())) throw new Error("Miriade returned an invalid UTC date: " + value);
   return date.toISOString();
 }
 
@@ -124,15 +216,12 @@ export function parseInpopRectangularRows(
     throw new Error("Miriade response time scale is not UTC.");
   }
   if (!Array.isArray(payload.data)) throw new Error("Miriade response does not contain a data array.");
-
   const rows: InpopReferenceFixture[] = payload.data.map((row, index) => {
     const epochUtc = parseUtcDate(row.epoch ?? row.Date ?? row.date);
     const expectedEpochUtc = expectedEpochsUtc[index];
     if (epochUtc !== expectedEpochUtc) {
-      throw new Error(
-        "Miriade returned epoch " + epochUtc + " at row " + (index + 1) +
-        "; expected " + expectedEpochUtc + "."
-      );
+      throw new Error("Miriade returned epoch " + epochUtc + " at row " + (index + 1) +
+        "; expected " + expectedEpochUtc + ".");
     }
     const xAu = readVectorComponent(row, "x");
     const yAu = readVectorComponent(row, "y");
@@ -146,7 +235,6 @@ export function parseInpopRectangularRows(
     const latitudeDegrees = Math.atan2(zAu, planarDistance) * 180 / Math.PI;
     return { body, epochUtc, longitudeDegrees, latitudeDegrees, xAu, yAu, zAu };
   });
-
   if (rows.length !== expectedEpochsUtc.length) {
     throw new Error("Miriade returned " + rows.length + " rows; expected " + expectedEpochsUtc.length + ".");
   }
