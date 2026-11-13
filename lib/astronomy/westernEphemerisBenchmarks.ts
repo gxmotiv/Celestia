@@ -67,7 +67,7 @@ export function buildJplWesternHorizonsQueryUrl(targetId: string, epochsUtc: str
   for (const [key, value] of Object.entries(parameters)) {
     url.searchParams.set(key, value);
   }
-  return url.toString();
+  return url.toString().replace(/\+/g, "%20");
 }
 
 export interface HorizonsEclipticRow {
