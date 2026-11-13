@@ -275,7 +275,8 @@ export class WesternReturnEngine {
     const d = solved.exactDate;
     const chart = calculateWesternChart(
       d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate(),
-      d.getUTCHours(), d.getUTCMinutes(), latitude, longitude, 0, houseSystem, d.getUTCSeconds()
+      d.getUTCHours(), d.getUTCMinutes(), latitude, longitude, 0, houseSystem,
+      d.getUTCSeconds() + d.getUTCMilliseconds() / 1000
     );
     return {
       kind: "Lunar Return",
