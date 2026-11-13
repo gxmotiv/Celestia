@@ -7,6 +7,7 @@ import {
   type WesternChartData,
 } from "../lib/astronomy/ephemeris";
 import { SwissEphemerisEngine } from "../lib/astronomy/swissEphemeris";
+import { MinorAspectsEngine } from "../lib/astronomy/minorAspects";
 import {
   calculateSolarAltitudeDegrees,
   isSunAboveHorizonInChart,
@@ -100,6 +101,46 @@ const stationaryAspect = calculateAspects([
 ]).find((aspect) => aspect.planet1 === "Sun" || aspect.planet2 === "Sun");
 check(stationaryAspect?.isApplying === null,
   "A fully stationary relative aspect is not falsely labelled separating");
+
+// The natal "Major Ptolemaic" table must contain only the five classical
+// Ptolemaic aspects. Quincunx and Semisextile belong to the minor-aspect engine.
+function natalAspectAt(longitude: number) {
+  return calculateAspects([
+    syntheticSun(0),
+    { ...syntheticSun(longitude), id: "AspectProbe", name: "AspectProbe" },
+  ]);
+}
+const expectedPtolemaic: Array<[number, string]> = [
+  [0, "Conjunction"],
+  [60, "Sextile"],
+  [90, "Square"],
+  [120, "Trine"],
+  [180, "Opposition"],
+];
+for (const [longitude, name] of expectedPtolemaic) {
+  check(
+    natalAspectAt(longitude).some((aspect) => aspect.aspectName === name),
+    "Natal major-aspect engine includes the Ptolemaic " + name
+  );
+}
+check(natalAspectAt(30).length === 0,
+  "Semisextile is not duplicated in the major Ptolemaic aspect result");
+check(natalAspectAt(150).length === 0,
+  "Quincunx is not duplicated in the major Ptolemaic aspect result");
+
+const minorAspectEngine = new MinorAspectsEngine();
+const semisextileResult = minorAspectEngine.calculateMinorAspects([
+  syntheticSun(0),
+  { ...syntheticSun(30), id: "AspectProbe", name: "AspectProbe" },
+]);
+check(semisextileResult.some((aspect) => aspect.aspectType.name === "Semisextile"),
+  "Semisextile remains available in the minor-aspect engine");
+const quincunxResult = minorAspectEngine.calculateMinorAspects([
+  syntheticSun(0),
+  { ...syntheticSun(150), id: "AspectProbe", name: "AspectProbe" },
+]);
+check(quincunxResult.some((aspect) => aspect.aspectType.name === "Quincunx"),
+  "Quincunx remains available in the minor-aspect engine");
 
 
 
