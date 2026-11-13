@@ -25,6 +25,7 @@ jobs:
         script:
           - testAstrologySuite.ts
           - testWesternIntegritySuite.ts
+          - testWesternReferenceHarness.ts
           - testBaZiSuite.ts
           - testGeocodeSuite.ts
           - testPdfGenerationSuite.ts
