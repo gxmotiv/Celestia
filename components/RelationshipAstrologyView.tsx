@@ -500,6 +500,7 @@ export function RelationshipAstrologyView({
         latitude: person1Lat,
         longitude: person1Lon,
         timezoneOffset: person1TimezoneOffset,
+        utcInstant: person1UtcInstant,
       },
       {
         birthDate: partnerProfile.birthDate,
@@ -507,9 +508,10 @@ export function RelationshipAstrologyView({
         latitude: partnerProfile.latitude,
         longitude: partnerProfile.longitude,
         timezoneOffset: partnerResolvedOffsetHours,
+        utcInstant: partnerUtcInstant.toISOString(),
       }
     );
-  }, [person1Date, person1Time, person1Lat, person1Lon, person1TimezoneOffset, partnerProfile, partnerResolvedOffsetHours]);
+  }, [person1Date, person1Time, person1Lat, person1Lon, person1TimezoneOffset, person1UtcInstant, partnerProfile, partnerResolvedOffsetHours, partnerUtcInstant]);
 
   // Vedic Jyotish Charts & Kundli Milan Engine
   const person1VedicChart = useMemo(() => {
