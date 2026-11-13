@@ -38,6 +38,8 @@ check(queryUrl.hostname === "ssd.jpl.nasa.gov",
 check(queryUrl.searchParams.get("TLIST") ===
   "'2000-Jan-01 12:00:00.000' '2024-Feb-29 00:00:00.000'",
   "Horizons TLIST URL contains separate individually quoted calendar times");
+check(queryUrl.toString().includes("%20"),
+  "Horizons discrete date list encodes date separators as percent-encoded spaces");
 check(queryUrl.searchParams.get("TLIST")?.startsWith("'") === true &&
   queryUrl.searchParams.get("TLIST")?.endsWith("'") === true &&
   queryUrl.searchParams.get("TLIST")?.includes("' '") === true,
