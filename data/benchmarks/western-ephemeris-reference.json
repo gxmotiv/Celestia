@@ -4,12 +4,13 @@
   "source": {
     "provider": "NASA/JPL Horizons",
     "apiEndpoint": "https://ssd.jpl.nasa.gov/api/horizons.api",
-    "apiVersion": "1.3 (2025 June)",
+    "apiDocumentationVersion": "1.3 (2025 June)",
+    "observedResponseSignatureVersion": "1.2 (returned by all ten captured JSON payloads)",
     "horizonsSystemVersion": "4.98e (2026-08-25, as reported by current manual)",
     "currentPlanetaryEphemerisFamily": "DE441 (Horizons manual states DE441 is used for planetary-system barycenter motion; target-center availability/solutions may differ)",
     "retrievalTool": "scripts/fetchJplWesternEphemerisReference.ts",
     "retrievalCommand": "bun run scripts/fetchJplWesternEphemerisReference.ts --fetch",
-    "note": "No numerical reference rows are included until they have been retrieved and archived from Horizons. Do not substitute Celestia outputs or synthetic values for external reference data."
+    "note": "Contains 60 externally captured JPL Horizons quantity-31 observations. Every fixture points to a raw response JSON and its SHA-256 digest; raw response payloads identify DE441 as the source for these requested targets. The API documentation version and response signature version are recorded separately."
   },
   "query": {
     "ephemerisType": "OBSERVER",
@@ -30,6 +31,10 @@
     "vector": "geocentric GeoVector with light-time and aberration correction enabled",
     "eclipticFrame": "Astronomy Engine true ecliptic of date",
     "knownDifferences": "Horizons quantity 31 additionally models gravitational light deflection and uses its IAU76/80 ecliptic-of-date realization; Celestia does not claim these are identical pipelines. Residuals must be interpreted with this model difference and a documented tolerance."
+  },
+  "eopCaptureHeaderNote": "Captured response headers report EOP file eop.261112.p270208 with data-based coverage through 2026-11-12 and predictions through 2027-02-07. The 2035-07-01 long-range sample is beyond that prediction interval; Horizons holds the last predicted EOP values constant outside available coverage, so treat this sample as a separate extrapolation stress case rather than mixing it into near-term acceptance limits.",
+  "epochClassification": {
+    "2035-07-01T06:30:00.000Z": "long-range stress sample beyond the EOP prediction interval observed in the captured response headers"
   },
   "epochsUtc": [
     "1987-03-14T12:00:00.000Z",
