@@ -609,13 +609,13 @@ export function formatPoint(
 export function calculateAspects(planets: PlanetPosition[]): AspectData[] {
   const aspects: AspectData[] = [];
   const MAJOR_ASPECTS = [
+    // The five classical Ptolemaic aspects. Quincunx and Semisextile
+    // are classified and calculated by MinorAspectsEngine instead.
     { name: "Conjunction", symbol: "☌", angle: 0, defaultOrb: 8, nature: "Neutral" as const },
     { name: "Sextile", symbol: "⚹", angle: 60, defaultOrb: 6, nature: "Harmonious" as const },
     { name: "Square", symbol: "□", angle: 90, defaultOrb: 7, nature: "Challenging" as const },
     { name: "Trine", symbol: "△", angle: 120, defaultOrb: 8, nature: "Harmonious" as const },
     { name: "Opposition", symbol: "☍", angle: 180, defaultOrb: 8, nature: "Challenging" as const },
-    { name: "Quincunx", symbol: "⚻", angle: 150, defaultOrb: 3, nature: "Challenging" as const },
-    { name: "Semisextile", symbol: "⚺", angle: 30, defaultOrb: 2.5, nature: "Neutral" as const },
   ];
 
   for (let i = 0; i < planets.length; i++) {
