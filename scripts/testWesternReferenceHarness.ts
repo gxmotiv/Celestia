@@ -27,7 +27,14 @@ const output = [
   " 2024-Feb-29 00:00:00.000           12.50000000    1.25000000",
   "$$EOE",
 ].join("\n");
-const parsed = parseHorizonsObserverEclipticRows(output, 2);
+const expectedEpochs = [
+  "2000-01-01T12:00:00.000Z",
+  "2024-02-29T00:00:00.000Z",
+];
+const parsed = parseHorizonsObserverEclipticRows(output, expectedEpochs);
+check(parsed[0].epochUtc === expectedEpochs[0] && parsed[1].epochUtc === expectedEpochs[1],
+  "Horizons parser preserves requested UTC epochs from the returned date/time columns");
+
 const queryEpochs = [
   "2000-01-01T12:00:00.000Z",
   "2024-02-29T00:00:00.000Z",
@@ -80,7 +87,10 @@ close(residual.latitudeArcseconds, 1800, 1e-7,
 assert.throws(() => parseHorizonsObserverEclipticRows("no table markers here", 1),
   /valid.*SOE.*EOE/, "Parser rejects missing Horizons data markers");
 assertions += 1;
-assert.throws(() => parseHorizonsObserverEclipticRows(output, 1),
+assert.throws(() => parseHorizonsObserverEclipticRows(output, [expectedEpochs[1], expectedEpochs[0]]),
+  /expected .* at row 1/, "Parser rejects a reordered Horizons epoch list");
+assertions += 1;
+assert.throws(() => parseHorizonsObserverEclipticRows(output, expectedEpochs.slice(0, 1)),
   /expected 1/, "Parser rejects an unexpected observation-row count");
 assertions += 1;
 assert.throws(() => parseHorizonsObserverEclipticRows(
