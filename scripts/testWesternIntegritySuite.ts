@@ -296,25 +296,28 @@ check(subsequentLunarReturn.longitudeErrorDegrees < 0.00001,
 // Pre-natal syzygy must resolve the actual previous New/Full Moon crossing,
 // not estimate its Sun longitude using a fixed phase-angle multiplier.
 const sanEngine = new AlmutenFigurisCalculator();
-const april2024NewMoonBirth = new SwissEphemerisEngine().calculateJulianDay(2024, 4, 9, 12, 0, 0, 0);
+const sanReferenceEphemeris = new SwissEphemerisEngine();
+const april2024NewMoonBirth = sanReferenceEphemeris.calculateJulianDay(2024, 4, 9, 12, 0, 0, 0);
 const april2024NewMoonSan = sanEngine.calculatePreNatalSyzygy(april2024NewMoonBirth);
 check(april2024NewMoonSan.type === "New Moon",
   "A birth after the 8 April 2024 New Moon identifies the previous syzygy as New Moon");
-check(april2024NewMoonSan.daysBeforeBirth > 0.70 && april2024NewMoonSan.daysBeforeBirth < 0.78,
-  "The 8 April 2024 New Moon is resolved near the NASA Sky Calendar event time");
+const nasaAprilNewMoonJd = sanReferenceEphemeris.calculateJulianDay(2024, 4, 8, 18, 21, 0, 0);
+close(april2024NewMoonSan.julianDay, nasaAprilNewMoonJd, 0.02,
+  "Solved New Moon is within 0.02 day of NASA Sky Calendar 8 April 2024 18:21 UTC");
 close(
-  new SwissEphemerisEngine().getApparentSunLongitude(april2024NewMoonSan.julianDay),
+  sanReferenceEphemeris.getApparentSunLongitude(april2024NewMoonSan.julianDay),
   april2024NewMoonSan.degree,
   1e-10,
   "Pre-natal New Moon degree is the apparent solar longitude at the solved event instant"
 );
-const march2024FullMoonBirth = new SwissEphemerisEngine().calculateJulianDay(2024, 3, 26, 12, 0, 0, 0);
+const march2024FullMoonBirth = sanReferenceEphemeris.calculateJulianDay(2024, 3, 26, 12, 0, 0, 0);
 const march2024FullMoonSan = sanEngine.calculatePreNatalSyzygy(march2024FullMoonBirth);
 check(march2024FullMoonSan.type === "Full Moon",
   "A birth after the 25 March 2024 Full Moon identifies the previous syzygy as Full Moon");
-check(march2024FullMoonSan.daysBeforeBirth > 1.0 && march2024FullMoonSan.daysBeforeBirth < 1.4,
-  "The 25 March 2024 Full Moon is selected as the previous syzygy");
-const beforeMarchFullMoonBirth = new SwissEphemerisEngine().calculateJulianDay(2024, 3, 24, 12, 0, 0, 0);
+const nasaMarchFullMoonJd = sanReferenceEphemeris.calculateJulianDay(2024, 3, 25, 7, 0, 0, 0);
+close(march2024FullMoonSan.julianDay, nasaMarchFullMoonJd, 0.02,
+  "Solved Full Moon is within 0.02 day of NASA Sky Calendar 25 March 2024 07:00 UTC");
+const beforeMarchFullMoonBirth = sanReferenceEphemeris.calculateJulianDay(2024, 3, 24, 12, 0, 0, 0);
 const beforeMarchFullMoonSan = sanEngine.calculatePreNatalSyzygy(beforeMarchFullMoonBirth);
 check(beforeMarchFullMoonSan.type === "New Moon" &&
   beforeMarchFullMoonSan.daysBeforeBirth > 13.5 && beforeMarchFullMoonSan.daysBeforeBirth < 14.8,
