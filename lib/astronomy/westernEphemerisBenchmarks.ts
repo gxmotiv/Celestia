@@ -42,7 +42,11 @@ export function buildJplWesternHorizonsQueryUrl(targetId: string, epochsUtc: str
         new Date(value).toISOString() !== value) {
       throw new Error("Invalid canonical UTC benchmark epoch: " + value);
     }
-    return "'" + value.replace("T", " ").replace("Z", "") + "'";
+    const parsed = new Date(value);
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const calendarDate = value.slice(0, 4) + "-" + monthNames[parsed.getUTCMonth()] +
+      "-" + value.slice(8, 10);
+    return "'" + calendarDate + " " + value.slice(11, 23) + "'";
   }).join(" ");
 
   const parameters: Record<string, string> = {
