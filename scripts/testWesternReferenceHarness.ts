@@ -50,7 +50,7 @@ close(residual.latitudeArcseconds, 1800, 1e-7,
   "Coordinate comparison reports absolute latitude residual in arcseconds");
 
 assert.throws(() => parseHorizonsObserverEclipticRows("no table markers here", 1),
-  /SOE \/ EOE/, "Parser rejects missing Horizons data markers");
+  /valid.*SOE.*EOE/, "Parser rejects missing Horizons data markers");
 assertions += 1;
 assert.throws(() => parseHorizonsObserverEclipticRows(output, 1),
   /expected 1/, "Parser rejects an unexpected observation-row count");
