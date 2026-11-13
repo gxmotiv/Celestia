@@ -454,6 +454,10 @@ console.log("\n[TEST GROUP 10] Davison Input Validation");
     rejects(() => engine.calculateDavison({ ...valid, utcInstant: "2024-02-30T00:00:00.000Z" }, valid)),
     "10.9 Invalid ISO UTC instants are rejected"
   );
+  assert(
+    rejects(() => engine.calculateDavison({ ...valid, birthDate: "2024-02-30", utcInstant: "2024-03-01T00:00:00.000Z" }, valid)),
+    "10.10 Invalid local civil dates are still rejected when a fallback/resolved UTC instant is present"
+  );
 }
 
 // ---------------------------------------------------------------------------
