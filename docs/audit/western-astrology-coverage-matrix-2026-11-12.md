@@ -70,7 +70,7 @@ Primary historical/research references:
 
 | Area | Status | Current coverage and limits |
 |---|---|---|
-| Midpoints / 90° dial | Partial | Midpoints and selected hard-aspect activations are calculated. This is not a full Uranian/Hamburg 8-point hypothetical-planet and dial system. |
+| Midpoints / 90° dial | Partial | Natal midpoint UI now includes the core planet list plus Ascendant and Midheaven through the chart-level midpoint entry point. Selected midpoint hard-aspect activations and 90° dial are available. This is not a full Uranian/Hamburg 8-point hypothetical-planet, 90°/45° dial and all midpoint-structure system. |
 | Harmonic charts | Partial | Selected harmonics H4, H5, H7, H8 and H9 are mathematical longitude transformations. This is not a measured frequency, resonance or neurological property. |
 | Synastry | Partial | Cross-chart aspects, house overlays and interpretation labels exist. Aspect scores are heuristic interpretation weights. |
 | Composite chart | Partial | Midpoint composite placements are available; this is not a scientifically validated relationship model. |

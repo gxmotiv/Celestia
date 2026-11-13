@@ -123,8 +123,8 @@ export function AdvancedWesternPanel({
   // Midpoints calculation
   const midpointCalc = useMemo(() => new MidpointCalculator(), []);
   const allMidpoints = useMemo(() => {
-    return midpointCalc.calculateAllMidpoints(chartData.planets);
-  }, [midpointCalc, chartData.planets]);
+    return midpointCalc.calculateNatalMidpoints(chartData);
+  }, [midpointCalc, chartData.planets, chartData.ascendant, chartData.midheaven]);
 
   const [midpointSearch, setMidpointSearch] = useState("");
   const filteredMidpoints = useMemo(() => {
