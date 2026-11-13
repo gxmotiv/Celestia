@@ -81,7 +81,7 @@ function readVectorComponent(row: Record<string, unknown>, component: "x" | "y" 
   const normalized = new Map(
     Object.entries(row).map(([key, value]) => [key.toLowerCase().replace(/[^a-z]/g, ""), value])
   );
-  const aliases = [component, component + "au", component + "coord", component + "coordinate"];
+  const aliases = [component, "p" + component, component + "au", "p" + component + "au", component + "coord", component + "coordinate"];
   for (const alias of aliases) {
     const value = normalized.get(alias);
     if (value !== undefined && value !== null && value !== "") {

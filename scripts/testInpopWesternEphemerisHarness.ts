@@ -52,8 +52,8 @@ const payload = {
     reference_frame: { type: "apparent of date", plane: "ecliptic", center: "geocenter" },
   },
   data: [
-    { epoch: "2000-01-01T12:00:00.000", X: 1, Y: 1, Z: 1 },
-    { epoch: "2024-02-29T00:00:00.000", x: -1, y: 0, z: 0 },
+    { Date: "2000-01-01T12:00:00.000", px: 1, py: 1, pz: 1 },
+    { Date: "2024-02-29T00:00:00.000", px: -1, py: 0, pz: 0 },
   ],
 };
 const rows = parseInpopRectangularRows(payload, "Uranus", epochs);
