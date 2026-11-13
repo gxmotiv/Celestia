@@ -330,6 +330,17 @@ try {
 }
 check(invalidSanDateRejected, "Pre-natal syzygy rejects a non-finite birth Julian Day");
 
+// The Almuten view must expose its configured weighting and must not present
+// the legacy soul/temperament aliases as separate technical calculations.
+const almutenAuditChart = faganReferenceChart.almutenFiguris;
+check(Boolean(almutenAuditChart && almutenAuditChart.methodNote.includes("Celestia-specific hybrid weighting")),
+  "Almuten result discloses its custom hybrid point and weighting method");
+check(Boolean(almutenAuditChart && almutenAuditChart.runnerUpPlanet === almutenAuditChart.scores[1]?.planet),
+  "Almuten result exposes rank two as a runner-up, not a separately calculated temperament lord");
+check(Boolean(almutenAuditChart && almutenAuditChart.lordOfSoul === almutenAuditChart.almutenFiguris &&
+  almutenAuditChart.lordOfTemperament === (almutenAuditChart.runnerUpPlanet ?? almutenAuditChart.almutenFiguris)),
+  "Legacy soul/temperament fields remain compatibility aliases for the ranked results");
+
 // 1. Solar altitude and sect are based on real horizon geometry, not house numbers.
 close(
   calculateSolarAltitudeDegrees({
