@@ -1072,7 +1072,7 @@ function parsePersonToUtcMs(person: DavisonPersonInput, label: string): number {
   }
 
   const dateMatch = typeof person.birthDate === "string"
-    ? /^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(person.birthDate)
+    ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(person.birthDate)
     : null;
   if (!dateMatch) {
     throw new RangeError(`${label} birth date must use YYYY-MM-DD.`);
@@ -1096,7 +1096,7 @@ function parsePersonToUtcMs(person: DavisonPersonInput, label: string): number {
   }
 
   const timeMatch = typeof person.birthTime === "string"
-    ? /^(?:([01]\\d|2[0-3])):([0-5]\\d)(?::([0-5]\\d)(?:\\.(\\d{1,3}))?)?$/.exec(person.birthTime)
+    ? /^(?:([01]\d|2[0-3])):([0-5]\d)(?::([0-5]\d)(?:\\.(\d{1,3}))?)?$/.exec(person.birthTime)
     : null;
   if (!timeMatch) {
     throw new RangeError(`${label} birth time must use HH:MM, HH:MM:SS, or HH:MM:SS.sss (24-hour time).`);
