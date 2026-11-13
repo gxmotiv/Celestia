@@ -5,7 +5,7 @@
  * 3. Declinations & Parallels / Contraparallels System
  */
 
-import { PlanetPosition, normalizeDegrees, formatDegreeMinute, ZODIAC_SIGNS } from "./ephemeris";
+import { PlanetPosition, normalizeDegrees, formatDegreeMinute, ZODIAC_SIGNS, type WesternChartData } from "./ephemeris";
 
 // -------------------------------------------------------------
 // 1. MIDPOINT SYSTEM
@@ -36,6 +36,21 @@ export class MidpointCalculator {
     if (diff < -180) diff += 360;
     const mid = lon1 + diff / 2;
     return normalizeDegrees(mid);
+  }
+
+  /**
+   * Calculate natal midpoints from the full Western chart, including its
+   * Ascendant and Midheaven. The raw planet list intentionally excludes these
+   * two angles, so callers rendering a natal 90° dial must use this entry point.
+   */
+  public calculateNatalMidpoints(
+    chart: Pick<WesternChartData, "planets" | "ascendant" | "midheaven">
+  ): MidpointItem[] {
+    return this.calculateAllMidpoints([
+      ...chart.planets,
+      chart.ascendant,
+      chart.midheaven,
+    ]);
   }
 
   /**
