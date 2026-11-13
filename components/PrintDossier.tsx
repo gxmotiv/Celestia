@@ -354,12 +354,12 @@ export function PrintDossier({
               <tbody>
                 {western.planets.map((p) => (
                   <tr key={p.name} className="even:bg-slate-50">
-                    <td className="font-semibold">{p.name}</td>
+                    <td className="font-semibold">{p.name}{p.calculationNote && <span className="block text-[9px] text-slate-500 font-normal">{p.calculationNote}</span>}</td>
                     <td>{p.sign}</td>
                     <td className="text-right font-mono text-[10px]">{p.signDegree.toFixed(2)}°</td>
                     <td className="text-center font-mono">{p.house}</td>
                     <td className="text-right font-mono text-[10px]">{p.latitude !== undefined ? p.latitude.toFixed(2) + "°" : "0.00°"}</td>
-                    <td>{p.isRetrograde ? "Retrograde (Rx)" : "Direct"}</td>
+                    <td>{p.motionStatus === "unknown" ? "Unknown" : p.isRetrograde ? "Retrograde (Rx)" : "Direct"}</td>
                   </tr>
                 ))}
               </tbody>
