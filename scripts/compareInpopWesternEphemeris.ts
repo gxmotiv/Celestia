@@ -59,7 +59,11 @@ async function main(): Promise<void> {
       date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate(),
       date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds() + date.getUTCMilliseconds() / 1000, 0
     );
-    const astronomyEngine = swissEphemeris.getApparentGeocentricEclipticPosition(fixture.body, jd);
+    const position = swissEphemeris.getApparentGeocentricEclipticPosition(fixture.body, jd);
+    const astronomyEngine = {
+      longitudeDegrees: position.longitude,
+      latitudeDegrees: position.latitude,
+    };
     const aeInpop = signedCoordinateDifference(astronomyEngine, fixture);
     const aeJpl = signedCoordinateDifference(astronomyEngine, referenceJpl);
     const inpopJpl = signedCoordinateDifference(fixture, referenceJpl);

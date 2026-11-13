@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   buildInpopApiUrl,
+  formatInpopEpochFile,
   INPOP_OUTER_PLANETS,
   parseInpopRectangularRows,
   validateInpopEpochs,
@@ -44,7 +45,7 @@ async function main(): Promise<void> {
   const responseMetadata: Array<Record<string, unknown>> = [];
 
   for (const body of INPOP_OUTER_PLANETS) {
-    const epochsFile = new Blob([jpl.epochsUtc.join("\n") + "\n"], { type: "text/plain" });
+    const epochsFile = new Blob([formatInpopEpochFile(jpl.epochsUtc)], { type: "text/plain" });
     const form = new FormData();
     form.append("epochs", epochsFile, "epochs.txt");
     const url = buildInpopApiUrl(body);
@@ -113,6 +114,7 @@ async function main(): Promise<void> {
       referencePlane: "2 (ecliptic)",
       vectorUnits: "AU, as reported by the service",
       note: "Ecliptic longitude/latitude are derived from the returned geocentric rectangular vector.",
+      inputEpochFormat: "ISO-8601 with whole seconds, no fractional part or trailing Z",
     },
     bodies: [...INPOP_OUTER_PLANETS],
     epochsUtc: jpl.epochsUtc,

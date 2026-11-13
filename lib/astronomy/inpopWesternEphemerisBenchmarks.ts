@@ -46,13 +46,34 @@ export function buildInpopApiUrl(body: InpopOuterPlanet): string {
   return url.toString();
 }
 
+export function formatInpopEpochFile(epochsUtc: string[]): string {
+  validateInpopEpochs(epochsUtc);
+  return epochsUtc.map((epoch) => {
+    if (!epoch.endsWith(".000Z")) {
+      throw new Error(
+        "Miriade ISO input supports integer seconds only; benchmark epoch has non-zero milliseconds: " + epoch
+      );
+    }
+    // Miriade's ISO parser expects integer seconds (no fractional-second suffix or terminal Z).
+    return epoch.slice(0, -5);
+  }).join("\n") + "\n";
+}
+
 function parseUtcDate(value: unknown): string {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    // Miriade JSON may encode epoch as a Julian day when ISO output is not applied.
+    const milliseconds = (value - 2440587.5) * 86400000;
+    const date = new Date(milliseconds);
+    if (Number.isFinite(date.getTime())) return date.toISOString();
+  }
   if (typeof value !== "string" || value.length === 0) {
-    throw new Error("Miriade response row is missing its ISO date.");
+    throw new Error("Miriade response row is missing an ISO date or numeric Julian epoch.");
   }
   const candidate = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(value) ? value : value + "Z";
   const date = new Date(candidate);
-  if (!Number.isFinite(date.getTime())) throw new Error("Miriade returned an invalid UTC date: " + value);
+  if (!Number.isFinite(date.getTime())) {
+    throw new Error("Miriade returned an invalid UTC date: " + value);
+  }
   return date.toISOString();
 }
 
@@ -79,9 +100,7 @@ export function parseInpopRectangularRows(
   body: InpopOuterPlanet,
   expectedEpochsUtc: string[]
 ): InpopReferenceFixture[] {
-  if (!Array.isArray(expectedEpochsUtc) || expectedEpochsUtc.length === 0) {
-    throw new RangeError("Expected Miriade UTC epochs must be a non-empty list.");
-  }
+  validateInpopEpochs(expectedEpochsUtc);
   const model = payload.ephemeris?.planetary_theory ?? "";
   if (!model.toUpperCase().includes("INPOP")) {
     throw new Error("Miriade did not identify an INPOP planetary theory: " + (model || "missing"));
@@ -107,7 +126,7 @@ export function parseInpopRectangularRows(
   if (!Array.isArray(payload.data)) throw new Error("Miriade response does not contain a data array.");
 
   const rows: InpopReferenceFixture[] = payload.data.map((row, index) => {
-    const epochUtc = parseUtcDate(row.Date ?? row.date ?? row.epoch);
+    const epochUtc = parseUtcDate(row.epoch ?? row.Date ?? row.date);
     const expectedEpochUtc = expectedEpochsUtc[index];
     if (epochUtc !== expectedEpochUtc) {
       throw new Error(

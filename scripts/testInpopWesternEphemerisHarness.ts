@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   buildInpopApiUrl,
+  formatInpopEpochFile,
   parseInpopRectangularRows,
   validateInpopEpochs,
 } from "../lib/astronomy/inpopWesternEphemerisBenchmarks";
@@ -30,6 +31,12 @@ check(url.searchParams.get("-tscale") === "UTC" && url.searchParams.get("-mime")
   "Miriade query fixes UTC and a machine-readable response");
 validateInpopEpochs(epochs);
 assertions += 1;
+check(formatInpopEpochFile(epochs) === "2000-01-01T12:00:00\n2024-02-29T00:00:00\n",
+  "Miriade epoch upload uses whole-second ISO strings without fractional seconds or trailing Z");
+assertions += 1;
+assert.throws(() => formatInpopEpochFile(["2000-01-01T12:00:00.125Z"]),
+  /integer seconds only/, "Epoch serializer rejects lossy millisecond truncation");
+assertions += 1;
 assert.throws(() => validateInpopEpochs([epochs[1], epochs[0]]),
   /strictly ascending/, "Epoch manifest must be ordered");
 assertions += 1;
@@ -45,8 +52,8 @@ const payload = {
     reference_frame: { type: "apparent of date", plane: "ecliptic", center: "geocenter" },
   },
   data: [
-    { Date: "2000-01-01T12:00:00.000", X: 1, Y: 1, Z: 1 },
-    { Date: "2024-02-29T00:00:00.000", x: -1, y: 0, z: 0 },
+    { epoch: "2000-01-01T12:00:00.000", X: 1, Y: 1, Z: 1 },
+    { epoch: "2024-02-29T00:00:00.000", x: -1, y: 0, z: 0 },
   ],
 };
 const rows = parseInpopRectangularRows(payload, "Uranus", epochs);
@@ -70,17 +77,17 @@ assert.throws(() => parseInpopRectangularRows(
 ), /ecliptic/, "Parser rejects a response in the wrong reference plane");
 assertions += 1;
 assert.throws(() => parseInpopRectangularRows(
-  { ...payload, data: [{ Date: "2024-02-29T00:00:00.000", X: 1, Y: 1, Z: 1 }] },
+  { ...payload, data: [{ epoch: "2024-02-29T00:00:00.000", X: 1, Y: 1, Z: 1 }] },
   "Uranus", epochs
 ), /at row 1/, "Parser rejects an unexpected first epoch");
 assertions += 1;
 assert.throws(() => parseInpopRectangularRows(
-  { ...payload, data: [{ Date: "2000-01-01T12:00:00.000", X: 1, Y: 1 }] },
+  { ...payload, data: [{ epoch: "2000-01-01T12:00:00.000", X: 1, Y: 1 }] },
   "Uranus", [epochs[0]]
 ), /missing finite Z coordinate/, "Parser rejects incomplete position vectors");
 assertions += 1;
 assert.throws(() => parseInpopRectangularRows(
-  { ...payload, data: [{ Date: "2000-01-01T12:00:00.000", X: 0, Y: 0, Z: 0 }] },
+  { ...payload, data: [{ epoch: "2000-01-01T12:00:00.000", X: 0, Y: 0, Z: 0 }] },
   "Uranus", [epochs[0]]
 ), /zero or non-finite/, "Parser rejects a zero vector");
 assertions += 1;
