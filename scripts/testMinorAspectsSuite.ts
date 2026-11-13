@@ -480,5 +480,5 @@ results.forEach((r, idx) => {
 if (failed > 0) {
   process.exit(1);
 } else {
-  console.log("\nALL 20 MINOR ASPECTS SUITE TESTS PASSED WITH 100% ACCURACY!");
+  console.log("\nALL " + total + " MINOR ASPECTS SUITE TESTS PASSED. A green software suite does not certify astronomical accuracy.");
 }
