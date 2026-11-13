@@ -88,7 +88,7 @@ assert.throws(() => parseHorizonsObserverEclipticRows("no table markers here", e
   /valid.*SOE.*EOE/, "Parser rejects missing Horizons data markers");
 assertions += 1;
 assert.throws(() => parseHorizonsObserverEclipticRows(output, [expectedEpochs[1], expectedEpochs[0]]),
-  /expected .* at row 1/, "Parser rejects a reordered Horizons epoch list");
+  /at row 1; expected/, "Parser rejects a reordered Horizons epoch list");
 assertions += 1;
 const oneRowOutput = [
   "$$SOE",
