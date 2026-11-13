@@ -19,7 +19,7 @@ Passing software tests validates code against specified numerical fixtures and i
 | Area | Status | Current coverage and limits |
 |---|---|---|
 | Tropical geocentric planetary chart | Implemented | Uses Celestia's Astronomy Engine compatibility facade. It is not linked to the native Swiss Ephemeris library. |
-| Independent planetary ephemeris comparison | Harness added; JPL fixtures pending | A reproducible Horizons quantity-31 capture and offline comparison tool now exists. No reference values have yet been committed or calibrated; do not treat the harness test as proof of ephemeris accuracy. See `docs/audit/western-ephemeris-benchmark-methodology.md`. |
+| Independent planetary ephemeris comparison | Reference fixtures captured; calibration pending | 60 JPL Horizons quantity-31 observations across ten bodies and six UTC epochs are committed with raw-response SHA-256 digests. Descriptive residual maximum is 12.14″ longitude / 18.72″ latitude; no acceptance threshold has been calibrated because the frame/correction pipelines differ and the 2035 sample is beyond current EOP prediction coverage. See `docs/audit/western-ephemeris-benchmark-methodology.md`. |
 | House systems | Partial | Placidus, Equal, Whole Sign and Porphyry are supported. Placidus falls back to Porphyry when its geometry/solver cannot be used; the actual resolved system is surfaced. |
 | Other house systems | Not implemented | Koch, Campanus, Regiomontanus, Alcabitius, Morinus, Meridian and Topocentric are not selectable calculation engines. |
 | Angles | Implemented with reference fixtures | Ascendant, Midheaven, Descendant, IC, Vertex and ecliptic East Point. The East Point is distinguished from the equatorial point on the eastern horizon. |
