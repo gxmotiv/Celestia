@@ -36,6 +36,10 @@ export interface PlanetPosition {
   element: "Fire" | "Earth" | "Air" | "Water";
   modality: "Cardinal" | "Fixed" | "Mutable";
   solarProximity?: SolarProximity;
+  /** Discloses a known approximation or symbolic placeholder used for this point. */
+  calculationNote?: string;
+  /** Unknown when the current coordinate model does not calculate instantaneous direction. */
+  motionStatus?: "unknown";
 }
 
 export interface HouseCusp {
@@ -742,11 +746,17 @@ export function calculateWesternChart(
   planetsList.push(formatPoint("NorthNode", "NorthNode", sp.rahu.longitude, rawCusps, sp.rahu.speed));
   planetsList.push(formatPoint("SouthNode", "SouthNode", sp.ketu.longitude, rawCusps, sp.ketu.speed));
 
-  // Chiron calculation (~50.7-year orbit between Saturn and Uranus)
+  // Chiron is currently an illustrative sine-formula placeholder, not an
+  // integrated/perturbed small-body ephemeris. Do not invent a constant speed:
+  // its true geocentric motion can be retrograde and varies substantially.
   const chironT = (jd - 2451545.0) / 36525.0;
   const chironM = normalizeDegrees(339.8 + 719.9 * chironT);
   const chironLon = normalizeDegrees(71.9 + chironM + 12.0 * Math.sin(chironM * (Math.PI / 180)));
-  planetsList.push(formatPoint("Chiron", "Chiron", chironLon, rawCusps, 0.05));
+  const chironPosition = formatPoint("Chiron", "Chiron", chironLon, rawCusps, 0.05);
+  chironPosition.speed = undefined;
+  chironPosition.motionStatus = "unknown";
+  chironPosition.calculationNote = "Illustrative sine-formula placeholder only. This is not an integrated or perturbed Chiron ephemeris and has not been validated against JPL Horizons. Its instantaneous speed and retrograde state are not calculated. Chiron is excluded from aspect and midpoint calculations until a suitable small-body ephemeris is integrated.";
+  planetsList.push(chironPosition);
 
   // Ascendant and Midheaven
   const ascPoint = formatPoint("Ascendant", "Ascendant", asc, rawCusps);
@@ -800,6 +810,10 @@ export function calculateWesternChart(
   // Calculate Solar Proximity (Cazimi <= 17', Combust <= 8.5°, Under Beams <= 17°)
   const sunLon = sp.sun.longitude;
   planetsList.forEach((p) => {
+    if (p.calculationNote) {
+      p.solarProximity = undefined;
+      return;
+    }
     if (p.id === "Sun") {
       p.solarProximity = "Free";
       return;
@@ -818,9 +832,12 @@ export function calculateWesternChart(
   });
 
   // Calculate aspects including planets, North Node, Ascendant, and Midheaven
-  const aspectTargets = [...planetsList, ascPoint, mcPoint];
+  // Points with unvalidated placeholder coordinates must not generate
+  // apparently precise aspects or aspect-phase labels.
+  const aspectablePlanets = planetsList.filter((planet) => !planet.calculationNote);
+  const aspectTargets = [...aspectablePlanets, ascPoint, mcPoint];
   const aspects = calculateAspects(aspectTargets);
-  const minorAspects = new MinorAspectsEngine().calculateMinorAspects(planetsList);
+  const minorAspects = new MinorAspectsEngine().calculateMinorAspects(aspectablePlanets);
 
   // Calculate Traditional Planetary Hours and Day Ruler
   const planetaryHoursCalc = new PlanetaryHoursCalculator();
