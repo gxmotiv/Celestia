@@ -1,6 +1,6 @@
 # Celestia master implementation tracker
 
-Last reviewed: 2026-11-06  
+Last reviewed: 2026-11-13  
 Source of scope: `docs/audit/2026-10-31-master-audit-spec.md` and the current GitHub source tree.  
 Policy: keep changes on isolated branches; do not merge or deploy until the owner reviews the PR chain. Passing internal tests is not proof of astronomical correctness.
 
@@ -35,7 +35,7 @@ Policy: keep changes on isolated branches; do not merge or deploy until the owne
 | Item | Current status | Evidence / next acceptance gate |
 |---|---|---|
 | Actual ephemeris identity | Corrected disclosure on audit branch | The compatibility facade calls `astronomy-engine`, not native Swiss Ephemeris/libswe. Reviewed chart, transit, benchmark and PDF labels now disclose this. Upstream documents an approximately ±1 arcminute design target; this is not a Celestia-wide accuracy certificate. |
-| Independent planetary benchmarks | Not started | A stored Sun/Moon date is only a regression spot check; its full source query settings are not stored. Build a reproducible comparison set against JPL Horizons or another trustworthy source for Sun, Moon and planets. Record time scale, coordinate frame, apparent/astrometric settings, ephemeris, center and tolerances. |
+| Independent planetary benchmarks | Harness implemented; reference capture pending | Added a reproducible JPL Horizons observer-quantity-31 downloader, raw-response archive with SHA-256 digests, circular longitude residual comparison, an offline parser test and a method note. The dataset currently contains no external numerical fixtures: capture and inspect all 60 body/epoch rows, then calibrate per-body tolerances before calling planetary positions independently benchmarked. |
 | Julian Day and UTC conversions | Partial / audit required | Existing suite covers selected UTC/JD and date rollover cases. Validate leap dates, seconds, pre-1972 civil-time assumptions, historical offsets with seconds, and explicit UTC/UT1/TT/Delta-T handling. |
 | Tropical/sidereal and ayanamsa | Shared model implemented on audit branch; independent validation pending | Western and Vedic paths now call one J2000-anchored Lahiri-style precession polynomial; the prior opposite-sign quadratic discrepancy is removed. This is not native Swiss Ephemeris `SE_SIDM_LAHIRI`. Regression tests verify path consistency, not absolute accuracy. Benchmark named epochs against authoritative Lahiri tables / Swiss Ephemeris with explicit time-scale and nutation conventions. |
 | Houses and high latitudes | Known concern / audit required | Current houses use custom formulas and an approximate mean-obliquity polynomial; the native Swiss Ephemeris house APIs are not called. Determine Placidus failure/fallback behavior, expose actual house system used, warn users, and compare ASC/MC/cusps against an independent reference at high latitudes. |
