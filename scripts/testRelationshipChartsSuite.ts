@@ -1,6 +1,6 @@
 /**
  * Celestia - Phase 1B Relationship Astrology Test Suite
- * Validates the Davison Time-Space Relationship Chart calculation engine:
+ * Validates relationship-chart calculation integrity:
  * 1. Timezone-normalized UTC birth instant conversion (with date/month rollovers).
  * 2. Fractional timezone offsets (e.g. India +5.5, Nepal +5.75, Newfoundland -3.5).
  * 3. Exact time midpoint calculation with sub-minute / second-level precision.
@@ -10,7 +10,9 @@
  * 7. Standard arithmetic mean latitude convention and terrestrial boundary clamping.
  * 8. Julian Day sub-minute precision propagation into ephemeris calculations.
  * 9. Backward compatibility when timezoneOffset is omitted.
- * 10. Robust process exit behavior (exits with non-zero on failure).
+ * 10. Synastry compatibility score invariance when the two charts are reversed.
+ * 11. Strict Davison local civil-time, coordinate and exact UTC instant validation.
+ * 12. Robust process exit behavior (exits with non-zero on failure).
  */
 
 import { DavisonChartEngine, DavisonPersonInput, SynastryEngine, SynastryAspect } from "../lib/astronomy/relationshipEngine";
