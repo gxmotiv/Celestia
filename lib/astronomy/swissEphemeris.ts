@@ -393,32 +393,51 @@ export class SwissEphemerisEngine {
   }
 
   /**
-   * Unrounded apparent geocentric tropical solar longitude from astronomy-engine.
-   * This is deliberately separate from the rounded display-oriented planet result.
+   * Unrounded apparent geocentric tropical ecliptic coordinates for the major
+   * solar-system bodies supported by Astronomy Engine.
+   *
+   * GeoVector applies light-time and the requested stellar-aberration correction;
+   * Ecliptic transforms the J2000-equatorial vector into true ecliptic coordinates
+   * of date. This intentionally does not claim to reproduce every Horizons
+   * correction (notably its gravitational light deflection and IAU76/80 frame).
    */
-  public getApparentSunLongitude(julianDay: number): number {
+  public getApparentGeocentricEclipticPosition(
+    bodyName: "Sun" | "Moon" | "Mercury" | "Venus" | "Mars" | "Jupiter" |
+      "Saturn" | "Uranus" | "Neptune" | "Pluto",
+    julianDay: number
+  ): { longitude: number; latitude: number } {
     if (!Number.isFinite(julianDay)) {
       throw new RangeError("Julian Day must be finite.");
     }
+    const body = {
+      Sun: Astronomy.Body.Sun,
+      Moon: Astronomy.Body.Moon,
+      Mercury: Astronomy.Body.Mercury,
+      Venus: Astronomy.Body.Venus,
+      Mars: Astronomy.Body.Mars,
+      Jupiter: Astronomy.Body.Jupiter,
+      Saturn: Astronomy.Body.Saturn,
+      Uranus: Astronomy.Body.Uranus,
+      Neptune: Astronomy.Body.Neptune,
+      Pluto: Astronomy.Body.Pluto,
+    }[bodyName];
     const time = new Astronomy.AstroTime(julianDay - 2451545.0);
-    const vector = Astronomy.GeoVector(Astronomy.Body.Sun, time, true);
+    const vector = Astronomy.GeoVector(body, time, true);
     const ecliptic = Astronomy.Ecliptic(vector);
-    return ((ecliptic.elon % 360) + 360) % 360;
+    return {
+      longitude: ((ecliptic.elon % 360) + 360) % 360,
+      latitude: ecliptic.elat,
+    };
   }
 
-  /**
-   * Unrounded apparent geocentric tropical lunar longitude for event-time solving.
-   * The normal planet-position API rounds to 0.0001° for display; return searches
-   * must use the underlying longitude to avoid a several-tenths-of-a-second plateau.
-   */
+  /** Unrounded apparent geocentric tropical solar longitude. */
+  public getApparentSunLongitude(julianDay: number): number {
+    return this.getApparentGeocentricEclipticPosition("Sun", julianDay).longitude;
+  }
+
+  /** Unrounded apparent geocentric tropical lunar longitude. */
   public getApparentMoonLongitude(julianDay: number): number {
-    if (!Number.isFinite(julianDay)) {
-      throw new RangeError("Julian Day must be finite.");
-    }
-    const time = new Astronomy.AstroTime(julianDay - 2451545.0);
-    const vector = Astronomy.GeoVector(Astronomy.Body.Moon, time, true);
-    const ecliptic = Astronomy.Ecliptic(vector);
-    return ((ecliptic.elon % 360) + 360) % 360;
+    return this.getApparentGeocentricEclipticPosition("Moon", julianDay).longitude;
   }
 
   /**
