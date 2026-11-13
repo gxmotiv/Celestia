@@ -142,6 +142,20 @@ check(midpointRows.some((item) =>
   (item.planet1 === "Sun" && item.planet2 === "Midheaven") ||
   (item.planet2 === "Sun" && item.planet1 === "Midheaven")
 ), "Midpoint set includes the Sun/Midheaven axis");
+
+// Exercise the same full-chart entry point used by the Advanced Western UI.
+// This guards the wiring, not just the lower-level pairwise midpoint method.
+const natalMidpointRows = midpointEngine.calculateNatalMidpoints(midpointChart);
+check(natalMidpointRows.some((item) =>
+  (item.planet1 === "Sun" && item.planet2 === "Ascendant") ||
+  (item.planet2 === "Sun" && item.planet1 === "Ascendant")
+), "Advanced Western natal midpoint entry point includes Sun/Ascendant");
+check(natalMidpointRows.some((item) =>
+  (item.planet1 === "Sun" && item.planet2 === "Midheaven") ||
+  (item.planet2 === "Sun" && item.planet1 === "Midheaven")
+), "Advanced Western natal midpoint entry point includes Sun/Midheaven");
+check(natalMidpointRows.length === midpointRows.length,
+  "Natal midpoint entry point preserves the complete core-point pair set including both angles");
 let invalidHarmonicRejected = false;
 try {
   new HarmonicChartCalculator().calculateHarmonic(midpointChart.planets, 0);
