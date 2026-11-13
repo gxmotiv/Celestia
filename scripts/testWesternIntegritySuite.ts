@@ -248,9 +248,17 @@ check(chironPosition?.speed === undefined && chironPosition.motionStatus === "un
   "Chiron has no fabricated constant speed or direct/retrograde status");
 check(!faganReferenceChart.aspects.some((aspect) => aspect.planet1 === "Chiron" || aspect.planet2 === "Chiron"),
   "Unvalidated Chiron placeholder is excluded from major-aspect calculations");
+check(!calculateAspects([
+  { ...chironPosition!, name: "Chiron", id: "Chiron" },
+  syntheticSun(chironPosition?.longitude ?? 0),
+]).some((aspect) => aspect.planet1 === "Chiron" || aspect.planet2 === "Chiron"),
+  "Direct major-aspect engine calls also ignore points with approximation notes");
 check(!new MinorAspectsEngine().calculateMinorAspects(faganReferenceChart.planets)
   .some((aspect) => aspect.planet1 === "Chiron" || aspect.planet2 === "Chiron"),
   "Unvalidated Chiron placeholder is excluded from minor-aspect calculations");
+check(!new MidpointCalculator().calculateNatalMidpoints(faganReferenceChart)
+  .some((midpoint) => midpoint.planet1 === "Chiron" || midpoint.planet2 === "Chiron"),
+  "Unvalidated Chiron placeholder is excluded from midpoint calculations");
 const asteroidPositions = faganReferenceChart.asteroids
   ? Object.values(faganReferenceChart.asteroids)
   : [];
