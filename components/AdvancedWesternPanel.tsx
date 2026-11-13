@@ -237,6 +237,10 @@ export function AdvancedWesternPanel({
   const starContacts: StarContact[] = useMemo(() => {
     return fixedStarsEngine.calculateStarContacts(chartData);
   }, [fixedStarsEngine, chartData]);
+  const fixedStarCatalogueEpochCompatible = useMemo(
+    () => fixedStarsEngine.isCatalogueEpochCompatible(chartData),
+    [fixedStarsEngine, chartData]
+  );
 
   // Eclipses
   const eclipseEngine = useMemo(() => new EclipseAnalyzer(), []);
@@ -966,7 +970,7 @@ export function AdvancedWesternPanel({
       {activeSubTab === "fixedStars" && (
         <div className="space-y-4">
           <div className="flex items-center justify-between text-xs px-3 py-2 bg-slate-950/80 border border-slate-800 rounded-lg text-slate-400">
-            <span>Tight Aspects to Fixed Stars (&lt; 1.25° orb): <strong className="text-amber-300 font-mono">{starContacts.length} active</strong></span>
+            <span>Tight Aspects to Fixed Stars (&lt; 1.25° orb): <strong className="text-amber-300 font-mono">{fixedStarCatalogueEpochCompatible ? `${starContacts.length} active` : "not calculated"}</strong></span>
             <span>20 reference entries · J2000 only</span>
           </div>
 
@@ -991,7 +995,9 @@ export function AdvancedWesternPanel({
             ))}
             {starContacts.length === 0 && (
               <div className="col-span-2 p-6 text-center text-xs text-slate-500 bg-slate-950/40 rounded-xl">
-                No major planets conjunct classical fixed stars within strict 1.25° orb.
+                {fixedStarCatalogueEpochCompatible
+                  ? "No major planets conjunct classical fixed stars within strict 1.25° orb."
+                  : "Fixed-star contacts are not calculated: this catalogue contains approximate J2000 reference longitudes only and is not epoch-adjusted for this chart date."}
               </div>
             )}
           </div>
