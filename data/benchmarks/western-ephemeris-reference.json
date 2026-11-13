@@ -3,7 +3,7 @@
   "datasetStatus": "awaiting-reference-capture",
   "source": {
     "provider": "NASA/JPL Horizons",
-    "apiEndpoint": "https://ssd-api.jpl.nasa.gov/api/horizons.api",
+    "apiEndpoint": "https://ssd.jpl.nasa.gov/api/horizons.api",
     "apiVersion": "1.3 (2025 June)",
     "horizonsSystemVersion": "4.98e (2026-08-25, as reported by current manual)",
     "currentPlanetaryEphemerisFamily": "DE440/DE441 (confirm the selected solution in each captured Horizons response header)",
