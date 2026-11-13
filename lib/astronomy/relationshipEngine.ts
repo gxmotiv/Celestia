@@ -1060,17 +1060,9 @@ export interface DavisonChartResult {
  * before the normalizer is allowed to perform date rollover arithmetic.
  */
 function parsePersonToUtcMs(person: DavisonPersonInput, label: string): number {
-  if (person.utcInstant !== undefined) {
-    if (typeof person.utcInstant !== "string") {
-      throw new TypeError(`${label} UTC instant must be an ISO-8601 UTC string.`);
-    }
-    const instant = new Date(person.utcInstant);
-    if (!Number.isFinite(instant.getTime()) || instant.toISOString() !== person.utcInstant) {
-      throw new RangeError(`${label} UTC instant must be a valid canonical ISO-8601 timestamp ending in Z.`);
-    }
-    return instant.getTime();
-  }
-
+  // Validate the displayed local civil fields even when an exact UTC instant is
+  // supplied. This prevents the UI's provisional fallback Date from masking an
+  // invalid or impossible calendar date/time.
   const dateMatch = typeof person.birthDate === "string"
     ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(person.birthDate)
     : null;
@@ -1107,6 +1099,19 @@ function parsePersonToUtcMs(person: DavisonPersonInput, label: string): number {
   const fractionMs = Number((timeMatch[4] ?? "").padEnd(3, "0"));
   const second = wholeSecond + fractionMs / 1000;
 
+  // Exact instants from the historical timezone resolver are authoritative.
+  // Canonical ISO formatting makes precision and UTC ("Z") explicit.
+  if (person.utcInstant !== undefined) {
+    if (typeof person.utcInstant !== "string") {
+      throw new TypeError(`${label} UTC instant must be an ISO-8601 UTC string.`);
+    }
+    const instant = new Date(person.utcInstant);
+    if (!Number.isFinite(instant.getTime()) || instant.toISOString() !== person.utcInstant) {
+      throw new RangeError(`${label} UTC instant must be a valid canonical ISO-8601 timestamp ending in Z.`);
+    }
+    return instant.getTime();
+  }
+
   const timezoneOffsetHours = person.timezoneOffset ?? 0;
   if (!Number.isFinite(timezoneOffsetHours) || Math.abs(timezoneOffsetHours) > 24) {
     throw new RangeError(`${label} numeric UTC offset must be finite and within -24 to +24 hours.`);
@@ -1131,7 +1136,6 @@ function parsePersonToUtcMs(person: DavisonPersonInput, label: string): number {
   }
   return utcMilliseconds;
 }
-
 function validateDavisonCoordinates(person: DavisonPersonInput, label: string): void {
   if (!Number.isFinite(person.latitude) || person.latitude < -90 || person.latitude > 90) {
     throw new RangeError(`${label} latitude must be a finite value from -90 to +90 degrees.`);
