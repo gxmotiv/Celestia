@@ -142,18 +142,18 @@ export function normalizeDegrees(deg: number): number {
 /**
  * Determines whether a moving longitude is closing on an aspect to a fixed
  * reference longitude. relativeSpeed is longitude1 minus longitude2 in degrees/day.
- * Returns false for a stationary/unknown speed and at exactness, where direction
- * cannot be inferred from a single instant.
+ * Returns null when speed is stationary/unknown or the aspect is exactly
+ * partile, where a single instant cannot establish applying vs separating.
  */
 export function isAngularAspectApplying(
   longitude1: number,
   longitude2: number,
   aspectAngle: number,
   relativeSpeed: number
-): boolean {
+): boolean | null {
   if (![longitude1, longitude2, aspectAngle, relativeSpeed].every(Number.isFinite) ||
       Math.abs(relativeSpeed) < 1e-12) {
-    return false;
+    return null;
   }
 
   const separation = normalizeDegrees(longitude1 - longitude2);
@@ -171,7 +171,7 @@ export function isAngularAspectApplying(
     }
   }
 
-  if (nearestMagnitude < 1e-9) return false;
+  if (nearestMagnitude < 1e-9) return null;
   return nearestSignedError * relativeSpeed < 0;
 }
 
