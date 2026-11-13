@@ -244,7 +244,7 @@ const faganReferenceChart = calculateWesternChart(2026, 10, 1, 0, 0, 51.4769, 0,
 const chironPosition = faganReferenceChart.planets.find((planet) => planet.name === "Chiron");
 check(Boolean(chironPosition && chironPosition.calculationNote?.includes("not an integrated or perturbed Chiron ephemeris")),
   "Chiron position exposes its placeholder-model limitation");
-check(chironPosition?.speed === undefined && chironPosition.motionStatus === "unknown",
+check(Boolean(chironPosition && chironPosition.speed === undefined && chironPosition.motionStatus === "unknown"),
   "Chiron has no fabricated constant speed or direct/retrograde status");
 check(!faganReferenceChart.aspects.some((aspect) => aspect.planet1 === "Chiron" || aspect.planet2 === "Chiron"),
   "Unvalidated Chiron placeholder is excluded from major-aspect calculations");
