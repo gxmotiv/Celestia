@@ -909,10 +909,25 @@ export interface CompositeChart {
 
 export class CompositeChartEngine {
   private calculateMidpoint(lon1: number, lon2: number): number {
-    let diff = lon2 - lon1;
+    if (!Number.isFinite(lon1) || !Number.isFinite(lon2)) {
+      throw new RangeError("Composite chart longitudes must be finite numbers.");
+    }
+
+    const a = normalizeDegrees(lon1);
+    const b = normalizeDegrees(lon2);
+    const rawDiff = b - a;
+
+    // Exactly antipodal points have two equally short arcs and no unique
+    // geometric midpoint. Choose a stable convention by sorting the normalized
+    // endpoints, so swapping chart order cannot flip the composite point by 180°.
+    if (Math.abs(Math.abs(rawDiff) - 180) < 1e-10) {
+      return normalizeDegrees(Math.min(a, b) + 90);
+    }
+
+    let diff = rawDiff;
     if (diff > 180) diff -= 360;
     if (diff < -180) diff += 360;
-    return normalizeDegrees(lon1 + diff / 2);
+    return normalizeDegrees(a + diff / 2);
   }
 
   public calculateComposite(
