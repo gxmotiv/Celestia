@@ -231,6 +231,7 @@ export class AsteroidCalculator {
       house,
       element: signData.element,
       modality: signData.modality,
+      calculationNote: "Approximate geocentric position from fixed J2000-era Keplerian elements and a simplified Earth-orbit model. The model omits N-body perturbations and light-time/aberration corrections and has not been independently benchmarked against JPL Horizons; display precision is not ephemeris accuracy.",
     };
   }
 
