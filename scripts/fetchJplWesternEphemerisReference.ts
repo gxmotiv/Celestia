@@ -25,16 +25,16 @@ interface ReferenceFixture {
 const ROOT = process.cwd();
 const DATASET_PATH = path.join(ROOT, "data/benchmarks/western-ephemeris-reference.json");
 const RAW_DIR = path.join(ROOT, "data/benchmarks/raw");
-const API_ENDPOINT = "https://ssd-api.jpl.nasa.gov/api/horizons.api";
+const API_ENDPOINT = "https://ssd.jpl.nasa.gov/api/horizons.api";
 
-function makeQueryUrl(targetId: string, epochsUtc: string[]): string {
+export function buildJplHorizonsQueryUrl(targetId: string, epochsUtc: string[]): string {
   const utcList = epochsUtc.map((value) => {
-    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)) {
+    if (!/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$/.test(value) ||
+        !Number.isFinite(Date.parse(value))) {
       throw new Error("Invalid UTC benchmark epoch: " + value);
     }
-    return value.replace("T", " ").replace("Z", "");
-  }).join(",");
-
+    return "'" + value.replace("T", " ").replace("Z", "") + "'";
+  }).join(" ");
   const parameters: Record<string, string> = {
     format: "json",
     COMMAND: "'" + targetId + "'",
@@ -42,7 +42,7 @@ function makeQueryUrl(targetId: string, epochsUtc: string[]): string {
     MAKE_EPHEM: "'YES'",
     EPHEM_TYPE: "'OBSERVER'",
     CENTER: "'500@399'",
-    TLIST: "'" + utcList + "'",
+    TLIST: utcList,
     TLIST_TYPE: "'CAL'",
     TIME_TYPE: "'UT'",
     TIME_DIGITS: "'FRACSEC'",
@@ -89,7 +89,7 @@ async function main(): Promise<void> {
 
   // Query bodies sequentially to be polite to the public JPL service.
   for (const target of WESTERN_HORIZONS_BODIES) {
-    const url = makeQueryUrl(target.targetId, dataset.epochsUtc);
+    const url = buildJplHorizonsQueryUrl(target.targetId, dataset.epochsUtc);
     const response = await fetch(url, {
       headers: { Accept: "application/json", "User-Agent": "Celestia-Western-Ephemeris-Benchmark/1.0" },
       signal: AbortSignal.timeout(45000),
