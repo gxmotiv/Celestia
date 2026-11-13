@@ -3,6 +3,7 @@ import {
   angularSeparationArcseconds,
   buildHorizonsAstrometricUrl,
   buildMiriadeAstrometricUrl,
+  equatorialJ2000ToEclipticJ2000,
   formatAstrometricEpochFile,
   parseHorizonsAstrometricRows,
   parseMiriadeAstrometricRows,
@@ -62,5 +63,11 @@ const angle=angularSeparationArcseconds(
  {body:"Saturn",epochUtc:epochs[0],xAu:1,yAu:1e-6,zAu:0,rangeAu:Math.hypot(1,1e-6),longitudeDegrees:0,latitudeDegrees:0},
 );
 close(angle,1e-6*180/Math.PI*3600,1e-8,"Angular separation uses stable atan2 cross/dot geometry");
+
+const rotated=equatorialJ2000ToEclipticJ2000(0,1,0);
+const epsilon=84381.448/3600*Math.PI/180;
+close(rotated.yAu,Math.cos(epsilon),1e-14,"EQJ-to-ecliptic rotation uses J2000 mean obliquity");
+close(rotated.zAu,-Math.sin(epsilon),1e-14,"EQJ-to-ecliptic rotation has the correct handedness");
+close(Math.hypot(rotated.xAu,rotated.yAu,rotated.zAu),1,1e-14,"Fixed-frame coordinate rotation preserves vector norm");
 
 console.log("Astrometric J2000 harness passed: "+assertions+" assertions; parser/configuration validation only, not accuracy validation.");

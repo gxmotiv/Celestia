@@ -163,4 +163,19 @@ export function angularSeparationArcseconds(a:AstrometricVector,b:AstrometricVec
   return Math.atan2(cross,dot)*180/Math.PI*3600;
 }
 
+/**
+ * Rotates an Astronomy Engine EQJ vector (J2000 mean equator) into the
+ * fixed J2000 ecliptic plane. The IAU 1976 mean obliquity at J2000 is
+ * 84381.448 arcseconds. This is a coordinate rotation, not a correction
+ * to the underlying planetary ephemeris.
+ */
+export function equatorialJ2000ToEclipticJ2000(
+  xAu:number,yAu:number,zAu:number
+):{xAu:number;yAu:number;zAu:number}{
+  if(![xAu,yAu,zAu].every(Number.isFinite))throw new TypeError("EQJ vector components must be finite.");
+  const epsilon=(84381.448/3600)*Math.PI/180;
+  const c=Math.cos(epsilon),s=Math.sin(epsilon);
+  return {xAu,yAu:yAu*c+zAu*s,zAu:-yAu*s+zAu*c};
+}
+
 export function sha256Hex(text:string):string{return createHash("sha256").update(text).digest("hex");}
