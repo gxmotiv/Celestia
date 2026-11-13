@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  buildJplWesternHorizonsQueryUrl,
   compareEclipticCoordinates,
   parseHorizonsObserverEclipticRows,
   signedCircularDifferenceDegrees,
@@ -27,6 +28,31 @@ const output = [
   "$$EOE",
 ].join("\n");
 const parsed = parseHorizonsObserverEclipticRows(output, 2);
+const queryEpochs = [
+  "2000-01-01T12:00:00.000Z",
+  "2024-02-29T00:00:00.000Z",
+];
+const queryUrl = new URL(buildJplWesternHorizonsQueryUrl("10", queryEpochs));
+check(queryUrl.hostname === "ssd.jpl.nasa.gov",
+  "Horizons request uses the official documented API hostname");
+check(queryUrl.searchParams.get("TLIST") ===
+  "'2000-Jan-01 12:00:00.000' '2024-Feb-29 00:00:00.000'",
+  "Horizons TLIST URL contains separate individually quoted calendar times");
+check(queryUrl.searchParams.get("TLIST")?.startsWith("'") === true &&
+  queryUrl.searchParams.get("TLIST")?.endsWith("'") === true &&
+  queryUrl.searchParams.get("TLIST")?.includes("' '") === true,
+  "Horizons TLIST is a space-separated sequence of quoted epochs, not one quoted string");
+check(queryUrl.searchParams.get("CENTER") === "'500@399'" &&
+  queryUrl.searchParams.get("EPHEM_TYPE") === "'OBSERVER'" &&
+  queryUrl.searchParams.get("QUANTITIES") === "'31'",
+  "Horizons reference query fixes Earth geocenter, observer output, and quantity 31");
+assert.throws(() => buildJplWesternHorizonsQueryUrl("10", ["not-a-date"]),
+  /Invalid canonical UTC/, "Horizons query builder rejects non-canonical timestamps");
+assertions += 1;
+assert.throws(() => buildJplWesternHorizonsQueryUrl("Earth", queryEpochs),
+  /target id/, "Horizons query builder rejects non-numeric target IDs");
+assertions += 1;
+
 check(parsed.length === 2, "Horizons quantity-31 parser returns both observation rows");
 close(parsed[0].longitudeDegrees, 280.12345678, 1e-10, "Parser extracts ecliptic longitude in degrees");
 close(parsed[0].latitudeDegrees, -0.00012345, 1e-10, "Parser extracts ecliptic latitude in degrees");
