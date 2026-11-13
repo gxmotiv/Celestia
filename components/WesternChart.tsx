@@ -441,6 +441,11 @@ export function WesternChart({
                 onSelectAllGroup={selectAllGroup}
                 onDeselectAllGroup={deselectAllGroup}
               />
+              {allAvailableBodies.some((body) => body.calculationNote) && (
+                <p className="text-[11px] text-amber-200/80 bg-amber-950/20 border border-amber-700/30 rounded-lg p-3">
+                  Approximate optional positions: {allAvailableBodies.filter((body) => body.calculationNote).map((body) => body.name).join(", ")}. Their coordinates inherit the model limitations shown in each placement. Unvalidated points are not included in aspect or midpoint calculations.
+                </p>
+              )}
 
       {/* Main Wheel & Planet Detail Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -823,6 +828,12 @@ export function WesternChart({
                   )}
                 </div>
                 <p className="text-xs text-amber-300/80 mt-0.5">{selectedPlanetInfo.archetype}</p>
+                {selectedPlanet.calculationNote && (
+                  <p className="text-[11px] text-amber-200/80 mt-2 leading-relaxed">{selectedPlanet.calculationNote}</p>
+                )}
+                {selectedPlanet.motionStatus === "unknown" && (
+                  <span className="text-[10px] text-slate-400 border border-slate-700 rounded px-1.5 py-0.5 mt-2 inline-block">Motion unknown</span>
+                )}
               </div>
 
               <div className="text-right">

@@ -241,6 +241,31 @@ check(invalidHarmonicRejected, "Harmonic number zero is rejected");
 
 // 0b. Fagan-Bradley comparison is calculated at the natal epoch, not from a fixed current constant.
 const faganReferenceChart = calculateWesternChart(2026, 10, 1, 0, 0, 51.4769, 0, 0, "Placidus");
+const chironPosition = faganReferenceChart.planets.find((planet) => planet.name === "Chiron");
+check(Boolean(chironPosition && chironPosition.calculationNote?.includes("not an integrated or perturbed Chiron ephemeris")),
+  "Chiron position exposes its placeholder-model limitation");
+check(Boolean(chironPosition && chironPosition.speed === undefined && chironPosition.motionStatus === "unknown"),
+  "Chiron has no fabricated constant speed or direct/retrograde status");
+check(!faganReferenceChart.aspects.some((aspect) => aspect.planet1 === "Chiron" || aspect.planet2 === "Chiron"),
+  "Unvalidated Chiron placeholder is excluded from major-aspect calculations");
+check(!calculateAspects([
+  { ...chironPosition!, name: "Chiron", id: "Chiron" },
+  syntheticSun(chironPosition?.longitude ?? 0),
+]).some((aspect) => aspect.planet1 === "Chiron" || aspect.planet2 === "Chiron"),
+  "Direct major-aspect engine calls also ignore points with approximation notes");
+check(!new MinorAspectsEngine().calculateMinorAspects(faganReferenceChart.planets)
+  .some((aspect) => aspect.planet1 === "Chiron" || aspect.planet2 === "Chiron"),
+  "Unvalidated Chiron placeholder is excluded from minor-aspect calculations");
+check(!new MidpointCalculator().calculateNatalMidpoints(faganReferenceChart)
+  .some((midpoint) => midpoint.planet1 === "Chiron" || midpoint.planet2 === "Chiron"),
+  "Unvalidated Chiron placeholder is excluded from midpoint calculations");
+const asteroidPositions = faganReferenceChart.asteroids
+  ? Object.values(faganReferenceChart.asteroids)
+  : [];
+check(asteroidPositions.length === 4 && asteroidPositions.every((planet) =>
+  Boolean(planet.calculationNote?.includes("fixed J2000-era Keplerian elements"))),
+  "All four simplified asteroid positions disclose the fixed-element approximation");
+
 const siderealComparison = calculateSiderealComparison(faganReferenceChart);
 close(siderealComparison.faganBradleyAyanamsa, 25.1128, 0.01,
   "Fagan-Bradley ayanamsa on 2026-10-01 agrees with the Swiss Ephemeris reference near 25°06'46");

@@ -82,11 +82,12 @@ Primary historical/research references:
 | Feature | Status | Current coverage and limits |
 |---|---|---|
 | Ceres, Pallas, Juno and Vesta | Approximate | Simplified Keplerian model with fixed J2000 orbital elements; not high-precision current small-body ephemerides. |
-| Chiron | Approximate | Rough illustrative model; not a precision Chiron ephemeris. |
+| Chiron | Approximate placeholder / not precision | Current sine-formula placeholder has no integrated/perturbed orbit or measured speed. Motion is marked unknown and it is excluded from aspect/midpoint calculations. A real small-body ephemeris and independent benchmark are still required. |
 | Mean/True Lilith | Approximate | Compact mean/periodic models; True Lilith is not a complete osculating lunar-apogee solution. |
 | White Moon/Selena | Symbolic | Hypothetical and tradition-dependent; no standardized physical body/orbit. |
 | Proserpine and Hypnos | Symbolic | Hypothetical points; no verified physical orbit or standardized astronomical ephemeris represented. |
 | Vertex and East Point | Geometric | Mathematical chart angles/intersections, not physical bodies. |
+| Four major asteroids | Approximate | Ceres, Pallas, Juno and Vesta use fixed J2000-era Keplerian elements with a simplified Earth orbit; no N-body perturbations or independent JPL Horizons benchmark. UI/PDF disclose model limitations; tests verify disclosure only. |
 | Fixed stars | Approximate | 20 stored J2000 tropical longitudes; no epoch precession, proper motion, nutation or aberration. |
 | Eclipses | Partial | Global solar/lunar events are searched with Astronomy Engine. Local visibility/path for the user's coordinates is not implied by a natal-house overlay. |
 | Astrocartography | Partial | Planetary line geometry is calculated. Nearest-city ranking, distance-to-line scoring and route/locality recommendations are not implemented. |

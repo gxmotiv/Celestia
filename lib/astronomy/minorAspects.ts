@@ -406,17 +406,22 @@ export class MinorAspectsEngine {
     planets: PlanetPosition[],
     settings: AspectSettings = DEFAULT_ASPECT_SETTINGS
   ): MinorAspect[] {
-    if (!settings.useMinorAspects || !planets || planets.length < 2) {
+    if (!settings.useMinorAspects || !planets) {
       return [];
     }
+
+    // A point carrying a calculationNote is explicitly approximate or symbolic.
+    // Do not turn its placeholder longitude into a seemingly valid aspect.
+    const aspectablePlanets = planets.filter((planet) => !planet.calculationNote);
+    if (aspectablePlanets.length < 2) return [];
 
     const aspects: MinorAspect[] = [];
     const orbMultiplier = settings.minorOrbMultiplier || 1.0;
 
-    for (let i = 0; i < planets.length; i++) {
-      for (let j = i + 1; j < planets.length; j++) {
-        const p1 = planets[i];
-        const p2 = planets[j];
+    for (let i = 0; i < aspectablePlanets.length; i++) {
+      for (let j = i + 1; j < aspectablePlanets.length; j++) {
+        const p1 = aspectablePlanets[i];
+        const p2 = aspectablePlanets[j];
 
         // Skip Lunar Nodes opposing each other
         if (

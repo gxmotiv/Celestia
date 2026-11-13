@@ -226,32 +226,36 @@ export class MultiSystemBenchmarkRunner {
       notes: "True Rahu-Ketu / Nodal axis is mathematically diametric.",
     });
 
-    // 16. Chiron & Lilith Inclusion
+    // 16. Chiron placeholder metadata smoke check — not an ephemeris accuracy test.
     const chiron = chart.planets.find((p) => p.name === "Chiron");
     list.push({
       id: "W-CHI-01",
       system: "Western",
-      name: "Chiron Centaur Coordinate",
+      name: "Chiron Approximate Placeholder Metadata",
       category: "Centaurs & Asteroids",
-      classicalAuthority: "Kowal (1977) / Modern Western Ephemeris",
-      expectedFormula: "Chiron longitude computed (0° to 360°)",
-      actualResult: chiron ? `${chiron.longitude.toFixed(2)}° in ${chiron.sign}` : "Missing",
-      passed: chiron !== undefined && chiron.longitude >= 0 && chiron.longitude < 360,
-      notes: "50.7-year chaotic orbit calculated via orbital perturbation model.",
+      classicalAuthority: "Discovered by Charles T. Kowal (1977); position method is a Celestia placeholder",
+      expectedFormula: "Placeholder longitude in [0°, 360°), explicit accuracy note, and unknown motion",
+      actualResult: chiron ? `${chiron.longitude.toFixed(2)}° in ${chiron.sign}; motion ${chiron.motionStatus ?? "not marked"}` : "Missing",
+      passed: chiron !== undefined && chiron.longitude >= 0 && chiron.longitude < 360 &&
+        chiron.motionStatus === "unknown" && Boolean(chiron.calculationNote),
+      notes: "Smoke test only. The current sine-formula placeholder is not an integrated/perturbed Chiron ephemeris and is not benchmarked for longitude or retrograde accuracy.",
     });
 
-    // 17. 4 Major Asteroids (Ceres, Pallas, Juno, Vesta)
-    const hasAsteroids = chart.asteroids && chart.asteroids.ceres && chart.asteroids.pallas;
+    // 17. Four major asteroid approximation metadata smoke check.
+    const asteroidPositions = chart.asteroids ? Object.values(chart.asteroids) : [];
+    const hasAsteroids = asteroidPositions.length === 4 && asteroidPositions.every((planet) =>
+      Boolean(planet.calculationNote?.includes("fixed J2000-era Keplerian elements"))
+    );
     list.push({
       id: "W-AST-01",
       system: "Western",
-      name: "Four Major Goddess Asteroids (Asteroid Belt)",
+      name: "Four Major Asteroid Approximation Metadata",
       category: "Centaurs & Asteroids",
-      classicalAuthority: "Piazzi, Olbers, Harding (1801-1807)",
-      expectedFormula: "Ceres, Pallas, Juno, and Vesta calculated with houses",
-      actualResult: hasAsteroids ? "All 4 Asteroids verified" : "Incomplete",
-      passed: Boolean(hasAsteroids),
-      notes: "Complete sacred feminine archetype coordinates generated.",
+      classicalAuthority: "Piazzi, Olbers, Harding (1801-1807); current coordinates use a Celestia approximation",
+      expectedFormula: "Four fixed-element approximate positions with an explicit model limitation",
+      actualResult: hasAsteroids ? "4 approximate positions with model notes" : "Incomplete or missing model notes",
+      passed: hasAsteroids,
+      notes: "Smoke check only. This does not validate asteroid longitude accuracy. The model uses fixed J2000-era Keplerian elements and a simplified Earth orbit; it omits N-body perturbations and lacks an independent JPL Horizons benchmark.",
     });
 
     // 18. Part of Fortune Day/Night Diurnal/Nocturnal Invariant
