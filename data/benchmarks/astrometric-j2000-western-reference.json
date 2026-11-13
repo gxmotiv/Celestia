@@ -1,0 +1,609 @@
+{
+  "schemaVersion": 1,
+  "datasetStatus": "captured-from-imcce-inpop19-and-jpl-horizons-lt-vectors",
+  "epochsUtc": [
+    "1987-03-14T12:00:00.000Z",
+    "2000-01-01T12:00:00.000Z",
+    "2024-02-29T00:00:00.000Z",
+    "2026-11-12T23:59:59.000Z",
+    "2026-11-13T00:00:00.000Z",
+    "2035-07-01T06:30:00.000Z"
+  ],
+  "retrievedAtUtc": "2026-11-13T07:39:49.928Z",
+  "query": {
+    "miriade": "INPOP; observer 500; UTC; teph=1 astrometric J2000; tcoor=2 rectangular; rplane=2 ecliptic; xyz AU",
+    "horizons": "DE441; center 500@399; UT; VECTORS; ICRF; ECLIPTIC; VEC_CORR=LT; VEC_TABLE=1; AU-D",
+    "purpose": "Compare independent planetary theories in an inertial J2000 ecliptic vector frame using astrometric light-time correction."
+  },
+  "miriadeResponses": [
+    {
+      "body": "Saturn",
+      "responseFile": "data/benchmarks/astrometric-j2000-raw/miriade-inpop-astrometric-saturn.json",
+      "responseSha256": "951dac1ba0ca2e99767892173ac09224e346e05a4aa1f871220381742d5d9747",
+      "planetaryTheory": "INPOP19",
+      "timeScale": "UTC",
+      "coordinateMode": "rectangular",
+      "referenceFrame": {
+        "type": "astrometric J2000",
+        "plane": "ecliptic",
+        "center": "geocenter"
+      },
+      "coordinateSystem": {
+        "epoch": "J2000",
+        "equinox": "J2000",
+        "system": "ec_ICRF"
+      },
+      "units": {
+        "diameter": "km",
+        "px": "au",
+        "py": "au",
+        "pz": "au",
+        "Dobs": "au",
+        "Dhelio": "au",
+        "Phase": "deg",
+        "Elong.": "deg",
+        "VMag": "mag",
+        "vx": "au/d",
+        "vy": "au/d",
+        "vz": "au/d",
+        "RV": "km/s"
+      }
+    },
+    {
+      "body": "Uranus",
+      "responseFile": "data/benchmarks/astrometric-j2000-raw/miriade-inpop-astrometric-uranus.json",
+      "responseSha256": "135443c0e382b36da6676d5e07af61070342dab4c33fbe0a561b1a4beefa92e5",
+      "planetaryTheory": "INPOP19",
+      "timeScale": "UTC",
+      "coordinateMode": "rectangular",
+      "referenceFrame": {
+        "type": "astrometric J2000",
+        "plane": "ecliptic",
+        "center": "geocenter"
+      },
+      "coordinateSystem": {
+        "epoch": "J2000",
+        "equinox": "J2000",
+        "system": "ec_ICRF"
+      },
+      "units": {
+        "diameter": "km",
+        "px": "au",
+        "py": "au",
+        "pz": "au",
+        "Dobs": "au",
+        "Dhelio": "au",
+        "Phase": "deg",
+        "Elong.": "deg",
+        "VMag": "mag",
+        "vx": "au/d",
+        "vy": "au/d",
+        "vz": "au/d",
+        "RV": "km/s"
+      }
+    },
+    {
+      "body": "Neptune",
+      "responseFile": "data/benchmarks/astrometric-j2000-raw/miriade-inpop-astrometric-neptune.json",
+      "responseSha256": "b96e85b3ba88de72242b571a184f6bc766ed9beb3b8773eb13f8d453193cdd20",
+      "planetaryTheory": "INPOP19",
+      "timeScale": "UTC",
+      "coordinateMode": "rectangular",
+      "referenceFrame": {
+        "type": "astrometric J2000",
+        "plane": "ecliptic",
+        "center": "geocenter"
+      },
+      "coordinateSystem": {
+        "epoch": "J2000",
+        "equinox": "J2000",
+        "system": "ec_ICRF"
+      },
+      "units": {
+        "diameter": "km",
+        "px": "au",
+        "py": "au",
+        "pz": "au",
+        "Dobs": "au",
+        "Dhelio": "au",
+        "Phase": "deg",
+        "Elong.": "deg",
+        "VMag": "mag",
+        "vx": "au/d",
+        "vy": "au/d",
+        "vz": "au/d",
+        "RV": "km/s"
+      }
+    }
+  ],
+  "horizonsResponses": [
+    {
+      "body": "Saturn",
+      "responseFile": "data/benchmarks/astrometric-j2000-raw/horizons-astrometric-vectors-saturn.json",
+      "responseSha256": "8ec6fa55fd7a98531e87f8a4134e835e451017dac1acbaaa55ac3795f0324eea",
+      "signature": {
+        "source": "NASA/JPL Horizons API",
+        "version": "1.2"
+      },
+      "query": {
+        "center": "500@399",
+        "referenceSystem": "ICRF",
+        "referencePlane": "ECLIPTIC (J2000 fixed ecliptic)",
+        "vectorCorrection": "LT (astrometric light-time; no stellar aberration)",
+        "vectorTable": "1",
+        "units": "AU-D",
+        "timeScale": "UT"
+      }
+    },
+    {
+      "body": "Uranus",
+      "responseFile": "data/benchmarks/astrometric-j2000-raw/horizons-astrometric-vectors-uranus.json",
+      "responseSha256": "86ddbe6fe03c4c1fe28c18b9868e854e25bf57aad445676e1065387fc6aa8395",
+      "signature": {
+        "version": "1.2",
+        "source": "NASA/JPL Horizons API"
+      },
+      "query": {
+        "center": "500@399",
+        "referenceSystem": "ICRF",
+        "referencePlane": "ECLIPTIC (J2000 fixed ecliptic)",
+        "vectorCorrection": "LT (astrometric light-time; no stellar aberration)",
+        "vectorTable": "1",
+        "units": "AU-D",
+        "timeScale": "UT"
+      }
+    },
+    {
+      "body": "Neptune",
+      "responseFile": "data/benchmarks/astrometric-j2000-raw/horizons-astrometric-vectors-neptune.json",
+      "responseSha256": "385948053b7f56956b10c8fe57eb9c7dc685c6175462c634d94e177db8c7b756",
+      "signature": {
+        "version": "1.2",
+        "source": "NASA/JPL Horizons API"
+      },
+      "query": {
+        "center": "500@399",
+        "referenceSystem": "ICRF",
+        "referencePlane": "ECLIPTIC (J2000 fixed ecliptic)",
+        "vectorCorrection": "LT (astrometric light-time; no stellar aberration)",
+        "vectorTable": "1",
+        "units": "AU-D",
+        "timeScale": "UT"
+      }
+    }
+  ],
+  "fixtures": [
+    {
+      "body": "Saturn",
+      "epochUtc": "1987-03-14T12:00:00.000Z",
+      "miriade": {
+        "body": "Saturn",
+        "epochUtc": "1987-03-14T12:00:00.000Z",
+        "xAu": -1.5340740524047303,
+        "yAu": -9.806906159418373,
+        "zAu": 0.26935827097291654,
+        "rangeAu": 9.929821020342764,
+        "longitudeDegrees": 261.10938931596655,
+        "latitudeDegrees": 1.5544072132879239
+      },
+      "horizons": {
+        "body": "Saturn",
+        "epochUtc": "1987-03-14T12:00:00.000Z",
+        "xAu": -1.53407521980835,
+        "yAu": -9.80690732185455,
+        "zAu": 0.2693610368193775,
+        "rangeAu": 9.929822423771276,
+        "longitudeDegrees": 261.1093836954374,
+        "latitudeDegrees": 1.554422958547442
+      }
+    },
+    {
+      "body": "Saturn",
+      "epochUtc": "2000-01-01T12:00:00.000Z",
+      "miriade": {
+        "body": "Saturn",
+        "epochUtc": "2000-01-01T12:00:00.000Z",
+        "xAu": 6.58376779194293,
+        "yAu": 5.602559188286181,
+        "zAu": -0.369076261084889,
+        "rangeAu": 8.652796373599195,
+        "longitudeDegrees": 40.39663653279558,
+        "latitudeDegrees": -2.444635077056587
+      },
+      "horizons": {
+        "body": "Saturn",
+        "epochUtc": "2000-01-01T12:00:00.000Z",
+        "xAu": 6.583769334635413,
+        "yAu": 5.602557929164104,
+        "zAu": -0.3690769367811774,
+        "rangeAu": 8.652796760966304,
+        "longitudeDegrees": 40.396623551169,
+        "latitudeDegrees": -2.444639445848136
+      }
+    },
+    {
+      "body": "Saturn",
+      "epochUtc": "2024-02-29T00:00:00.000Z",
+      "miriade": {
+        "body": "Saturn",
+        "epochUtc": "2024-02-29T00:00:00.000Z",
+        "xAu": 10.026282013253466,
+        "yAu": -3.7565676854208343,
+        "zAu": -0.3027703101068546,
+        "rangeAu": 10.71119982285459,
+        "longitudeDegrees": 339.4604298645288,
+        "latitudeDegrees": -1.6197785655537644
+      },
+      "horizons": {
+        "body": "Saturn",
+        "epochUtc": "2024-02-29T00:00:00.000Z",
+        "xAu": 10.02628149391253,
+        "yAu": -3.756565992980524,
+        "zAu": -0.3027703404924744,
+        "rangeAu": 10.711198744018922,
+        "longitudeDegrees": 339.4604373704512,
+        "latitudeDegrees": -1.6197788913440305
+      }
+    },
+    {
+      "body": "Saturn",
+      "epochUtc": "2026-11-12T23:59:59.000Z",
+      "miriade": {
+        "body": "Saturn",
+        "epochUtc": "2026-11-12T23:59:59.000Z",
+        "xAu": 8.564986839624321,
+        "yAu": 1.2399317087110948,
+        "zAu": -0.4009323380737977,
+        "rangeAu": 8.663554521379684,
+        "longitudeDegrees": 8.237339687257304,
+        "latitudeDegrees": -2.6524838382346614
+      },
+      "horizons": {
+        "body": "Saturn",
+        "epochUtc": "2026-11-12T23:59:59.000Z",
+        "xAu": 8.564986847996733,
+        "yAu": 1.239933297453421,
+        "zAu": -0.4009334531120743,
+        "rangeAu": 8.663554808640336,
+        "longitudeDegrees": 8.23735008909847,
+        "latitudeDegrees": -2.652491132354901
+      }
+    },
+    {
+      "body": "Saturn",
+      "epochUtc": "2026-11-13T00:00:00.000Z",
+      "miriade": {
+        "body": "Saturn",
+        "epochUtc": "2026-11-13T00:00:00.000Z",
+        "xAu": 8.564986978720311,
+        "yAu": 1.2399316450410516,
+        "zAu": -0.40093233846996873,
+        "rangeAu": 8.66355464979899,
+        "longitudeDegrees": 8.237339138138225,
+        "latitudeDegrees": -2.652483801511812
+      },
+      "horizons": {
+        "body": "Saturn",
+        "epochUtc": "2026-11-13T00:00:00.000Z",
+        "xAu": 8.564986987083326,
+        "yAu": 1.239933233785259,
+        "zAu": -0.4009334535074415,
+        "rangeAu": 8.663554937050568,
+        "longitudeDegrees": 8.23734954000048,
+        "latitudeDegrees": -2.6524910956294034
+      }
+    },
+    {
+      "body": "Saturn",
+      "epochUtc": "2035-07-01T06:30:00.000Z",
+      "miriade": {
+        "body": "Saturn",
+        "epochUtc": "2035-07-01T06:30:00.000Z",
+        "xAu": -5.672742412834155,
+        "yAu": 8.243649000548315,
+        "zAu": 0.09383848151993313,
+        "rangeAu": 10.007325366311555,
+        "longitudeDegrees": 124.53321656005079,
+        "latitudeDegrees": 0.5372692047691622
+      },
+      "horizons": {
+        "body": "Saturn",
+        "epochUtc": "2035-07-01T06:30:00.000Z",
+        "xAu": -5.67273919949121,
+        "yAu": 8.243648777727328,
+        "zAu": 0.09383689976179764,
+        "rangeAu": 10.00732334641618,
+        "longitudeDegrees": 124.53320212668905,
+        "latitudeDegrees": 0.5372602566431307
+      }
+    },
+    {
+      "body": "Uranus",
+      "epochUtc": "1987-03-14T12:00:00.000Z",
+      "miriade": {
+        "body": "Uranus",
+        "epochUtc": "1987-03-14T12:00:00.000Z",
+        "xAu": -1.0830719412648655,
+        "yAu": -19.196165743120886,
+        "zAu": -0.043953105408394144,
+        "rangeAu": 19.22674584901975,
+        "longitudeDegrees": 266.77072342477396,
+        "latitudeDegrees": -0.13098054395835454
+      },
+      "horizons": {
+        "body": "Uranus",
+        "epochUtc": "1987-03-14T12:00:00.000Z",
+        "xAu": -1.083072880080489,
+        "yAu": -19.19616568704814,
+        "zAu": -0.04395104644280378,
+        "rangeAu": 19.226745841214356,
+        "longitudeDegrees": 266.77072062212187,
+        "latitudeDegrees": -0.13097440826980125
+      }
+    },
+    {
+      "body": "Uranus",
+      "epochUtc": "2000-01-01T12:00:00.000Z",
+      "miriade": {
+        "body": "Uranus",
+        "epochUtc": "2000-01-01T12:00:00.000Z",
+        "xAu": 14.608686458913596,
+        "yAu": -14.701879112209038,
+        "zAu": -0.23813435696414054,
+        "rangeAu": 20.72717244239601,
+        "longitudeDegrees": 314.8178292496664,
+        "latitudeDegrees": -0.6582853416233886
+      },
+      "horizons": {
+        "body": "Uranus",
+        "epochUtc": "2000-01-01T12:00:00.000Z",
+        "xAu": 14.6086838871544,
+        "yAu": -14.70187981155025,
+        "zAu": -0.2381347227043184,
+        "rangeAu": 20.727171130046447,
+        "longitudeDegrees": 314.8178228438035,
+        "latitudeDegrees": -0.6582863943811484
+      }
+    },
+    {
+      "body": "Uranus",
+      "epochUtc": "2024-02-29T00:00:00.000Z",
+      "miriade": {
+        "body": "Uranus",
+        "epochUtc": "2024-02-29T00:00:00.000Z",
+        "xAu": 13.015648127222843,
+        "yAu": 15.087701140121558,
+        "zAu": -0.09937837920514525,
+        "rangeAu": 19.926256495577846,
+        "longitudeDegrees": 49.21677384101986,
+        "latitudeDegrees": -0.28575288636783025
+      },
+      "horizons": {
+        "body": "Uranus",
+        "epochUtc": "2024-02-29T00:00:00.000Z",
+        "xAu": 13.01563296080163,
+        "yAu": 15.08770098653469,
+        "zAu": -0.09938114529701281,
+        "rangeAu": 19.926246486516877,
+        "longitudeDegrees": 49.216806573410906,
+        "latitudeDegrees": -0.2857609836029396
+      }
+    },
+    {
+      "body": "Uranus",
+      "epochUtc": "2026-11-12T23:59:59.000Z",
+      "miriade": {
+        "body": "Uranus",
+        "epochUtc": "2026-11-12T23:59:59.000Z",
+        "xAu": 8.146109391995456,
+        "yAu": 16.576501066062324,
+        "zAu": -0.04938928766546713,
+        "rangeAu": 18.47002775096069,
+        "longitudeDegrees": 63.82933788120897,
+        "latitudeDegrees": -0.15321044163658418
+      },
+      "horizons": {
+        "body": "Uranus",
+        "epochUtc": "2026-11-12T23:59:59.000Z",
+        "xAu": 8.146091702937836,
+        "yAu": 16.57649893918927,
+        "zAu": -0.04939129667814114,
+        "rangeAu": 18.470018045844007,
+        "longitudeDegrees": 63.82938421925934,
+        "latitudeDegrees": -0.15321675431517662
+      }
+    },
+    {
+      "body": "Uranus",
+      "epochUtc": "2026-11-13T00:00:00.000Z",
+      "miriade": {
+        "body": "Uranus",
+        "epochUtc": "2026-11-13T00:00:00.000Z",
+        "xAu": 8.146109507376398,
+        "yAu": 16.576500957883418,
+        "zAu": -0.049389287053918984,
+        "rangeAu": 18.470027704758696,
+        "longitudeDegrees": 63.82933741197047,
+        "latitudeDegrees": -0.15321044012274737
+      },
+      "horizons": {
+        "body": "Uranus",
+        "epochUtc": "2026-11-13T00:00:00.000Z",
+        "xAu": 8.146091818320803,
+        "yAu": 16.57649883100973,
+        "zAu": -0.04939129606708523,
+        "rangeAu": 18.47001799964221,
+        "longitudeDegrees": 63.82938375001413,
+        "latitudeDegrees": -0.15321675280288008
+      }
+    },
+    {
+      "body": "Uranus",
+      "epochUtc": "2035-07-01T06:30:00.000Z",
+      "miriade": {
+        "body": "Uranus",
+        "epochUtc": "2035-07-01T06:30:00.000Z",
+        "xAu": -3.5142696352304332,
+        "yAu": 19.560538517282136,
+        "zAu": 0.11219672332953756,
+        "rangeAu": 19.87403698949729,
+        "longitudeDegrees": 100.18516947414781,
+        "latitudeDegrees": 0.32345883585991714
+      },
+      "horizons": {
+        "body": "Uranus",
+        "epochUtc": "2035-07-01T06:30:00.000Z",
+        "xAu": -3.514291971158403,
+        "yAu": 19.5605238562489,
+        "zAu": 0.1121957402318093,
+        "rangeAu": 19.87402650379527,
+        "longitudeDegrees": 100.1852403279135,
+        "latitudeDegrees": 0.32345617225678325
+      }
+    },
+    {
+      "body": "Neptune",
+      "epochUtc": "1987-03-14T12:00:00.000Z",
+      "miriade": {
+        "body": "Neptune",
+        "epochUtc": "1987-03-14T12:00:00.000Z",
+        "xAu": 4.234002767569246,
+        "yAu": -30.169270168396817,
+        "zAu": 0.5441140642315307,
+        "rangeAu": 30.469783426279825,
+        "longitudeDegrees": 277.98880385347223,
+        "latitudeDegrees": 1.0232135942513003
+      },
+      "horizons": {
+        "body": "Neptune",
+        "epochUtc": "1987-03-14T12:00:00.000Z",
+        "xAu": 4.23400243809679,
+        "yAu": -30.1692698351699,
+        "zAu": 0.5441202497525047,
+        "rangeAu": 30.46978316101532,
+        "longitudeDegrees": 277.98880332694165,
+        "latitudeDegrees": 1.0232252363498777
+      }
+    },
+    {
+      "body": "Neptune",
+      "epochUtc": "2000-01-01T12:00:00.000Z",
+      "miriade": {
+        "body": "Neptune",
+        "epochUtc": "2000-01-01T12:00:00.000Z",
+        "xAu": 16.988734249666347,
+        "yAu": -25.959316187095364,
+        "zAu": 0.1272409403561543,
+        "rangeAu": 31.0244964272473,
+        "longitudeDegrees": 303.2022156143196,
+        "latitudeDegrees": 0.23498815908673565
+      },
+      "horizons": {
+        "body": "Neptune",
+        "epochUtc": "2000-01-01T12:00:00.000Z",
+        "xAu": 16.98873433562863,
+        "yAu": -25.95931826167689,
+        "zAu": 0.1272437534038784,
+        "rangeAu": 31.024498221734046,
+        "longitudeDegrees": 303.2022136491261,
+        "latitudeDegrees": 0.23499334065103045
+      }
+    },
+    {
+      "body": "Neptune",
+      "epochUtc": "2024-02-29T00:00:00.000Z",
+      "miriade": {
+        "body": "Neptune",
+        "epochUtc": "2024-02-29T00:00:00.000Z",
+        "xAu": 30.780158415428776,
+        "yAu": -1.951067010473251,
+        "zAu": -0.6548611002096946,
+        "rangeAu": 30.84888421999758,
+        "longitudeDegrees": 356.3730353534975,
+        "latitudeDegrees": -1.2163680056353872
+      },
+      "horizons": {
+        "body": "Neptune",
+        "epochUtc": "2024-02-29T00:00:00.000Z",
+        "xAu": 30.78015906264012,
+        "yAu": -1.951073228969612,
+        "zAu": -0.6548648539826387,
+        "rangeAu": 30.848885338747824,
+        "longitudeDegrees": 356.37302390045045,
+        "latitudeDegrees": -1.2163749349880824
+      }
+    },
+    {
+      "body": "Neptune",
+      "epochUtc": "2026-11-12T23:59:59.000Z",
+      "miriade": {
+        "body": "Neptune",
+        "epochUtc": "2026-11-12T23:59:59.000Z",
+        "xAu": 29.19697077879705,
+        "yAu": 0.7542131384814292,
+        "zAu": -0.7185724407282412,
+        "rangeAu": 29.215548710725272,
+        "longitudeDegrees": 1.4797295920915303,
+        "latitudeDegrees": -1.4093632362515889
+      },
+      "horizons": {
+        "body": "Neptune",
+        "epochUtc": "2026-11-12T23:59:59.000Z",
+        "xAu": 29.19697203974831,
+        "yAu": 0.7542067699854708,
+        "zAu": -0.7185769261641802,
+        "rangeAu": 29.215549916791776,
+        "longitudeDegrees": 1.4797170390892234,
+        "latitudeDegrees": -1.4093719772881346
+      }
+    },
+    {
+      "body": "Neptune",
+      "epochUtc": "2026-11-13T00:00:00.000Z",
+      "miriade": {
+        "body": "Neptune",
+        "epochUtc": "2026-11-13T00:00:00.000Z",
+        "xAu": 29.196970933049823,
+        "yAu": 0.7542130483555601,
+        "zAu": -0.7185724414194417,
+        "rangeAu": 29.215548862570312,
+        "longitudeDegrees": 1.4797294075333411,
+        "latitudeDegrees": -1.4093632302810306
+      },
+      "horizons": {
+        "body": "Neptune",
+        "epochUtc": "2026-11-13T00:00:00.000Z",
+        "xAu": 29.19697219400609,
+        "yAu": 0.7542066798598419,
+        "zAu": -0.7185769268588156,
+        "rangeAu": 29.215550068641935,
+        "longitudeDegrees": 1.4797168545313752,
+        "latitudeDegrees": -1.4093719713240223
+      }
+    },
+    {
+      "body": "Neptune",
+      "epochUtc": "2035-07-01T06:30:00.000Z",
+      "miriade": {
+        "body": "Neptune",
+        "epochUtc": "2035-07-01T06:30:00.000Z",
+        "xAu": 27.48760643668376,
+        "yAu": 12.197226590708919,
+        "zAu": -0.8675418568064948,
+        "rangeAu": 30.084771446637692,
+        "longitudeDegrees": 23.928560314659876,
+        "latitudeDegrees": -1.6524432802621336
+      },
+      "horizons": {
+        "body": "Neptune",
+        "epochUtc": "2035-07-01T06:30:00.000Z",
+        "xAu": 27.4876098575381,
+        "yAu": 12.19721908127775,
+        "zAu": -0.8675491809503038,
+        "rangeAu": 30.084771738842882,
+        "longitudeDegrees": 23.928544593325455,
+        "latitudeDegrees": -1.65245721868031
+      }
+    }
+  ]
+}
