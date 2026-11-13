@@ -199,7 +199,7 @@ export class AlmutenFigurisCalculator {
     // Half-day samples keep each phase increment well below 180°, making the
     // unwrapped phase crossing unambiguous before the local bisection.
     const searchStart = birthJulianDay - 35;
-    const stepDays = 0.5;
+    const stepDays = 1;
     let previousJd = searchStart;
     let previousPhase = phaseAngle(previousJd);
     let previousUnwrappedPhase = previousPhase;
@@ -237,15 +237,13 @@ export class AlmutenFigurisCalculator {
           if (!(lowError < 0 && highError > 0)) {
             throw new RangeError("Could not bracket the pre-natal syzygy phase crossing.");
           }
-          for (let iteration = 0; iteration < 48 && high - low > 1e-8; iteration++) {
+          for (let iteration = 0; iteration < 32 && high - low > 1e-7; iteration++) {
             const middle = low + (high - low) / 2;
             const middleError = phaseError(middle);
             if (middleError < 0) {
               low = middle;
-              lowError = middleError;
             } else {
               high = middle;
-              highError = middleError;
             }
           }
         }
