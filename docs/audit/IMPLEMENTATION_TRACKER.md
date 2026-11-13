@@ -55,7 +55,7 @@ Policy: keep changes on isolated branches; do not merge or deploy until the owne
 
 | Item | Current status | Evidence / next acceptance gate |
 |---|---|---|
-| Synastry | Audit required | Verify aspect orbs, weights, house overlays, duplicated transformations and interpretation labels. |
+| Synastry | Partial / chart-order scoring corrected on follow-on branch | Sun–Venus, Sun–Mars and Sun–Jupiter score contributions now use order-independent planet-pair matching, with reversal regression fixtures. Continue auditing aspect orbs/weights and interpretation labels. House overlays currently select Sun, Moon, Venus, Mars, Jupiter and Saturn only; confirm whether omitting Mercury and outer planets is intended before expanding. Independent aspect and overlay fixtures remain open. |
 | Composite chart | Audit required | Independently verify midpoint conventions, circular longitude handling, time/date handling and house calculations. |
 | Davison chart | Partial / UTC integration corrected on follow-on branch | Engine accepts exact resolver-supplied UTC instants and the relationship screen passes them when available; legacy fixed-offset conversion remains for older callers. Strict local date/time and coordinate validation added. Independent fixtures for temporal/geographic midpoint, longitude wrap, antipodal handling and historical timezone seconds are still required. |
 | Numerology | Audit required | Verify name normalization, master-number rules, date conventions, and explain interpretive/non-empirical status. |

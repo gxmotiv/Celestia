@@ -632,6 +632,11 @@ export class SynastryEngine {
     let valuesTotal = 70;
     let saturnTotal = 70;
 
+    // Synastry is a cross-chart relationship: swapping chart 1 and chart 2
+    // must not remove a contribution simply because its planet order reversed.
+    const hasPlanetPair = (left: string, right: string, a: string, b: string): boolean =>
+      (left === a && right === b) || (left === b && right === a);
+
     aspects.forEach((asp) => {
       const isHarmonious = asp.nature === "Harmonious";
       const isChallenging = asp.nature === "Challenging";
@@ -646,20 +651,18 @@ export class SynastryEngine {
         mentalTotal += isHarmonious ? weight * 2.2 : isChallenging ? -weight * 1.4 : 0;
         communicationTotal += isHarmonious ? weight * 2.0 : isChallenging ? -weight * 1.5 : 0;
       }
-      // Venus / Mars / Sun contacts
+      // Venus / Mars / Sun contacts (order-independent across the two charts)
       if (
-        (asp.planet1 === "Venus" && asp.planet2 === "Mars") ||
-        (asp.planet1 === "Mars" && asp.planet2 === "Venus") ||
-        (asp.planet1 === "Sun" && asp.planet2 === "Venus") ||
-        (asp.planet1 === "Sun" && asp.planet2 === "Mars")
+        hasPlanetPair(asp.planet1, asp.planet2, "Venus", "Mars") ||
+        hasPlanetPair(asp.planet1, asp.planet2, "Sun", "Venus") ||
+        hasPlanetPair(asp.planet1, asp.planet2, "Sun", "Mars")
       ) {
         physicalTotal += isHarmonious ? weight * 2.6 : isChallenging ? weight * 0.8 : 0;
       }
-      // Venus / Jupiter contacts
+      // Venus / Jupiter / Sun contacts (order-independent across the two charts)
       if (
-        (asp.planet1 === "Venus" && asp.planet2 === "Jupiter") ||
-        (asp.planet1 === "Jupiter" && asp.planet2 === "Venus") ||
-        (asp.planet1 === "Sun" && asp.planet2 === "Jupiter")
+        hasPlanetPair(asp.planet1, asp.planet2, "Venus", "Jupiter") ||
+        hasPlanetPair(asp.planet1, asp.planet2, "Sun", "Jupiter")
       ) {
         valuesTotal += isHarmonious ? weight * 2.4 : isChallenging ? -weight * 0.8 : 0;
       }
