@@ -3,7 +3,7 @@ import { isAngularAspectApplying } from "../lib/astronomy/ephemeris";
 let passed = 0;
 let failed = 0;
 
-function assert(name: string, actual: boolean, expected: boolean) {
+function assert(name: string, actual: boolean | null, expected: boolean | null) {
   const ok = actual === expected;
   if (ok) passed++;
   else failed++;
@@ -25,9 +25,9 @@ assert("Direct planet approaching negative sextile branch", isAngularAspectApply
 assert("Direct planet separating from negative sextile branch", isAngularAspectApplying(305, 0, 60, 1), false);
 
 // Stationary and exact aspects have no inferable applying direction at this instant.
-assert("Stationary planet is not labelled applying", isAngularAspectApplying(55, 0, 60, 0), false);
-assert("Exact aspect has no inferred direction", isAngularAspectApplying(60, 0, 60, 1), false);
-assert("Non-finite motion is treated as unknown", isAngularAspectApplying(55, 0, 60, Number.NaN), false);
+assert("Stationary planet has indeterminate phase", isAngularAspectApplying(55, 0, 60, 0), null);
+assert("Exact aspect has no inferred direction", isAngularAspectApplying(60, 0, 60, 1), null);
+assert("Non-finite motion is treated as unknown", isAngularAspectApplying(55, 0, 60, Number.NaN), null);
 
 console.log(`Transit aspect direction: ${passed}/${passed + failed} passed`);
 if (failed > 0) process.exit(1);
