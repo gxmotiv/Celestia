@@ -644,10 +644,14 @@ export function calculateAspects(planets: PlanetPosition[]): AspectData[] {
 
         if (orbDiff <= maxOrb) {
           // Compare the signed angular error to the nearest aspect branch.
-          const relativeSpeed = (p1.speed ?? 0) - (p2.speed ?? 0);
+          const hasInstantaneousSpeeds =
+            typeof p1.speed === "number" && Number.isFinite(p1.speed) &&
+            typeof p2.speed === "number" && Number.isFinite(p2.speed);
+          const relativeSpeed = hasInstantaneousSpeeds ? p1.speed! - p2.speed! : Number.NaN;
           const isAngleWithoutSpeed = ["Ascendant", "Midheaven", "Descendant", "Imum Coeli"].includes(p1.name) ||
             ["Ascendant", "Midheaven", "Descendant", "Imum Coeli"].includes(p2.name);
-          const isApplying = isAngleWithoutSpeed || Math.abs(relativeSpeed) < 1e-12
+          const isApplying = isAngleWithoutSpeed || !hasInstantaneousSpeeds ||
+            Math.abs(relativeSpeed) < 1e-12
             ? null
             : isAngularAspectApplying(p1.longitude, p2.longitude, asp.angle, relativeSpeed);
 
