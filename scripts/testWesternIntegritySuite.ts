@@ -324,7 +324,7 @@ if (belowPolarFallback.houseSystemUsed === "O") {
     "Numerical Placidus fallback is disclosed to the chart user");
 }
 const polarAuto = calculateWesternChart(2000, 1, 1, 12, 0, 70, 0, 0, "Auto");
-check(polarAuto.houseSystem === "Porphyry", "Auto switches to Porphyry at polar latitude where Placidus is undefined");
+check(polarAuto.houseSystem === "Porphyry", "Auto selects Porphyry at Celestia's conservative polar-latitude threshold");
 check(Boolean(
   polarAuto.houseSystemNote &&
   polarAuto.houseSystemNote.includes("Celestia's conservative policy") &&
