@@ -1,0 +1,149 @@
+{
+  "sso": {
+    "num": "7",
+    "name": "Uranus",
+    "type": "planet",
+    "parameters": {
+      "physical_model": "",
+      "diameter": 50724.0
+    }
+  },
+  "coosys": {
+    "epoch": "J2000",
+    "equinox": "J2000",
+    "system": "ec_ICRF"
+  },
+  "ephemeris": {
+    "time_scale": "UTC",
+    "planetary_theory": "INPOP19",
+    "coordinates": "rectangular",
+    "reference_frame": {
+      "type": "apparent (true equator; equinoxe of the date)",
+      "plane": "ecliptic",
+      "center": "geocenter"
+    }
+  },
+  "data": [
+    {
+      "Date": "1987-03-14T12:00:00.000",
+      "px": -1.1434078204063955,
+      "py": -19.192665633551556,
+      "pz": -0.44276152958870441E-1,
+      "Dobs": 19.226745849019753,
+      "Dhelio": 19.196709805392679,
+      "Phase": 2.963428213173104,
+      "Elong.": 86.782002312965929,
+      "VMag": 5.7461007375213153,
+      "vx": 0.61416187066029842E-2,
+      "vy": 0.16531916072292128E-1,
+      "vz": -0.52470656852890429E-4,
+      "RV": -29.208596498684685
+    },
+    {
+      "Date": "2000-01-01T12:00:00.000",
+      "px": 14.606468785744122,
+      "py": -14.704088814432664,
+      "pz": -0.23773768144970209,
+      "Dobs": 20.72717244239605,
+      "Dhelio": 19.924015361745305,
+      "Phase": 1.60439767756806,
+      "Elong.": 34.445810839365812,
+      "VMag": 5.9804218025889346,
+      "vx": 0.19887283096700206E-1,
+      "vy": 0.5830630188395006E-2,
+      "vz": -0.25043722481194863E-4,
+      "RV": 17.105969995856796
+    },
+    {
+      "Date": "2024-02-29T00:00:00.000",
+      "px": 12.927379996294121,
+      "py": 15.163409093048751,
+      "pz": -0.9782144866846032E-1,
+      "Dobs": 19.926256495577853,
+      "Dhelio": 19.603985687182892,
+      "Phase": 2.7175870152002659,
+      "Elong.": 69.665705911179387,
+      "VMag": 5.8675229729678087,
+      "vx": 0.3053195261333283E-2,
+      "vy": 0.18447428223740299E-1,
+      "vz": 0.49192559448070321E-4,
+      "RV": 27.733468701696694
+    },
+    {
+      "Date": "2026-11-12T23:59:59.000",
+      "px": 8.0350692047012711,
+      "py": 16.630613598109061,
+      "pz": -0.47742510502988722E-1,
+      "Dobs": 18.470027750960686,
+      "Dhelio": 19.433501385446245,
+      "Phase": 0.69105842888084368,
+      "Elong.": 166.40372579704936,
+      "VMag": 5.6696949250722479,
+      "vx": 0.10030172675716341E-1,
+      "vy": -0.9280608557914025E-2,
+      "vz": 0.51989587226441199E-4,
+      "RV": -6.9117163743618661
+    },
+    {
+      "Date": "2026-11-13T00:00:00.000",
+      "px": 8.0350693204934025,
+      "py": 16.63061349085374,
+      "pz": -0.477425099167057E-1,
+      "Dobs": 18.470027704758699,
+      "Dhelio": 19.433501383342843,
+      "Phase": 0.69105782755164291,
+      "Elong.": 166.40373791181176,
+      "VMag": 5.6696949153575655,
+      "vx": 0.10030174889555894E-1,
+      "vy": -0.92806058466097206E-2,
+      "vz": 0.51989588575409012E-4,
+      "RV": -6.9117102944014723
+    },
+    {
+      "Date": "2035-07-01T06:30:00.000",
+      "px": -3.6809517638523537,
+      "py": 19.529853999074895,
+      "pz": 0.11288555175407922,
+      "Dobs": 19.874036989519372,
+      "Dhelio": 18.857686299572482,
+      "Phase": 0.81691995304412776E-1,
+      "Elong.": 1.4158739921420165,
+      "VMag": 5.7594113060632184,
+      "vx": -0.20601062254702172E-1,
+      "vy": -0.36221571146405835E-2,
+      "vz": 0.47134031571977129E-4,
+      "RV": 0.44751240089675259
+    }
+  ],
+  "datacol": {
+    "Date": "Date",
+    "IAU_code": "IAU code of the observatory",
+    "px": "X-component of position vector of the target",
+    "py": "Y-component of position vector of the target",
+    "pz": "Z-component of position vector of the target",
+    "Dobs": "Range of target center to observer",
+    "Dhelio": "Heliocentric range",
+    "Phase": "Phase angle",
+    "Elong.": "Sun elongation",
+    "VMag": "Apparent magnitude",
+    "vx": "X-component of velocity vector of the target",
+    "vy": "Y-component of velocity vector of the target",
+    "vz": "Z-component of velocity vector of the target",
+    "RV": "Radial velocity of target wrt observer"
+  },
+  "unit": {
+    "diameter": "km",
+    "px": "au",
+    "py": "au",
+    "pz": "au",
+    "Dobs": "au",
+    "Dhelio": "au",
+    "Phase": "deg",
+    "Elong.": "deg",
+    "VMag": "mag",
+    "vx": "au/d",
+    "vy": "au/d",
+    "vz": "au/d",
+    "RV": "km/s"
+  }
+}
