@@ -59,8 +59,8 @@ export interface AlmutenFigurisResult {
   sanFormatted: string;
   sanUtcInstant: string;
   sanDaysBeforeBirth: number;
-  dayRuler: string;
-  hourRuler: string;
+  dayRuler: string | null;
+  hourRuler: string | null;
   points: AlmutenPointAnalysis[];
   scores: AlmutenCandidateScore[];
   significance: string;
@@ -292,8 +292,8 @@ export class AlmutenFigurisCalculator {
     partOfFortune: number;
     planets: { name: string; longitude: number; house: number }[];
     isDayChart: boolean;
-    dayRuler: string;
-    hourRuler: string;
+    dayRuler: string | null;
+    hourRuler: string | null;
     julianDay: number;
   }): AlmutenFigurisResult {
     const { ascendant, sun, moon, partOfFortune, planets, isDayChart, dayRuler, hourRuler, julianDay } = params;
@@ -404,10 +404,10 @@ export class AlmutenFigurisCalculator {
       scoresMap[pName].accidental = hScore;
 
       // 4. Day and Hour Ruler Bonuses
-      if (pName === dayRuler) {
+      if (dayRuler !== null && pName === dayRuler) {
         scoresMap[pName].dayHourBonus += 7;
       }
-      if (pName === hourRuler) {
+      if (hourRuler !== null && pName === hourRuler) {
         scoresMap[pName].dayHourBonus += 6;
       }
     });
