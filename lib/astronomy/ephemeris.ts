@@ -42,6 +42,18 @@ export interface PlanetPosition {
   motionStatus?: "unknown";
 }
 
+/**
+ * Return only points with a calculation model suitable for derived Western
+ * geometry. Approximate/symbolic placeholders remain visible in the natal
+ * chart, but must not silently generate aspects, harmonics, declinations,
+ * transit contacts, or specialist contacts.
+ */
+export function filterCalculationReadyPoints(
+  points: readonly PlanetPosition[]
+): PlanetPosition[] {
+  return points.filter((point) => !point.calculationNote);
+}
+
 export interface HouseCusp {
   house: number;
   longitude: number;
@@ -613,7 +625,7 @@ export function formatPoint(
 export function calculateAspects(planets: PlanetPosition[]): AspectData[] {
   const aspects: AspectData[] = [];
   // Refuse to derive aspects from explicitly approximate/symbolic placeholder positions.
-  const aspectablePlanets = planets.filter((planet) => !planet.calculationNote);
+  const aspectablePlanets = filterCalculationReadyPoints(planets);
   const MAJOR_ASPECTS = [
     // The five classical Ptolemaic aspects. Quincunx and Semisextile
     // are classified and calculated by MinorAspectsEngine instead.
