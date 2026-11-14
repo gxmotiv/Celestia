@@ -53,7 +53,8 @@ export type ImplementedWesternHouseSystem =
   | "Placidus"
   | "Equal"
   | "WholeSign"
-  | "Porphyry";
+  | "Porphyry"
+  | "Regiomontanus";
 
 export type HouseSystemRecommendationMode =
   | "automatic"
@@ -87,6 +88,7 @@ const IMPLEMENTED_SYSTEMS = new Set<WesternHouseSystemName>([
   "Equal",
   "WholeSign",
   "Porphyry",
+  "Regiomontanus",
 ]);
 
 function automatic(
@@ -131,6 +133,27 @@ function unavailable(
     mode,
     status,
     preferredSystem,
+    usedPolarFallback: false,
+    rationale,
+  };
+}
+
+/**
+ * A named technique can have a supported house calculation while its broader
+ * judgement/search workflow remains absent. The rationale must keep those
+ * scopes separate so the UI cannot imply that horary/electional is complete.
+ */
+function implementedPreset(
+  technique: WesternHouseTechnique,
+  system: ImplementedWesternHouseSystem,
+  rationale: string
+): WesternHouseSystemRecommendation {
+  return {
+    technique,
+    mode: "automatic",
+    status: "supported",
+    preferredSystem: system,
+    resolvedSystem: system,
     usedPolarFallback: false,
     rationale,
   };
@@ -197,21 +220,17 @@ export function recommendWesternHouseSystem(
       );
 
     case "lilly-horary":
-      return unavailable(
+      return implementedPreset(
         technique,
-        "automatic",
-        IMPLEMENTED_SYSTEMS.has("Regiomontanus") ? "supported" : "unsupported",
         "Regiomontanus",
-        "Regiomontanus is the named convention for this explicitly Lilly-style horary preset, but Celestia does not yet calculate Regiomontanus cusps. Do not substitute Placidus and call it a Lilly-style chart."
+        "The Regiomontanus house calculation is supported. This does not mean the complete Lilly horary judgement engine is implemented; radicality, significators, receptions, perfection and timing remain separate work."
       );
 
     case "lilly-electional":
-      return unavailable(
+      return implementedPreset(
         technique,
-        "automatic",
-        "unsupported",
         "Regiomontanus",
-        "This is an explicitly Lilly-derived electional preset. Regiomontanus is not yet implemented in Celestia; other electional authors and traditions may prescribe different chart conventions."
+        "The named Lilly-derived preset can now calculate Regiomontanus houses. The complete election search, candidate scoring and Lilly-specific judgement workflow are not implemented; other electional sources may prescribe other conventions."
       );
 
     case "general-electional":
