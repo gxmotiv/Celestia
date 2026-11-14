@@ -9,7 +9,13 @@
  */
 
 import { swissEphemeris, SwissPlanetPosition } from "./swissEphemeris";
-import { WesternChartData, normalizeDegrees, ZODIAC_SIGNS, isAngularAspectApplying } from "./ephemeris";
+import {
+  WesternChartData,
+  normalizeDegrees,
+  ZODIAC_SIGNS,
+  isAngularAspectApplying,
+  filterCalculationReadyPoints,
+} from "./ephemeris";
 import { VedicChartData } from "./vedic";
 import { isSunAboveHorizonInChart } from "./horizon";
 import { CompleteBaZiEngine, BaZiChart } from "./baziEngine";
@@ -1173,7 +1179,7 @@ export class MultiSystemTransitEngine {
     }
 
     // Natal planets in current coordinate system for aspect calculation
-    const natalPlanetsInSystem = this.birthWestern.planets.map((np) => ({
+    const natalPlanetsInSystem = filterCalculationReadyPoints(this.birthWestern.planets).map((np) => ({
       name: np.name,
       longitude: this.toZodiacLongitude(np.longitude),
       sign: this.getSignAndDegree(this.toZodiacLongitude(np.longitude)).sign,
