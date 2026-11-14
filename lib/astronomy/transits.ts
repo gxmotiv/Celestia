@@ -6,7 +6,7 @@
  */
 
 import { swissEphemeris, SwissPlanetPosition } from "./swissEphemeris";
-import { WesternChartData, PlanetPosition, HouseCusp, ZODIAC_SIGNS, normalizeDegrees } from "./ephemeris";
+import { WesternChartData, PlanetPosition, HouseCusp, ZODIAC_SIGNS, normalizeDegrees, filterCalculationReadyPoints } from "./ephemeris";
 import { EclipseAnalyzer } from "./specializedWesternEngines";
 import { isAngularAspectApplying } from "./ephemeris";
 import * as Astronomy from "astronomy-engine";
@@ -443,7 +443,7 @@ export class TransitEngine {
 
     // Combine natal planets with angles (Ascendant and Midheaven)
     const natalPoints: PlanetPosition[] = [
-      ...this.birthChart.planets,
+      ...filterCalculationReadyPoints(this.birthChart.planets),
       this.birthChart.ascendant,
       this.birthChart.midheaven,
     ].filter(Boolean);
@@ -726,7 +726,7 @@ export class TransitEngine {
       const longitude = event.degree;
       const natalAspects: string[] = [];
 
-      for (const natal of this.birthChart.planets) {
+      for (const natal of filterCalculationReadyPoints(this.birthChart.planets)) {
         const rawDifference = Math.abs(longitude - natal.longitude);
         const difference = Math.min(rawDifference, 360 - rawDifference);
         if (difference <= 4) {
