@@ -47,6 +47,7 @@ import {
 } from "lucide-react";
 import { TransitBiWheel } from "./TransitBiWheel";
 import { AshtakavargaPanel } from "./AshtakavargaPanel";
+import { recommendWesternHouseSystem } from "@/lib/astronomy/westernHouseSystemPolicy";
 
 const emptySubscribe = () => () => {};
 
@@ -107,9 +108,13 @@ export function TransitView({
       const natalResolvedSystem = westernChart.houseSystem === "WholeSign" ? "whole-sign"
         : westernChart.houseSystem === "Equal" ? "equal"
         : westernChart.houseSystem === "Porphyry" ? "porphyry" : "placidus";
+      const transitHousePolicy = recommendWesternHouseSystem("western-transits");
+      const automaticSystem = transitHousePolicy.mode === "inherit-natal"
+        ? natalResolvedSystem
+        : base.houseSystem;
       return {
         ...base,
-        houseSystem: selectedHouseSystem === "auto" ? natalResolvedSystem : selectedHouseSystem,
+        houseSystem: selectedHouseSystem === "auto" ? automaticSystem : selectedHouseSystem,
       };
     }
     return base;
