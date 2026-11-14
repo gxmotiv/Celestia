@@ -114,7 +114,7 @@ function automatic(
     resolvedSystem,
     usedPolarFallback,
     rationale: usedPolarFallback
-      ? "Celestia's conservative high-latitude policy uses Porphyry instead of Placidus at |latitude| ≥ 66.5622°. This is a disclosed application fallback, not a claim that every Placidus implementation fails at every such coordinate and date."
+      ? "Celestia's conservative policy selected Porphyry at |latitude| ≥ 66.5622°. This is an application fallback, not a claim that Placidus is impossible at every such location; other implementations may resolve it at some high-latitude dates and coordinates."
       : rationale,
   };
 }
