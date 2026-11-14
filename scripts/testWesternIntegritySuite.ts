@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   calculateWesternChart,
   calculateAspects,
+  filterCalculationReadyPoints,
   isAngularAspectApplying,
   normalizeDegrees,
   type PlanetPosition,
@@ -236,6 +237,20 @@ check(dateObliquityReport.declinations[0].isOutOfBounds === false,
   "OOB threshold follows the supplied obliquity of date instead of a fixed J2000 constant");
 const midpointEngine = new MidpointCalculator();
 const midpointChart = calculateWesternChart(2000, 1, 1, 12, 0, 51.4769, 0, 0, "Placidus");
+const calculationReadyPoints = filterCalculationReadyPoints(midpointChart.planets);
+check(!calculationReadyPoints.some((planet) => planet.name === "Chiron"),
+  "Central calculation-provenance filter excludes the annotated Chiron placeholder");
+
+const harmonicWithoutPlaceholder = new HarmonicChartCalculator()
+  .calculateHarmonic(midpointChart.planets, 5);
+check(!harmonicWithoutPlaceholder.planets.some((planet) => planet.name === "Chiron"),
+  "Harmonic charts exclude explicitly approximate placeholder points");
+
+const declinationWithoutPlaceholder = new DeclinationCalculator()
+  .calculateAll(midpointChart.planets, midpointChart.obliquity);
+check(!declinationWithoutPlaceholder.declinations.some((planet) => planet.planet === "Chiron"),
+  "Declination and parallel calculations exclude explicitly approximate placeholder points");
+
 close(midpointChart.additionalPoints?.vertex.longitude ?? Number.NaN, 188.469312, 0.01,
   "Natal additional-points Vertex uses the corrected western prime-vertical intersection");
 close(midpointChart.additionalPoints?.eastPoint.longitude ?? Number.NaN, 11.373900, 0.01,
@@ -713,6 +728,29 @@ const applyingNatal = {
   sign: "Synthetic",
   signDegreeFormatted: "Synthetic natal point",
 };
+const transitingPlaceholderChart = {
+  ...transitFixtureChart,
+  planets: transitFixtureChart.planets.map((planet) => planet.name === "Chiron"
+    ? { ...planet, longitude: transitingSun.longitude }
+    : planet),
+};
+const transitPlaceholderResults = new TransitEngine(transitingPlaceholderChart, transitDate)
+  .getCurrentTransits(transitDate);
+check(!transitPlaceholderResults.some((item) => item.natalPlanet === "Chiron"),
+  "Transit engine excludes the approximate Chiron placeholder even when a transit is exactly conjunct its stored longitude");
+
+const eclipsePlaceholderChart = {
+  ...transitFixtureChart,
+  planets: transitFixtureChart.planets.map((planet) => planet.name === "Chiron"
+    ? { ...planet, longitude: transitingSun.longitude }
+    : planet),
+};
+const eclipseNatalAspects = new TransitEngine(eclipsePlaceholderChart, transitDate)
+  .getEclipseTransits(transitDate);
+check(eclipseNatalAspects.every((event) =>
+  !event.natalAspects.some((item) => item.includes("Chiron"))
+), "Eclipse-to-natal transit overlays exclude the approximate Chiron placeholder");
+
 const applyingChart = { ...transitFixtureChart, planets: [applyingNatal] };
 const applyingTransit = new TransitEngine(applyingChart, transitDate)
   .getCurrentTransits(transitDate)
