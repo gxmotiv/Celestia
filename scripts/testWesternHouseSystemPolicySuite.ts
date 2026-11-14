@@ -44,7 +44,7 @@ check(synastry.mode === "per-chart" && synastry.status === "requires-inherited-s
 const horary = recommendWesternHouseSystem("lilly-horary");
 check(horary.preferredSystem === "Regiomontanus" && horary.status === "supported" &&
   horary.resolvedSystem === "Regiomontanus" &&
-  horary.rationale.includes("complete Lilly horary judgement engine is implemented") === false,
+  horary.rationale.includes("does not mean the complete Lilly horary judgement engine is implemented"),
   "Lilly-style horary can use the supported Regiomontanus house method while keeping full judgement scope distinct");
 
 const electional = recommendWesternHouseSystem("lilly-electional");
