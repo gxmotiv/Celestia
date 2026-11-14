@@ -252,14 +252,14 @@ export function AlmutenHoursPanel({ chartData }: AlmutenHoursPanelProps) {
                 <span className="text-[10px] text-slate-400 block">Day Ruler</span>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className="text-amber-400 text-sm font-bold">{hours.dayRulerSymbol}</span>
-                  <span className="text-sm font-bold text-slate-100">{hours.dayRuler}</span>
+                  <span className="text-sm font-bold text-slate-100">{hours.dayRuler ?? "Unavailable"}</span>
                 </div>
               </div>
               <div className="p-3 bg-slate-950/70 border border-slate-800 rounded-xl">
                 <span className="text-[10px] text-slate-400 block">Current Hour Ruler at Birth</span>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className="text-cyan-400 text-sm font-bold">{hours.currentHourRulerSymbol}</span>
-                  <span className="text-sm font-bold text-slate-100">{hours.currentHourRuler}</span>
+                  <span className="text-sm font-bold text-slate-100">{hours.currentHourRuler ?? "Unavailable"}</span>
                 </div>
               </div>
               <div className="p-3 bg-slate-950/70 border border-slate-800 rounded-xl">
@@ -280,7 +280,7 @@ export function AlmutenHoursPanel({ chartData }: AlmutenHoursPanelProps) {
 
             <p className="text-xs text-slate-400 leading-relaxed">
               Classical planetary hours follow the descending Chaldean sequence: Saturn → Jupiter → Mars → Sun → Venus → Mercury → Moon.
-              Each day has 12 unequal diurnal hours (sunrise to sunset) and 12 nocturnal hours (sunset to sunrise).
+              On ordinary dates, each day has 12 unequal diurnal hours (sunrise to sunset) and 12 nocturnal hours (sunset to sunrise). Polar dates without a sunrise/sunset pair are disclosed below rather than assigned zero-length hours.
             </p>
           </div>
 
