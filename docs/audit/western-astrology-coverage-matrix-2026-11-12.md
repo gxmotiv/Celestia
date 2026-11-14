@@ -36,7 +36,7 @@ Passing software tests validates code against specified numerical fixtures and i
 | Annual profections | Implemented | One sign/house per completed year, with a traditional ruler-of-year lookup. Full interpretive judging still depends on the chart and chosen tradition. |
 | Zodiacal Releasing | Partial | L1 and L2 with a 360-day releasing year, 30-day L2 month convention, angularity judged from Fortune and a 211-month Loosing-of-the-Bond rule. L3/L4 are not implemented. Other reconstructions differ. |
 | Firdaria | Partial | Day and night major periods, Chaldean planetary sub-periods, undivided node majors and a 75-year cycle are supported. A selectable alternative nocturnal order places the nodes after Mars. Historical manuscripts/editions differ; this is not every Firdaria variant. |
-| Planetary hours | Approximate | Unequal day/night hours and Chaldean rulers use an NOAA-style approximate sunrise/sunset model with a supplied fixed UTC offset. It is not a precision rise/set ephemeris; polar-day/night conditions are explicitly identified. |
+| Planetary hours | Partial / polar-day/night safe | Unequal day/night hours and Chaldean rulers use an NOAA-style approximate sunrise/sunset model with a supplied fixed UTC offset. Where no normal sunrise/sunset pair occurs, the app now retains broad diurnal/nocturnal sect but marks the classical planetary-hour schedule and its day/hour rulers unavailable rather than inventing zero-length hours. Not a precision rise/set ephemeris; historical timezone/DST correctness still depends on the supplied offset. |
 
 ## 3. Arabic Lots / Hermetic Lots
 
