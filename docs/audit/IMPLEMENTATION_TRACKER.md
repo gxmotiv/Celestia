@@ -101,3 +101,5 @@ Policy: keep changes on isolated branches; do not merge or deploy until the owne
 5. PR #5 — IANA city/geocoding and birth-form timezone integration; open draft, stacked on PR #4.
 
 Do not merge the chain automatically. Review each diff and rerun the full workflow on the final head before merge/deployment.
+
+| Western Almuten Figuris prenatal syzygy | Corrected on PR #27 branch; CI pending | Replaced the fixed 0.08°/degree solar-motion estimate with Astronomy Engine's previous 0°/180° geocentric lunar-phase search; the zodiacal degree is the apparent Sun longitude at the resolved event. Added New Moon and Full Moon external UTC fixtures (Astrodienst Swiss Ephemeris phase table, year 2000) and chart-level UTC JD plumbing. Removed unsupported equivalence labels for Lord of Soul and Lord of Temperament; report expanded scoring leader and essential-only leader(s) separately. The current expanded scoring remains one explicit variant, not a universal historical protocol. |
