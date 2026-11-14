@@ -226,6 +226,23 @@ assertTest(
   asp30[0] ? `${asp30[0].aspectType.name} (orb ${asp30[0].orb}°)` : "None"
 );
 
+// Explicitly approximate chart points must not create minor aspects.
+const approximateProbe = {
+  ...createMockPlanet("Chiron", 0, 0),
+  calculationNote: "Synthetic approximation fixture; not a physical ephemeris position.",
+};
+const approximateMinor = engine.calculateMinorAspects([
+  createMockPlanet("Sun", 0),
+  approximateProbe,
+], { ...DEFAULT_ASPECT_SETTINGS, showWeakAspects: true });
+assertTest(
+  "Calculation provenance filter",
+  "Approximate/symbolic points are excluded from minor-aspect geometry",
+  approximateMinor.length === 0,
+  "0 aspects",
+  `${approximateMinor.length} aspect(s)`
+);
+
 // --------------------------------------------------------------------------------
 // GROUP 3: APPLYING VS SEPARATING ACCURACY
 // --------------------------------------------------------------------------------
