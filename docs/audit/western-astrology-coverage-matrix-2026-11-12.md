@@ -82,7 +82,7 @@ Primary historical/research references:
 | Feature | Status | Current coverage and limits |
 |---|---|---|
 | Ceres, Pallas, Juno and Vesta | Approximate | Simplified Keplerian model with fixed J2000 orbital elements; not high-precision current small-body ephemerides. |
-| Chiron | Approximate placeholder / not precision | Current sine-formula placeholder has no integrated/perturbed orbit or measured speed. Motion is marked unknown and it is excluded from aspect/midpoint calculations. A real small-body ephemeris and independent benchmark are still required. |
+| Chiron | Approximate placeholder / not precision | Current sine-formula placeholder has no integrated/perturbed orbit or measured speed. Motion is marked unknown and it is excluded from natal major/minor aspects, midpoints, Fixed-Star contacts and Solar Arc directed contacts. A real small-body ephemeris and independent benchmark are still required. |
 | Mean/True Lilith | Approximate | Compact mean/periodic models; True Lilith is not a complete osculating lunar-apogee solution. |
 | White Moon/Selena | Symbolic | Hypothetical and tradition-dependent; no standardized physical body/orbit. |
 | Proserpine and Hypnos | Symbolic | Hypothetical points; no verified physical orbit or standardized astronomical ephemeris represented. |
