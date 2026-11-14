@@ -15,6 +15,7 @@ import { ArabianPartsCalculator, ArabianPartsResult } from "./arabianPartsCalcul
 import { PlanetaryHoursCalculator, PlanetaryHoursResult } from "./planetaryHours";
 import { AlmutenFigurisCalculator, AlmutenFigurisResult } from "./almutenFigurisCalculator";
 import { isSunAboveHorizon } from "./horizon";
+import { recommendWesternHouseSystem } from "./westernHouseSystemPolicy";
 
 export type SolarProximity = "Cazimi" | "Combust" | "UnderBeams" | "Free";
 export type WesternHouseSystem = "Auto" | "Placidus" | "Equal" | "WholeSign" | "Porphyry";
@@ -715,10 +716,16 @@ export function calculateWesternChart(
   if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
     throw new RangeError("Western chart coordinates must use latitude ±90° and east-positive longitude ±180°.");
   }
-  const polarPlacidusFallback = Math.abs(latitude) >= 66.5622 && (houseSystem === "Auto" || houseSystem === "Placidus");
-  const resolvedRequest: ResolvedWesternHouseSystem = houseSystem === "Auto"
-    ? (polarPlacidusFallback ? "Porphyry" : "Placidus")
-    : polarPlacidusFallback ? "Porphyry" : houseSystem;
+  const autoHouseRecommendation = houseSystem === "Auto"
+    ? recommendWesternHouseSystem("modern-natal", latitude)
+    : undefined;
+  const explicitPolarPlacidusFallback =
+    houseSystem === "Placidus" && Math.abs(latitude) >= 66.5622;
+  const resolvedRequest: ResolvedWesternHouseSystem =
+    autoHouseRecommendation?.resolvedSystem ??
+    (explicitPolarPlacidusFallback ? "Porphyry" : houseSystem === "Auto" ? "Placidus" : houseSystem);
+  const polarPlacidusFallback =
+    autoHouseRecommendation?.usedPolarFallback ?? explicitPolarPlacidusFallback;
   const sysCode = resolvedRequest === "WholeSign" ? "W" : resolvedRequest === "Equal" ? "E" : resolvedRequest === "Porphyry" ? "O" : "P";
   const houseResult = swissEphemeris.calculateHouses(jd, latitude, longitude, sysCode);
   const rawCusps = houseResult.houseCusps;
@@ -726,12 +733,11 @@ export function calculateWesternChart(
     : houseResult.houseSystemUsed === "E" ? "Equal"
     : houseResult.houseSystemUsed === "O" ? "Porphyry" : "Placidus";
   const houseSystemNote = polarPlacidusFallback
-    ? "Celestia's conservative policy selected Porphyry at |latitude| ≥ 66.5622°. This is an application fallback, not a claim that Placidus is impossible at every such location; other implementations may resolve it at some high-latitude dates and coordinates."
+    ? autoHouseRecommendation?.rationale ??
+      "Celestia's conservative policy selected Porphyry at |latitude| ≥ 66.5622°. This is an application fallback, not a claim that Placidus is impossible at every such location; other implementations may resolve it at some high-latitude dates and coordinates."
     : actualHouseSystem !== resolvedRequest
       ? "The requested Placidus calculation could not be resolved numerically for this place/date; Porphyry quadrant houses were used instead."
-      : houseSystem === "Auto"
-        ? "Auto selected Placidus for the Western Modern chart. Hellenistic and Vedic calculations retain their own Whole Sign house frameworks."
-        : undefined;
+      : autoHouseRecommendation?.rationale;
   const asc = houseResult.ascendant;
   const mc = houseResult.midheaven;
 

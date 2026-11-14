@@ -4,6 +4,8 @@
 **Repository branch:** `research/jpl-western-ephemeris-benchmarks`  
 **Purpose:** distinguish implemented calculations, approximate models, symbolic-only points, and methods that are not implemented. A feature name in the UI is not proof of a complete traditional technique.
 
+**Master scope catalogue:** [western-astrology-master-scope-catalog.md](./western-astrology-master-scope-catalog.md) expands this first-pass matrix across distinct Western schools, chart/judgement methods, predictive systems, specialist branches, points and geographic techniques. Neither document claims that a finite universal list of every historical variant exists.
+
 ## How to read this matrix
 
 - **Implemented:** a calculation path exists and has regression tests for the stated behavior.

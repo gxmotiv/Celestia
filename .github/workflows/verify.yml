@@ -25,6 +25,7 @@ jobs:
         script:
           - testAstrologySuite.ts
           - testWesternIntegritySuite.ts
+          - testWesternHouseSystemPolicySuite.ts
           - testWesternReferenceHarness.ts
           - testInpopWesternEphemerisHarness.ts
           - testAstrometricJ2000Harness.ts
