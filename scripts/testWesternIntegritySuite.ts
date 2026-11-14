@@ -366,6 +366,35 @@ close(
   1e-6,
   "Solar arc shifts the Ascendant by the same Naibod arc"
 );
+
+// Deliberately align the approximate Chiron placeholder so directed Chiron
+// would conjunct the natal Sun if provenance filtering were bypassed.
+const directedSun = directedFixture.planets.find((point) => point.name === "Sun");
+const directedChiron = directedFixture.planets.find((point) => point.name === "Chiron");
+if (!directedSun || !directedChiron) throw new Error("Solar Arc provenance fixture requires Sun and Chiron points.");
+const solarArcPlaceholderChart = {
+  ...directedFixture,
+  planets: directedFixture.planets.map((point) => point.name === "Chiron"
+    ? {
+      ...point,
+      longitude: normalizeDegrees(directedSun.longitude - expectedSolarArc),
+      calculationNote: point.calculationNote ?? "Synthetic approximation fixture; not a physical ephemeris position.",
+    }
+    : point),
+};
+const solarArcPlaceholderReport = new SolarArcDirectionsEngine().calculate(
+  solarArcPlaceholderChart, directedBirth, directedAtAgeTen, 1
+);
+check(
+  !solarArcPlaceholderReport.directedPlanets.some((point) => point.name === "Chiron"),
+  "Solar Arc directed planets exclude the approximate Chiron placeholder"
+);
+check(
+  !solarArcPlaceholderReport.contacts.some((contact) =>
+    contact.directedPoint === "Chiron" || contact.natalPoint === "Chiron"
+  ),
+  "Solar Arc contacts exclude the approximate Chiron placeholder from both point lists"
+);
 const returnEngine = new WesternReturnEngine();
 const solarReturn = returnEngine.calculateSolarReturn(directedFixture, 2026, 51.4769, 0, "Placidus");
 check(solarReturn.exactUtc.startsWith("2026-"), "Solar return solver finds the requested calendar-year return");
@@ -828,6 +857,22 @@ check(fixedStarsEngine.calculateStarContacts(faganReferenceChart).length === 0,
 const regulus = FixedStarsEngine.FIXED_STARS.find((star) => star.name.includes("Regulus"));
 check(Boolean(regulus && Math.abs(regulus.longitude - 149.83) < 0.05),
   "Regulus J2000 tropical longitude reference is near Leo 29 degrees 50 minutes");
+if (!regulus) throw new Error("Fixed-star provenance fixture requires the Regulus reference entry.");
+const fixedStarPlaceholderChart = {
+  ...midpointChart,
+  planets: midpointChart.planets.map((point) => point.name === "Chiron"
+    ? {
+      ...point,
+      longitude: regulus.longitude,
+      calculationNote: point.calculationNote ?? "Synthetic approximation fixture; not a physical ephemeris position.",
+    }
+    : point),
+};
+const fixedStarPlaceholderContacts = fixedStarsEngine.calculateStarContacts(fixedStarPlaceholderChart);
+check(
+  !fixedStarPlaceholderContacts.some((contact) => contact.planetName === "Chiron"),
+  "Fixed-star contacts exclude the approximate Chiron placeholder even at exact Regulus alignment"
+);
 
 // 11. The dedicated deep Western benchmark runner must report meaningful passing assertions.
 const benchmarkChart = calculateWesternChart(2000, 1, 1, 12, 0, 51.4769, 0, 0, "Placidus");
