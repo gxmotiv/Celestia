@@ -14,6 +14,7 @@ import {
   normalizeDegrees,
   formatDegreeMinute,
   ZODIAC_SIGNS,
+  filterCalculationReadyPoints,
 } from "./ephemeris";
 import { swissEphemeris } from "./swissEphemeris";
 
@@ -346,8 +347,8 @@ export class SynastryEngine {
     // Explicitly approximate/symbolic placeholders must not create
     // apparently valid cross-chart aspects. Keep them visible in natal charts,
     // but exclude them from synastry geometry until a suitable ephemeris exists.
-    const planets1 = this.chart1.planets.filter((planet) => !planet.calculationNote);
-    const planets2 = this.chart2.planets.filter((planet) => !planet.calculationNote);
+    const planets1 = filterCalculationReadyPoints(this.chart1.planets);
+    const planets2 = filterCalculationReadyPoints(this.chart2.planets);
 
     const ASPECTS_DEF = [
       { name: "Conjunction" as const, symbol: "☌", angle: 0, orb: 7.5 },
