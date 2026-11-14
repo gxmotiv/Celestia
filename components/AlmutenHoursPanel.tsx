@@ -285,7 +285,6 @@ export function AlmutenHoursPanel({ chartData }: AlmutenHoursPanelProps) {
           </div>
 
           {hours.hoursAvailable ? (
-            {/* 24 Unequal Hours Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Diurnal Hours */}
               <div className="p-4 bg-slate-900/50 border border-slate-800 rounded-xl space-y-2.5">
