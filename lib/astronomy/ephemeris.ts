@@ -828,6 +828,7 @@ export function calculateWesternChart(
   const almutenCalc = new AlmutenFigurisCalculator();
   const partOfFortune = arabianParts.partOfFortune.longitude;
   const almutenFiguris = almutenCalc.calculate({
+    birthJulianDay: jd,
     ascendant: asc,
     sun: sunLon,
     moon: sp.moon.longitude,
