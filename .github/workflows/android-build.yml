@@ -6,6 +6,7 @@ on:
       - deploy/cloudflare-workers-free
       - feat/android-offline-mode
       - fix/celestia-calculation-integrity
+      - 'fix/**'
     paths:
       - "android/**"
       - "lib/android/**"
@@ -20,6 +21,7 @@ on:
   pull_request:
     branches:
       - deploy/cloudflare-workers-free
+      - 'fix/**'
     paths:
       - "android/**"
       - "lib/android/**"

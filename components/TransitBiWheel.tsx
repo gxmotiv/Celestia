@@ -6,6 +6,7 @@ import {
   PlanetPosition,
   ZODIAC_SIGNS,
   normalizeDegrees,
+  filterCalculationReadyPoints,
 } from "@/lib/astronomy/ephemeris";
 import {
   Sparkles,
@@ -106,7 +107,7 @@ export function TransitBiWheel({
     ];
 
     transitingPlanets.forEach((t) => {
-      westernChart.planets.forEach((n) => {
+      filterCalculationReadyPoints(westernChart.planets).forEach((n) => {
         let diff = Math.abs(t.longitude - n.longitude);
         if (diff > 180) diff = 360 - diff;
 
@@ -338,6 +339,7 @@ export function TransitBiWheel({
                   <g
                     key={p.name}
                     className="cursor-pointer transition-all"
+                    opacity={p.calculationNote ? 0.55 : 1}
                     onClick={() => {
                       setSelectedNatalPlanet(isSelected ? null : p.name);
                       setSelectedTransitPlanet(null);
@@ -345,6 +347,7 @@ export function TransitBiWheel({
                     onMouseEnter={() => setHoveredEntity(p.name)}
                     onMouseLeave={() => setHoveredEntity(null)}
                   >
+                    <title>{p.calculationNote || p.name}</title>
                     <circle
                       cx={pt.x}
                       cy={pt.y}

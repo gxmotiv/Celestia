@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   calculateWesternChart,
   calculateAspects,
+  filterCalculationReadyPoints,
   isAngularAspectApplying,
   normalizeDegrees,
   type PlanetPosition,
@@ -236,6 +237,20 @@ check(dateObliquityReport.declinations[0].isOutOfBounds === false,
   "OOB threshold follows the supplied obliquity of date instead of a fixed J2000 constant");
 const midpointEngine = new MidpointCalculator();
 const midpointChart = calculateWesternChart(2000, 1, 1, 12, 0, 51.4769, 0, 0, "Placidus");
+const calculationReadyPoints = filterCalculationReadyPoints(midpointChart.planets);
+check(!calculationReadyPoints.some((planet) => planet.name === "Chiron"),
+  "Central calculation-provenance filter excludes the annotated Chiron placeholder");
+
+const harmonicWithoutPlaceholder = new HarmonicChartCalculator()
+  .calculateHarmonic(midpointChart.planets, 5);
+check(!harmonicWithoutPlaceholder.planets.some((planet) => planet.name === "Chiron"),
+  "Harmonic charts exclude explicitly approximate placeholder points");
+
+const declinationWithoutPlaceholder = new DeclinationCalculator()
+  .calculateAll(midpointChart.planets, midpointChart.obliquity);
+check(!declinationWithoutPlaceholder.declinations.some((planet) => planet.planet === "Chiron"),
+  "Declination and parallel calculations exclude explicitly approximate placeholder points");
+
 close(midpointChart.additionalPoints?.vertex.longitude ?? Number.NaN, 188.469312, 0.01,
   "Natal additional-points Vertex uses the corrected western prime-vertical intersection");
 close(midpointChart.additionalPoints?.eastPoint.longitude ?? Number.NaN, 11.373900, 0.01,
@@ -350,6 +365,35 @@ close(
   normalizeDegrees(directedFixture.ascendant.longitude + expectedSolarArc),
   1e-6,
   "Solar arc shifts the Ascendant by the same Naibod arc"
+);
+
+// Deliberately align the approximate Chiron placeholder so directed Chiron
+// would conjunct the natal Sun if provenance filtering were bypassed.
+const directedSun = directedFixture.planets.find((point) => point.name === "Sun");
+const directedChiron = directedFixture.planets.find((point) => point.name === "Chiron");
+if (!directedSun || !directedChiron) throw new Error("Solar Arc provenance fixture requires Sun and Chiron points.");
+const solarArcPlaceholderChart = {
+  ...directedFixture,
+  planets: directedFixture.planets.map((point) => point.name === "Chiron"
+    ? {
+      ...point,
+      longitude: normalizeDegrees(directedSun.longitude - expectedSolarArc),
+      calculationNote: point.calculationNote ?? "Synthetic approximation fixture; not a physical ephemeris position.",
+    }
+    : point),
+};
+const solarArcPlaceholderReport = new SolarArcDirectionsEngine().calculate(
+  solarArcPlaceholderChart, directedBirth, directedAtAgeTen, 1
+);
+check(
+  !solarArcPlaceholderReport.directedPlanets.some((point) => point.name === "Chiron"),
+  "Solar Arc directed planets exclude the approximate Chiron placeholder"
+);
+check(
+  !solarArcPlaceholderReport.contacts.some((contact) =>
+    contact.directedPoint === "Chiron" || contact.natalPoint === "Chiron"
+  ),
+  "Solar Arc contacts exclude the approximate Chiron placeholder from both point lists"
 );
 const returnEngine = new WesternReturnEngine();
 const solarReturn = returnEngine.calculateSolarReturn(directedFixture, 2026, 51.4769, 0, "Placidus");
@@ -713,6 +757,51 @@ const applyingNatal = {
   sign: "Synthetic",
   signDegreeFormatted: "Synthetic natal point",
 };
+const transitingPlaceholderChart = {
+  ...transitFixtureChart,
+  planets: transitFixtureChart.planets.map((planet) => planet.name === "Chiron"
+    ? { ...planet, longitude: transitingSun.longitude }
+    : planet),
+};
+const transitPlaceholderResults = new TransitEngine(transitingPlaceholderChart, transitDate)
+  .getCurrentTransits(transitDate);
+check(!transitPlaceholderResults.some((item) => item.natalPlanet === "Chiron"),
+  "Transit engine excludes the approximate Chiron placeholder even when a transit is exactly conjunct its stored longitude");
+
+// The multi-system transit screen has a separate engine and must enforce the
+// same provenance rule. Align the placeholder with the engine's live Sun so
+// the test would create a partile conjunction if the point leaks through.
+const multiTransitBaseline = new MultiSystemTransitEngine(
+  TRANSIT_SYSTEM_PRESETS.western, transitFixtureChart, undefined, transitDate
+).calculateSystemTransits(transitDate);
+const multiTransitingSun = multiTransitBaseline.planets.find((planet) => planet.name === "Sun");
+if (!multiTransitingSun) throw new Error("Multi-system transit provenance fixture requires the transiting Sun.");
+const multiTransitPlaceholderChart = {
+  ...transitFixtureChart,
+  planets: transitFixtureChart.planets.map((planet) => planet.name === "Chiron"
+    ? { ...planet, longitude: multiTransitingSun.rawLongitude }
+    : planet),
+};
+const multiTransitWithPlaceholder = new MultiSystemTransitEngine(
+  TRANSIT_SYSTEM_PRESETS.western, multiTransitPlaceholderChart, undefined, transitDate
+).calculateSystemTransits(transitDate);
+check(
+  !multiTransitWithPlaceholder.aspects.some((aspect) => aspect.natalPlanet === "Chiron"),
+  "Multi-system Western transit engine excludes the approximate Chiron placeholder from exact natal contacts"
+);
+
+const eclipsePlaceholderChart = {
+  ...transitFixtureChart,
+  planets: transitFixtureChart.planets.map((planet) => planet.name === "Chiron"
+    ? { ...planet, longitude: transitingSun.longitude }
+    : planet),
+};
+const eclipseNatalAspects = new TransitEngine(eclipsePlaceholderChart, transitDate)
+  .getEclipseTransits(transitDate);
+check(eclipseNatalAspects.every((event) =>
+  !event.natalAspects.some((item) => item.includes("Chiron"))
+), "Eclipse-to-natal transit overlays exclude the approximate Chiron placeholder");
+
 const applyingChart = { ...transitFixtureChart, planets: [applyingNatal] };
 const applyingTransit = new TransitEngine(applyingChart, transitDate)
   .getCurrentTransits(transitDate)
@@ -790,6 +879,22 @@ check(fixedStarsEngine.calculateStarContacts(faganReferenceChart).length === 0,
 const regulus = FixedStarsEngine.FIXED_STARS.find((star) => star.name.includes("Regulus"));
 check(Boolean(regulus && Math.abs(regulus.longitude - 149.83) < 0.05),
   "Regulus J2000 tropical longitude reference is near Leo 29 degrees 50 minutes");
+if (!regulus) throw new Error("Fixed-star provenance fixture requires the Regulus reference entry.");
+const fixedStarPlaceholderChart = {
+  ...midpointChart,
+  planets: midpointChart.planets.map((point) => point.name === "Chiron"
+    ? {
+      ...point,
+      longitude: regulus.longitude,
+      calculationNote: point.calculationNote ?? "Synthetic approximation fixture; not a physical ephemeris position.",
+    }
+    : point),
+};
+const fixedStarPlaceholderContacts = fixedStarsEngine.calculateStarContacts(fixedStarPlaceholderChart);
+check(
+  !fixedStarPlaceholderContacts.some((contact) => contact.planetName === "Chiron"),
+  "Fixed-star contacts exclude the approximate Chiron placeholder even at exact Regulus alignment"
+);
 
 // 11. The dedicated deep Western benchmark runner must report meaningful passing assertions.
 const benchmarkChart = calculateWesternChart(2000, 1, 1, 12, 0, 51.4769, 0, 0, "Placidus");

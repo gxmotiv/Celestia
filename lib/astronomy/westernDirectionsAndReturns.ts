@@ -6,6 +6,7 @@ import {
   type PlanetPosition,
   type WesternChartData,
   type WesternHouseSystem,
+  filterCalculationReadyPoints,
 } from "./ephemeris";
 import { swissEphemeris } from "./swissEphemeris";
 
@@ -111,7 +112,8 @@ export class SolarArcDirectionsEngine {
 
     const ageYears = (referenceDate.getTime() - birthUtc.getTime()) / (365.2422 * DAY_MS);
     const arcDegrees = ageYears * NAIBOD_KEY_DEGREES_PER_YEAR;
-    const directedPlanets = chart.planets.map((planet) => {
+    const eligiblePlanets = filterCalculationReadyPoints(chart.planets);
+    const directedPlanets = eligiblePlanets.map((planet) => {
       const longitude = normalizeDegrees(planet.longitude + arcDegrees);
       return { name: planet.name, longitude, signDegreeFormatted: signDegree(longitude) };
     });
@@ -127,7 +129,7 @@ export class SolarArcDirectionsEngine {
     });
 
     const natalPoints = [
-      ...chart.planets.map((planet) => ({ name: planet.name, longitude: planet.longitude })),
+      ...eligiblePlanets.map((planet) => ({ name: planet.name, longitude: planet.longitude })),
       ...natalAngles,
     ];
     const directedPoints = [

@@ -5,7 +5,7 @@
  * 3. Declinations & Parallels / Contraparallels System
  */
 
-import { PlanetPosition, normalizeDegrees, formatDegreeMinute, ZODIAC_SIGNS, type WesternChartData } from "./ephemeris";
+import { filterCalculationReadyPoints, PlanetPosition, normalizeDegrees, formatDegreeMinute, ZODIAC_SIGNS, type WesternChartData } from "./ephemeris";
 
 // -------------------------------------------------------------
 // 1. MIDPOINT SYSTEM
@@ -129,8 +129,8 @@ export class MidpointCalculator {
    */
   public calculateAllMidpoints(planets: PlanetPosition[]): MidpointItem[] {
     const items: MidpointItem[] = [];
-    const corePlanets = planets.filter((p) =>
-      ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto", "NorthNode", "Ascendant", "Midheaven"].includes(p.name) && !p.calculationNote
+    const corePlanets = filterCalculationReadyPoints(planets).filter((p) =>
+      ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto", "NorthNode", "Ascendant", "Midheaven"].includes(p.name)
     );
 
     for (let i = 0; i < corePlanets.length; i++) {
@@ -235,7 +235,7 @@ export class HarmonicChartCalculator {
         description: `Mathematical harmonic chart produced by multiplying ecliptic longitudes by ${harmonicNumber} and reducing them to 0–360°. Astrological interpretations vary by school; these are not measured physical or neurological frequencies.`,
       };
 
-    const harmonicPlanets: HarmonicPlanet[] = planets.map((p) => {
+    const harmonicPlanets: HarmonicPlanet[] = filterCalculationReadyPoints(planets).map((p) => {
       const hLon = normalizeDegrees(p.longitude * harmonicNumber);
       const signIdx = Math.floor(hLon / 30);
       const signName = ZODIAC_SIGNS[signIdx]?.name || "Aries";
@@ -368,7 +368,7 @@ export class DeclinationCalculator {
     // The maximum solar declination is the obliquity of date, not a fixed J2000 constant.
     const OOB_THRESHOLD = Math.abs(obliquity);
 
-    const declinationList: DeclinationData[] = planets.map((p) => {
+    const declinationList: DeclinationData[] = filterCalculationReadyPoints(planets).map((p) => {
       const dec = this.calculateDeclination(p.longitude, p.latitude || 0, obliquity);
       const isOOB = Math.abs(dec) > OOB_THRESHOLD;
 

@@ -1,4 +1,4 @@
-import { PlanetPosition } from "./ephemeris";
+import { filterCalculationReadyPoints, PlanetPosition } from "./ephemeris";
 
 export type AspectNature = "harmonious" | "challenging" | "spiritual" | "neutral";
 
@@ -412,7 +412,7 @@ export class MinorAspectsEngine {
 
     // A point carrying a calculationNote is explicitly approximate or symbolic.
     // Do not turn its placeholder longitude into a seemingly valid aspect.
-    const aspectablePlanets = planets.filter((planet) => !planet.calculationNote);
+    const aspectablePlanets = filterCalculationReadyPoints(planets);
     if (aspectablePlanets.length < 2) return [];
 
     const aspects: MinorAspect[] = [];

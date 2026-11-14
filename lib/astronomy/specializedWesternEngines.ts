@@ -14,6 +14,7 @@ import {
   normalizeDegrees,
   formatDegreeMinute,
   ZODIAC_SIGNS,
+  filterCalculationReadyPoints,
 } from "./ephemeris";
 
 // ---------------------------------------------------------------------------
@@ -88,7 +89,7 @@ export class FixedStarsEngine {
     if (!this.isCatalogueEpochCompatible(chart)) return [];
     const contacts: StarContact[] = [];
     const testPoints = [
-      ...chart.planets,
+      ...filterCalculationReadyPoints(chart.planets),
       chart.ascendant,
       chart.midheaven,
     ];

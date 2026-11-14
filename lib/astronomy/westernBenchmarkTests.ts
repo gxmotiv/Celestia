@@ -8,7 +8,12 @@
  * 5. Classical Benchmark Charts (Leonardo da Vinci 1452, J2000.0 epoch standard, Noon vs Midnight sect)
  */
 
-import { calculateWesternChart, WesternChartData, normalizeDegrees } from "./ephemeris";
+import {
+  calculateWesternChart,
+  WesternChartData,
+  normalizeDegrees,
+  filterCalculationReadyPoints,
+} from "./ephemeris";
 import { isSunAboveHorizonInChart } from "./horizon";
 import { swissEphemeris } from "./swissEphemeris";
 import { MinorAspectsEngine } from "./minorAspects";
@@ -501,20 +506,24 @@ export class WesternBenchmarkRunner {
       details: "The 9th harmonic reveals the novile (40°) geometry, directly matching the 9-fold division of the zodiac.",
     });
 
-    // Test 19: Out of Bounds (OOB) Declination Threshold (23.43929°)
+    // Test 19: Out of Bounds (OOB) Declination Threshold (23.43929°).
+    // Approximate/symbolic points remain visible on the natal chart but are
+    // excluded from derived declination geometry by the shared quality filter.
+    const eligibleDeclinationPoints = filterCalculationReadyPoints(chart.planets);
     const decRep = this.declinationCalculator.calculateAll(chart.planets, chart.obliquity);
     results.push({
       id: "W-ADV-03",
       name: "Equatorial Declination & Out of Bounds (OOB) Threshold",
       category: "Advanced Systems & Harmonics",
       standardReference: "Celestial Mechanics (Max Solar Obliquity ε = 23°26')",
-      expected: "Parallels / Contraparallels evaluated against 23.439° limit",
-      actual: `${decRep.parallels.length} Parallels, ${decRep.contraparallels.length} Contraparallels, ${decRep.outOfBoundsCount} OOB planets`,
-      passed: decRep.declinations.length === chart.planets.length &&
+      expected: `${eligibleDeclinationPoints.length} calculation-ready points evaluated against the obliquity limit`,
+      actual: `${decRep.declinations.length} declinations, ${decRep.parallels.length} Parallels, ${decRep.contraparallels.length} Contraparallels, ${decRep.outOfBoundsCount} OOB points`,
+      passed: decRep.declinations.length === eligibleDeclinationPoints.length &&
         decRep.declinations.every((entry) => Number.isFinite(entry.declination)) &&
-        decRep.outOfBoundsCount >= 0 && decRep.outOfBoundsCount <= chart.planets.length &&
+        decRep.outOfBoundsCount >= 0 && decRep.outOfBoundsCount <= eligibleDeclinationPoints.length &&
+        decRep.declinations.every((entry) => eligibleDeclinationPoints.some((point) => point.name === entry.planet)) &&
         Math.abs(this.declinationCalculator.calculateDeclination(90, 0, chart.obliquity) - chart.obliquity) < 1e-6,
-      details: "Planets exceeding the Sun's maximum declination of ~23°26' are deemed Out of Bounds (OOB), acting with unbounded autonomy.",
+      details: "Declination, parallel and contraparallel calculations use only points with calculation-ready model provenance. Approximate/symbolic placeholders remain visible in natal charts but do not create derived contacts.",
     });
 
     // Test 20: 90° Cosmobiology Dial Modulus (Midpoint % 90)
