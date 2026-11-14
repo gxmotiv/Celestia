@@ -175,11 +175,7 @@ export class PlanetaryHoursCalculator {
     const dayShift = isBeforeSunrise ? -1440 : 0;
     const dayAnchor = sunriseMinutes + dayShift;
     let sunsetAnchor = sunsetMinutes + dayShift;
-    if (solarCondition === "polar-day") {
-      sunsetAnchor = dayAnchor + 1440;
-    } else if (solarCondition === "polar-night") {
-      sunsetAnchor = dayAnchor;
-    } else if (sunsetAnchor <= dayAnchor) {
+    if (sunsetAnchor <= dayAnchor) {
       sunsetAnchor += 1440;
     }
     const birthTimeOnDayline = birthTimeMinutes;
