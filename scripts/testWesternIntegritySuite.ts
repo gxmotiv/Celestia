@@ -23,6 +23,7 @@ import {
   ZodiacalReleasingEngine,
 } from "../lib/astronomy/predictiveHellenisticEngine";
 import { EclipseAnalyzer, FixedStarsEngine, MedicalAstrologyEngine } from "../lib/astronomy/specializedWesternEngines";
+import { SolarArcDirectionsEngine } from "../lib/astronomy/westernDirectionsAndReturns";
 import { WesternBenchmarkRunner } from "../lib/astronomy/westernBenchmarkTests";
 import {
   MultiSystemTransitEngine,
@@ -268,6 +269,35 @@ check(natalMidpointRows.some((item) =>
 ), "Advanced Western natal midpoint entry point includes Sun/Midheaven");
 check(natalMidpointRows.length === midpointRows.length,
   "Natal midpoint entry point preserves the complete core-point pair set including both angles");
+
+// Downstream specialized contact engines must also exclude explicitly
+// approximate placeholders, not only ordinary natal aspects and midpoints.
+const natalSunForContacts = midpointChart.planets.find((planet) => planet.name === "Sun")!;
+const placeholderAtStar = {
+  ...midpointChart,
+  planets: midpointChart.planets.map((planet) => planet.name === "Chiron"
+    ? { ...planet, longitude: FixedStarsEngine.FIXED_STARS[0].longitude }
+    : planet),
+};
+const fixedStarContacts = new FixedStarsEngine().calculateStarContacts(placeholderAtStar);
+check(!fixedStarContacts.some((contact) => contact.planetName === "Chiron"),
+  "Fixed-star contact engine excludes Chiron's approximate placeholder even at an exact stored-star longitude");
+
+const placeholderAtSun = {
+  ...midpointChart,
+  planets: midpointChart.planets.map((planet) => planet.name === "Chiron"
+    ? { ...planet, longitude: natalSunForContacts.longitude }
+    : planet),
+};
+const natalInstant = new Date("2000-01-01T12:00:00.000Z");
+const solarArcContactReport = new SolarArcDirectionsEngine().calculate(
+  placeholderAtSun, natalInstant, natalInstant
+);
+check(!solarArcContactReport.directedPlanets.some((point) => point.name === "Chiron"),
+  "Solar Arc directed planet list excludes Chiron's approximate placeholder");
+check(!solarArcContactReport.contacts.some((contact) =>
+  contact.directedPoint === "Chiron" || contact.natalPoint === "Chiron"
+), "Solar Arc contact engine does not generate contacts from Chiron's approximate placeholder");
 let invalidHarmonicRejected = false;
 try {
   new HarmonicChartCalculator().calculateHarmonic(midpointChart.planets, 0);

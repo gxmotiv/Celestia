@@ -111,7 +111,10 @@ export class SolarArcDirectionsEngine {
 
     const ageYears = (referenceDate.getTime() - birthUtc.getTime()) / (365.2422 * DAY_MS);
     const arcDegrees = ageYears * NAIBOD_KEY_DEGREES_PER_YEAR;
-    const directedPlanets = chart.planets.map((planet) => {
+    // Approximate or symbolic placeholder points are not valid inputs to
+    // directed contacts; preserve them in the natal chart but exclude them here.
+    const directedEligiblePlanets = chart.planets.filter((planet) => !planet.calculationNote);
+    const directedPlanets = directedEligiblePlanets.map((planet) => {
       const longitude = normalizeDegrees(planet.longitude + arcDegrees);
       return { name: planet.name, longitude, signDegreeFormatted: signDegree(longitude) };
     });
@@ -127,7 +130,7 @@ export class SolarArcDirectionsEngine {
     });
 
     const natalPoints = [
-      ...chart.planets.map((planet) => ({ name: planet.name, longitude: planet.longitude })),
+      ...directedEligiblePlanets.map((planet) => ({ name: planet.name, longitude: planet.longitude })),
       ...natalAngles,
     ];
     const directedPoints = [
