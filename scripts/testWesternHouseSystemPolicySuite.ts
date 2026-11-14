@@ -42,13 +42,16 @@ check(synastry.mode === "per-chart" && synastry.status === "requires-inherited-s
   "Synastry preserves each person's house system independently");
 
 const horary = recommendWesternHouseSystem("lilly-horary");
-check(horary.preferredSystem === "Regiomontanus" && horary.status === "unsupported" &&
-  horary.resolvedSystem === undefined,
-  "Lilly-style horary reports Regiomontanus as not yet calculated instead of silently substituting Placidus");
+check(horary.preferredSystem === "Regiomontanus" && horary.status === "supported" &&
+  horary.resolvedSystem === "Regiomontanus" &&
+  horary.rationale.includes("complete Lilly horary judgement engine is implemented") === false,
+  "Lilly-style horary can use the supported Regiomontanus house method while keeping full judgement scope distinct");
 
 const electional = recommendWesternHouseSystem("lilly-electional");
-check(electional.preferredSystem === "Regiomontanus" && electional.status === "unsupported",
-  "The named Lilly-derived electional preset does not claim unavailable Regiomontanus calculations");
+check(electional.preferredSystem === "Regiomontanus" && electional.status === "supported" &&
+  electional.resolvedSystem === "Regiomontanus" &&
+  electional.rationale.includes("complete election search") ,
+  "The Lilly-derived electional preset distinguishes supported house math from the missing full electional workflow");
 
 const directions = recommendWesternHouseSystem("primary-directions");
 check(directions.mode === "method-specific" && directions.resolvedSystem === undefined,
@@ -69,11 +72,11 @@ check(astrocartography.mode === "not-applicable",
 check(isWesternHouseSystemImplemented("Placidus") &&
   isWesternHouseSystemImplemented("Equal") &&
   isWesternHouseSystemImplemented("WholeSign") &&
-  isWesternHouseSystemImplemented("Porphyry"),
-  "The implementation registry recognizes the four currently calculated Western house systems");
+  isWesternHouseSystemImplemented("Porphyry") &&
+  isWesternHouseSystemImplemented("Regiomontanus"),
+  "The implementation registry recognizes the five currently calculated Western house systems");
 
-check(!isWesternHouseSystemImplemented("Regiomontanus") &&
-  !isWesternHouseSystemImplemented("Koch") &&
+check(!isWesternHouseSystemImplemented("Koch") &&
   !isWesternHouseSystemImplemented("Campanus"),
   "House-system labels without calculation engines are not treated as implemented");
 
@@ -85,6 +88,11 @@ const polarNatal = calculateWesternChart(2000, 1, 1, 12, 0, 70, 20, 1, "Auto");
 check(polarNatal.requestedHouseSystem === "Auto" && polarNatal.houseSystem === "Porphyry" &&
   Boolean(polarNatal.houseSystemNote?.includes("high-latitude")),
   "The natal chart calculator exposes the central policy's polar fallback in chart metadata");
+
+const regioNatal = calculateWesternChart(2000, 1, 1, 12, 0, 40.7, -74, -5, "Regiomontanus");
+check(regioNatal.requestedHouseSystem === "Regiomontanus" &&
+  regioNatal.houseSystem === "Regiomontanus" && regioNatal.houses.length === 12,
+  "The Western natal chart resolves and exposes the Regiomontanus house system");
 
 let invalidLatitudeRejected = false;
 try {
