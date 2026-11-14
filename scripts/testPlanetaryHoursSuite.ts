@@ -35,8 +35,16 @@ assert("There are 12 daylight and 12 night periods",
   daytime.hours.filter(x => x.isDayHour).length === 12 && daytime.hours.filter(x => !x.isDayHour).length === 12);
 assert("Exactly one planetary hour is marked for a daytime birth",
   daytime.hours.filter(x => x.isCurrentBirthHour).length === 1);
-assert("Day and night hour durations sum to 24 hours",
-  close(daytime.dayHourDurationMinutes * 12 + daytime.nightHourDurationMinutes * 12, 1440, 12));
+assert("Normal solar conditions provide day and night hour durations",
+  daytime.solarCondition === "normal" &&
+    daytime.dayHourDurationMinutes !== null &&
+    daytime.nightHourDurationMinutes !== null);
+if (daytime.dayHourDurationMinutes !== null && daytime.nightHourDurationMinutes !== null) {
+  assert("Day and night hour durations sum to 24 hours",
+    close(daytime.dayHourDurationMinutes * 12 + daytime.nightHourDurationMinutes * 12, 1440, 12));
+} else {
+  assert("Day and night hour durations sum to 24 hours", false, "Normal equinox calculation unexpectedly returned unavailable durations.");
+}
 const beforeSunrise = calc.calculate(2026, 3, 20, 4, 30, 0, 0, 0);
 assert("Pre-sunrise birth is classed as nighttime", !beforeSunrise.isBirthInDaytime);
 assert("Pre-sunrise birth uses preceding astrological weekday", beforeSunrise.dayRuler === "Jupiter");
