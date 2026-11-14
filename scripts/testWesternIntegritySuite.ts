@@ -768,6 +768,28 @@ const transitPlaceholderResults = new TransitEngine(transitingPlaceholderChart, 
 check(!transitPlaceholderResults.some((item) => item.natalPlanet === "Chiron"),
   "Transit engine excludes the approximate Chiron placeholder even when a transit is exactly conjunct its stored longitude");
 
+// The multi-system transit screen has a separate engine and must enforce the
+// same provenance rule. Align the placeholder with the engine's live Sun so
+// the test would create a partile conjunction if the point leaks through.
+const multiTransitBaseline = new MultiSystemTransitEngine(
+  TRANSIT_SYSTEM_PRESETS.western, transitFixtureChart, undefined, transitDate
+).calculateSystemTransits(transitDate);
+const multiTransitingSun = multiTransitBaseline.planets.find((planet) => planet.name === "Sun");
+if (!multiTransitingSun) throw new Error("Multi-system transit provenance fixture requires the transiting Sun.");
+const multiTransitPlaceholderChart = {
+  ...transitFixtureChart,
+  planets: transitFixtureChart.planets.map((planet) => planet.name === "Chiron"
+    ? { ...planet, longitude: multiTransitingSun.rawLongitude }
+    : planet),
+};
+const multiTransitWithPlaceholder = new MultiSystemTransitEngine(
+  TRANSIT_SYSTEM_PRESETS.western, multiTransitPlaceholderChart, undefined, transitDate
+).calculateSystemTransits(transitDate);
+check(
+  !multiTransitWithPlaceholder.aspects.some((aspect) => aspect.natalPlanet === "Chiron"),
+  "Multi-system Western transit engine excludes the approximate Chiron placeholder from exact natal contacts"
+);
+
 const eclipsePlaceholderChart = {
   ...transitFixtureChart,
   planets: transitFixtureChart.planets.map((planet) => planet.name === "Chiron"
