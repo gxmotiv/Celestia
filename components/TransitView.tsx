@@ -79,7 +79,7 @@ export function TransitView({
 
   // Custom House System Override (for Western)
   const [selectedHouseSystem, setSelectedHouseSystem] = useState<
-    "auto" | "placidus" | "whole-sign" | "equal" | "porphyry"
+    "auto" | "placidus" | "whole-sign" | "equal" | "porphyry" | "regiomontanus"
   >("auto");
 
   // BaZi Gender (for Da Yun progression direction)
@@ -107,7 +107,8 @@ export function TransitView({
     if (systemMode === "western") {
       const natalResolvedSystem = westernChart.houseSystem === "WholeSign" ? "whole-sign"
         : westernChart.houseSystem === "Equal" ? "equal"
-        : westernChart.houseSystem === "Porphyry" ? "porphyry" : "placidus";
+        : westernChart.houseSystem === "Porphyry" ? "porphyry"
+        : westernChart.houseSystem === "Regiomontanus" ? "regiomontanus" : "placidus";
       const transitHousePolicy = recommendWesternHouseSystem("western-transits");
       const automaticSystem = transitHousePolicy.mode === "inherit-natal"
         ? natalResolvedSystem
@@ -297,6 +298,7 @@ export function TransitView({
                   <option value="porphyry">Porphyry (Equal Quadrants)</option>
                   <option value="whole-sign">Whole Sign (Hellenistic)</option>
                   <option value="equal">Equal House (30° from Ascendant)</option>
+                  <option value="regiomontanus">Regiomontanus (Equatorial)</option>
                 </select>
               </div>
             )}

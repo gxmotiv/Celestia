@@ -1,7 +1,7 @@
 /**
  * Multi-System Planetary Transit Prediction Engine
  * Provides clean, pure separation between:
- * 1. Western Modern (Tropical, Placidus/Equal/Porphyry/Whole Sign, Ptolemaic Aspects, Psychological)
+ * 1. Western Modern (Tropical, Placidus/Equal/Porphyry/Whole Sign/Regiomontanus, Ptolemaic Aspects, Psychological)
  * 2. Vedic Jyotish (Sidereal Lahiri/Raman/KP, Whole Sign / Chandra Lagna Gochara, Graha Drishti, Karmic + Remedies)
  * 3. Hellenistic Traditional (Tropical, Whole Sign, Sect, Ptolemaic)
  * 4. Western Sidereal (Fagan-Bradley, Placidus/Equal/Porphyry, Ptolemaic)
@@ -40,7 +40,7 @@ export const PLANET_SYMBOLS: Record<string, string> = {
 export type ZodiacSystem = "tropical" | "sidereal";
 
 /** Only systems actually calculated by this engine are selectable. */
-export type HouseSystem = "placidus" | "whole-sign" | "equal" | "porphyry";
+export type HouseSystem = "placidus" | "whole-sign" | "equal" | "porphyry" | "regiomontanus";
 
 export type AspectSystem = "western" | "vedic" | "hellenistic";
 
@@ -834,7 +834,8 @@ export class MultiSystemTransitEngine {
     const natalAyanamsa = calculateAyanamsaValue(config.ayanamsa, birthInstant);
     const systemCode = config.houseSystem === "whole-sign" ? "W"
       : config.houseSystem === "equal" ? "E"
-      : config.houseSystem === "porphyry" ? "O" : "P";
+      : config.houseSystem === "porphyry" ? "O"
+      : config.houseSystem === "regiomontanus" ? "R" : "P";
     if (Number.isFinite(birthWestern.birthLatitude) && Number.isFinite(birthWestern.birthLongitude)) {
       const houseResult = swissEphemeris.calculateHouses(
         birthWestern.julianDay,
@@ -856,7 +857,8 @@ export class MultiSystemTransitEngine {
       }
       this.houseSystemUsed = houseResult.houseSystemUsed === "O" ? "porphyry"
         : houseResult.houseSystemUsed === "W" ? "whole-sign"
-        : houseResult.houseSystemUsed === "E" ? "equal" : "placidus";
+        : houseResult.houseSystemUsed === "E" ? "equal"
+        : houseResult.houseSystemUsed === "R" ? "regiomontanus" : "placidus";
     } else {
       this.natalHouseCusps = birthWestern.houses.map((house) =>
         config.zodiac === "sidereal" ? normalizeDegrees(house.longitude - natalAyanamsa) : normalizeDegrees(house.longitude)

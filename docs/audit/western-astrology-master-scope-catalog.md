@@ -52,7 +52,7 @@ The list of schools should be treated as an extensible registry. A school may co
 | Major asteroids | Approximate | Ceres, Pallas, Juno and Vesta use simplified fixed-element models; upgrade to integrated/perturbed small-body positions and independent references |
 | Further minor planets / TNOs | Not implemented / symbolic by school | Eris, Haumea, Makemake, Sedna, Orcus, Quaoar, Ixion, Varuna and source-specific objects; distinguish physical bodies from hypothetical points |
 | Angles and local geometry | Implemented in part | ASC, MC, DSC, IC, Vertex and East Point exist; complete angle/house/prime-vertical/equatorial conventions and independent fixtures |
-| House systems | Four calculation methods supported | Placidus, Equal, Whole Sign and Porphyry; many named systems listed in Section 10 do not yet have Celestia calculation engines |
+| House systems | Five calculation methods supported | Placidus, Equal, Whole Sign, Porphyry and Regiomontanus; many named systems listed in Section 10 do not yet have Celestia calculation engines |
 | Planetary phase and visibility | Partial | Heliacal rising/setting, morning/evening star phases, combustion, under-beams, cazimi, elongations, visibility criteria and sect/light condition variants |
 | Fixed stars | Approximate | Current set is 20 stored J2000 tropical longitudes; need epoch precession, proper motion, nutation/aberration conventions, expanded catalogue, star identity and uncertainty |
 | Lunar mansions / decans | Partial or separate tradition | Western decans/faces, Chaldean decans, bounds/terms, monomoiria, dodecatemoria, dwads and source-specific subdivisions |
@@ -175,7 +175,7 @@ Swiss Ephemeris publishes a much broader house-method list than Celestia current
 | Whole Sign | Implemented |
 | Porphyry | Implemented |
 | Koch | Not implemented |
-| Regiomontanus | Not implemented |
+| Regiomontanus | Implemented |
 | Campanus | Not implemented |
 | Alcabitius | Not implemented |
 | Morinus | Not implemented |
@@ -203,7 +203,7 @@ Swiss Ephemeris documentation also notes that Placidus and Koch cannot be calcul
 - Western transits and return charts: inherit the user's selected natal chart framework unless the named technique explicitly requires another method.
 - Synastry: preserve each person's own natal house setting; disclose whose houses receive the overlay.
 - Composite/Davison: require the named construction/house convention rather than silently inheriting a natal chart's system.
-- Lilly-style horary/electional: Regiomontanus can be offered as an explicit named preset only after its actual calculation engine exists; until then mark it unsupported rather than silently substituting Placidus.
+- Lilly-style horary/electional: the Regiomontanus house calculation is now available as a named method. The full horary judgement and election-search workflows remain unimplemented; never infer the complete technique from house-system support alone.
 - Primary directions: direction method, key and domification are coupled; require an explicit direction profile.
 - Uranian/Cosmobiology and mundane methods: require source/school-specific settings; do not invent one universal default.
 - Astrocartography: no ordinary house system is required for the planet-line geometry itself.
@@ -227,7 +227,7 @@ For every distinct technique/profile, maintain these gates:
 
 1. Centralize technique-aware house-system selection and accurately disclose what is actually supported.
 2. Expand the Western reference suite for house systems, angles, time scales and natal placements.
-3. Add and validate additional house engines (start with named high-value methods such as Regiomontanus, Koch, Campanus and Alcabitius), then integrate manual/automatic selection.
+3. Add and validate further house engines (next candidates include Koch, Campanus and Alcabitius), then extend source-specific house-method profiles.
 4. Complete traditional natal judgement: dignity, reception, rulers, dispositors, sect, lots, antiscia and patterns with source profiles.
 5. Build the exact transit event timeline.
 6. Implement primary directions as a separate, variant-driven engine.
@@ -240,9 +240,11 @@ For every distinct technique/profile, maintain these gates:
 ## References and source policy
 
 - [Swiss Ephemeris Programmer's Manual — house methods](https://www.astro.com/swisseph/swephprg.pdf): technical method identifiers and computation behavior.
+- [Swiss Ephemeris house-calculation source (`swehouse.c`)](https://github.com/astrotools/SwissEphemeris/blob/master/swisseph/swehouse.c): independent implementation reference for Regiomontanus cusp and polar-orientation behavior.
+- [Cambridge Casebooks — Regiomontanus house construction](https://casebooks-production.casebooks.lib.cam.ac.uk/data/astrology-in-the-casebooks.pdf): historical/geometrical explanation of dividing the celestial equator into 30° intervals and projecting position circles to the ecliptic.
 - [Astrodienst house-system overview](https://www.astro.com/faq/fq_fh_owhouse_e.htm): descriptions of named house systems and historical context.
 - [Astrodienst Astrowiki — Astrological Schools](https://www.astro.com/astrowiki/en/Astrological_Schools): overview of distinct schools and specializations.
 - [Internet Encyclopedia of Philosophy — Hellenistic Astrology](https://iep.utm.edu/hellenistic-astrology/): scholarly historical context for the Hellenistic tradition.
 - Each future technique entry must add the primary work / authoritative technical specification it actually uses. These general links are not a substitute for method-specific provenance.
 
-**Current release boundary:** this catalogue and policy branch are not yet deployed. The production application remains on `deploy/cloudflare-workers-free` at baseline commit `0d0af1d48a07bba833c43efd7c8ef171f85d58f3`.
+**Release boundary:** this catalogue is present in production from commit `a366c38c0a31128e15a81963eb5e685f313713d6`. The Regiomontanus implementation and reference suite are the subject of the next engineering change and must not be called live until that change is merged and deployed.

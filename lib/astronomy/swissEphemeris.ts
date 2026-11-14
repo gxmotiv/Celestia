@@ -7,6 +7,7 @@
 
 import * as Astronomy from "astronomy-engine";
 import { calculateEastPointLongitude, calculateVertexLongitude } from "./anglePoints";
+import { calculateRegiomontanusHouses } from "./regiomontanusHouses";
 
 export interface SwissPlanetPosition {
   longitude: number;      // Ecliptic longitude in degrees, rounded for display (not an accuracy guarantee)
@@ -46,7 +47,7 @@ export interface SwissHouseResult {
   localSiderealTime: number;
   /** True obliquity of date in degrees, matching Astronomy Engine GAST. */
   obliquity: number;
-  houseSystemUsed: "P" | "W" | "E" | "O";
+  houseSystemUsed: "P" | "W" | "E" | "O" | "R";
   equatorialAscendant: number;
 }
 
@@ -489,13 +490,13 @@ export class SwissEphemerisEngine {
   }
 
   /**
-   * Calculate astrological houses (Placidus, Equal, Whole Sign)
+   * Calculate Placidus, Equal, Whole Sign, Porphyry or Regiomontanus houses.
    */
   public calculateHouses(
     julianDay: number,
     latitude: number,
     longitude: number,
-    system: "P" | "W" | "E" | "O" = "P"
+    system: "P" | "W" | "E" | "O" | "R" = "P"
   ): SwissHouseResult {
     if (!Number.isFinite(julianDay) || !Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
       throw new RangeError("House calculation requires a finite Julian Day, latitude within ±90°, and longitude within ±180°.");
@@ -536,7 +537,7 @@ export class SwissEphemerisEngine {
     // Placidus is undefined at polar-circle latitudes. Use the standard Porphyry
     // quadrant fallback explicitly instead of allowing a trigonometric result to
     // masquerade as a valid Placidus chart.
-    let systemUsed: "P" | "W" | "E" | "O" = system === "P" && Math.abs(latitude) >= 66.5622 ? "O" : system;
+    let systemUsed: "P" | "W" | "E" | "O" | "R" = system === "P" && Math.abs(latitude) >= 66.5622 ? "O" : system;
     const cusps: number[] = new Array(12);
 
     if (systemUsed === "W") {
@@ -572,6 +573,16 @@ export class SwissEphemerisEngine {
       cusps[9] = mc;
       cusps[10] = (mc + q4 / 3) % 360;
       cusps[11] = (mc + 2 * q4 / 3) % 360;
+    } else if (systemUsed === "R") {
+      // Regiomontanus divides the celestial equator into 30° arcs and
+      // projects each division to the ecliptic through the horizon's
+      // north/south points. This is independent of Porphyry quadrant trisection.
+      const regio = calculateRegiomontanusHouses(ramc, latitude, epsDeg);
+      asc = regio.ascendant;
+      mc = regio.midheaven;
+      for (let index = 0; index < 12; index += 1) {
+        cusps[index] = regio.houseCusps[index];
+      }
     } else {
       // Placidus House System
       cusps[3] = (mc + 180.0) % 360.0; // 4th house (IC)
