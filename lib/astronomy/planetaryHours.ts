@@ -15,18 +15,22 @@ export interface PlanetaryHour {
 }
 
 export interface PlanetaryHoursResult {
-  dayRuler: string;
+  dayRuler: string | null;
   dayRulerSymbol: string;
-  nightRuler: string;
-  currentHourRuler: string;
+  nightRuler: string | null;
+  currentHourRuler: string | null;
   currentHourRulerSymbol: string;
-  birthHourNumber: number;
+  birthHourNumber: number | null;
+  /** Sect classification remains available: polar day = diurnal, polar night = nocturnal. */
   isBirthInDaytime: boolean;
   sunriseTime: string;
   sunsetTime: string;
-  dayHourDurationMinutes: number;
-  nightHourDurationMinutes: number;
+  dayHourDurationMinutes: number | null;
+  nightHourDurationMinutes: number | null;
   solarCondition: "normal" | "polar-day" | "polar-night";
+  /** Classical unequal hours are unavailable when the Sun does not cross the horizon. */
+  hoursAvailable: boolean;
+  availabilityNote: string | null;
   hours: PlanetaryHour[];
 }
 
@@ -140,17 +144,38 @@ export class PlanetaryHoursCalculator {
     const { sunrise, sunset, solarCondition } = this.calculateSunTimes(
       year, month, day, latitude, longitude, timezoneOffsetHours
     );
+    if (solarCondition !== "normal") {
+      const isPolarDay = solarCondition === "polar-day";
+      const availabilityNote = isPolarDay
+        ? "Classical unequal planetary hours are unavailable: the Sun does not set on this local date, so there is no sunrise-to-sunset / sunset-to-sunrise division. Sect is retained as diurnal."
+        : "Classical unequal planetary hours are unavailable: the Sun does not rise on this local date, so there is no sunrise-to-sunset / sunset-to-sunrise division. Sect is retained as nocturnal.";
+
+      return {
+        dayRuler: null,
+        dayRulerSymbol: "",
+        nightRuler: null,
+        currentHourRuler: null,
+        currentHourRulerSymbol: "",
+        birthHourNumber: null,
+        isBirthInDaytime: isPolarDay,
+        sunriseTime: isPolarDay ? "No sunset (polar day)" : "No sunrise (polar night)",
+        sunsetTime: isPolarDay ? "No sunset (polar day)" : "No sunrise (polar night)",
+        dayHourDurationMinutes: null,
+        nightHourDurationMinutes: null,
+        solarCondition,
+        hoursAvailable: false,
+        availabilityNote,
+        hours: [],
+      };
+    }
+
     const sunriseMinutes = Math.round(sunrise * 60);
     const sunsetMinutes = Math.round(sunset * 60);
     const isBeforeSunrise = birthTimeMinutes < sunriseMinutes;
     const dayShift = isBeforeSunrise ? -1440 : 0;
     const dayAnchor = sunriseMinutes + dayShift;
     let sunsetAnchor = sunsetMinutes + dayShift;
-    if (solarCondition === "polar-day") {
-      sunsetAnchor = dayAnchor + 1440;
-    } else if (solarCondition === "polar-night") {
-      sunsetAnchor = dayAnchor;
-    } else if (sunsetAnchor <= dayAnchor) {
+    if (sunsetAnchor <= dayAnchor) {
       sunsetAnchor += 1440;
     }
     const birthTimeOnDayline = birthTimeMinutes;
@@ -226,6 +251,8 @@ export class PlanetaryHoursCalculator {
       dayHourDurationMinutes: Math.round(dayHourLength),
       nightHourDurationMinutes: Math.round(nightHourLength),
       solarCondition,
+      hoursAvailable: true,
+      availabilityNote: null,
       hours,
     };
   }

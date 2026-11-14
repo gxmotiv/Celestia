@@ -105,11 +105,11 @@ export function AlmutenHoursPanel({ chartData }: AlmutenHoursPanelProps) {
               </div>
               <div className="p-2.5 bg-slate-950/50 border border-slate-800/80 rounded-lg">
                 <span className="text-[10px] text-slate-400 block">Day ruler · +7 custom pts</span>
-                <span className="text-xs font-semibold text-slate-200">{almuten.dayRuler}</span>
+                <span className="text-xs font-semibold text-slate-200">{almuten.dayRuler ?? "Unavailable (polar conditions)"}</span>
               </div>
               <div className="p-2.5 bg-slate-950/50 border border-slate-800/80 rounded-lg">
                 <span className="text-[10px] text-slate-400 block">Hour ruler · +6 custom pts</span>
-                <span className="text-xs font-semibold text-slate-200">{almuten.hourRuler}</span>
+                <span className="text-xs font-semibold text-slate-200">{almuten.hourRuler ?? "Unavailable (polar conditions)"}</span>
               </div>
               <div className="p-2.5 bg-slate-950/50 border border-slate-800/80 rounded-lg">
                 <span className="text-[10px] text-slate-400 block">Sect Determination</span>
@@ -252,14 +252,14 @@ export function AlmutenHoursPanel({ chartData }: AlmutenHoursPanelProps) {
                 <span className="text-[10px] text-slate-400 block">Day Ruler</span>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className="text-amber-400 text-sm font-bold">{hours.dayRulerSymbol}</span>
-                  <span className="text-sm font-bold text-slate-100">{hours.dayRuler}</span>
+                  <span className="text-sm font-bold text-slate-100">{hours.dayRuler ?? "Unavailable"}</span>
                 </div>
               </div>
               <div className="p-3 bg-slate-950/70 border border-slate-800 rounded-xl">
                 <span className="text-[10px] text-slate-400 block">Current Hour Ruler at Birth</span>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className="text-cyan-400 text-sm font-bold">{hours.currentHourRulerSymbol}</span>
-                  <span className="text-sm font-bold text-slate-100">{hours.currentHourRuler}</span>
+                  <span className="text-sm font-bold text-slate-100">{hours.currentHourRuler ?? "Unavailable"}</span>
                 </div>
               </div>
               <div className="p-3 bg-slate-950/70 border border-slate-800 rounded-xl">
@@ -271,91 +271,99 @@ export function AlmutenHoursPanel({ chartData }: AlmutenHoursPanelProps) {
               <div className="p-3 bg-slate-950/70 border border-slate-800 rounded-xl">
                 <span className="text-[10px] text-slate-400 block">Hour Duration (Day / Night)</span>
                 <span className="text-xs font-semibold text-slate-200 block mt-0.5 font-mono">
-                  {hours.dayHourDurationMinutes}m / {hours.nightHourDurationMinutes}m
+                  {hours.dayHourDurationMinutes === null || hours.nightHourDurationMinutes === null
+                    ? "Unavailable"
+                    : `${hours.dayHourDurationMinutes}m / ${hours.nightHourDurationMinutes}m`}
                 </span>
               </div>
             </div>
 
             <p className="text-xs text-slate-400 leading-relaxed">
               Classical planetary hours follow the descending Chaldean sequence: Saturn → Jupiter → Mars → Sun → Venus → Mercury → Moon.
-              Each day has 12 unequal diurnal hours (sunrise to sunset) and 12 nocturnal hours (sunset to sunrise).
+              On ordinary dates, each day has 12 unequal diurnal hours (sunrise to sunset) and 12 nocturnal hours (sunset to sunrise). Polar dates without a sunrise/sunset pair are disclosed below rather than assigned zero-length hours.
             </p>
           </div>
 
-          {/* 24 Unequal Hours Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Diurnal Hours */}
-            <div className="p-4 bg-slate-900/50 border border-slate-800 rounded-xl space-y-2.5">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-                <Sun className="w-3.5 h-3.5" />
-                12 Diurnal Hours (Daytime)
-              </h4>
-              <div className="space-y-1">
-                {hours.hours
-                  .filter((h) => h.isDayHour)
-                  .map((h) => (
-                    <div
-                      key={h.hourNumber}
-                      className={`flex items-center justify-between p-2 rounded text-xs transition-colors ${
-                        h.isCurrentBirthHour
-                          ? "bg-amber-500/20 border border-amber-500/40 text-amber-200 font-bold"
-                          : "hover:bg-slate-800/40 text-slate-300"
-                      }`}
-                    >
-                      <span className="text-slate-400 font-mono">Hour {h.hourNumber}</span>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-amber-400 font-semibold">{h.rulerSymbol}</span>
-                        <span>{h.ruler}</span>
-                        {h.isCurrentBirthHour && (
-                          <span className="text-[9px] bg-amber-500/30 text-amber-300 px-1 py-0.2 rounded font-normal">
-                            Birth Hour
-                          </span>
-                        )}
+          {hours.hoursAvailable ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Diurnal Hours */}
+              <div className="p-4 bg-slate-900/50 border border-slate-800 rounded-xl space-y-2.5">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                  <Sun className="w-3.5 h-3.5" />
+                  12 Diurnal Hours (Daytime)
+                </h4>
+                <div className="space-y-1">
+                  {hours.hours
+                    .filter((h) => h.isDayHour)
+                    .map((h) => (
+                      <div
+                        key={h.hourNumber}
+                        className={`flex items-center justify-between p-2 rounded text-xs transition-colors ${
+                          h.isCurrentBirthHour
+                            ? "bg-amber-500/20 border border-amber-500/40 text-amber-200 font-bold"
+                            : "hover:bg-slate-800/40 text-slate-300"
+                        }`}
+                      >
+                        <span className="text-slate-400 font-mono">Hour {h.hourNumber}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-amber-400 font-semibold">{h.rulerSymbol}</span>
+                          <span>{h.ruler}</span>
+                          {h.isCurrentBirthHour && (
+                            <span className="text-[9px] bg-amber-500/30 text-amber-300 px-1 py-0.2 rounded font-normal">
+                              Birth Hour
+                            </span>
+                          )}
+                        </div>
+                        <span className="font-mono text-slate-400 text-[11px]">
+                          {h.startTime} – {h.endTime}
+                        </span>
                       </div>
-                      <span className="font-mono text-slate-400 text-[11px]">
-                        {h.startTime} – {h.endTime}
-                      </span>
-                    </div>
-                  ))}
+                    ))}
+                </div>
+              </div>
+  
+              {/* Nocturnal Hours */}
+              <div className="p-4 bg-slate-900/50 border border-slate-800 rounded-xl space-y-2.5">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
+                  <Moon className="w-3.5 h-3.5" />
+                  12 Nocturnal Hours (Nighttime)
+                </h4>
+                <div className="space-y-1">
+                  {hours.hours
+                    .filter((h) => !h.isDayHour)
+                    .map((h) => (
+                      <div
+                        key={h.hourNumber}
+                        className={`flex items-center justify-between p-2 rounded text-xs transition-colors ${
+                          h.isCurrentBirthHour
+                            ? "bg-cyan-500/20 border border-cyan-500/40 text-cyan-200 font-bold"
+                            : "hover:bg-slate-800/40 text-slate-300"
+                        }`}
+                      >
+                        <span className="text-slate-400 font-mono">Hour {h.hourNumber}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-cyan-400 font-semibold">{h.rulerSymbol}</span>
+                          <span>{h.ruler}</span>
+                          {h.isCurrentBirthHour && (
+                            <span className="text-[9px] bg-cyan-500/30 text-cyan-300 px-1 py-0.2 rounded font-normal">
+                              Birth Hour
+                            </span>
+                          )}
+                        </div>
+                        <span className="font-mono text-slate-400 text-[11px]">
+                          {h.startTime} – {h.endTime}
+                        </span>
+                      </div>
+                    ))}
+                </div>
               </div>
             </div>
-
-            {/* Nocturnal Hours */}
-            <div className="p-4 bg-slate-900/50 border border-slate-800 rounded-xl space-y-2.5">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
-                <Moon className="w-3.5 h-3.5" />
-                12 Nocturnal Hours (Nighttime)
-              </h4>
-              <div className="space-y-1">
-                {hours.hours
-                  .filter((h) => !h.isDayHour)
-                  .map((h) => (
-                    <div
-                      key={h.hourNumber}
-                      className={`flex items-center justify-between p-2 rounded text-xs transition-colors ${
-                        h.isCurrentBirthHour
-                          ? "bg-cyan-500/20 border border-cyan-500/40 text-cyan-200 font-bold"
-                          : "hover:bg-slate-800/40 text-slate-300"
-                      }`}
-                    >
-                      <span className="text-slate-400 font-mono">Hour {h.hourNumber}</span>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-cyan-400 font-semibold">{h.rulerSymbol}</span>
-                        <span>{h.ruler}</span>
-                        {h.isCurrentBirthHour && (
-                          <span className="text-[9px] bg-cyan-500/30 text-cyan-300 px-1 py-0.2 rounded font-normal">
-                            Birth Hour
-                          </span>
-                        )}
-                      </div>
-                      <span className="font-mono text-slate-400 text-[11px]">
-                        {h.startTime} – {h.endTime}
-                      </span>
-                    </div>
-                  ))}
-              </div>
+          ) : (
+            <div role="status" className="rounded-xl border border-amber-700/30 bg-amber-950/20 p-4 text-xs text-amber-100/90">
+              {hours.availabilityNote}
+              <span className="block text-slate-400 mt-2">No day/hour ruler or 24 unequal-hour schedule has been invented for this date.</span>
             </div>
-          </div>
+          )}
         </div>
       )}
     </div>

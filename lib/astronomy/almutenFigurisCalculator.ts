@@ -59,8 +59,8 @@ export interface AlmutenFigurisResult {
   sanFormatted: string;
   sanUtcInstant: string;
   sanDaysBeforeBirth: number;
-  dayRuler: string;
-  hourRuler: string;
+  dayRuler: string | null;
+  hourRuler: string | null;
   points: AlmutenPointAnalysis[];
   scores: AlmutenCandidateScore[];
   significance: string;
@@ -292,8 +292,8 @@ export class AlmutenFigurisCalculator {
     partOfFortune: number;
     planets: { name: string; longitude: number; house: number }[];
     isDayChart: boolean;
-    dayRuler: string;
-    hourRuler: string;
+    dayRuler: string | null;
+    hourRuler: string | null;
     julianDay: number;
   }): AlmutenFigurisResult {
     const { ascendant, sun, moon, partOfFortune, planets, isDayChart, dayRuler, hourRuler, julianDay } = params;
@@ -404,10 +404,10 @@ export class AlmutenFigurisCalculator {
       scoresMap[pName].accidental = hScore;
 
       // 4. Day and Hour Ruler Bonuses
-      if (pName === dayRuler) {
+      if (dayRuler !== null && pName === dayRuler) {
         scoresMap[pName].dayHourBonus += 7;
       }
-      if (pName === hourRuler) {
+      if (hourRuler !== null && pName === hourRuler) {
         scoresMap[pName].dayHourBonus += 6;
       }
     });
@@ -455,7 +455,7 @@ export class AlmutenFigurisCalculator {
       lordOfSoul: winner.planet,
       lordOfTemperament: runnerUp ? runnerUp.planet : winner.planet,
       runnerUpPlanet: runnerUp?.planet ?? null,
-      methodNote: "Celestia-specific hybrid weighting: the Ascendant, Sun, Moon, Part of Fortune and previous syzygy are scored using domicile +5, exaltation +4, the active Dorothean triplicity ruler +3, Egyptian term +2 and Chaldean face +1. Additional accidental points use Celestia’s custom 12-to-1 house ranking, plus custom +7 day-ruler and +6 hour-ruler bonuses. This combination is not an exact reproduction of one historical author’s complete scoring method. The labels Lord of Soul and Lord of Temperament are not separately calculated by this engine; the legacy fields are aliases for rank 1 and rank 2.",
+      methodNote: "Celestia-specific hybrid weighting: the Ascendant, Sun, Moon, Part of Fortune and previous syzygy are scored using domicile +5, exaltation +4, the active Dorothean triplicity ruler +3, Egyptian term +2 and Chaldean face +1. Additional accidental points use Celestia’s custom 12-to-1 house ranking, plus custom +7 day-ruler and +6 hour-ruler bonuses only when ordinary planetary day/hour rulers are available; these temporal additions are omitted where polar conditions prevent a classical sunrise/sunset schedule. This combination is not an exact reproduction of one historical author’s complete scoring method. The labels Lord of Soul and Lord of Temperament are not separately calculated by this engine; the legacy fields are aliases for rank 1 and rank 2.",
       sanDegree: san.degree,
       sanType: san.type,
       sanFormatted,
