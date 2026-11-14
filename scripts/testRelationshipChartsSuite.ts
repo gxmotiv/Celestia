@@ -528,6 +528,29 @@ console.log("\n[TEST GROUP 12] Synastry Chart-Order Invariance");
       `Forward: ${forward[dimension]}/${forward.overall}, reversed: ${reversed[dimension]}/${reversed.overall}`
     );
   });
+
+  // A placeholder can be made to coincide exactly with a real planet. It must
+  // still be rejected by the relationship engine based on provenance metadata.
+  const sunPosition = chartFixture.planets.find((planet) => planet.name === "Sun")!;
+  const chartWithPlaceholder = {
+    ...chartFixture,
+    planets: chartFixture.planets.map((planet) => planet.name === "Chiron"
+      ? { ...planet, longitude: sunPosition.longitude }
+      : planet),
+  };
+  const placeholder = chartWithPlaceholder.planets.find((planet) => planet.name === "Chiron");
+  assert(
+    Boolean(placeholder?.calculationNote),
+    "12.7 Synastry placeholder fixture retains its explicit calculation-quality note"
+  );
+  const placeholderSynastry = new SynastryEngine(
+    chartWithPlaceholder, chartFixture, "Placeholder Person", "Reference Person"
+  );
+  const placeholderAspects = placeholderSynastry.calculateAllInterAspects();
+  assert(
+    !placeholderAspects.some((aspect) => aspect.planet1 === "Chiron" || aspect.planet2 === "Chiron"),
+    "12.8 Synastry excludes Chiron's approximate placeholder even at exact Sun conjunction"
+  );
 }
 
 // ---------------------------------------------------------------------------
