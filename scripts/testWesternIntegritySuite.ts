@@ -9,6 +9,7 @@ import {
 } from "../lib/astronomy/ephemeris";
 import { SwissEphemerisEngine } from "../lib/astronomy/swissEphemeris";
 import { MinorAspectsEngine } from "../lib/astronomy/minorAspects";
+import { PlanetaryHoursCalculator } from "../lib/astronomy/planetaryHours";
 import {
   calculateSolarAltitudeDegrees,
   isSunAboveHorizonInChart,
@@ -86,6 +87,44 @@ function syntheticSectChart(localSiderealTime: number): WesternChartData {
     houseSystem: "Placidus",
   };
 }
+
+// Classical planetary hours require an actual sunrise and sunset. Polar
+// dates keep a broad day/night sect classification but must not fabricate
+// zero-minute hours or day/hour rulers.
+const planetaryHoursEngine = new PlanetaryHoursCalculator();
+const polarDaySunTimes = planetaryHoursEngine.calculateSunTimes(2024, 6, 21, 80, 0, 0);
+check(polarDaySunTimes.solarCondition === "polar-day",
+  "High-latitude summer fixture is classified as polar day");
+const polarDayHours = planetaryHoursEngine.calculate(2024, 6, 21, 12, 0, 80, 0, 0);
+check(polarDayHours.isBirthInDaytime === true,
+  "Polar day retains the diurnal sect classification");
+check(polarDayHours.hoursAvailable === false && polarDayHours.hours.length === 0,
+  "Polar day does not fabricate 24 unequal hours");
+check(polarDayHours.dayRuler === null && polarDayHours.currentHourRuler === null &&
+  polarDayHours.birthHourNumber === null,
+  "Polar day has no invented planetary day/hour ruler or birth-hour number");
+check(polarDayHours.dayHourDurationMinutes === null && polarDayHours.nightHourDurationMinutes === null,
+  "Polar day does not report zero-length planetary-hour durations");
+
+const polarNightSunTimes = planetaryHoursEngine.calculateSunTimes(2024, 1, 21, 80, 0, 0);
+check(polarNightSunTimes.solarCondition === "polar-night",
+  "High-latitude winter fixture is classified as polar night");
+const polarNightHours = planetaryHoursEngine.calculate(2024, 1, 21, 12, 0, 80, 0, 0);
+check(polarNightHours.isBirthInDaytime === false,
+  "Polar night retains the nocturnal sect classification");
+check(polarNightHours.hoursAvailable === false && polarNightHours.hours.length === 0,
+  "Polar night does not fabricate 24 unequal hours");
+check(polarNightHours.dayRuler === null && polarNightHours.currentHourRuler === null &&
+  polarNightHours.birthHourNumber === null,
+  "Polar night has no invented planetary day/hour ruler or birth-hour number");
+check(Boolean(polarNightHours.availabilityNote?.includes("does not rise")),
+  "Polar night discloses why classical planetary hours are unavailable");
+
+const ordinaryPlanetaryHours = planetaryHoursEngine.calculate(2024, 3, 20, 12, 0, 51.4769, 0, 0);
+check(ordinaryPlanetaryHours.hoursAvailable && ordinaryPlanetaryHours.hours.length === 24,
+  "Ordinary sunrise/sunset dates retain the full 24-hour planetary schedule");
+check(ordinaryPlanetaryHours.hours.every((hour) => hour.endTime !== hour.startTime),
+  "Ordinary planetary hours have non-zero displayed intervals");
 
 console.log("Western calculation integrity regression suite");
 
