@@ -72,7 +72,7 @@ Primary historical/research references:
 |---|---|---|
 | Midpoints / 90° dial | Partial | Natal midpoint UI now includes the core planet list plus Ascendant and Midheaven through the chart-level midpoint entry point. Selected midpoint hard-aspect activations and 90° dial are available. This is not a full Uranian/Hamburg 8-point hypothetical-planet, 90°/45° dial and all midpoint-structure system. |
 | Harmonic charts | Partial | Selected harmonics H4, H5, H7, H8 and H9 are mathematical longitude transformations. This is not a measured frequency, resonance or neurological property. |
-| Synastry | Partial | Cross-chart aspects, house overlays and interpretation labels exist. Aspect scores are heuristic interpretation weights. |
+| Synastry | Partial | Cross-chart aspects exclude points carrying an explicit calculationNote, including the approximate Chiron placeholder. House overlays currently use Sun, Moon, Venus, Mars, Jupiter and Saturn only. Aspect orbs, interpretation labels and compatibility scores are heuristic/school-specific, not validated measures of relationship outcomes. |
 | Composite chart | Partial | Midpoint composite placements are available; this is not a scientifically validated relationship model. |
 | Davison chart | Partial | Time-space midpoint chart workflow exists; it still needs broader independent numerical reference fixtures. |
 | Relationship index | Heuristic | Starts six dimensions at 70 and adjusts them using fixed, hand-designed aspect/orb weights. It is not a compatibility probability, psychometric test or measured outcome. Karmic/soulmate labels are interpretive symbolism, not proof of fate or past lives. |
