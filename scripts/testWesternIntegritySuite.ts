@@ -2,11 +2,13 @@ import assert from "node:assert/strict";
 import {
   calculateWesternChart,
   calculateAspects,
+  calculateJulianDay,
   normalizeDegrees,
   type PlanetPosition,
   type WesternChartData,
 } from "../lib/astronomy/ephemeris";
 import { SwissEphemerisEngine } from "../lib/astronomy/swissEphemeris";
+import { AlmutenFigurisCalculator } from "../lib/astronomy/almutenFigurisCalculator";
 import { MinorAspectsEngine } from "../lib/astronomy/minorAspects";
 import {
   calculateSolarAltitudeDegrees,
@@ -84,6 +86,32 @@ function syntheticSectChart(localSiderealTime: number): WesternChartData {
     houseSystem: "Placidus",
   };
 }
+
+// Prenatal syzygy must be resolved as the previous actual New/Full Moon,
+// not estimated by a fixed average solar-motion multiplier. Reference times
+// are checked against the Astrodienst Swiss Ephemeris 2000-2100 phase table.
+const almutenEngine = new AlmutenFigurisCalculator();
+const newMoonBirthJd = calculateJulianDay(2000, 1, 14, 15, 0, 0);
+const priorNewMoon = almutenEngine.calculatePreNatalSyzygy(newMoonBirthJd);
+check(priorNewMoon.type === "New Moon",
+  "Prenatal syzygy after the 2000-01-06 New Moon resolves as New Moon");
+const expectedNewMoonUtc = Date.parse("2000-01-06T18:13:38.000Z");
+check(Math.abs(Date.parse(priorNewMoon.utc) - expectedNewMoonUtc) <= 5 * 60 * 1000,
+  "Prenatal New Moon UTC matches the external 2000-01-06 18:13:38 UT reference within five minutes");
+check(Number.isFinite(priorNewMoon.degree) && priorNewMoon.degree >= 0 && priorNewMoon.degree < 360,
+  "Prenatal New Moon returns a normalized apparent solar longitude");
+
+const fullMoonBirthJd = calculateJulianDay(2000, 1, 25, 12, 0, 0);
+const priorFullMoon = almutenEngine.calculatePreNatalSyzygy(fullMoonBirthJd);
+check(priorFullMoon.type === "Full Moon",
+  "Prenatal syzygy after the 2000-01-21 Full Moon resolves as Full Moon");
+const expectedFullMoonUtc = Date.parse("2000-01-21T04:40:27.000Z");
+check(Math.abs(Date.parse(priorFullMoon.utc) - expectedFullMoonUtc) <= 5 * 60 * 1000,
+  "Prenatal Full Moon UTC matches the external 2000-01-21 04:40:27 UT reference within five minutes");
+
+const almutenIntegratedChart = calculateWesternChart(2000, 1, 14, 15, 0, 51.4769, 0, 0, "Placidus");
+check(almutenIntegratedChart.almutenFiguris?.sanUtc === priorNewMoon.utc,
+  "Natal chart passes its UTC Julian Day into the ephemeris-resolved Almuten syzygy calculation");
 
 console.log("Western calculation integrity regression suite");
 
