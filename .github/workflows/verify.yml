@@ -26,6 +26,7 @@ jobs:
           - testAstrologySuite.ts
           - testWesternIntegritySuite.ts
           - testWesternHouseSystemPolicySuite.ts
+          - testRegiomontanusHouseSystemSuite.ts
           - testWesternReferenceHarness.ts
           - testInpopWesternEphemerisHarness.ts
           - testAstrometricJ2000Harness.ts
