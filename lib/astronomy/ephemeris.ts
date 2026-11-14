@@ -824,7 +824,7 @@ export function calculateWesternChart(
     year, month, day, hour, minute, latitude, longitude, timezoneOffsetHours
   );
 
-  // Calculate Ibn Ezra / Lilly Almuten Figuris (Ruler of Geniture)
+  // Calculate the expanded Almuten Figuris variant with separate essential-only leaders.
   const almutenCalc = new AlmutenFigurisCalculator();
   const partOfFortune = arabianParts.partOfFortune.longitude;
   const almutenFiguris = almutenCalc.calculate({
