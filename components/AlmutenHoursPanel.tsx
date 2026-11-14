@@ -53,7 +53,7 @@ export function AlmutenHoursPanel({ chartData }: AlmutenHoursPanelProps) {
 
       {activeTab === "almuten" ? (
         <div className="space-y-6">
-          {/* Sovereign Almuten Figuris Hero Card */}
+          {/* Expanded Almuten Figuris score: one documented scoring variant */}
           <div className="p-6 bg-gradient-to-br from-amber-950/30 via-slate-900/80 to-slate-950/90 border border-amber-500/30 rounded-2xl shadow-xl space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-4">
@@ -63,7 +63,7 @@ export function AlmutenHoursPanel({ chartData }: AlmutenHoursPanelProps) {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
-                      Sovereign Ruler of Chart (Almuten Figuris)
+                      Expanded Almuten Figuris · selected variant
                     </span>
                     <span className="text-xs text-slate-400">Rank #1</span>
                   </div>
@@ -71,19 +71,20 @@ export function AlmutenHoursPanel({ chartData }: AlmutenHoursPanelProps) {
                     {almuten.almutenFiguris}
                   </h3>
                   <p className="text-xs text-amber-200/80">
-                    Highest Cumulative Essential & Accidental Dignity ({almuten.almutenScore} pts)
+                    Expanded score: {almuten.almutenScore} points
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div className="p-3 bg-slate-950/70 border border-slate-800 rounded-xl text-right">
-                  <span className="text-[10px] text-slate-400 block">Lord of Soul</span>
-                  <span className="text-sm font-bold text-amber-300">{almuten.lordOfSoul}</span>
+                  <span className="text-[10px] text-slate-400 block">Expanded scoring leader</span>
+                  <span className="text-sm font-bold text-amber-300">{almuten.almutenFiguris}</span>
                 </div>
                 <div className="p-3 bg-slate-950/70 border border-slate-800 rounded-xl text-right">
-                  <span className="text-[10px] text-slate-400 block">Lord of Temperament</span>
-                  <span className="text-sm font-bold text-cyan-300">{almuten.lordOfTemperament}</span>
+                  <span className="text-[10px] text-slate-400 block">Essential-only leader(s)</span>
+                  <span className="text-sm font-bold text-cyan-300">{almuten.essentialOnlyLeaders.join(" / ")}</span>
+                  <span className="text-[10px] text-slate-500 block">{almuten.essentialOnlyScore} essential points</span>
                 </div>
               </div>
             </div>
@@ -97,6 +98,7 @@ export function AlmutenHoursPanel({ chartData }: AlmutenHoursPanelProps) {
                 <span className="text-[10px] text-slate-400 block">Pre-Natal Syzygy (SAN)</span>
                 <span className="text-xs font-semibold text-slate-200">{almuten.sanFormatted}</span>
                 <span className="text-[10px] text-amber-400/90 block">({almuten.sanType})</span>
+                <span className="text-[9px] text-slate-500 block">{almuten.sanUtc.replace("T", " ").replace("Z", " UTC").slice(0, 23)}</span>
               </div>
               <div className="p-2.5 bg-slate-950/50 border border-slate-800/80 rounded-lg">
                 <span className="text-[10px] text-slate-400 block">Day Ruler (+7 pts)</span>
@@ -121,10 +123,10 @@ export function AlmutenHoursPanel({ chartData }: AlmutenHoursPanelProps) {
               <div>
                 <h4 className="text-sm font-bold text-slate-100 flex items-center gap-2">
                   <Star className="w-4 h-4 text-amber-400" />
-                  The 5 Hylegical Foundation Points (Ibn Ezra Doctrine)
+                  The Five Hylegical / Almuten Points
                 </h4>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Rulers assessed for each point: Domicile (+5), Exaltation (+4), Dorothean Triplicity (+3), Egyptian Term (+2), Chaldean Face (+1)
+                  This implementation uses domicile (+5), exaltation (+4), the active sect triplicity ruler (+3), Egyptian term (+2), and Chaldean face (+1). The expanded result adds house and day/hour bonuses; traditions differ on these choices.
                 </p>
               </div>
             </div>
