@@ -87,8 +87,10 @@ export class FixedStarsEngine {
   public calculateStarContacts(chart: WesternChartData, maxOrb = 1.25): StarContact[] {
     if (!this.isCatalogueEpochCompatible(chart)) return [];
     const contacts: StarContact[] = [];
+    // Never turn an explicitly approximate/symbolic placeholder into a
+    // precise-looking fixed-star conjunction.
     const testPoints = [
-      ...chart.planets,
+      ...chart.planets.filter((point) => !point.calculationNote),
       chart.ascendant,
       chart.midheaven,
     ];
