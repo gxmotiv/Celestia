@@ -164,7 +164,11 @@ const expectedFrame = calculateRegiomontanusHouses(
 check(frame.houseSystemUsed === "R",
   "The astronomy facade reports Regiomontanus rather than a fallback system");
 for (let i = 0; i < 12; i += 1) {
-  check(angularDifference(frame.houseCusps[i], expectedFrame.houseCusps[i]) < 0.0001,
+  // The public facade rounds ARMC and obliquity to four decimal places
+  // in its result metadata after computing cusps from full-precision inputs.
+  // Allow for that rounded-input difference here; the independent golden
+  // fixture tests above retain their 1e-7 degree precision.
+  check(angularDifference(frame.houseCusps[i], expectedFrame.houseCusps[i]) < 0.001,
     `The astronomy facade returns the Regiomontanus cusp ${i + 1}`);
 }
 
