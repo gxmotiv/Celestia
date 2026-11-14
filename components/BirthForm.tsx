@@ -754,6 +754,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
                 <option value="WholeSign">Whole Sign (Hellenistic / traditional)</option>
                 <option value="Equal">Equal House (30° from Ascendant)</option>
                 <option value="Porphyry">Porphyry (Equal Quadrants)</option>
+                <option value="Regiomontanus">Regiomontanus (Equatorial Great Circles)</option>
               </select>
             </div>
           </div>
