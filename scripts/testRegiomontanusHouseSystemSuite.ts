@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import { calculateRegiomontanusHouses } from "../lib/astronomy/regiomontanusHouses";
+import { SwissEphemerisEngine } from "../lib/astronomy/swissEphemeris";
+import { calculateWesternChart } from "../lib/astronomy/ephemeris";
+import { MultiSystemTransitEngine, TRANSIT_SYSTEM_PRESETS } from "../lib/astronomy/MultiSystemTransitEngine";
 
 interface ReferenceFixture {
   name: string;
@@ -144,4 +147,45 @@ for (const [armc, latitude, obliquity] of [
 check(invalidInputRejected === 5,
   "Reject non-finite ARMC/latitude/obliquity and latitude outside ±90°");
 
-console.log(`Regiomontanus reference suite passed: ${assertions} assertions against Swiss Ephemeris 2.10.03 fixtures.`);
+// Verify the public compatibility facade routes code "R" to the same
+// numerical method and reports the system actually used.
+const swissFacade = new SwissEphemerisEngine();
+const frame = swissFacade.calculateHouses(
+  2451545.0,
+  52.2166666666667,
+  8.8485279795,
+  "R"
+);
+const expectedFrame = calculateRegiomontanusHouses(
+  frame.localSiderealTime,
+  52.2166666666667,
+  frame.obliquity
+);
+check(frame.houseSystemUsed === "R",
+  "The astronomy facade reports Regiomontanus rather than a fallback system");
+for (let i = 0; i < 12; i += 1) {
+  check(angularDifference(frame.houseCusps[i], expectedFrame.houseCusps[i]) < 0.0001,
+    `The astronomy facade returns the Regiomontanus cusp ${i + 1}`);
+}
+
+const natalChart = calculateWesternChart(
+  2000, 1, 1, 12, 0,
+  52.2166666666667, 8.8485279795, 1,
+  "Regiomontanus"
+);
+check(natalChart.houseSystem === "Regiomontanus" &&
+  natalChart.houses.length === 12,
+  "The public Western natal calculator exposes twelve Regiomontanus houses");
+
+const transitDate = new Date("2000-03-01T00:00:00.000Z");
+const transitEngine = new MultiSystemTransitEngine(
+  { ...TRANSIT_SYSTEM_PRESETS.western, houseSystem: "regiomontanus" },
+  natalChart,
+  undefined,
+  transitDate
+);
+const transitResult = transitEngine.calculateSystemTransits(transitDate);
+check(transitResult.houseSystemUsed === "regiomontanus",
+  "The multi-system Western transit engine uses and reports Regiomontanus");
+
+console.log(`Regiomontanus reference/integration suite passed: ${assertions} assertions against Swiss Ephemeris 2.10.03 fixtures.`);
