@@ -1,7 +1,9 @@
 /**
  * Almuten Figuris (Ruler of the Chart) Engine
- * Implements the classical Medieval doctrine of Rabbi Abraham Ibn Ezra and William Lilly.
- * Analyzes the 5 Hylegical/Almuten points:
+ * Computes an explicitly labelled expanded medieval Almuten Figuris scoring variant.
+ * The five-point essential-dignity tally and optional accidental/temporal bonuses are
+ * separate outputs because historical authors and modern implementations vary.
+ * Analyzes the 5 hylegical/almuten points:
  * 1. Ascendant
  * 2. Sun
  * 3. Moon
@@ -11,6 +13,8 @@
  * plus accidental house dignities (+1 to +12), Day Ruler (+7), and Hour Ruler (+6).
  */
 
+import * as Astronomy from "astronomy-engine";
+import { swissEphemeris } from "./swissEphemeris";
 import { normalizeDegrees } from "./ephemeris";
 
 export interface AlmutenCandidateScore {
@@ -47,11 +51,12 @@ export interface AlmutenFigurisResult {
   almutenFiguris: string;
   almutenSymbol: string;
   almutenScore: number;
-  lordOfSoul: string;
-  lordOfTemperament: string;
+  essentialOnlyLeaders: string[];
+  essentialOnlyScore: number;
   sanDegree: number;
   sanType: "New Moon" | "Full Moon";
   sanFormatted: string;
+  sanUtc: string;
   dayRuler: string;
   hourRuler: string;
   points: AlmutenPointAnalysis[];
@@ -160,18 +165,43 @@ const PLANET_SYMBOLS: Record<string, string> = {
 
 export class AlmutenFigurisCalculator {
   /**
-   * Approximate Pre-natal Syzygy (SAN: New Moon or Full Moon before birth).
+   * Resolve the previous New Moon or Full Moon by geocentric apparent ecliptic
+   * longitude, using Astronomy Engine's phase search rather than a fixed
+   * average lunar/solar speed approximation.
+   *
+   * The returned zodiacal degree is the apparent Sun longitude at that
+   * syzygy instant, evaluated through the same Astronomy Engine facade used
+   * for the natal chart. This is model-resolved precision, not an independent
+   * claim of absolute astronomical truth.
    */
-  public calculatePreNatalSyzygy(sunLon: number, moonLon: number): { degree: number; type: "New Moon" | "Full Moon" } {
-    const diff = normalizeDegrees(moonLon - sunLon);
-    if (diff < 180) {
-      // Waning towards or waxing from New Moon; last syzygy was New Moon
-      return { degree: normalizeDegrees(sunLon - diff * 0.08), type: "New Moon" };
-    } else {
-      // Full Moon occurred when diff was 180
-      const diffFromFull = diff - 180;
-      return { degree: normalizeDegrees(sunLon - diffFromFull * 0.08), type: "Full Moon" };
+  public calculatePreNatalSyzygy(
+    birthJulianDay: number
+  ): { degree: number; type: "New Moon" | "Full Moon"; utc: string } {
+    if (!Number.isFinite(birthJulianDay)) {
+      throw new RangeError("Prenatal syzygy calculation requires a finite birth Julian Day.");
     }
+
+    const birthTime = new Astronomy.AstroTime(birthJulianDay - 2451545.0);
+    const phase = Astronomy.MoonPhase(birthTime);
+    if (!Number.isFinite(phase) || phase < 0 || phase >= 360) {
+      throw new RangeError("The lunar phase at birth could not be resolved.");
+    }
+
+    const type: "New Moon" | "Full Moon" = phase < 180 ? "New Moon" : "Full Moon";
+    const targetLongitude = type === "New Moon" ? 0 : 180;
+    const syzygyTime = Astronomy.SearchMoonPhase(targetLongitude, birthTime, -35);
+    if (!syzygyTime) {
+      throw new RangeError("The preceding lunar syzygy could not be found within 35 days.");
+    }
+
+    const syzygyDate = syzygyTime.date;
+    if (syzygyDate.getTime() > birthTime.date.getTime() + 1000) {
+      throw new RangeError("The resolved lunar syzygy is later than the birth instant.");
+    }
+
+    const syzygyJulianDay = syzygyDate.getTime() / 86400000 + 2440587.5;
+    const degree = normalizeDegrees(swissEphemeris.getApparentSunLongitude(syzygyJulianDay));
+    return { degree, type, utc: syzygyDate.toISOString() };
   }
 
   public calculate(params: {
@@ -183,11 +213,12 @@ export class AlmutenFigurisCalculator {
     isDayChart: boolean;
     dayRuler: string;
     hourRuler: string;
+    birthJulianDay: number;
   }): AlmutenFigurisResult {
-    const { ascendant, sun, moon, partOfFortune, planets, isDayChart, dayRuler, hourRuler } = params;
+    const { ascendant, sun, moon, partOfFortune, planets, isDayChart, dayRuler, hourRuler, birthJulianDay } = params;
 
     // 1. Determine SAN
-    const san = this.calculatePreNatalSyzygy(sun, moon);
+    const san = this.calculatePreNatalSyzygy(birthJulianDay);
 
     const candidatePoints = [
       { name: "Ascendant", lon: ascendant },
@@ -285,6 +316,11 @@ export class AlmutenFigurisCalculator {
       });
     });
 
+    const essentialOnlyScore = Math.max(...Object.values(scoresMap).map((item) => item.essential));
+    const essentialOnlyLeaders = Object.keys(scoresMap).filter(
+      (planet) => scoresMap[planet].essential === essentialOnlyScore
+    );
+
     // 3. Accidental Dignities (by House)
     Object.keys(scoresMap).forEach((pName) => {
       const h = scoresMap[pName].house;
@@ -330,7 +366,6 @@ export class AlmutenFigurisCalculator {
     });
 
     const winner = scores[0];
-    const runnerUp = scores[1];
 
     const sanSignIdx = Math.floor(san.degree / 30);
     const sanDegInSign = san.degree % 30;
@@ -340,16 +375,17 @@ export class AlmutenFigurisCalculator {
       almutenFiguris: winner.planet,
       almutenSymbol: winner.symbol,
       almutenScore: winner.totalScore,
-      lordOfSoul: winner.planet,
-      lordOfTemperament: runnerUp ? runnerUp.planet : winner.planet,
+      essentialOnlyLeaders,
+      essentialOnlyScore,
       sanDegree: san.degree,
       sanType: san.type,
       sanFormatted,
+      sanUtc: san.utc,
       dayRuler,
       hourRuler,
       points: pointAnalyses,
       scores,
-      significance: `According to Ibn Ezra's classical doctrine, ${winner.planet} holds supreme sovereignty over this geniture with ${winner.totalScore} dignity points (${winner.essentialScore} essential, ${winner.accidentalScore} house, ${winner.dayHourBonus} temporal).`,
+      significance: `Under this expanded scoring variant, ${winner.planet} ranks first with ${winner.totalScore} points (${winner.essentialScore} from the five essential-dignity places, ${winner.accidentalScore} from house placement, and ${winner.dayHourBonus} from planetary day/hour). Other historical and modern protocols can produce a different leader.`,
     };
   }
 }
