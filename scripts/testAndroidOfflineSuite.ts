@@ -46,6 +46,20 @@ assert(
     directWestern.planets.find((p) => p.name === "Sun")?.longitude,
   "The offline wrapper must not change the calculation inputs or result."
 );
+const offlineMeridian = calculateOfflineAstrology({ ...sample, houseSystem: "Meridian" });
+const directMeridian = calculateWesternChart(
+  1990, 5, 15, 6, 30, 28.6139, 77.209, 5.5, "Meridian"
+);
+assert(
+  "Offline Western supports Meridian houses and matches the shared website engine",
+  offlineMeridian.westernData.houseSystem === "Meridian" &&
+    offlineMeridian.westernData.houses.length === 12 &&
+    offlineMeridian.westernData.houses.every((house, index) =>
+      Math.abs(house.longitude - directMeridian.houses[index].longitude) < 1e-8
+    ),
+  "Offline Meridian cusps must match the shared natal chart engine."
+);
+
 assert(
   "Offline Vedic output includes the Moon nakshatra",
   Boolean(result.vedicData.planets.find((p) => p.name === "Moon")?.nakshatraName),
@@ -109,6 +123,12 @@ assert("Invalid birth clock time is rejected", invalidTimeRejected, "Invalid bir
 
 
 const offlineHtml = readFileSync("android/app/src/main/assets/offline/index.html", "utf8");
+assert(
+  "Offline page exposes all implemented Western house systems, including Meridian",
+  ["Placidus", "WholeSign", "Equal", "Porphyry", "Regiomontanus", "Koch", "Campanus", "Alcabitius", "Morinus", "Meridian"]
+    .every((system) => offlineHtml.includes(`value="${system}"`)),
+  "One or more supported offline house-system options are missing."
+);
 assert(
   "Offline page references the bundled calculation engine",
   offlineHtml.includes('<script src="./celestia-offline.js"></script>'),

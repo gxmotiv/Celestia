@@ -41,7 +41,7 @@ export const PLANET_SYMBOLS: Record<string, string> = {
 export type ZodiacSystem = "tropical" | "sidereal";
 
 /** Only systems actually calculated by this engine are selectable. */
-export type HouseSystem = "placidus" | "whole-sign" | "equal" | "porphyry" | "regiomontanus" | "koch" | "campanus" | "alcabitius" | "morinus";
+export type HouseSystem = "placidus" | "whole-sign" | "equal" | "porphyry" | "regiomontanus" | "koch" | "campanus" | "alcabitius" | "morinus" | "meridian";
 
 export type AspectSystem = "western" | "vedic" | "hellenistic";
 
@@ -840,7 +840,8 @@ export class MultiSystemTransitEngine {
       : config.houseSystem === "koch" ? "K"
       : config.houseSystem === "campanus" ? "C"
       : config.houseSystem === "alcabitius" ? "B"
-      : config.houseSystem === "morinus" ? "M" : "P";
+      : config.houseSystem === "morinus" ? "M"
+      : config.houseSystem === "meridian" ? "X" : "P";
     if (Number.isFinite(birthWestern.birthLatitude) && Number.isFinite(birthWestern.birthLongitude)) {
       const houseResult = swissEphemeris.calculateHouses(
         birthWestern.julianDay,
@@ -867,7 +868,8 @@ export class MultiSystemTransitEngine {
         : houseResult.houseSystemUsed === "K" ? "koch"
         : houseResult.houseSystemUsed === "C" ? "campanus"
         : houseResult.houseSystemUsed === "B" ? "alcabitius"
-        : houseResult.houseSystemUsed === "M" ? "morinus" : "placidus";
+        : houseResult.houseSystemUsed === "M" ? "morinus"
+        : houseResult.houseSystemUsed === "X" ? "meridian" : "placidus";
     } else {
       this.natalHouseCusps = birthWestern.houses.map((house) =>
         config.zodiac === "sidereal" ? normalizeDegrees(house.longitude - natalAyanamsa) : normalizeDegrees(house.longitude)

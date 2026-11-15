@@ -79,7 +79,7 @@ export function TransitView({
 
   // Custom House System Override (for Western)
   const [selectedHouseSystem, setSelectedHouseSystem] = useState<
-    "auto" | "placidus" | "whole-sign" | "equal" | "porphyry" | "regiomontanus" | "koch" | "campanus" | "alcabitius" | "morinus"
+    "auto" | "placidus" | "whole-sign" | "equal" | "porphyry" | "regiomontanus" | "koch" | "campanus" | "alcabitius" | "morinus" | "meridian"
   >("auto");
 
   // BaZi Gender (for Da Yun progression direction)
@@ -300,6 +300,7 @@ export function TransitView({
                   <option value="campanus">Campanus (Prime Vertical Great Circles)</option>
                   <option value="alcabitius">Alcabitius (Ascendant semi-arc thirds)</option>
                   <option value="morinus">Morinus (Equatorial 30° divisions)</option>
+                  <option value="meridian">Meridian / Axial Rotation (30° right-ascension divisions)</option>
                 </select>
               </div>
             )}
