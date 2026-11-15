@@ -75,11 +75,9 @@ check(isWesternHouseSystemImplemented("Placidus") &&
   isWesternHouseSystemImplemented("WholeSign") &&
   isWesternHouseSystemImplemented("Porphyry") &&
   isWesternHouseSystemImplemented("Regiomontanus") &&
-  isWesternHouseSystemImplemented("Koch"),
-  "The implementation registry recognizes the six currently calculated Western house systems");
-
-check(!isWesternHouseSystemImplemented("Campanus"),
-  "Campanus remains unavailable until its own calculation engine is implemented");
+  isWesternHouseSystemImplemented("Koch") &&
+  isWesternHouseSystemImplemented("Campanus"),
+  "The implementation registry recognizes the seven currently calculated Western house systems");
 
 check(toWesternTransitHouseSystem("Koch") === "koch" &&
   toWesternTransitHouseSystem("Regiomontanus") === "regiomontanus" &&
