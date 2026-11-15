@@ -337,7 +337,7 @@ assert.throws(
 );
 assert.throws(
   () => KPSignificators.getPlanetHouse(42, { cusps: [] } as unknown as KPCusps),
-  /requires a finite longitude and twelve valid cusps/
+  /requires twelve finite cusp longitudes/
 );
 assert.throws(
   () => KPSignificators.getPlanetHouse(42, {
@@ -432,12 +432,23 @@ const nodeTestSignifications = Object.fromEntries(
     planet.name,
     {
       planet: planet.name,
+      occupiesHouse: planet.house,
+      ownsHouses: [],
+      starLord: planet.starLord,
+      starLordOccupiesHouse: planet.house,
+      starLordOwnsHouses: [],
+      subLord: planet.subLord,
+      subLordOccupiesHouse: planet.house,
+      subLordOwnsHouses: [],
       levels: {
         levelA: [],
         levelB: [planet.house],
         levelC: [],
         levelD: [],
       },
+      strengthOrder: ["A", "B", "C", "D"],
+      starTenants: [],
+      hasSelfStrength: false,
       signifiedHouses: [planet.house],
     } as KPPlanetSignification,
   ])
