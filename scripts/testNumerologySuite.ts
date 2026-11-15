@@ -26,6 +26,7 @@ import {
   ALL_KABBALAH_PATHS,
   LATIN_TO_HEBREW_MAP,
   TAMIL_GRAHA_PROFILES,
+  calculateTamilNumerology,
 } from "../lib/numerology";
 
 let passedCount = 0;
@@ -241,6 +242,19 @@ assert("Tamil Navagrahas defined for all 9 numbers", Object.keys(TAMIL_GRAHA_PRO
 assert("Einstein Janma En is 5 (14 -> 5)", einsteinReport.tamil.janmaEn === 5);
 assert("Tamil Graha profile has proverb guidance", einsteinReport.tamil.tamilProverbGuidance.length > 0);
 assert("Auspicious days, gems, and colors populated", einsteinReport.tamil.auspiciousDays.length > 0 && einsteinReport.tamil.auspiciousColors.length > 0);
+assert("Latin transliteration explicitly uses the Chaldean-Indian A-Z method",
+  einsteinReport.tamil.peyarEnMethod === "Chaldean-Indian Latin A-Z mapping" &&
+  einsteinReport.tamil.peyarEn !== null);
+const nativeTamilName = calculateTamilNumerology("அருண் குமார்", 1990, 1, 1);
+assert("Tamil-script names do not receive a fabricated Peyar En value",
+  nativeTamilName.peyarEn === null &&
+  nativeTamilName.peyarEnNote.includes("Latin A–Z transliteration only"));
+const mixedScriptName = calculateTamilNumerology("Arun குமார்", 1990, 1, 1);
+assert("Mixed-script names are not partially calculated after dropping unsupported characters",
+  mixedScriptName.peyarEn === null);
+const transliteratedTamilName = calculateTamilNumerology("Arun Kumar", 1990, 1, 1);
+assert("A supported Latin transliteration still returns a real mapped name number",
+  transliteratedTamilName.peyarEn === 2);
 
 // -----------------------------------------------------------------------------
 // 7. CROSS-SYSTEM SYNTHESIS TESTS
