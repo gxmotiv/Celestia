@@ -78,6 +78,14 @@ Shared astronomy may provide raw positions and time conversions. It does not aut
 
 **Next work:** continue comparing the remaining Bala components against independently worked classical example charts and edition-specific variants. Reimplement the remaining Bala components from their cited BPHS chapter/verse and selected translation, including local apparent time and planetary-hour lords, declination/Ayana, true motional kendra, and full Drishti-Pinda. Add independent worked-example fixtures before removing the partial label.
 
+### Jaimini Karakamsa wiring in the Parashari chart pipeline
+
+**Finding:** the stricter Jaimini Chara-Karaka validation correctly requires a sidereal Ascendant to derive the Karakamsa house, but the main `calculateVedicChart` adapter passed only the seven graha positions. Because the Ascendant is intentionally excluded from Chara-Karaka ranking, it was not present in that array and full Vedic chart generation failed.
+
+**Correction:** the Vedic chart pipeline now passes `lagnaPlanet.siderealLongitude` explicitly as the second argument to `calculate7Karakas`. The graha list remains limited to the seven classical planets; no synthetic Ascendant is inserted into the karaka-ranking input.
+
+**Regression coverage:** `scripts/testJaiminiVedicChartIntegrationSuite.ts` verifies the normal Vedic chart pipeline produces Karakamsa, checks that the D9 sign is derived from the Atmakaraka's sidereal longitude and that its house is measured from the sidereal Lagna, and confirms the direct Jaimini API still fails closed when its required Ascendant is omitted.
+
 ### KP house-system isolation
 
 **Finding:** the KP cusp adapter previously converted `westernData.houses` directly to KP sidereal cusps. Because that array reflects the user's selected Western house system, a Whole Sign, Morinus, Meridian or other Western selection could inadvertently become the KP cusp framework.
