@@ -520,7 +520,12 @@ export class VedicBenchmarkRunner {
       ascendant: 95.0,
       planets: {
         Sun: { longitude: 10.0 }, // Exalted Aries 10°
+        Moon: { longitude: 40.0 }, // Taurus
+        Mars: { longitude: 70.0 }, // Gemini
+        Mercury: { longitude: 190.0 }, // Libra
         Jupiter: { longitude: 95.0 }, // Exalted Cancer 5°
+        Venus: { longitude: 340.0 }, // Pisces
+        Saturn: { longitude: 280.0 }, // Capricorn
       },
     };
     const sunSthana = this.shadbalaEngine.calculateSthanaBala("Sun", shadAvatarInput);
