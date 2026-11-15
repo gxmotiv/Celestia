@@ -365,6 +365,7 @@ export function VedicChart({
       {vedicMasterView === "shadbala" && (
         <ShadbalaPanel
           vedicData={vedicData}
+          westernData={westernData}
           birthDate={birthDate}
           birthTime={birthTime}
         />

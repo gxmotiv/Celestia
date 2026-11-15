@@ -1,13 +1,24 @@
 /**
- * Complete Classical Shadbala Engine
- * Implements all 6 planetary strengths (Bala) in Virupas and Rupas:
- * 1. Sthana Bala (Positional Strength)
- * 2. Dig Bala (Directional Strength)
- * 3. Kala Bala (Temporal Strength)
- * 4. Cheshta Bala (Motional Strength)
- * 5. Naisargika Bala (Natural Strength)
- * 6. Drik Bala (Aspect Strength)
+ * Partial Shadbala research estimator.
+ *
+ * This module exposes the six traditional categories, but several calculations
+ * still use simplified or placeholder values. See SHADBALA_IMPLEMENTATION_STATUS
+ * before presenting a result as classical or source-validated Shadbala.
  */
+
+export const SHADBALA_IMPLEMENTATION_STATUS = {
+  level: "partial",
+  label: "Partial / approximate",
+  summary:
+    "This is a provisional six-component estimate, not yet an independently verified classical Shadbala calculation.",
+  limitations: [
+    "Saptavargaja currently repeats one Rashi relationship score across seven Vargas instead of evaluating the planet and each divisional sign lord separately.",
+    "Dig Bala uses a simplified ecliptic offset from the Ascendant instead of the exact relevant angle (IC, Descendant, MC or Ascendant).",
+    "Kala Bala still contains fixed placeholder values for Tribhaga, year, month and Ayana components, and its Hora estimate is not a sunrise-based planetary-hour calculation.",
+    "Cheshta Bala uses coarse motion bands; non-luminary scores require an actual daily-motion value. Sun and Moon still use provisional constants rather than their textually specified Ayana/Paksha derivations.",
+    "Drik Bala uses simplified fixed aspect bands and point values rather than a complete angular Drishti-Pinda computation."
+  ]
+} as const;
 
 export interface SthanaBalaBreakdown {
   ucchaBala: number;
@@ -49,7 +60,8 @@ export interface CheshtaBalaResult {
   points: number;
   motion: number;
   isRetrograde: boolean;
-  state: "Vakra (Retrograde)" | "Anuvakra (Slow)" | "Samanya (Direct)" | "Mandatara (Fast)";
+  state: "Vakra (Retrograde)" | "Anuvakra (Slow)" | "Samanya (Direct)" | "Mandatara (Fast)" | "Unavailable (motion not supplied)";
+  available: boolean;
   description: string;
 }
 
@@ -401,7 +413,7 @@ export class ShadbalaEngine {
   public calculateCheshtaBala(planet: string, input: ShadbalaChartInput): CheshtaBalaResult {
     const pPos = input.planets[planet];
     const isRetro = pPos?.isRetrograde ?? false;
-    const dailyMotion = pPos?.dailyMotion ?? (isRetro ? -0.15 : 0.85);
+    const dailyMotion = pPos?.dailyMotion ?? pPos?.speed;
 
     if (planet === "Sun" || planet === "Moon") {
       return {
@@ -409,7 +421,19 @@ export class ShadbalaEngine {
         motion: planet === "Sun" ? 1.0 : 13.2,
         isRetrograde: false,
         state: "Samanya (Direct)",
-        description: `${planet} never retrogresses; motional strength derived from celestial velocity.`,
+        available: true,
+        description: `${planet} uses a provisional motional-strength constant; the source-specified Ayana/Paksha derivation remains to be implemented.`,
+      };
+    }
+
+    if (dailyMotion === undefined || !Number.isFinite(dailyMotion)) {
+      return {
+        points: 0,
+        motion: 0,
+        isRetrograde: isRetro,
+        state: "Unavailable (motion not supplied)",
+        available: false,
+        description: "Cheshta Bala was not estimated because an actual daily-motion value was not supplied. No default speed is invented.",
       };
     }
 
@@ -436,7 +460,8 @@ export class ShadbalaEngine {
       motion: dailyMotion,
       isRetrograde: isRetro,
       state,
-      description: `${planet} is in ${state} motion, securing ${points} Virupas Cheshta Bala.`,
+      available: true,
+      description: `${planet} is in ${state} motion, securing a provisional ${points} Virupas Cheshta Bala estimate.`,
     };
   }
 

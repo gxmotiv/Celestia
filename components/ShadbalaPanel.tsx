@@ -5,7 +5,9 @@ import {
   ShadbalaEngine,
   ShadbalaResult,
   ShadbalaChartInput,
+  SHADBALA_IMPLEMENTATION_STATUS,
 } from "@/lib/vedic/shadbalaEngine";
+import { WesternChartData } from "@/lib/astronomy/ephemeris";
 import { VedicChartData } from "@/lib/astronomy/vedic";
 import {
   Shield,
@@ -18,12 +20,14 @@ import {
 
 interface ShadbalaPanelProps {
   vedicData: VedicChartData;
+  westernData?: WesternChartData;
   birthDate?: string;
   birthTime?: string;
 }
 
 export function ShadbalaPanel({
   vedicData,
+  westernData,
   birthDate = "1990-01-01",
   birthTime = "12:00",
 }: ShadbalaPanelProps) {
@@ -33,10 +37,14 @@ export function ShadbalaPanel({
   const chartInput: ShadbalaChartInput = useMemo(() => {
     const planetsMap: ShadbalaChartInput["planets"] = {};
     vedicData.planets.forEach((p) => {
+      const westernPosition = westernData?.planets.find((position) => position.name === p.name);
+      const actualDailyMotion = westernPosition?.speed;
       planetsMap[p.name] = {
         longitude: p.siderealLongitude,
         isRetrograde: p.isRetrograde,
-        dailyMotion: p.isRetrograde ? -0.1 : 0.95,
+        ...(typeof actualDailyMotion === "number" && Number.isFinite(actualDailyMotion)
+          ? { dailyMotion: actualDailyMotion }
+          : {}),
       };
     });
 
@@ -57,7 +65,7 @@ export function ShadbalaPanel({
       planets: planetsMap,
       birthDate: bDateObj,
     };
-  }, [vedicData, birthDate, birthTime]);
+  }, [vedicData, westernData, birthDate, birthTime]);
 
   const engine = useMemo(() => new ShadbalaEngine(), []);
 
@@ -90,24 +98,39 @@ export function ShadbalaPanel({
                 <Shield className="w-5 h-5" />
               </div>
               <h2 className="text-xl font-bold tracking-tight text-slate-100">
-                Planetary Strength Analysis (Shadbala षड्बल)
+                Shadbala Strength Estimate (षड्बल) — Partial
               </h2>
             </div>
             <p className="text-xs text-slate-400">
-              The 6-Fold Classical Planetary Power System: Sthana, Dig, Kala, Cheshta, Naisargika & Drik Balas in Virupas and Rupas
+              Six traditional categories are shown, but several component calculations remain approximate and are not yet source-validated.
             </p>
           </div>
 
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 flex items-center gap-1.5">
               <CheckCircle2 className="w-3.5 h-3.5" />
-              Strong Planets: {shadbalaList.filter((p) => p.isStrong).length}
+              Above modeled threshold: {shadbalaList.filter((p) => p.isStrong).length}
             </span>
             <span className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 flex items-center gap-1.5">
               <XCircle className="w-3.5 h-3.5" />
-              Challenged: {shadbalaList.filter((p) => !p.isStrong).length}
+              Below modeled threshold: {shadbalaList.filter((p) => !p.isStrong).length}
             </span>
           </div>
+        </div>
+
+        <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-2">
+          <div className="flex items-center gap-2 text-amber-300 text-xs font-bold uppercase tracking-wide">
+            <Shield className="w-4 h-4" />
+            {SHADBALA_IMPLEMENTATION_STATUS.label}
+          </div>
+          <p className="text-xs text-slate-300 leading-relaxed">
+            {SHADBALA_IMPLEMENTATION_STATUS.summary}
+          </p>
+          <ul className="list-disc pl-5 space-y-1 text-[11px] text-slate-400">
+            {SHADBALA_IMPLEMENTATION_STATUS.limitations.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
         </div>
 
         <div className="pt-4 flex items-center gap-2 overflow-x-auto no-scrollbar">
@@ -194,7 +217,7 @@ export function ShadbalaPanel({
                             : "bg-rose-500/20 text-rose-300 border border-rose-500/40"
                         }`}
                       >
-                        {planet.isStrong ? "Strong" : "Weak"} ({(planet.strengthRatio * 100).toFixed(0)}%)
+                        {planet.isStrong ? "Above estimate" : "Below estimate"} ({(planet.strengthRatio * 100).toFixed(0)}%)
                       </span>
 
                       <button
@@ -287,7 +310,7 @@ export function ShadbalaPanel({
                     : "bg-rose-500/20 text-rose-300 border border-rose-500/40"
                 }`}
               >
-                {activeResult.isStrong ? "Strong" : "Weak"}
+                {activeResult.isStrong ? "Above estimate" : "Below estimate"}
               </span>
             </div>
 

@@ -42,6 +42,20 @@ Shared astronomy may provide raw positions and time conversions. It does not aut
 
 ## Findings and fixes from this audit cycle
 
+### Parashari Shodashavarga boundary audit
+
+**Correction:** `lib/vedic/divisionalCalc.ts` now rejects unknown varga IDs and non-finite longitudes instead of silently falling back to D1. Equal-width divisions use a sub-microarcsecond floating-point boundary tolerance so exact D7/D9/D45-style cusps are assigned to the following half-open subdivision consistently. D30 keeps its unequal odd/even segment tables and uses the same explicit boundary handling for sign and degree output.
+
+**Regression coverage:** `scripts/testParashariVargaSuite.ts` checks the named rules and exact boundaries across all 16 configured Shodashavarga charts, degree mapping, and invalid-input rejection. This validates the implemented sign-assignment algorithms at the tested boundaries; it does not certify every Varga interpretation, dignity doctrine, or textual variant.
+
+### Shadbala status correction
+
+**Finding:** the Shadbala screen claimed a complete classical six-fold result, but the engine still used provisional/fixed values and simplified approximations for several components. In particular, Saptavargaja currently repeats one Rashi relationship across seven Vargas; Dig Bala uses a simplified ecliptic offset from the Ascendant; Kala Bala contains fixed values for some subcomponents; and Drik Bala uses simplified fixed aspect bands.
+
+**Correction:** the UI now labels Shadbala as partial/approximate, explains the known limitations, and changes “Strong/Weak” to “Above/Below modeled threshold.” Cheshta Bala no longer invents a default daily motion for non-luminary planets: it uses an actual supplied speed or returns an unavailable result. The website passes through the Western chart's computed planetary speed when available.
+
+**Next work:** reimplement each Bala from its cited BPHS chapter/verse and selected translation, including the seven individual Vargas, exact quadrant reference points, local apparent time and planetary-hour lords, declination/Ayana, true motional kendra, and full Drishti-Pinda. Add independent worked-example fixtures before removing the partial label.
+
 ### KP house-system isolation
 
 **Finding:** the KP cusp adapter previously converted `westernData.houses` directly to KP sidereal cusps. Because that array reflects the user's selected Western house system, a Whole Sign, Morinus, Meridian or other Western selection could inadvertently become the KP cusp framework.
