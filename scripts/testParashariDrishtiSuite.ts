@@ -56,7 +56,7 @@ assert.equal(
 );
 assert.equal(
   calculateLongitudeDrishtiVirupas(75, "Saturn", "bphs-verse-special-formula"),
-  30,
+  52.5,
   "BPHS 26.9 Saturn c=2 uses 60 minus half the degrees past the second sign"
 );
 assert.equal(
