@@ -80,6 +80,19 @@ export interface KPHouseSignificators {
   allSignificators: string[];
 }
 
+export interface KPPlanetSignificationLevels {
+  /** Level A: house occupied by the planet's star lord. */
+  levelA: number[];
+  /** Level B: house occupied by the planet itself. */
+  levelB: number[];
+  /** Level C: houses owned by the planet's star lord. */
+  levelC: number[];
+  /** Level D: houses owned by the planet itself. */
+  levelD: number[];
+}
+
+export type KPPlanetSignificationGrade = "A" | "B" | "C" | "D";
+
 export interface KPPlanetSignification {
   planet: string;
   occupiesHouse: number;
@@ -90,6 +103,14 @@ export interface KPPlanetSignification {
   subLord: string;
   subLordOccupiesHouse: number;
   subLordOwnsHouses: number[];
+  /** Distinct classical planet-level four-fold signification grades. */
+  levels: KPPlanetSignificationLevels;
+  /** Higher-priority grade to lower-priority grade for the selected KP strength variant. */
+  strengthOrder: KPPlanetSignificationGrade[];
+  /** Other planets occupying one of this planet's stars. */
+  starTenants: string[];
+  /** A tenantless planet (or a planet in its own star) uses B-A-D-C strength order. */
+  hasSelfStrength: boolean;
   signifiedHouses: number[]; // Unique ordered list of all signified houses
 }
 
