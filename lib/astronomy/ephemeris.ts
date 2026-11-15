@@ -18,7 +18,7 @@ import { isSunAboveHorizon } from "./horizon";
 import { recommendWesternHouseSystem } from "./westernHouseSystemPolicy";
 
 export type SolarProximity = "Cazimi" | "Combust" | "UnderBeams" | "Free";
-export type WesternHouseSystem = "Auto" | "Placidus" | "Equal" | "WholeSign" | "Porphyry" | "Regiomontanus" | "Koch" | "Campanus";
+export type WesternHouseSystem = "Auto" | "Placidus" | "Equal" | "WholeSign" | "Porphyry" | "Regiomontanus" | "Koch" | "Campanus" | "Alcabitius";
 export type ResolvedWesternHouseSystem = Exclude<WesternHouseSystem, "Auto">;
 
 export interface PlanetPosition {
@@ -750,7 +750,8 @@ export function calculateWesternChart(
     : resolvedRequest === "Porphyry" ? "O"
     : resolvedRequest === "Regiomontanus" ? "R"
     : resolvedRequest === "Koch" ? "K"
-    : resolvedRequest === "Campanus" ? "C" : "P";
+    : resolvedRequest === "Campanus" ? "C"
+    : resolvedRequest === "Alcabitius" ? "B" : "P";
   const houseResult = swissEphemeris.calculateHouses(jd, latitude, longitude, sysCode);
   const rawCusps = houseResult.houseCusps;
   const actualHouseSystem: ResolvedWesternHouseSystem = houseResult.houseSystemUsed === "W" ? "WholeSign"
@@ -758,7 +759,8 @@ export function calculateWesternChart(
     : houseResult.houseSystemUsed === "O" ? "Porphyry"
     : houseResult.houseSystemUsed === "R" ? "Regiomontanus"
     : houseResult.houseSystemUsed === "K" ? "Koch"
-    : houseResult.houseSystemUsed === "C" ? "Campanus" : "Placidus";
+    : houseResult.houseSystemUsed === "C" ? "Campanus"
+    : houseResult.houseSystemUsed === "B" ? "Alcabitius" : "Placidus";
   const houseSystemNote = polarPlacidusFallback
     ? autoHouseRecommendation?.rationale ??
       "Celestia's conservative policy selected Porphyry at |latitude| ≥ 66.5622°. This is an application fallback, not a claim that Placidus is impossible at every such location; other implementations may resolve it at some high-latitude dates and coordinates."
