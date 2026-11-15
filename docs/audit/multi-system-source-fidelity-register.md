@@ -42,6 +42,16 @@ Shared astronomy may provide raw positions and time conversions. It does not aut
 
 ## Findings and fixes from this audit cycle
 
+### Western Lots: Fortune and Spirit formula provenance
+
+**Finding:** the Lot calculator used the common sect-reversed Hellenistic formula correctly, but a benchmark attributed the nocturnal reversal to Ptolemy's `Tetrabiblos` III.10. That attribution is incorrect: Ptolemy specifies the Sun-to-Moon arc for Fortune both by night and by day. The common reversed convention is documented in other Hellenistic sources and examined by Dorian Gieseler Greenbaum; Valens also preserves a more nuanced night-Fortune rule in `Anthology` III.11 depending on whether the Moon is above or below the Earth.
+
+**Correction:** `ArabianPartsCalculator` now publishes `formulaProfile: "common-hellenistic-sect-reversed"` and labels Fortune and Spirit formula strings as the common Hellenistic day/night profile. The code comment explicitly excludes Ptolemy's non-reversing formula and Valens' special night-Fortune variant, rather than claiming one universal classical rule. Both the Western benchmark and the multi-system benchmark now state the actual method lineage; the multi-system benchmark independently recomputes Fortune and Spirit from chart Ascendant, Sun and Moon instead of checking only that a formula label contains "Day" or "Night".
+
+**Regression coverage:** `scripts/testWesternLotSectFormulaSuite.ts` checks numeric day/night Fortune and Spirit positions, their reflection about the Ascendant, New Moon and Full Moon coincidences, house assignment, and invalid cusp-count rejection.
+
+**Sources:** [Dorian Gieseler Greenbaum, "Calculating the Lots of Fortune and Daemon in Hellenistic Astrology", *Culture and Cosmos* (2007)](https://doi.org/10.46472/cc.01211.0217) compares the common sect-reversed formulas and textual variants. [Valens, `Anthologies`, Riley translation / Skyscript digital edition](https://www.skyscript.co.uk/valens_janegca.html) provides the primary text for `II.23` (Daimon) and `III.11` (Fortune). [Ptolemy, `Tetrabiblos` III.10, Robbins Loeb translation](https://penelope.uchicago.edu/Thayer/E/Roman/Texts/Ptolemy/Tetrabiblos/3B%2A.html) explicitly says to use the Sun-to-Moon distance "both by night and by day"; the note to that passage explains the direction of projection.
+
 ### Parashari Shodashavarga boundary audit
 
 **Correction:** `lib/vedic/divisionalCalc.ts` now rejects unknown varga IDs and non-finite longitudes instead of silently falling back to D1. Equal-width divisions use a sub-microarcsecond floating-point boundary tolerance so exact D7/D9/D45-style cusps are assigned to the following half-open subdivision consistently. D30 keeps its unequal odd/even segment tables and uses the same explicit boundary handling for sign and degree output.
