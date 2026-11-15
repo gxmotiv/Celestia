@@ -11,6 +11,7 @@ export type WesternHouseTechnique =
   | "campanus-school-natal"
   | "alcabitius-school-natal"
   | "morinus-house-profile"
+  | "meridian-house-profile"
   | "western-sidereal-natal"
   | "hellenistic-natal"
   | "hellenistic-time-lord"
@@ -62,7 +63,8 @@ export type ImplementedWesternHouseSystem =
   | "Koch"
   | "Campanus"
   | "Alcabitius"
-  | "Morinus";
+  | "Morinus"
+  | "Meridian";
 
 export type HouseSystemRecommendationMode =
   | "automatic"
@@ -101,6 +103,7 @@ const IMPLEMENTED_SYSTEMS = new Set<WesternHouseSystemName>([
   "Campanus",
   "Alcabitius",
   "Morinus",
+  "Meridian",
 ]);
 
 /** House-system names accepted by the Western transit engine. */
@@ -113,7 +116,8 @@ export type WesternTransitHouseSystem =
   | "koch"
   | "campanus"
   | "alcabitius"
-  | "morinus";
+  | "morinus"
+  | "meridian";
 
 /** Convert a resolved natal method to the transit engine's explicit method key. */
 export function toWesternTransitHouseSystem(
@@ -129,6 +133,7 @@ export function toWesternTransitHouseSystem(
     case "Campanus": return "campanus";
     case "Alcabitius": return "alcabitius";
     case "Morinus": return "morinus";
+    case "Meridian": return "meridian";
   }
 }
 
@@ -275,6 +280,13 @@ export function recommendWesternHouseSystem(
           : "Alcabitius is selected for an explicitly named Alcabitius-school chart. Its cusps trisect the Ascendant's diurnal and nocturnal semi-arcs; this does not make it the universal Western default.",
       };
     }
+
+    case "meridian-house-profile":
+      return implementedPreset(
+        technique,
+        "Meridian",
+        "Meridian / Axial Rotation houses divide the ecliptic into points whose right ascensions are 30° apart from the local meridian. This is a distinct transformation from Morinus; the named house calculation does not imply a complete historical interpretive school."
+      );
 
     case "morinus-house-profile":
       return implementedPreset(
