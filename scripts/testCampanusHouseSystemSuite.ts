@@ -245,6 +245,10 @@ const swiss = new SwissEphemerisEngine();
 const frame = swiss.calculateHouses(2451545.0, 45, 0, "C");
 check(frame.houseSystemUsed === "C",
   "The astronomy facade reports Campanus as the calculation actually used");
+const poleFrame = swiss.calculateHouses(2451545.0, 90, 20, "C");
+check(poleFrame.houseSystemUsed === "O" &&
+  poleFrame.houseSystemNote?.includes("exact geographic poles") === true,
+  "The exact-pole Campanus fallback reports Porphyry and explains why");
 const transitDate = new Date("2000-03-01T00:00:00.000Z");
 const transitChart = calculateWesternChart(
   2000, 1, 1, 12, 0, 45, 0, 0, "Campanus"
