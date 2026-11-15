@@ -171,12 +171,33 @@ export class KPSignificators {
       if (!starInfo) throw new Error(`KP signification cannot resolve star lord ${p.starLord} for ${p.name}.`);
       if (!subInfo) throw new Error(`KP signification cannot resolve sub lord ${p.subLord} for ${p.name}.`);
 
-      // In KP: Planet strongly signifies houses of Star Lord, then its own
-      const housesSet = new Set<number>();
-      housesSet.add(starInfo.occupies);
-      starInfo.owns.forEach((h) => housesSet.add(h));
-      housesSet.add(selfInfo.occupies);
-      selfInfo.owns.forEach((h) => housesSet.add(h));
+      // Classical KP planet-level four-fold significations. Keep the four
+      // grades separate: A=star lord's occupied house, B=planet's occupied
+      // house, C=star lord's owned houses, D=planet's owned houses.
+      const levels = {
+        levelA: [starInfo.occupies],
+        levelB: [selfInfo.occupies],
+        levelC: [...starInfo.owns],
+        levelD: [...selfInfo.owns],
+      };
+
+      // "Self-strength": if no other planet tenants this planet's stars, or
+      // if the planet is itself in its own star, its own placement/ownership
+      // moves ahead of its star lord's corresponding factors (B-A-D-C).
+      const starTenants = planets
+        .filter((candidate) => candidate.name !== p.name && candidate.starLord === p.name)
+        .map((candidate) => candidate.name);
+      const hasSelfStrength = p.starLord === p.name || starTenants.length === 0;
+      const strengthOrder: KPPlanetSignificationGrade[] = hasSelfStrength
+        ? ["B", "A", "D", "C"]
+        : ["A", "B", "C", "D"];
+
+      const housesSet = new Set<number>([
+        ...levels.levelA,
+        ...levels.levelB,
+        ...levels.levelC,
+        ...levels.levelD,
+      ]);
 
       result[p.name] = {
         planet: p.name,
@@ -188,6 +209,10 @@ export class KPSignificators {
         subLord: p.subLord,
         subLordOccupiesHouse: subInfo.occupies,
         subLordOwnsHouses: subInfo.owns,
+        levels,
+        strengthOrder,
+        starTenants,
+        hasSelfStrength,
         signifiedHouses: Array.from(housesSet).sort((a, b) => a - b),
       };
     });
