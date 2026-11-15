@@ -29,6 +29,7 @@ jobs:
           - testWesternHouseSystemPolicySuite.ts
           - testKPSystemSuite.ts
           - testParashariVargaSuite.ts
+          - testParashariNatalDignitySuite.ts
           - testJaiminiVedicChartIntegrationSuite.ts
           - testShadbalaStatusSuite.ts
           - testShadbalaSaptavargajaSuite.ts
