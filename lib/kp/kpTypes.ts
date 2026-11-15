@@ -152,6 +152,8 @@ export interface KPRulingPlanets {
 }
 
 export interface KPChartData {
+  /** Shared ephemeris currently supplies mean Rahu and exactly opposite Ketu. */
+  nodeConvention?: "mean" | "true";
   ayanamsa: number;
   ayanamsaFormatted: string;
   cusps: KPCusps;
