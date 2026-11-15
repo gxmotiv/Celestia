@@ -178,10 +178,19 @@ function validatePositions(
       throw new RangeError("Duplicate Jaimini position supplied for " + planet.name + ".");
     }
     if (!Number.isFinite(planet.siderealLongitude) ||
-        !Number.isFinite(planet.house) ||
+        planet.siderealLongitude < 0 || planet.siderealLongitude >= 360 ||
+        !Number.isInteger(planet.house) ||
         planet.house < 1 || planet.house > 12 ||
         typeof planet.rasiName !== "string" || !planet.rasiName.trim()) {
       throw new RangeError("Jaimini position for " + planet.name + " is incomplete or invalid.");
+    }
+
+    const expectedRasi = RASI_NAMES[Math.floor(planet.siderealLongitude / 30)];
+    if (planet.rasiName !== expectedRasi) {
+      throw new RangeError(
+        "Jaimini position for " + planet.name + " has sign " + planet.rasiName +
+        " but its sidereal longitude resolves to " + expectedRasi + "."
+      );
     }
     byName.set(planet.name, planet);
   }
@@ -196,8 +205,9 @@ function validatePositions(
 
   const suppliedAscendant = ascendantLongitude ??
     planets.find((planet) => planet.name === "Ascendant" || planet.name === "Lagna")?.siderealLongitude;
-  if (!Number.isFinite(suppliedAscendant)) {
-    throw new RangeError("Jaimini Karakamsa requires the sidereal Ascendant longitude.");
+  if (!Number.isFinite(suppliedAscendant) ||
+      (suppliedAscendant as number) < 0 || (suppliedAscendant as number) >= 360) {
+    throw new RangeError("Jaimini Karakamsa requires a sidereal Ascendant longitude in [0°, 360°).");
   }
 
   return { byName, ascendant: normalizeDegrees(suppliedAscendant as number) };
