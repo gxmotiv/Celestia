@@ -594,10 +594,14 @@ export class SwissEphemerisEngine {
         cusps[index] = regio.houseCusps[index];
       }
     } else if (systemUsed === "K") {
-      // Koch (Birthplace) houses trisect the MC's semi-diurnal arc. The
-      // ascensional difference of the MC adjusts four pseudo-sidereal angles,
-      // whose rising ecliptic intersections define cusps 11, 12, 2 and 3.
+      // Koch (Birthplace) houses trisect the MC's semi-diurnal arc.
       // Polar-circle requests were explicitly resolved to Porphyry above.
+      const koch = calculateKochHouses(ramc, latitude, epsDeg);
+      asc = koch.ascendant;
+      mc = koch.midheaven;
+      for (let index = 0; index < 12; index += 1) {
+        cusps[index] = koch.houseCusps[index];
+      }
     } else if (systemUsed === "C") {
       // Campanus divides the prime vertical into equal 30° sectors and
       // projects the corresponding position circles onto the ecliptic.
@@ -607,13 +611,6 @@ export class SwissEphemerisEngine {
       polarOrientationShifted = campanus.polarShifted;
       for (let index = 0; index < 12; index += 1) {
         cusps[index] = campanus.houseCusps[index];
-      }
-    } else if (systemUsed === "K") {
-      const koch = calculateKochHouses(ramc, latitude, epsDeg);
-      asc = koch.ascendant;
-      mc = koch.midheaven;
-      for (let index = 0; index < 12; index += 1) {
-        cusps[index] = koch.houseCusps[index];
       }
     } else {
       // Placidus House System
