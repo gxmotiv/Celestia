@@ -79,7 +79,7 @@ export function TransitView({
 
   // Custom House System Override (for Western)
   const [selectedHouseSystem, setSelectedHouseSystem] = useState<
-    "auto" | "placidus" | "whole-sign" | "equal" | "porphyry" | "regiomontanus" | "koch" | "campanus" | "alcabitius" | "morinus" | "meridian
+    "auto" | "placidus" | "whole-sign" | "equal" | "porphyry" | "regiomontanus" | "koch" | "campanus" | "alcabitius" | "morinus" | "meridian"
   >("auto");
 
   // BaZi Gender (for Da Yun progression direction)
