@@ -264,10 +264,10 @@ export class MultiSystemBenchmarkRunner {
     const spirit = lots?.partOfSpirit;
     const sun = chart.planets.find((planet) => planet.name === "Sun")?.longitude;
     const moon = chart.planets.find((planet) => planet.name === "Moon")?.longitude;
-    const asc = chart.ascendant.longitude;
+    const chartAscendant = chart.ascendant.longitude;
     const isDay = lots?.isDayChart;
-    const expectedFortune = isDay ? asc + (moon ?? 0) - (sun ?? 0) : asc + (sun ?? 0) - (moon ?? 0);
-    const expectedSpirit = isDay ? asc + (sun ?? 0) - (moon ?? 0) : asc + (moon ?? 0) - (sun ?? 0);
+    const expectedFortune = isDay ? chartAscendant + (moon ?? 0) - (sun ?? 0) : chartAscendant + (sun ?? 0) - (moon ?? 0);
+    const expectedSpirit = isDay ? chartAscendant + (sun ?? 0) - (moon ?? 0) : chartAscendant + (moon ?? 0) - (sun ?? 0);
     const normalizedFortune = ((expectedFortune % 360) + 360) % 360;
     const normalizedSpirit = ((expectedSpirit % 360) + 360) % 360;
     const formulaTolerance = (actual: number | undefined, expected: number) => {
