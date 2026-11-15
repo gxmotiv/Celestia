@@ -15,6 +15,7 @@ import {
   KPPlanet,
   KPHouseSignificators,
   KPPlanetSignification,
+  KPPlanetSignificationGrade,
   SignificatorLevels,
 } from "./kpTypes";
 import { normalizeDegrees } from "../astronomy/ephemeris";
