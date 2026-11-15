@@ -91,7 +91,16 @@ const BENEFIC_PLANETS = new Set(["Jupiter", "Venus", "Mercury", "Moon"]);
 const MALEFIC_PLANETS = new Set(["Saturn", "Mars", "Rahu", "Ketu", "Sun"]);
 
 export type NodeAspectRule = "none" | "seventh-only" | "fifth-seventh-ninth";
-export type DrishtiVirupaVariant = "bphs-base-longitude-curve" | "bphs-translator-special-adjustments";
+/**
+ * Sputa Drishti source profiles:
+ * - base curve: BPHS 26.6-8 only;
+ * - verse special: BPHS 26.9-12 per-sign special formulae replace the base curve;
+ * - added steps: Raman / translator-note +15/+30/+45 additions.
+ */
+export type DrishtiVirupaVariant =
+  | "bphs-base-longitude-curve"
+  | "bphs-verse-special-formula"
+  | "bphs-translator-special-adjustments";
 
 export interface DrishtiMatrixOptions {
   /** BPHS does not explicitly settle node aspects; default is no nodal Graha Drishti. */
@@ -101,24 +110,26 @@ export interface DrishtiMatrixOptions {
 }
 
 /**
- * Exact-longitude Drishti Pinda curve from BPHS Ch. 26, vv. 6–8.
- *
- * The angle is measured forward from the aspecting graha to the aspected
- * point. The optional translator-note variant applies the Mars/Jupiter/Saturn
- * special-aspect boosts commonly printed with the Santhanam/Kapoor edition.
- * It is kept separate because the notes/editions are not identical.
+ * Exact-longitude Sputa Drishti in Virupas.
+ * BPHS 26.6-8 supplies the generic curve. BPHS 26.9-12 supplies separate
+ * per-sign replacement formulae for Saturn, Mars and Jupiter. Raman and
+ * some translator notes use a different fixed-addition convention; that is
+ * offered separately and is not called the Sanskrit verse formula.
  */
 export function calculateLongitudeDrishtiVirupas(
   diffDeg: number,
   planetName: string,
-  variant: DrishtiVirupaVariant = "bphs-translator-special-adjustments"
+  variant: DrishtiVirupaVariant = "bphs-verse-special-formula"
 ): number {
   if (!Number.isFinite(diffDeg)) {
     throw new RangeError("Drishti longitude difference must be finite.");
   }
   const angle = ((diffDeg % 360) + 360) % 360;
+  const wholeSigns = Math.floor(angle / 30);
+  const degreesPastSign = angle - wholeSigns * 30;
   let value = 0;
 
+  // BPHS 26.6-8 generic Sputa Drishti curve.
   if (angle < 30 || angle >= 300) value = 0;
   else if (angle < 60) value = (angle - 30) / 2;
   else if (angle < 90) value = angle - 45;
@@ -127,22 +138,40 @@ export function calculateLongitudeDrishtiVirupas(
   else if (angle < 180) value = 2 * (angle - 150);
   else value = (300 - angle) / 2;
 
-  if (variant === "bphs-translator-special-adjustments") {
-    // Translator-note special increases: Mars +15, Jupiter +30, Saturn +45
-    // in their respective special-aspect angular bands.
-    if (planetName === "Mars" &&
-        ((angle >= 90 && angle < 120) || (angle >= 210 && angle < 240))) {
+  if (variant === "bphs-verse-special-formula") {
+    // BPHS 26.9-12: replace the generic curve in the named sign remainders.
+    let special: number | undefined;
+    if (planetName === "Saturn") {
+      if (wholeSigns === 1) special = 2 * degreesPastSign;
+      else if (wholeSigns === 9) special = 2 * (30 - degreesPastSign);
+      else if (wholeSigns === 2) special = 60 - degreesPastSign / 2;
+      else if (wholeSigns === 8) special = degreesPastSign + 30;
+    } else if (planetName === "Mars") {
+      if (wholeSigns === 3 || wholeSigns === 7) special = 60 - degreesPastSign;
+      else if (wholeSigns === 2) special = 1.5 * degreesPastSign + 15;
+      else if (wholeSigns === 6) special = 60;
+    } else if (planetName === "Jupiter") {
+      if (wholeSigns === 3 || wholeSigns === 7) special = 45 + degreesPastSign / 2;
+      else if (wholeSigns === 4 || wholeSigns === 8) special = 60 - 2 * degreesPastSign;
+    }
+    if (special !== undefined) value = special;
+  } else if (variant === "bphs-translator-special-adjustments") {
+    // B.V. Raman / commonly printed translator-note convention: add fixed
+    // special values on the aspecting planet's named sign spans.
+    if (planetName === "Mars" && (wholeSigns === 3 || wholeSigns === 7)) {
       value += 15;
-    } else if (planetName === "Jupiter" &&
-        ((angle >= 120 && angle < 150) || (angle >= 240 && angle < 270))) {
+    } else if (planetName === "Jupiter" && (wholeSigns === 4 || wholeSigns === 8)) {
       value += 30;
-    } else if (planetName === "Saturn" &&
-        ((angle >= 60 && angle < 90) || (angle >= 270 && angle < 300))) {
+    } else if (planetName === "Saturn" && (wholeSigns === 2 || wholeSigns === 9)) {
       value += 45;
     }
   }
 
-  return Math.max(0, Math.min(60, value));
+  // The Raman/translator-note additions can exceed 60 Virupas; do not clip
+  // them. The base and BPHS verse-special profiles remain bounded to one rupa.
+  return variant === "bphs-translator-special-adjustments"
+    ? Math.max(0, value)
+    : Math.max(0, Math.min(60, value));
 }
 
 /**
@@ -154,7 +183,7 @@ export function calculateDrishtiVirupas(
   diffDeg: number,
   planetName: string,
   _houseOffset?: number,
-  variant: DrishtiVirupaVariant = "bphs-translator-special-adjustments"
+  variant: DrishtiVirupaVariant = "bphs-verse-special-formula"
 ): number {
   return calculateLongitudeDrishtiVirupas(diffDeg, planetName, variant);
 }
@@ -270,7 +299,7 @@ export function calculateDrishtiMatrix(
   }
 
   const nodeAspectRule = options.nodeAspectRule ?? "none";
-  const degreeStrengthVariant = options.degreeStrengthVariant ?? "bphs-translator-special-adjustments";
+  const degreeStrengthVariant = options.degreeStrengthVariant ?? "bphs-verse-special-formula";
   const names = new Set<string>();
   planets.forEach((planet) => {
     if (!planet || typeof planet.name !== "string" || !planet.name.trim()) {
