@@ -45,15 +45,55 @@ assert.equal(
   "The base longitude curve leaves Mars's special increase out"
 );
 assert.equal(
+  calculateLongitudeDrishtiVirupas(90, "Mars", "bphs-verse-special-formula"),
+  60,
+  "BPHS 26.11 Mars c=3 formula replaces generic strength with 60"
+);
+assert.equal(
+  calculateLongitudeDrishtiVirupas(105, "Mars", "bphs-verse-special-formula"),
+  45,
+  "BPHS 26.11 Mars c=3 uses 60 minus degrees past the third sign"
+);
+assert.equal(
+  calculateLongitudeDrishtiVirupas(75, "Saturn", "bphs-verse-special-formula"),
+  30,
+  "BPHS 26.9 Saturn c=2 uses 60 minus half the degrees past the second sign"
+);
+assert.equal(
+  calculateLongitudeDrishtiVirupas(255, "Saturn", "bphs-verse-special-formula"),
+  45,
+  "BPHS 26.10 Saturn c=8 uses degrees past the eighth sign plus 30"
+);
+assert.equal(
+  calculateLongitudeDrishtiVirupas(255, "Jupiter", "bphs-verse-special-formula"),
+  10,
+  "BPHS 26.12 Jupiter c=8 uses 60 minus twice the degrees past the eighth sign"
+);
+assert.equal(
+  calculateLongitudeDrishtiVirupas(270, "Jupiter", "bphs-verse-special-formula"),
+  0,
+  "BPHS Jupiter c=8 formula reaches zero at the 270-degree boundary"
+);
+assert.equal(
+  calculateLongitudeDrishtiVirupas(270, "Jupiter", "bphs-verse-special-formula"),
+  0,
+  "The verse-special discontinuity is preserved rather than smoothed into the generic c=9 curve"
+);
+assert.equal(
+  calculateLongitudeDrishtiVirupas(75, "Saturn", "bphs-translator-special-adjustments"),
+  75,
+  "Raman/translator-note Saturn +45 addition is not clipped at 60"
+);
+assert.equal(
   calculateLongitudeDrishtiVirupas(90, "Mars", "bphs-translator-special-adjustments"),
   60,
-  "The labelled translator-note variant raises Mars's exact 4th-aspect angle to 60"
+  "Raman/translator-note Mars adds 15 to the generic 45 at 90 degrees"
 );
-assert.equal(calculateLongitudeDrishtiVirupas(210, "Mars"), 60);
-assert.equal(calculateLongitudeDrishtiVirupas(120, "Jupiter"), 60);
-assert.equal(calculateLongitudeDrishtiVirupas(240, "Jupiter"), 60);
-assert.equal(calculateLongitudeDrishtiVirupas(60, "Saturn"), 60);
-assert.equal(calculateLongitudeDrishtiVirupas(270, "Saturn"), 60);
+assert.equal(calculateLongitudeDrishtiVirupas(210, "Mars", "bphs-verse-special-formula"), 60);
+assert.equal(calculateLongitudeDrishtiVirupas(120, "Jupiter", "bphs-verse-special-formula"), 60);
+assert.equal(calculateLongitudeDrishtiVirupas(240, "Jupiter", "bphs-verse-special-formula"), 60);
+assert.equal(calculateLongitudeDrishtiVirupas(60, "Saturn", "bphs-verse-special-formula"), 60);
+assert.equal(calculateLongitudeDrishtiVirupas(270, "Saturn", "bphs-verse-special-formula"), 60);
 assert.throws(() => calculateLongitudeDrishtiVirupas(Number.NaN, "Sun"), /must be finite/);
 
 const partialGrades: Array<[string, number, number]> = [
@@ -117,7 +157,7 @@ const moon = position("Moon", 65, 12);
 const report = calculateDrishtiMatrix([sun, moon], 3);
 assert.equal(report.grahaAspectPolicy, "bphs-chapter-26-seven-grahas");
 assert.equal(report.nodeAspectRule, "none");
-assert.equal(report.degreeStrengthVariant, "bphs-translator-special-adjustments");
+assert.equal(report.degreeStrengthVariant, "bphs-verse-special-formula");
 const sunMoon = report.grahaAspects.find(
   (aspect) => aspect.aspectingPlanet === "Sun" && aspect.aspectedPlanet === "Moon"
 );
