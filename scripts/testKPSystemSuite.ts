@@ -183,6 +183,30 @@ assert.ok(kpIntegratedChart.planets.some((planet) => planet.name === "Rahu"), "W
 assert.ok(kpIntegratedChart.planets.some((planet) => planet.name === "Ketu"), "Western SouthNode must map to KP Ketu");
 assert.ok(!kpIntegratedChart.planets.some((planet) => planet.name === "NorthNode" || planet.name === "SouthNode"), "KP must not expose Western point names in its planetary system");
 assert.ok(!kpIntegratedChart.planets.some((planet) => planet.name === "Chiron"), "KP must exclude the unvalidated illustrative Chiron point from calculation");
+
+const integratedKPFourStep = new KPFourStepEngine();
+const integratedNodePS = integratedKPFourStep.calculatePositionalStatus(
+  kpIntegratedChart.cusps,
+  kpIntegratedChart.planets
+);
+assert.ok(integratedNodePS.Rahu && integratedNodePS.Ketu, "KP Positional Status must include the correctly named lunar nodes");
+assert.equal(integratedNodePS.NorthNode, undefined);
+const rahuPlanet = kpIntegratedChart.planets.find((planet) => planet.name === "Rahu")!;
+const rahuStep = integratedKPFourStep.evaluatePlanetFourStep(
+  "Rahu",
+  kpIntegratedChart.cusps,
+  kpIntegratedChart.planets,
+  integratedNodePS
+);
+const rahuSignLordHouses = kpIntegratedChart.cusps.houseLords
+  .map((lord, index) => lord === rahuPlanet.signLord ? index + 1 : 0)
+  .filter((house) => house > 0);
+assert.deepEqual(
+  rahuStep.step1.ownsHouses,
+  rahuSignLordHouses,
+  "Modern KP 4-Step node representation must include the houses owned by the node's sign lord"
+);
+
 assert.equal(kpIntegratedChart.currentDashaLord, "Jupiter");
 assert.equal(kpIntegratedChart.currentAntardashaLord, "Venus");
 
