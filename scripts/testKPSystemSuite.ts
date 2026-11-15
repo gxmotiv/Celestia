@@ -109,6 +109,39 @@ assert.equal(SubLordCalculator.getHorary2193Entry(2193).seed, 2193);
 assert.equal(SubLordCalculator.getHorary2193Entry(2194).seed, 2193);
 assert.equal(SubLordCalculator.getHorary2193Entry(0).seed, 1);
 
+// KP linear profile date interpolation: Jan 1, 1900 is exactly the
+// declared epoch; each calendar year advances by the stated annual rate.
+const kp1900Anchor = 22 + 22 / 60 + 14 / 3600;
+const kpAnnualRate = 50.2388475;
+const kpDaily1900 = kpAnnualRate / (365 * 3600);
+assert.ok(
+  Math.abs(KPCuspsCalculator.calculateKPAyanamsa(1900, 1, 1) - kp1900Anchor) < 1e-12,
+  "KP linear profile must equal its exact 1900.0 anchor at the start of 1 January"
+);
+assert.ok(
+  Math.abs(
+    KPCuspsCalculator.calculateKPAyanamsa(1900, 1, 2) -
+      (kp1900Anchor + kpDaily1900)
+  ) < 1e-12,
+  "KP linear profile must interpolate using actual day-of-year, not equal month lengths"
+);
+assert.ok(
+  Math.abs(
+    KPCuspsCalculator.calculateKPAyanamsa(1901, 1, 1) -
+      (kp1900Anchor + kpAnnualRate / 3600)
+  ) < 1e-12,
+  "KP linear profile must advance exactly one annual rate between New Year anchors"
+);
+const kpLeapDay = KPCuspsCalculator.calculateKPAyanamsa(2000, 2, 29);
+const kpMarchFirst = KPCuspsCalculator.calculateKPAyanamsa(2000, 3, 1);
+assert.ok(
+  Math.abs(kpMarchFirst - kpLeapDay - kpAnnualRate / (366 * 3600)) < 1e-12,
+  "KP linear profile must interpolate leap-year dates over 366 days"
+);
+assert.throws(() => KPCuspsCalculator.calculateKPAyanamsa(2023, 2, 29), /outside the selected Gregorian month/);
+assert.throws(() => KPCuspsCalculator.calculateKPAyanamsa(2024, 13, 1), /month must be between 1 and 12/);
+assert.throws(() => KPCuspsCalculator.calculateKPAyanamsa(2024, 2, 1.5), /integer Gregorian year, month, and day/);
+
 const calculator = new KPCuspsCalculator();
 const chartInputs = [2000, 1, 1, 12, 0, 40.7128, -74.006, 0] as const;
 const westernPlacidus = calculateWesternChart(...chartInputs, "Placidus");
