@@ -344,8 +344,8 @@ assert.equal(venusClassicalStrength.hasSelfStrength, false, "A planet with a ten
 assert.deepEqual(venusClassicalStrength.strengthOrder, ["A", "B", "C", "D"]);
 assert.deepEqual(venusClassicalStrength.starTenants, ["Sun"]);
 const mercuryClassicalStrength = classicalPlanetSignifications.Mercury;
-assert.equal(mercuryClassicalStrength.hasSelfStrength, true, "A planet in its own star receives self-strength");
-assert.deepEqual(mercuryClassicalStrength.strengthOrder, ["B", "A", "D", "C"]);
+assert.equal(mercuryClassicalStrength.hasSelfStrength, false, "A planet with another tenant in its stars remains standard-grade even when the modern own-star PS rule applies");
+assert.deepEqual(mercuryClassicalStrength.strengthOrder, ["A", "B", "C", "D"]);
 const sunClassicalStrength = classicalPlanetSignifications.Sun;
 assert.equal(sunClassicalStrength.hasSelfStrength, true, "A planet with no other planets in its stars receives self-strength");
 assert.deepEqual(sunClassicalStrength.starTenants, []);
