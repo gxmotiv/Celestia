@@ -705,7 +705,13 @@ export function calculateVedicChart(
 
   // Jaimini Chara Karakas (7-Karaka System)
   const jaiminiEngine = new JaiminiKarakasEngine();
-  const jaiminiKarakas = jaiminiEngine.calculate7Karakas(vedicPlanets);
+  // Karakamsa is calculated relative to the sidereal Lagna. The Ascendant is
+  // not one of the seven grahas used for Chara-Karaka ranking, so pass it as
+  // the explicit second input rather than inserting it into the graha list.
+  const jaiminiKarakas = jaiminiEngine.calculate7Karakas(
+    vedicPlanets,
+    lagnaPlanet.siderealLongitude
+  );
 
   // Tara Bala (9-Tara Chakra for birth Nakshatra)
   const taraBalaEngine = new TaraBalaEngine();
