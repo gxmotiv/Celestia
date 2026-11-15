@@ -30,6 +30,7 @@ jobs:
           - testKPSystemSuite.ts
           - testParashariVargaSuite.ts
           - testShadbalaStatusSuite.ts
+          - testShadbalaSaptavargajaSuite.ts
           - testRegiomontanusHouseSystemSuite.ts
           - testKochHouseSystemSuite.ts
           - testCampanusHouseSystemSuite.ts
