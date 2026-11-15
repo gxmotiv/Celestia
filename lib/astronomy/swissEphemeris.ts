@@ -547,6 +547,7 @@ export class SwissEphemerisEngine {
         : system === "K" && Math.abs(latitude) >= 90 - epsDeg
           ? "O"
           : system;
+    let polarOrientationShifted = false;
     const cusps: number[] = new Array(12);
 
     if (systemUsed === "W") {
