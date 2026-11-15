@@ -1403,37 +1403,37 @@ export function KPSystemPanel({
               Krishnamurti Padhdhati Ruling Planets (RP) &amp; Transit Concurrence
             </h3>
             <p className="text-xs text-slate-400">
-              The cosmic clock of KP: Ruling Planets at any inquiry moment point directly to the fruit of the query.
+              Reader VI preference order: Lagna star lord → Lagna sign lord → Moon star lord → Moon sign lord → weekday lord. The weekday is currently derived from the UTC civil date, not a local sunrise-to-sunrise boundary.
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
             <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-xl space-y-1 text-center">
-              <span className="text-[10px] uppercase font-semibold text-slate-400 block">1. Day Lord</span>
+              <span className="text-[10px] uppercase font-semibold text-slate-400 block">5. Day Lord</span>
               <span className="text-lg font-bold text-amber-300 block">{kpData.rulingPlanets.dayLord}</span>
-              <span className="text-[10px] text-slate-500">Day of Inception</span>
+              <span className="text-[10px] text-slate-500">Weekday lord · UTC day currently provisional</span>
             </div>
 
             <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-xl space-y-1 text-center">
-              <span className="text-[10px] uppercase font-semibold text-slate-400 block">2. Moon Star Lord</span>
+              <span className="text-[10px] uppercase font-semibold text-slate-400 block">3. Moon Star Lord</span>
               <span className="text-lg font-bold text-cyan-300 block">{kpData.rulingPlanets.moonStarLord}</span>
               <span className="text-[10px] text-slate-500">Subconscious Pulse</span>
             </div>
 
             <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-xl space-y-1 text-center">
-              <span className="text-[10px] uppercase font-semibold text-slate-400 block">3. Moon Sign Lord</span>
+              <span className="text-[10px] uppercase font-semibold text-slate-400 block">4. Moon Sign Lord</span>
               <span className="text-lg font-bold text-blue-300 block">{kpData.rulingPlanets.moonSignLord}</span>
               <span className="text-[10px] text-slate-500">Emotional Vessel</span>
             </div>
 
             <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-xl space-y-1 text-center">
-              <span className="text-[10px] uppercase font-semibold text-slate-400 block">4. Lagna Star Lord</span>
+              <span className="text-[10px] uppercase font-semibold text-slate-400 block">1. Lagna Star Lord</span>
               <span className="text-lg font-bold text-emerald-300 block">{kpData.rulingPlanets.lagnaStarLord}</span>
               <span className="text-[10px] text-slate-500">Ascendant Nakshatra</span>
             </div>
 
             <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-xl space-y-1 text-center">
-              <span className="text-[10px] uppercase font-semibold text-slate-400 block">5. Lagna Sign Lord</span>
+              <span className="text-[10px] uppercase font-semibold text-slate-400 block">2. Lagna Sign Lord</span>
               <span className="text-lg font-bold text-purple-300 block">{kpData.rulingPlanets.lagnaSignLord}</span>
               <span className="text-[10px] text-slate-500">Physical Persona</span>
             </div>
@@ -1444,14 +1444,14 @@ export function KPSystemPanel({
             <div className="p-4 bg-slate-900/40 border border-slate-800 rounded-xl space-y-2 text-xs">
               <span className="font-semibold text-amber-300 block">Special Rule 1: Node Representation (Rahu &amp; Ketu)</span>
               <p className="text-slate-300 leading-relaxed">
-                In KP, Rahu and Ketu are the strongest significators. If Rahu or Ketu conjoins, aspects, or occupies the sign or star of any of the above Ruling Planets, the node replaces or represents that planet in the Ruling Planets list with enhanced potency.
+                The Rahu/Ketu representative cascade is displayed in the Planets tab. The base five-ruler calculation does not yet replace a listed RP with a node agent; node-to-RP substitution remains unimplemented.
               </p>
             </div>
 
             <div className="p-4 bg-slate-900/40 border border-slate-800 rounded-xl space-y-2 text-xs">
               <span className="font-semibold text-rose-300 block">Special Rule 2: Retrograde Planet Filtering</span>
               <p className="text-slate-300 leading-relaxed">
-                According to Krishnamurti&apos;s golden rule: A ruling planet that is retrograde, or posited in the star of a retrograde planet, cannot deliver immediate fruition. It denotes delays until the planet turns direct or another strong direct RP takes charge.
+                The chart records retrograde flags, but this RP calculation does not yet automatically exclude retrograde rulers or filter rulers in the stars of retrograde planets. Those rules must be implemented separately for natal, horary and transit contexts.
               </p>
             </div>
           </div>
@@ -1459,7 +1459,7 @@ export function KPSystemPanel({
           <div className="p-4 bg-slate-900/40 border border-slate-800 rounded-xl space-y-2 text-xs text-slate-300">
             <span className="font-semibold text-cyan-300 block">How Master KP Astrologers Use Ruling Planets for Precise Event Timing:</span>
             <p className="leading-relaxed">
-              When predicting the exact date or time of an event (e.g. marriage, contract, job offer), the event can only fructify when the transiting Sun, Moon, and Ascendant pass through the Stars and Subs ruled by these Ruling Planets, and when the active Dasha-Bhukti lords are among these Ruling Planets.
+              Traditional KP timing cross-checks the active Dasha-Bhukti-Antara chain with transiting Sun, Moon and Ascendant in relevant RP stars/subs. This panel currently lists the rulers; it does not yet calculate an exact transit-timestamp trigger.
             </p>
           </div>
         </div>
