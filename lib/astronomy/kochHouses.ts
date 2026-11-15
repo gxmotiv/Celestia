@@ -94,10 +94,6 @@ export function calculateKochHouses(
     ) * RAD
   );
 
-  // Declination of the MC on the ecliptic.
-  const sinMCHelio = clampUnit(Math.sin(midheaven * DEG) * sinEpsilon);
-  const mcDeclination = Math.asin(sinMCHelio);
-
   // Spherical-triangle form of the MC ascensional difference. The clamped
   // construction remains finite near the polar boundary, where tan(phi)*tan
   // (delta_MC) can otherwise overflow or leave the real domain.
