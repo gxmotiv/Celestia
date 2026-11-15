@@ -1251,7 +1251,7 @@ export function KPSystemPanel({
               Planetary Longitudes &amp; Sub-Lords
             </h3>
             <p className="text-xs text-slate-400">
-              Each planet&apos;s KP sidereal coordinate, house occupancy, star lord, and sub-lord.
+              Each planet&apos;s KP sidereal coordinate, house occupancy, star lord, sub-lord, and separately graded classical house signification.
             </p>
           </div>
 
@@ -1296,6 +1296,45 @@ export function KPSystemPanel({
                 })}
               </tbody>
             </table>
+          </div>
+
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <h4 className="text-sm font-bold text-amber-300 uppercase tracking-wider">
+                Classical KP Planet-Level Fourfold Signification (A–D)
+              </h4>
+              <p className="text-xs text-slate-400">
+                This is the classical planet-to-house strength sequence, not the separate Sunil Gondhalekar 4-Step method. A = star lord&apos;s occupied house, B = planet&apos;s occupied house, C = star lord&apos;s owned houses, D = planet&apos;s owned houses. Tenantless / own-star planets use B → A → D → C priority.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+              {kpData.planets.map((p) => {
+                const sig = kpData.planetSignifications[p.name];
+                return (
+                  <div key={p.name} className="p-3.5 bg-slate-900/60 border border-slate-800 rounded-xl space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-sm text-slate-100">{p.name}</span>
+                      <span className="text-[10px] font-mono text-cyan-300">
+                        {sig.hasSelfStrength ? "Self-strength" : "Star-mediated"}
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-slate-400">
+                      Priority: <strong className="text-amber-300">{sig.strengthOrder.join(" → ")}</strong>
+                      {" · "}Star tenants: {sig.starTenants.join(", ") || "None"}
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs font-mono">
+                      <div><span className="text-emerald-300 font-bold">A</span> <span className="text-slate-400">Star-lord occupation:</span> {sig.levels.levelA.join(", ")}</div>
+                      <div><span className="text-cyan-300 font-bold">B</span> <span className="text-slate-400">Planet occupation:</span> {sig.levels.levelB.join(", ")}</div>
+                      <div><span className="text-purple-300 font-bold">C</span> <span className="text-slate-400">Star-lord ownership:</span> {sig.levels.levelC.join(", ") || "—"}</div>
+                      <div><span className="text-slate-300 font-bold">D</span> <span className="text-slate-400">Planet ownership:</span> {sig.levels.levelD.join(", ") || "—"}</div>
+                    </div>
+                    <div className="pt-1 border-t border-slate-800 text-[10px] text-slate-500">
+                      Combined houses: [{sig.signifiedHouses.join(", ")}]
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
