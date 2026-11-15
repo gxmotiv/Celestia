@@ -191,7 +191,7 @@ export interface KPRulingPlanets {
 }
 
 export interface KPChartData {
-  /** Current KP integration includes seven classical planets, both nodes, and three outer planets. */
+  /** Selected traditional nine-graha or optional extended-twelve body profile. */
   bodySet?: "classical-nine" | "extended-twelve";
   /** Shared ephemeris currently supplies mean Rahu and exactly opposite Ketu. */
   nodeConvention?: "mean" | "true";
