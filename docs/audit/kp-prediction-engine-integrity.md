@@ -35,6 +35,14 @@ The ruling-planet list now follows the five-ruler preference sequence described 
 
 These transcriptions and teaching notes are research witnesses, not a critical edition. Keep the implementation variant-labelled and preserve any disagreements between KP lineages instead of blending their rules.
 
+## KP body integration and lunar-node convention
+
+The chart bridge now maps the Western engine's `NorthNode` to KP `Rahu` and `SouthNode` to KP `Ketu`. The upstream astronomy calculation explicitly uses **mean Rahu** with Ketu exactly opposite; the KP chart records this as `nodeConvention: "mean"`. A true-node option is not currently exposed.
+
+The bridge now runs Western points through `filterCalculationReadyPoints` before converting them into KP planets. This removes Chiron's explicitly marked illustrative, unvalidated sine-formula position instead of assigning it KP star/sub lords and significations. The KP body profile is now recorded as `extended-twelve`: seven classical planets, Rahu/Ketu, Uranus, Neptune and Pluto. A selectable classical-nine-only profile is not yet available.
+
+Mapping the node names makes the existing modern 4-Step engine's Rahu/Ketu Positional Status and sign-lord representation paths reachable. The classical planet-level A–D significator matrix still does not fully model node agency through sign lord, conjunction and aspect. Do not infer that those rules are complete from the name mapping alone.
+
 ## Classical planet-level A–D strength
 
 The KP planet-signification engine now exposes the four distinct house sets rather than only one merged set:
@@ -76,5 +84,8 @@ This implements the practitioner lesson's stated strength distinctions, but does
 - the classical planet-level A/B/C/D occupied-house and ownership levels;
 - standard A-B-C-D vs tenantless B-A-D-C strength preference;
 - distinction between classical self-strength and the modern own-star Gondhalekar PS override.
+- the Western NorthNode/SouthNode to KP Rahu/Ketu mapping;
+- mean-node and extended-twelve chart metadata;
+- exclusion of unvalidated calculation-note points such as the placeholder Chiron point.
 
 The latest verification result must be read from GitHub Actions for the commit under test. A successful Cloudflare deploy does not replace the verification gate.
