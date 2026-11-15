@@ -57,7 +57,7 @@ const grahaPositions = vedic.planets.map((planet) => ({
 }));
 assert.throws(
   () => engine.calculate7Karakas(grahaPositions),
-  /requires the sidereal Ascendant longitude/,
+  /requires a sidereal Ascendant longitude in \[0°, 360°\)/,
   "The direct Jaimini API must still reject missing Lagna data"
 );
 assert.doesNotThrow(
