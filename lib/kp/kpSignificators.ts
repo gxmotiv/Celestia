@@ -182,13 +182,13 @@ export class KPSignificators {
         levelD: [...selfInfo.owns],
       };
 
-      // "Self-strength": if no other planet tenants this planet's stars, or
-      // if the planet is itself in its own star, its own placement/ownership
-      // moves ahead of its star lord's corresponding factors (B-A-D-C).
+      // Classical "self-strength": no other planet tenants this planet's
+      // stars. Keep this test distinct from the modern Gondhalekar own-star
+      // Positional Status override, which belongs to the separate 4-Step engine.
       const starTenants = planets
         .filter((candidate) => candidate.name !== p.name && candidate.starLord === p.name)
         .map((candidate) => candidate.name);
-      const hasSelfStrength = p.starLord === p.name || starTenants.length === 0;
+      const hasSelfStrength = starTenants.length === 0;
       const strengthOrder: KPPlanetSignificationGrade[] = hasSelfStrength
         ? ["B", "A", "D", "C"]
         : ["A", "B", "C", "D"];
