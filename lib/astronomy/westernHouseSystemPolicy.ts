@@ -94,6 +94,29 @@ const IMPLEMENTED_SYSTEMS = new Set<WesternHouseSystemName>([
   "Koch",
 ]);
 
+/** House-system names accepted by the Western transit engine. */
+export type WesternTransitHouseSystem =
+  | "placidus"
+  | "whole-sign"
+  | "equal"
+  | "porphyry"
+  | "regiomontanus"
+  | "koch";
+
+/** Convert a resolved natal method to the transit engine's explicit method key. */
+export function toWesternTransitHouseSystem(
+  system: ImplementedWesternHouseSystem
+): WesternTransitHouseSystem {
+  switch (system) {
+    case "Placidus": return "placidus";
+    case "Equal": return "equal";
+    case "WholeSign": return "whole-sign";
+    case "Porphyry": return "porphyry";
+    case "Regiomontanus": return "regiomontanus";
+    case "Koch": return "koch";
+  }
+}
+
 function automatic(
   technique: WesternHouseTechnique,
   preferredSystem: ImplementedWesternHouseSystem,
