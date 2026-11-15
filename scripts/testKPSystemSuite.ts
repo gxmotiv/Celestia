@@ -7,7 +7,7 @@ import { KPSignificators } from "../lib/kp/kpSignificators";
 import { KPPredictionEngine } from "../lib/kp/kpPredictionEngine";
 import { KPEngine } from "../lib/kp/kpEngine";
 import type { VedicChartData } from "../lib/astronomy/vedic";
-import type { KPCusps, KPPlanet } from "../lib/kp/kpTypes";
+import type { KPCusps, KPPlanet, KPPlanetSignification } from "../lib/kp/kpTypes";
 
 
 const kp249 = SubLordCalculator.generate249Table();
@@ -380,6 +380,56 @@ assert.ok(venusFourStep.step2.primaryHouses.includes(2), "Step 2 star lord is pr
 assert.ok(venusFourStep.step2.primaryHouses.includes(7), "Step 2 star lord is primary for an empty owned house");
 assert.ok(venusFourStep.step2.secondaryHouses.includes(8), "Step 2 star lord is secondary for its occupied owned house");
 assert.equal(venusFourStep.step2.strengthRule, "star-lord-principal");
+
+
+const nodePlanet = (name: string, signIndex: number, house: number, starLord: string, signLord: string) =>
+  ({
+    id: name, name, symbol: name, tropicalLon: signIndex * 30 + 10,
+    siderealLon: signIndex * 30 + 10, signIndex, sign: String(signIndex),
+    degreeInSign: 10, degreeFormatted: "10°00′", house,
+    nakshatraIndex: 0, nakshatraName: "Test", pada: 1,
+    signLord, starLord, subLord: "Moon", subSubLord: "Mars",
+    isRetrograde: false, speed: 0,
+  }) as KPPlanet;
+const nodeTestPlanets = [
+  nodePlanet("Sun", 9, 10, "Mercury", "Venus"),
+  nodePlanet("Moon", 6, 7, "Venus", "Mercury"),
+  nodePlanet("Mercury", 7, 8, "Saturn", "Jupiter"),
+  nodePlanet("Venus", 1, 2, "Sun", "Mars"),
+  nodePlanet("Mars", 0, 1, "Saturn", "Jupiter"),
+  nodePlanet("Jupiter", 8, 9, "Moon", "Saturn"),
+  nodePlanet("Saturn", 5, 6, "Jupiter", "Mercury"),
+  nodePlanet("Rahu", 3, 4, "Jupiter", "Venus"),
+  nodePlanet("Ketu", 9, 10, "Saturn", "Mercury"),
+];
+const nodeTestSignifications = Object.fromEntries(
+  nodeTestPlanets.map((planet) => [
+    planet.name,
+    { planet: planet.name, signifiedHouses: [planet.house] } as KPPlanetSignification,
+  ])
+) as Record<string, KPPlanetSignification>;
+const nodeCalculator = new KPSignificators();
+const readerVINodes = nodeCalculator.calculateNodeRepresentations(
+  nodeTestPlanets,
+  nodeTestSignifications,
+  "reader-vi"
+);
+assert.deepEqual(readerVINodes.Rahu?.priorityOrder, ["conjunction", "star-lord", "aspect", "sign-lord"]);
+assert.deepEqual(readerVINodes.Rahu?.agentTiers.map((tier) => tier.planets), [[], ["Jupiter"], ["Mars", "Sun"], ["Venus"]]);
+assert.equal(readerVINodes.Rahu?.preferredAgentSource, "star-lord", "Reader VI prefers star lord before aspecting planets");
+assert.deepEqual(readerVINodes.Rahu?.preferredAgentHouses, [9], "Rahu inherits the preferred agent's chart signification");
+assert.ok(readerVINodes.Rahu?.representedHouses.includes(4), "Rahu always signifies its own occupied house");
+assert.ok(!readerVINodes.Rahu?.agentTiers.some((tier) => tier.planets.includes("Ketu")), "A node must never treat the opposite node as an agent");
+const readerIIINodes = nodeCalculator.calculateNodeRepresentations(
+  nodeTestPlanets,
+  nodeTestSignifications,
+  "reader-iii-v"
+);
+assert.deepEqual(readerIIINodes.Rahu?.priorityOrder, ["conjunction", "aspect", "star-lord", "sign-lord"]);
+assert.equal(readerIIINodes.Rahu?.preferredAgentSource, "aspect", "Reader III/V puts aspecting planets before the star lord");
+assert.deepEqual(readerIIINodes.Rahu?.preferredAgentPlanets, ["Mars", "Sun"]);
+assert.equal(readerVINodes.Ketu?.preferredAgentSource, "conjunction", "Conjunction remains first in both reader variants");
+assert.deepEqual(readerVINodes.Ketu?.preferredAgentPlanets, ["Sun"]);
 
 const classicalPlanetSignifications = new KPSignificators().calculateAllPlanetSignifications(
   strengthCusps,
