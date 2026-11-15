@@ -84,6 +84,10 @@ const kochSchool = recommendWesternHouseSystem("koch-school-natal", 52.2);
 check(kochSchool.status === "supported" && kochSchool.preferredSystem === "Koch" &&
   kochSchool.resolvedSystem === "Koch",
   "A named Koch-school natal profile selects Koch without altering the modern Western Auto default");
+const polarKochSchool = recommendWesternHouseSystem("koch-school-natal", 70);
+check(polarKochSchool.preferredSystem === "Koch" &&
+  polarKochSchool.resolvedSystem === "Porphyry" && polarKochSchool.usedPolarFallback,
+  "A Koch-school profile discloses Porphyry as the actual polar-latitude fallback");
 
 const natal = calculateWesternChart(2000, 1, 1, 12, 0, 40.7, -74, -5, "Auto");
 check(natal.requestedHouseSystem === "Auto" && natal.houseSystem === "Placidus",
