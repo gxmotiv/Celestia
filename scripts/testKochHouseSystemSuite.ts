@@ -191,13 +191,17 @@ const natal = calculateWesternChart(
 check(natal.houseSystem === "Koch" && natal.houses.length === 12,
   "The Western natal workflow exposes twelve Koch houses");
 
+const polarFrame = swiss.calculateHouses(2451545.0, 70, 20, "K");
+check(polarFrame.houseSystemUsed === "O",
+  "The shared astronomy facade resolves polar Koch requests to Porphyry");
+
 const polarNatal = calculateWesternChart(
   2000, 1, 1, 12, 0,
   70, 20, 1,
   "Koch"
 );
 check(polarNatal.houseSystem === "Porphyry" &&
-  polarNatal.houseSystemNote?.includes("Koch") === true,
+  polarNatal.houseSystemNote?.includes("Koch houses are undefined") === true,
   "A polar Koch request visibly reports its Porphyry fallback");
 
 const policy = recommendWesternHouseSystem("koch-school-natal", 52.2);
