@@ -753,7 +753,7 @@ export function calculateWesternChart(
     : actualHouseSystem !== resolvedRequest
       ? `${resolvedRequest} houses could not be used at this place/date; ${actualHouseSystem} houses were used instead.`
       : houseResult.polarOrientationShifted
-        ? `${actualHouseSystem} applied its 180° polar-orientation rule. The house system remains ${actualHouseSystem}; only the orientation of the cusp frame was adjusted.`
+        ? `${actualHouseSystem} applied its 180° polar orientation rule. The house system remains ${actualHouseSystem}; only the orientation of the cusp frame was adjusted.`
         : autoHouseRecommendation?.rationale;
   const asc = houseResult.ascendant;
   const mc = houseResult.midheaven;
