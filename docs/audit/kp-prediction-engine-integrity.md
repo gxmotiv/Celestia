@@ -37,7 +37,7 @@ These transcriptions and teaching notes are research witnesses, not a critical e
 
 ## Gondhalekar primary / secondary strength
 
-The engine now keeps the four steps distinct and exposes `primaryHouses` and `secondaryHouses` on each `KPStepDetail` rather than presenting every connection as equally strong.
+The engine now keeps the four steps distinct and exposes `primaryHouses` and `secondaryHouses` on each `KPStepDetail` rather than presenting every connection as equally strong. It preserves a primary occupied-house result when that same house is also owned; the ownership rule must not demote the residence rule.
 
 - **Steps 1 and 3 (planet / sub-lord):** a planet with Positional Status is primary for its occupied house; otherwise it is secondary. Owned houses are primary only when the planet has Positional Status and the owned house is empty. Owned houses of a planet without Positional Status remain secondary even when empty.
 - **Steps 2 and 4 (star lord / sub's star lord):** the star lord is principal for its occupied house; its owned houses are primary only when empty, with occupied owned houses secondary.
