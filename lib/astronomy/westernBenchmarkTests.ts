@@ -555,11 +555,11 @@ export class WesternBenchmarkRunner {
       id: "W-ADV-05",
       name: "Pars Fortunae (Part of Fortune) Diurnal/Nocturnal Formula",
       category: "Advanced Systems & Harmonics",
-      standardReference: "Ptolemy Tetrabiblos III.10 / Al-Biruni (1029)",
+      standardReference: "Valens, Anthology II.23 & III.11; Dorotheus I.26; Paulus Alexandrinus. Common sect-reversed profile. Ptolemy, Tetrabiblos III.10, is a non-reversing alternative and is not implemented by this profile.",
       expected: `Formula matches sect: ${fortuneFormula}`,
       actual: `${arabianRep?.partOfFortune.formula} -> ${arabianRep?.partOfFortune.signDegreeFormatted}`,
       passed: !!arabianRep && arabianRep.partOfFortune.formula.includes(isDay ? "Day" : "Night"),
-      details: "Classical doctrine reverses the arc from Sun to Moon at night to maintain the luminaries' respective daytime and nighttime roles.",
+      details: "This test validates the common sect-reversed Hellenistic profile only. It does not represent Ptolemy's non-reversing Fortune formula, nor Valens III.11's more nuanced night-Fortune alternative based on the Moon's position relative to the horizon.",
     });
   }
 
