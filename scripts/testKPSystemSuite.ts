@@ -504,7 +504,8 @@ assert.ok(baseNodeHouseSignifications[6].levels.levelA.includes("Jupiter"), "Jup
 assert.ok(expandedNodeHouseSignifications[6].levels.levelA.includes("Rahu"), "Rahu inherits Jupiter's Grade I role in House 6");
 assert.ok(!baseNodeHouseSignifications[9].levels.levelA.includes("Jupiter"), "Jupiter's planet-to-house A grade containing House 9 does not make it a House 9 Grade I significator");
 assert.ok(!expandedNodeHouseSignifications[9].levels.levelA.includes("Rahu"), "Rahu must not be promoted to Grade I in House 9 merely because the agent's separate planet-to-house A grade contains House 9");
-assert.ok(expandedNodeHouseSignifications[8].levels.levelB.includes("Rahu"), "Rahu inherits Jupiter's actual Grade II occupant role in House 8");
+assert.ok(baseNodeHouseSignifications[8].levels.levelA.includes("Rahu"), "Rahu is already a natural Grade I significator in House 8 because it is in the star of its occupant Jupiter");
+assert.ok(expandedNodeHouseSignifications[8].levels.levelB.includes("Rahu"), "Rahu additionally inherits Jupiter's Grade II occupant role in House 8 without losing its natural Grade I role");
 assert.ok(!expandedNodeHouseSignifications[9].allSignificators.includes("Rahu"), "House 9 has no direct or inherited house-grade role for Rahu in this controlled fixture");
 assert.ok(expandedNodeHouseSignifications[10].levels.levelB.includes("Ketu"), "Ketu must inherit its preferred conjoined Sun's Level B house signification");
 
@@ -515,8 +516,8 @@ assert.equal(
 );
 assert.equal(
   nodeCalculator.getStrongestHouseSignificatorGrade("Rahu", [8], expandedNodeHouseSignifications),
-  "II",
-  "Rahu inherits the agent's Grade II role in House 8"
+  "I",
+  "Rahu retains its stronger natural Grade I match while also inheriting Jupiter's Grade II role in House 8"
 );
 assert.equal(
   nodeCalculator.getStrongestHouseSignificatorGrade("Pluto", [6, 9], expandedNodeHouseSignifications),
