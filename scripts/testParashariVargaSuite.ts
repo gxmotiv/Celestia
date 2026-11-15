@@ -75,7 +75,7 @@ const cases: { name: string; code: string; longitude: number; expectedSign: numb
   { name: "D30 odd 5° boundary", code: "D30", longitude: lon(0, 5), expectedSign: 10 },
   { name: "D30 odd 10° boundary", code: "D30", longitude: lon(0, 10), expectedSign: 8 },
   { name: "D30 odd 18° boundary", code: "D30", longitude: lon(0, 18), expectedSign: 2 },
-  { name: "D30 odd 25° boundary", code: "D30", longitude: lon(0, 25), expectedSign: 1 },
+  { name: "D30 odd 25° boundary maps to Libra", code: "D30", longitude: lon(0, 25), expectedSign: 6 },
   { name: "D30 even 0–5°", code: "D30", longitude: lon(1, 4.999), expectedSign: 1 },
   { name: "D30 even 5° boundary", code: "D30", longitude: lon(1, 5), expectedSign: 5 },
   { name: "D30 even 12° boundary", code: "D30", longitude: lon(1, 12), expectedSign: 11 },
