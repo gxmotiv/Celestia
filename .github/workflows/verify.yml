@@ -27,6 +27,7 @@ jobs:
           - testWesternIntegritySuite.ts
           - testWesternHouseSystemPolicySuite.ts
           - testRegiomontanusHouseSystemSuite.ts
+          - testKochHouseSystemSuite.ts
           - testWesternReferenceHarness.ts
           - testInpopWesternEphemerisHarness.ts
           - testAstrometricJ2000Harness.ts

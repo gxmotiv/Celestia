@@ -7,6 +7,7 @@
  */
 export type WesternHouseTechnique =
   | "modern-natal"
+  | "koch-school-natal"
   | "western-sidereal-natal"
   | "hellenistic-natal"
   | "hellenistic-time-lord"
@@ -54,7 +55,8 @@ export type ImplementedWesternHouseSystem =
   | "Equal"
   | "WholeSign"
   | "Porphyry"
-  | "Regiomontanus";
+  | "Regiomontanus"
+  | "Koch";
 
 export type HouseSystemRecommendationMode =
   | "automatic"
@@ -89,7 +91,31 @@ const IMPLEMENTED_SYSTEMS = new Set<WesternHouseSystemName>([
   "WholeSign",
   "Porphyry",
   "Regiomontanus",
+  "Koch",
 ]);
+
+/** House-system names accepted by the Western transit engine. */
+export type WesternTransitHouseSystem =
+  | "placidus"
+  | "whole-sign"
+  | "equal"
+  | "porphyry"
+  | "regiomontanus"
+  | "koch";
+
+/** Convert a resolved natal method to the transit engine's explicit method key. */
+export function toWesternTransitHouseSystem(
+  system: ImplementedWesternHouseSystem
+): WesternTransitHouseSystem {
+  switch (system) {
+    case "Placidus": return "placidus";
+    case "Equal": return "equal";
+    case "WholeSign": return "whole-sign";
+    case "Porphyry": return "porphyry";
+    case "Regiomontanus": return "regiomontanus";
+    case "Koch": return "koch";
+  }
+}
 
 function automatic(
   technique: WesternHouseTechnique,
@@ -180,6 +206,24 @@ export function recommendWesternHouseSystem(
         latitude,
         "Placidus is Celestia's current default for a modern Western natal chart. It is a configurable convention, not a universally superior system."
       );
+
+    case "koch-school-natal": {
+      if (latitude !== undefined && (!Number.isFinite(latitude) || latitude < -90 || latitude > 90)) {
+        throw new RangeError("Koch house-system recommendation latitude must be finite and between -90° and +90°.");
+      }
+      const usedKochPolarFallback = latitude !== undefined && Math.abs(latitude) >= 66.5622;
+      return {
+        technique,
+        mode: "automatic",
+        status: "supported",
+        preferredSystem: "Koch",
+        resolvedSystem: usedKochPolarFallback ? "Porphyry" : "Koch",
+        usedPolarFallback: usedKochPolarFallback,
+        rationale: usedKochPolarFallback
+          ? "Koch houses are undefined within the polar circle. Celestia therefore uses Porphyry and reports the actual system used; choose Equal or Whole Sign for other polar-compatible frameworks."
+          : "Koch (Birthplace) houses are selected for an explicitly Koch-school natal profile. The standard modern Western Auto profile remains Placidus; Koch is not silently substituted for other schools.",
+      };
+    }
 
     case "hellenistic-natal":
     case "hellenistic-time-lord":

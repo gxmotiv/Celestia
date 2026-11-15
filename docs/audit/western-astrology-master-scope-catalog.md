@@ -168,13 +168,13 @@ Track every item separately; do not merge physical ephemeris objects with hypoth
 
 Swiss Ephemeris publishes a much broader house-method list than Celestia currently implements. The presence of a name in a reference manual, a type union or a UI option is not proof that Celestia can calculate it.
 
-| House method | Celestia calculation status at baseline |
+| House method | Celestia calculation status |
 |---|---|
 | Placidus | Implemented |
 | Equal (Ascendant = cusp 1) | Implemented |
 | Whole Sign | Implemented |
 | Porphyry | Implemented |
-| Koch | Not implemented |
+| Koch | Implemented; requests inside the polar circle resolve to Porphyry with the actual system disclosed |
 | Regiomontanus | Implemented |
 | Campanus | Not implemented |
 | Alcabitius | Not implemented |
@@ -194,7 +194,7 @@ Swiss Ephemeris publishes a much broader house-method list than Celestia current
 | Pullen SR | Not implemented |
 | Sripati | Not implemented |
 
-Swiss Ephemeris documentation also notes that Placidus and Koch cannot be calculated beyond the polar circle, and that some systems have additional calculation limits. Celestia's current conservative Placidus-to-Porphyry fallback is an application policy, not proof that Porphyry is the one historically correct choice for every chart. The future engine must expose the requested system, actual system used and reason for any fallback.
+Swiss Ephemeris documents that Placidus and Koch are not defined within the polar circle, and other house methods have their own calculation limits. Celestia's Koch calculator is independently derived from the MC semi-diurnal-arc construction and tested against Swiss Ephemeris 2.10.03 reference values. Koch requests inside the polar circle resolve to Porphyry and disclose the actual system used. This remains a calculation fallback, not a claim that Porphyry is the historically correct choice for every chart.
 
 ### Technique-aware automatic house-system rules
 
@@ -227,7 +227,7 @@ For every distinct technique/profile, maintain these gates:
 
 1. Centralize technique-aware house-system selection and accurately disclose what is actually supported.
 2. Expand the Western reference suite for house systems, angles, time scales and natal placements.
-3. Add and validate further house engines (next candidates include Koch, Campanus and Alcabitius), then extend source-specific house-method profiles.
+3. Add and validate further house engines (next candidates include Campanus and Alcabitius), then extend source-specific house-method profiles.
 4. Complete traditional natal judgement: dignity, reception, rulers, dispositors, sect, lots, antiscia and patterns with source profiles.
 5. Build the exact transit event timeline.
 6. Implement primary directions as a separate, variant-driven engine.
@@ -240,11 +240,11 @@ For every distinct technique/profile, maintain these gates:
 ## References and source policy
 
 - [Swiss Ephemeris Programmer's Manual — house methods](https://www.astro.com/swisseph/swephprg.pdf): technical method identifiers and computation behavior.
-- [Swiss Ephemeris house-calculation source (`swehouse.c`)](https://github.com/astrotools/SwissEphemeris/blob/master/swisseph/swehouse.c): independent implementation reference for Regiomontanus cusp and polar-orientation behavior.
+- [Swiss Ephemeris 2.10.03 house-calculation source (`swehouse.c`)](https://github.com/aloistr/swisseph/blob/v2.10.03/swehouse.c): authoritative reference for documented Koch and Regiomontanus house-method and polar-limit behavior. Celestia's Koch calculator uses an independent mathematical implementation.
 - [Cambridge Casebooks — Regiomontanus house construction](https://casebooks-production.casebooks.lib.cam.ac.uk/data/astrology-in-the-casebooks.pdf): historical/geometrical explanation of dividing the celestial equator into 30° intervals and projecting position circles to the ecliptic.
 - [Astrodienst house-system overview](https://www.astro.com/faq/fq_fh_owhouse_e.htm): descriptions of named house systems and historical context.
 - [Astrodienst Astrowiki — Astrological Schools](https://www.astro.com/astrowiki/en/Astrological_Schools): overview of distinct schools and specializations.
 - [Internet Encyclopedia of Philosophy — Hellenistic Astrology](https://iep.utm.edu/hellenistic-astrology/): scholarly historical context for the Hellenistic tradition.
 - Each future technique entry must add the primary work / authoritative technical specification it actually uses. These general links are not a substitute for method-specific provenance.
 
-**Release boundary:** this catalogue is present in production from commit `a366c38c0a31128e15a81963eb5e685f313713d6`. The Regiomontanus implementation and reference suite are the subject of the next engineering change and must not be called live until that change is merged and deployed.
+**Release boundary:** the catalogue and Regiomontanus implementation are in production at `b19de32a54f238bc73cb2c788605e0d12235840b`. Koch is implemented on the current review branch with independent Swiss Ephemeris 2.10.03 fixtures, natal/transit integration and a disclosed Porphyry fallback inside the polar circle; it must not be called live until merged and deployed.

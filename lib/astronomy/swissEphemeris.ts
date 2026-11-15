@@ -8,6 +8,7 @@
 import * as Astronomy from "astronomy-engine";
 import { calculateEastPointLongitude, calculateVertexLongitude } from "./anglePoints";
 import { calculateRegiomontanusHouses } from "./regiomontanusHouses";
+import { calculateKochHouses } from "./kochHouses";
 
 export interface SwissPlanetPosition {
   longitude: number;      // Ecliptic longitude in degrees, rounded for display (not an accuracy guarantee)
@@ -47,7 +48,7 @@ export interface SwissHouseResult {
   localSiderealTime: number;
   /** True obliquity of date in degrees, matching Astronomy Engine GAST. */
   obliquity: number;
-  houseSystemUsed: "P" | "W" | "E" | "O" | "R";
+  houseSystemUsed: "P" | "W" | "E" | "O" | "R" | "K";
   equatorialAscendant: number;
 }
 
@@ -490,13 +491,13 @@ export class SwissEphemerisEngine {
   }
 
   /**
-   * Calculate Placidus, Equal, Whole Sign, Porphyry or Regiomontanus houses.
+   * Calculate Placidus, Equal, Whole Sign, Porphyry, Regiomontanus or Koch houses.
    */
   public calculateHouses(
     julianDay: number,
     latitude: number,
     longitude: number,
-    system: "P" | "W" | "E" | "O" | "R" = "P"
+    system: "P" | "W" | "E" | "O" | "R" | "K" = "P"
   ): SwissHouseResult {
     if (!Number.isFinite(julianDay) || !Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
       throw new RangeError("House calculation requires a finite Julian Day, latitude within ±90°, and longitude within ±180°.");
@@ -537,7 +538,12 @@ export class SwissEphemerisEngine {
     // Placidus is undefined at polar-circle latitudes. Use the standard Porphyry
     // quadrant fallback explicitly instead of allowing a trigonometric result to
     // masquerade as a valid Placidus chart.
-    let systemUsed: "P" | "W" | "E" | "O" | "R" = system === "P" && Math.abs(latitude) >= 66.5622 ? "O" : system;
+    let systemUsed: "P" | "W" | "E" | "O" | "R" | "K" =
+      system === "P" && Math.abs(latitude) >= 66.5622
+        ? "O"
+        : system === "K" && Math.abs(latitude) >= 90 - epsDeg
+          ? "O"
+          : system;
     const cusps: number[] = new Array(12);
 
     if (systemUsed === "W") {
@@ -582,6 +588,17 @@ export class SwissEphemerisEngine {
       mc = regio.midheaven;
       for (let index = 0; index < 12; index += 1) {
         cusps[index] = regio.houseCusps[index];
+      }
+    } else if (systemUsed === "K") {
+      // Koch (Birthplace) houses trisect the MC's semi-diurnal arc. The
+      // ascensional difference of the MC adjusts four pseudo-sidereal angles,
+      // whose rising ecliptic intersections define cusps 11, 12, 2 and 3.
+      // Polar-circle requests were explicitly resolved to Porphyry above.
+      const koch = calculateKochHouses(ramc, latitude, epsDeg);
+      asc = koch.ascendant;
+      mc = koch.midheaven;
+      for (let index = 0; index < 12; index += 1) {
+        cusps[index] = koch.houseCusps[index];
       }
     } else {
       // Placidus House System

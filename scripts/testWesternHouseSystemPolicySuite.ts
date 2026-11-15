@@ -3,6 +3,7 @@ import { calculateWesternChart } from "../lib/astronomy/ephemeris";
 import {
   isWesternHouseSystemImplemented,
   recommendWesternHouseSystem,
+  toWesternTransitHouseSystem,
 } from "../lib/astronomy/westernHouseSystemPolicy";
 
 let assertions = 0;
@@ -73,12 +74,29 @@ check(isWesternHouseSystemImplemented("Placidus") &&
   isWesternHouseSystemImplemented("Equal") &&
   isWesternHouseSystemImplemented("WholeSign") &&
   isWesternHouseSystemImplemented("Porphyry") &&
-  isWesternHouseSystemImplemented("Regiomontanus"),
-  "The implementation registry recognizes the five currently calculated Western house systems");
+  isWesternHouseSystemImplemented("Regiomontanus") &&
+  isWesternHouseSystemImplemented("Koch"),
+  "The implementation registry recognizes the six currently calculated Western house systems");
 
-check(!isWesternHouseSystemImplemented("Koch") &&
-  !isWesternHouseSystemImplemented("Campanus"),
-  "House-system labels without calculation engines are not treated as implemented");
+check(!isWesternHouseSystemImplemented("Campanus"),
+  "Campanus remains unavailable until its own calculation engine is implemented");
+
+check(toWesternTransitHouseSystem("Koch") === "koch" &&
+  toWesternTransitHouseSystem("Regiomontanus") === "regiomontanus" &&
+  toWesternTransitHouseSystem("Porphyry") === "porphyry" &&
+  toWesternTransitHouseSystem("Placidus") === "placidus" &&
+  toWesternTransitHouseSystem("Equal") === "equal" &&
+  toWesternTransitHouseSystem("WholeSign") === "whole-sign",
+  "Transit Auto mapping preserves every implemented natal house method, including Koch");
+
+const kochSchool = recommendWesternHouseSystem("koch-school-natal", 52.2);
+check(kochSchool.status === "supported" && kochSchool.preferredSystem === "Koch" &&
+  kochSchool.resolvedSystem === "Koch",
+  "A named Koch-school natal profile selects Koch without altering the modern Western Auto default");
+const polarKochSchool = recommendWesternHouseSystem("koch-school-natal", 70);
+check(polarKochSchool.preferredSystem === "Koch" &&
+  polarKochSchool.resolvedSystem === "Porphyry" && polarKochSchool.usedPolarFallback,
+  "A Koch-school profile discloses Porphyry as the actual polar-latitude fallback");
 
 const natal = calculateWesternChart(2000, 1, 1, 12, 0, 40.7, -74, -5, "Auto");
 check(natal.requestedHouseSystem === "Auto" && natal.houseSystem === "Placidus",

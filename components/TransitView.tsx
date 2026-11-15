@@ -47,7 +47,7 @@ import {
 } from "lucide-react";
 import { TransitBiWheel } from "./TransitBiWheel";
 import { AshtakavargaPanel } from "./AshtakavargaPanel";
-import { recommendWesternHouseSystem } from "@/lib/astronomy/westernHouseSystemPolicy";
+import { recommendWesternHouseSystem, toWesternTransitHouseSystem } from "@/lib/astronomy/westernHouseSystemPolicy";
 
 const emptySubscribe = () => () => {};
 
@@ -79,7 +79,7 @@ export function TransitView({
 
   // Custom House System Override (for Western)
   const [selectedHouseSystem, setSelectedHouseSystem] = useState<
-    "auto" | "placidus" | "whole-sign" | "equal" | "porphyry" | "regiomontanus"
+    "auto" | "placidus" | "whole-sign" | "equal" | "porphyry" | "regiomontanus" | "koch"
   >("auto");
 
   // BaZi Gender (for Da Yun progression direction)
@@ -105,10 +105,7 @@ export function TransitView({
     if (systemMode === "comparison") return TRANSIT_SYSTEM_PRESETS.western;
     const base = TRANSIT_SYSTEM_PRESETS[systemMode] || TRANSIT_SYSTEM_PRESETS.western;
     if (systemMode === "western") {
-      const natalResolvedSystem = westernChart.houseSystem === "WholeSign" ? "whole-sign"
-        : westernChart.houseSystem === "Equal" ? "equal"
-        : westernChart.houseSystem === "Porphyry" ? "porphyry"
-        : westernChart.houseSystem === "Regiomontanus" ? "regiomontanus" : "placidus";
+      const natalResolvedSystem = toWesternTransitHouseSystem(westernChart.houseSystem);
       const transitHousePolicy = recommendWesternHouseSystem("western-transits");
       const automaticSystem = transitHousePolicy.mode === "inherit-natal"
         ? natalResolvedSystem
@@ -299,6 +296,7 @@ export function TransitView({
                   <option value="whole-sign">Whole Sign (Hellenistic)</option>
                   <option value="equal">Equal House (30° from Ascendant)</option>
                   <option value="regiomontanus">Regiomontanus (Equatorial)</option>
+                  <option value="koch">Koch (Birthplace / MC semi-diurnal arc)</option>
                 </select>
               </div>
             )}
