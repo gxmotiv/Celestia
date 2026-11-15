@@ -289,7 +289,7 @@ assert.throws(
 
 const strengthCusps = {
   houseLords: [
-    "Mars", "Moon", "Jupiter", "Saturn", "Mercury", "Mercury",
+    "Mercury", "Sun", "Jupiter", "Saturn", "Mercury", "Mercury",
     "Sun", "Sun", "Mars", "Venus", "Venus", "Jupiter",
   ],
 } as unknown as KPCusps;
@@ -308,8 +308,10 @@ const strengthPlanets = [
 const strengthPS = fourStep.calculatePositionalStatus(strengthCusps, strengthPlanets);
 assert.equal(strengthPS.Mercury.hasPositionalStatus, true, "A planet in its own star retains PS even when a planet tenants its star");
 assert.equal(strengthPS.Venus.hasPositionalStatus, false, "A non-own-star planet with a tenant in its star has no PS");
+assert.equal(strengthPS.Sun.hasPositionalStatus, true, "A planet with no tenants in its stars has PS");
 const mercuryFourStep = fourStep.evaluatePlanetFourStep("Mercury", strengthCusps, strengthPlanets, strengthPS);
-assert.ok(mercuryFourStep.step1.primaryHouses.includes(1), "Own-star planet must be primary for its occupied house");
+assert.ok(mercuryFourStep.step1.primaryHouses.includes(1), "Own-star planet must be primary for its occupied house, even when it also owns that same occupied house");
+assert.ok(mercuryFourStep.step2.primaryHouses.includes(1), "Star lord's occupied and owned house must remain primary");
 assert.ok(mercuryFourStep.step1.primaryHouses.includes(5), "PS planet must be primary for its empty owned house");
 assert.ok(mercuryFourStep.step1.secondaryHouses.includes(6), "PS planet's occupied owned house must be secondary");
 assert.deepEqual(
