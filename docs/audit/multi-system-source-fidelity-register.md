@@ -48,6 +48,14 @@ Shared astronomy may provide raw positions and time conversions. It does not aut
 
 **Regression coverage:** `scripts/testParashariVargaSuite.ts` checks the named rules and exact boundaries across all 16 configured Shodashavarga charts, degree mapping, and invalid-input rejection. This validates the implemented sign-assignment algorithms at the tested boundaries; it does not certify every Varga interpretation, dignity doctrine, or textual variant.
 
+### BaZi Day Master strength / Useful-God disclosure
+
+**Finding:** `FiveElementAnalysisEngine.evaluateDayMaster` uses a compact weighted heuristic: month-branch seasonal support plus aggregate same/resource versus output/controlling element counts. It does not evaluate the full classical pattern, roots, hidden-stem seasonal command, combinations, clashes, transformations, or the competing Yong Shen schools.
+
+**Correction:** `ChineseView` now labels the strength as an estimate, renames “Favorable Elements (Yong Shen)” to “Model-Suggested Supportive Elements,” and explains that this is not a complete classical Useful-God or pattern-selection analysis. The five-element chart remains a weighted distribution summary, not a strength verdict.
+
+**Next work:** choose and cite a specific Zi Ping lineage and source edition before implementing a full Useful-God/pattern engine. Keep the current model available only as a provisional comparison view until independently benchmarked.
+
 ### BaZi Jie / Qi solar-month boundaries
 
 **Finding:** BaZi's twelve monthly branches are opened by the twelve Jie (節) terms, spaced 30° apart from Lichun at 315°. The alternating Qi (氣) terms at the 15° midpoints do not advance the month branch. Treating all twenty-four solar terms as month boundaries would incorrectly advance the Month Pillar twice in each month.
