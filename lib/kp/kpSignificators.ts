@@ -41,12 +41,13 @@ export class KPSignificators {
    * Find house index (1-12) for a given longitude
    */
   public static getPlanetHouse(planetLon: number, cusps: KPCusps): number {
-    for (let h = 1; h <= 12; h++) {
-      if (this.isPlanetInHouse(planetLon, h, cusps)) {
-        return h;
-      }
+    if (!Number.isFinite(planetLon) || cusps.cusps.length !== 12 || cusps.cusps.some((cusp) => !Number.isFinite(cusp))) {
+      throw new Error("KP house assignment requires a finite longitude and twelve valid cusps.");
     }
-    return 1;
+    for (let h = 1; h <= 12; h++) {
+      if (this.isPlanetInHouse(planetLon, h, cusps)) return h;
+    }
+    throw new Error(`KP could not assign longitude ${planetLon} to any house; refusing to default to house 1.`);
   }
 
   /**
@@ -163,9 +164,12 @@ export class KPSignificators {
     });
 
     planets.forEach((p) => {
-      const selfInfo = planetMap[p.name] || { occupies: 1, owns: [] };
-      const starInfo = planetMap[p.starLord] || { occupies: 1, owns: [] };
-      const subInfo = planetMap[p.subLord] || { occupies: 1, owns: [] };
+      const selfInfo = planetMap[p.name];
+      const starInfo = planetMap[p.starLord];
+      const subInfo = planetMap[p.subLord];
+      if (!selfInfo) throw new Error(`KP signification cannot resolve chart position for ${p.name}.`);
+      if (!starInfo) throw new Error(`KP signification cannot resolve star lord ${p.starLord} for ${p.name}.`);
+      if (!subInfo) throw new Error(`KP signification cannot resolve sub lord ${p.subLord} for ${p.name}.`);
 
       // In KP: Planet strongly signifies houses of Star Lord, then its own
       const housesSet = new Set<number>();
