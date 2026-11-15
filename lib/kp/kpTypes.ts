@@ -100,6 +100,7 @@ export interface KPNodeAgentTier {
   source: KPNodeAgentSource;
   priority: number;
   planets: string[];
+  levels: KPPlanetSignificationLevels;
   signifiedHouses: number[];
 }
 
