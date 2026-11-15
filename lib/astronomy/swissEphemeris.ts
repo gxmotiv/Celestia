@@ -10,6 +10,7 @@ import { calculateEastPointLongitude, calculateVertexLongitude } from "./anglePo
 import { calculateRegiomontanusHouses } from "./regiomontanusHouses";
 import { calculateKochHouses } from "./kochHouses";
 import { calculateCampanusHouses } from "./campanusHouses";
+import { calculateAlcabitiusHouses } from "./alcabitiusHouses";
 
 export interface SwissPlanetPosition {
   longitude: number;      // Ecliptic longitude in degrees, rounded for display (not an accuracy guarantee)
@@ -49,7 +50,7 @@ export interface SwissHouseResult {
   localSiderealTime: number;
   /** True obliquity of date in degrees, matching Astronomy Engine GAST. */
   obliquity: number;
-  houseSystemUsed: "P" | "W" | "E" | "O" | "R" | "K" | "C";
+  houseSystemUsed: "P" | "W" | "E" | "O" | "R" | "K" | "C" | "B";
   /** Discloses a documented method-specific orientation adjustment or fallback. */
   houseSystemNote?: string;
   equatorialAscendant: number;
@@ -494,13 +495,13 @@ export class SwissEphemerisEngine {
   }
 
   /**
-   * Calculate Placidus, Equal, Whole Sign, Porphyry, Regiomontanus, Koch or Campanus houses.
+   * Calculate Placidus, Equal, Whole Sign, Porphyry, Regiomontanus, Koch, Campanus or Alcabitius houses.
    */
   public calculateHouses(
     julianDay: number,
     latitude: number,
     longitude: number,
-    system: "P" | "W" | "E" | "O" | "R" | "K" | "C" = "P"
+    system: "P" | "W" | "E" | "O" | "R" | "K" | "C" | "B" = "P"
   ): SwissHouseResult {
     if (!Number.isFinite(julianDay) || !Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
       throw new RangeError("House calculation requires a finite Julian Day, latitude within ±90°, and longitude within ±180°.");
@@ -541,18 +542,22 @@ export class SwissEphemerisEngine {
     // Placidus is undefined at polar-circle latitudes. Use the standard Porphyry
     // quadrant fallback explicitly instead of allowing a trigonometric result to
     // masquerade as a valid Placidus chart.
-    let systemUsed: "P" | "W" | "E" | "O" | "R" | "K" | "C" =
+    let systemUsed: "P" | "W" | "E" | "O" | "R" | "K" | "C" | "B" =
       system === "P" && Math.abs(latitude) >= 66.5622
         ? "O"
         : system === "K" && Math.abs(latitude) >= 90 - epsDeg
           ? "O"
           : system === "C" && Math.abs(latitude) >= 90
             ? "O"
-            : system;
+            : system === "B" && Math.abs(latitude) >= 90
+              ? "O"
+              : system;
     let houseSystemNote: string | undefined =
       system === "C" && systemUsed === "O"
         ? "Campanus house construction is indeterminate at the exact geographic poles; Porphyry quadrant houses were used instead."
-        : undefined;
+        : system === "B" && systemUsed === "O"
+          ? "Alcabitius semi-arc construction is indeterminate at the exact geographic poles; Porphyry quadrant houses were used instead."
+          : undefined;
     const cusps: number[] = new Array(12);
 
     if (systemUsed === "W") {
@@ -621,6 +626,18 @@ export class SwissEphemerisEngine {
       }
       for (let index = 0; index < 12; index += 1) {
         cusps[index] = campanus.houseCusps[index];
+      }
+    } else if (systemUsed === "B") {
+      // Alcabitius trisects the Ascendant's diurnal and nocturnal semi-arcs
+      // in right ascension, then projects the resulting points to the ecliptic.
+      const alcabitius = calculateAlcabitiusHouses(ramc, latitude, epsDeg);
+      asc = alcabitius.ascendant;
+      mc = alcabitius.midheaven;
+      if (alcabitius.orientationAdjusted) {
+        houseSystemNote = "Alcabitius applied its documented 180° Ascendant orientation adjustment before deriving the semi-arcs.";
+      }
+      for (let index = 0; index < 12; index += 1) {
+        cusps[index] = alcabitius.houseCusps[index];
       }
     } else {
       // Placidus House System

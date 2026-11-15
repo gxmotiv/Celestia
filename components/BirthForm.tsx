@@ -757,6 +757,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
                 <option value="Regiomontanus">Regiomontanus (Equatorial Great Circles)</option>
                 <option value="Koch">Koch (Birthplace / MC semi-diurnal arc)</option>
                 <option value="Campanus">Campanus (Prime Vertical Great Circles)</option>
+                <option value="Alcabitius">Alcabitius (Ascendant semi-arc thirds)</option>
               </select>
             </div>
           </div>

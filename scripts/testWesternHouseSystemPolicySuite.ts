@@ -76,8 +76,9 @@ check(isWesternHouseSystemImplemented("Placidus") &&
   isWesternHouseSystemImplemented("Porphyry") &&
   isWesternHouseSystemImplemented("Regiomontanus") &&
   isWesternHouseSystemImplemented("Koch") &&
-  isWesternHouseSystemImplemented("Campanus"),
-  "The implementation registry recognizes the seven currently calculated Western house systems");
+  isWesternHouseSystemImplemented("Campanus") &&
+  isWesternHouseSystemImplemented("Alcabitius"),
+  "The implementation registry recognizes the eight currently calculated Western house systems");
 
 check(toWesternTransitHouseSystem("Koch") === "koch" &&
   toWesternTransitHouseSystem("Regiomontanus") === "regiomontanus" &&
@@ -85,8 +86,9 @@ check(toWesternTransitHouseSystem("Koch") === "koch" &&
   toWesternTransitHouseSystem("Placidus") === "placidus" &&
   toWesternTransitHouseSystem("Equal") === "equal" &&
   toWesternTransitHouseSystem("WholeSign") === "whole-sign" &&
-  toWesternTransitHouseSystem("Campanus") === "campanus",
-  "Transit Auto mapping preserves every implemented natal house method, including Koch and Campanus");
+  toWesternTransitHouseSystem("Campanus") === "campanus" &&
+  toWesternTransitHouseSystem("Alcabitius") === "alcabitius",
+  "Transit Auto mapping preserves every implemented natal house method, including Koch, Campanus and Alcabitius");
 
 const kochSchool = recommendWesternHouseSystem("koch-school-natal", 52.2);
 check(kochSchool.status === "supported" && kochSchool.preferredSystem === "Koch" &&
@@ -111,6 +113,20 @@ const campanusNatal = calculateWesternChart(2000, 1, 1, 12, 0, 45, 0, 0, "Campan
 check(campanusNatal.requestedHouseSystem === "Campanus" &&
   campanusNatal.houseSystem === "Campanus" && campanusNatal.houses.length === 12,
   "The Western natal chart resolves and exposes twelve Campanus houses");
+
+const alcabitiusSchool = recommendWesternHouseSystem("alcabitius-school-natal", 45);
+check(alcabitiusSchool.status === "supported" &&
+  alcabitiusSchool.preferredSystem === "Alcabitius" &&
+  alcabitiusSchool.resolvedSystem === "Alcabitius",
+  "A named Alcabitius-school profile selects Alcabitius without changing the modern Western Auto default");
+const alcabitiusPole = recommendWesternHouseSystem("alcabitius-school-natal", 90);
+check(alcabitiusPole.preferredSystem === "Alcabitius" &&
+  alcabitiusPole.resolvedSystem === "Porphyry" && alcabitiusPole.usedPolarFallback,
+  "An exact-pole Alcabitius request discloses Porphyry as the actual fallback");
+const alcabitiusNatal = calculateWesternChart(2000, 1, 1, 12, 0, 45, 0, 0, "Alcabitius");
+check(alcabitiusNatal.requestedHouseSystem === "Alcabitius" &&
+  alcabitiusNatal.houseSystem === "Alcabitius" && alcabitiusNatal.houses.length === 12,
+  "The Western natal calculator resolves and exposes twelve Alcabitius houses");
 
 const natal = calculateWesternChart(2000, 1, 1, 12, 0, 40.7, -74, -5, "Auto");
 check(natal.requestedHouseSystem === "Auto" && natal.houseSystem === "Placidus",

@@ -52,7 +52,7 @@ The list of schools should be treated as an extensible registry. A school may co
 | Major asteroids | Approximate | Ceres, Pallas, Juno and Vesta use simplified fixed-element models; upgrade to integrated/perturbed small-body positions and independent references |
 | Further minor planets / TNOs | Not implemented / symbolic by school | Eris, Haumea, Makemake, Sedna, Orcus, Quaoar, Ixion, Varuna and source-specific objects; distinguish physical bodies from hypothetical points |
 | Angles and local geometry | Implemented in part | ASC, MC, DSC, IC, Vertex and East Point exist; complete angle/house/prime-vertical/equatorial conventions and independent fixtures |
-| House systems | Five calculation methods supported | Placidus, Equal, Whole Sign, Porphyry and Regiomontanus; many named systems listed in Section 10 do not yet have Celestia calculation engines |
+| House systems | Eight calculation methods supported | Placidus, Equal, Whole Sign, Porphyry, Regiomontanus, Koch, Campanus and Alcabitius; many named systems listed in Section 10 do not yet have Celestia calculation engines |
 | Planetary phase and visibility | Partial | Heliacal rising/setting, morning/evening star phases, combustion, under-beams, cazimi, elongations, visibility criteria and sect/light condition variants |
 | Fixed stars | Approximate | Current set is 20 stored J2000 tropical longitudes; need epoch precession, proper motion, nutation/aberration conventions, expanded catalogue, star identity and uncertainty |
 | Lunar mansions / decans | Partial or separate tradition | Western decans/faces, Chaldean decans, bounds/terms, monomoiria, dodecatemoria, dwads and source-specific subdivisions |
@@ -177,7 +177,7 @@ Swiss Ephemeris publishes a much broader house-method list than Celestia current
 | Koch | Implemented; requests inside the polar circle resolve to Porphyry with the actual system disclosed |
 | Regiomontanus | Implemented |
 | Campanus | Implemented; independent prime-vertical great-circle calculation, polar orientation handling and Swiss Ephemeris reference tests |
-| Alcabitius | Not implemented |
+| Alcabitius | Implemented; Ascendant semi-arc divisions, independently reference-tested |
 | Morinus | Not implemented |
 | Meridian / Axial Rotation | Not implemented |
 | Topocentric / Polich-Page | Not implemented |
@@ -194,7 +194,7 @@ Swiss Ephemeris publishes a much broader house-method list than Celestia current
 | Pullen SR | Not implemented |
 | Sripati | Not implemented |
 
-Swiss Ephemeris documents that Placidus and Koch are not defined within the polar circle, and other house methods have their own calculation limits. Celestia's Koch calculator is independently derived from the MC semi-diurnal-arc construction and tested against Swiss Ephemeris 2.10.03 reference values. Campanus is independently derived from prime-vertical great-circle geometry and tested against Swiss Ephemeris 2.10.03 fixtures in both hemispheres, including polar orientation shifts. Koch requests inside the polar circle resolve to Porphyry and disclose the actual system used; Campanus requests at the exact geographic poles resolve to Porphyry because the north/south horizon-point construction is indeterminate there. These are disclosed calculation fallbacks, not claims that Porphyry is the historically correct choice for every chart.
+Swiss Ephemeris documents that Placidus and Koch are not defined within the polar circle, and other house methods have their own calculation limits. Celestia's Koch calculator is independently derived from the MC semi-diurnal-arc construction and tested against Swiss Ephemeris 2.10.03 reference values. Campanus is independently derived from prime-vertical great-circle geometry and tested against Swiss Ephemeris 2.10.03 fixtures in both hemispheres, including polar orientation shifts. Alcabitius is independently derived from the Ascendant declination and its diurnal/nocturnal semi-arcs, then checked against Swiss Ephemeris 2.10.03 fixtures across both hemispheres and high latitudes. Koch requests inside the polar circle resolve to Porphyry and disclose the actual system used; Campanus and Alcabitius requests at the exact geographic poles resolve to Porphyry because their local horizon/semi-arc construction is singular there. These are disclosed calculation fallbacks, not claims that Porphyry is the historically correct choice for every chart.
 
 ### Technique-aware automatic house-system rules
 
@@ -203,7 +203,8 @@ Swiss Ephemeris documents that Placidus and Koch are not defined within the pola
 - Western transits and return charts: inherit the user's selected natal chart framework unless the named technique explicitly requires another method.
 - Synastry: preserve each person's own natal house setting; disclose whose houses receive the overlay.
 - Composite/Davison: require the named construction/house convention rather than silently inheriting a natal chart's system.
-- Lilly-style horary/electional: the Regiomontanus house calculation is now available as a named method. The full horary judgement and election-search workflows remain unimplemented; never infer the complete technique from house-system support alone.
+- Lilly-style horary/electional: the Regiomontanus house calculation is available as a named method. The full horary judgement and election-search workflows remain unimplemented; never infer the complete technique from house-system support alone.
+- Alcabitius-school profile: the semi-arc house calculation is available as an explicit choice; it is not silently made the default for other Western schools.
 - Primary directions: direction method, key and domification are coupled; require an explicit direction profile.
 - Uranian/Cosmobiology and mundane methods: require source/school-specific settings; do not invent one universal default.
 - Astrocartography: no ordinary house system is required for the planet-line geometry itself.
@@ -227,7 +228,7 @@ For every distinct technique/profile, maintain these gates:
 
 1. Centralize technique-aware house-system selection and accurately disclose what is actually supported.
 2. Expand the Western reference suite for house systems, angles, time scales and natal placements.
-3. Add and validate further house engines (next candidates include Campanus and Alcabitius), then extend source-specific house-method profiles.
+3. Add and validate further house engines (next candidates include Morinus, Meridian/Axial Rotation, Topocentric, Horizontal and the remaining documented systems), then extend source-specific house-method profiles.
 4. Complete traditional natal judgement: dignity, reception, rulers, dispositors, sect, lots, antiscia and patterns with source profiles.
 5. Build the exact transit event timeline.
 6. Implement primary directions as a separate, variant-driven engine.
@@ -242,11 +243,12 @@ For every distinct technique/profile, maintain these gates:
 - [Swiss Ephemeris Programmer's Manual — house methods](https://www.astro.com/swisseph/swephprg.pdf): technical method identifiers and computation behavior.
 - [Swiss Ephemeris Campanus Table of Houses](https://www.astro.com/swisseph/ae/hts_C_e.pdf): independent tabular reference for Campanus cusps.
 - [Campanus geometry and implementation notes](https://docs.rs/libephemeris-core/latest/libephemeris_core/houses/fn.houses_campanus.html): prime-vertical divisions and great-circle projection.
-- [Swiss Ephemeris 2.10.03 house-calculation source (`swehouse.c`)](https://github.com/aloistr/swisseph/blob/v2.10.03/swehouse.c): authoritative reference for documented Koch and Regiomontanus house-method and polar-limit behavior. Celestia's Koch calculator uses an independent mathematical implementation.
+- [Swiss Ephemeris 2.10.03 house-calculation source (`swehouse.c`)](https://github.com/aloistr/swisseph/blob/v2.10.03/swehouse.c): reference for the Alcabitius (`B`) semi-arc construction, Koch and Regiomontanus methods, and method-specific limits. Celestia's Alcabitius and Koch calculators use separate mathematical implementations.
+- Martin Munkasey, “The Alcibitius Semiarc House System,” cited by the Swiss Ephemeris implementation notes; compare with the `B` branch in the versioned `swehouse.c` source.
 - [Cambridge Casebooks — Regiomontanus house construction](https://casebooks-production.casebooks.lib.cam.ac.uk/data/astrology-in-the-casebooks.pdf): historical/geometrical explanation of dividing the celestial equator into 30° intervals and projecting position circles to the ecliptic.
 - [Astrodienst house-system overview](https://www.astro.com/faq/fq_fh_owhouse_e.htm): descriptions of named house systems and historical context.
 - [Astrodienst Astrowiki — Astrological Schools](https://www.astro.com/astrowiki/en/Astrological_Schools): overview of distinct schools and specializations.
 - [Internet Encyclopedia of Philosophy — Hellenistic Astrology](https://iep.utm.edu/hellenistic-astrology/): scholarly historical context for the Hellenistic tradition.
 - Each future technique entry must add the primary work / authoritative technical specification it actually uses. These general links are not a substitute for method-specific provenance.
 
-**Release boundary:** the Western master catalogue, Regiomontanus and Koch calculation engines, technique-aware selection, natal/transit integration and Koch's disclosed polar fallback are deployed in production at commit `1f153ab5bfb623714c9a1d4e6123734d5786864c` (15 November 2026). Koch's numerical fixtures passed the dedicated 282-assertion Swiss Ephemeris 2.10.03 reference suite; broader unimplemented house methods remain listed above.
+**Release boundary:** production branch baseline `deploy/cloudflare-workers-free` is commit `9cc7ed20b55bdfc7eb4aa567db0ebb05192fcd33` (15 November 2026), containing the catalogue, technique-aware house policy, Regiomontanus, Koch and Campanus. Alcabitius is being implemented on `fix/western-alcabitius-house-engine`; this catalogue update records the engine scope and must not be read as proof of merge or production deployment. Its dedicated reference suite is part of the pending CI gate.

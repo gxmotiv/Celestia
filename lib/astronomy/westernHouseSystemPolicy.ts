@@ -9,6 +9,7 @@ export type WesternHouseTechnique =
   | "modern-natal"
   | "koch-school-natal"
   | "campanus-school-natal"
+  | "alcabitius-school-natal"
   | "western-sidereal-natal"
   | "hellenistic-natal"
   | "hellenistic-time-lord"
@@ -58,7 +59,8 @@ export type ImplementedWesternHouseSystem =
   | "Porphyry"
   | "Regiomontanus"
   | "Koch"
-  | "Campanus";
+  | "Campanus"
+  | "Alcabitius";
 
 export type HouseSystemRecommendationMode =
   | "automatic"
@@ -82,7 +84,7 @@ export interface WesternHouseSystemRecommendation {
   preferredSystem?: WesternHouseSystemName;
   /** Actual selectable result only when this repository has the calculation. */
   resolvedSystem?: ImplementedWesternHouseSystem;
-  /** True when Celestia's documented polar policy changes Placidus to Porphyry. */
+  /** True when a documented method-specific policy resolves to Porphyry. */
   usedPolarFallback: boolean;
   rationale: string;
 }
@@ -95,6 +97,7 @@ const IMPLEMENTED_SYSTEMS = new Set<WesternHouseSystemName>([
   "Regiomontanus",
   "Koch",
   "Campanus",
+  "Alcabitius",
 ]);
 
 /** House-system names accepted by the Western transit engine. */
@@ -105,7 +108,8 @@ export type WesternTransitHouseSystem =
   | "porphyry"
   | "regiomontanus"
   | "koch"
-  | "campanus";
+  | "campanus"
+  | "alcabitius";
 
 /** Convert a resolved natal method to the transit engine's explicit method key. */
 export function toWesternTransitHouseSystem(
@@ -119,6 +123,7 @@ export function toWesternTransitHouseSystem(
     case "Regiomontanus": return "regiomontanus";
     case "Koch": return "koch";
     case "Campanus": return "campanus";
+    case "Alcabitius": return "alcabitius";
   }
 }
 
@@ -245,6 +250,24 @@ export function recommendWesternHouseSystem(
         rationale: exactPoleFallback
           ? "Campanus' horizon north/south points are indeterminate at the exact geographic poles. Celestia uses Porphyry and reports the actual system used."
           : "Campanus is selected for an explicitly Campanus-school chart. It divides the prime vertical into equal arcs; it is not silently substituted for the modern Western default.",
+      };
+    }
+
+    case "alcabitius-school-natal": {
+      if (latitude !== undefined && (!Number.isFinite(latitude) || latitude < -90 || latitude > 90)) {
+        throw new RangeError("Alcabitius house-system recommendation latitude must be finite and between -90° and +90°.");
+      }
+      const exactPoleFallback = latitude !== undefined && Math.abs(latitude) >= 90;
+      return {
+        technique,
+        mode: "automatic",
+        status: "supported",
+        preferredSystem: "Alcabitius",
+        resolvedSystem: exactPoleFallback ? "Porphyry" : "Alcabitius",
+        usedPolarFallback: exactPoleFallback,
+        rationale: exactPoleFallback
+          ? "Alcabitius semi-arc construction is indeterminate at the exact geographic poles. Celestia uses Porphyry and reports the actual system used."
+          : "Alcabitius is selected for an explicitly named Alcabitius-school chart. Its cusps trisect the Ascendant's diurnal and nocturnal semi-arcs; this does not make it the universal Western default.",
       };
     }
 
