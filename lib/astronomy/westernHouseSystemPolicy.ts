@@ -184,12 +184,23 @@ export function recommendWesternHouseSystem(
         "Placidus is Celestia's current default for a modern Western natal chart. It is a configurable convention, not a universally superior system."
       );
 
-    case "koch-school-natal":
-      return implementedPreset(
+    case "koch-school-natal": {
+      if (latitude !== undefined && (!Number.isFinite(latitude) || latitude < -90 || latitude > 90)) {
+        throw new RangeError("Koch house-system recommendation latitude must be finite and between -90° and +90°.");
+      }
+      const usedKochPolarFallback = latitude !== undefined && Math.abs(latitude) >= 66.5622;
+      return {
         technique,
-        "Koch",
-        "Koch (Birthplace) houses are selected for an explicitly Koch-school natal profile. The standard modern Western Auto profile remains Placidus; Koch is not silently substituted for other schools."
-      );
+        mode: "automatic",
+        status: "supported",
+        preferredSystem: "Koch",
+        resolvedSystem: usedKochPolarFallback ? "Porphyry" : "Koch",
+        usedPolarFallback: usedKochPolarFallback,
+        rationale: usedKochPolarFallback
+          ? "Koch houses are undefined within the polar circle. Celestia therefore uses Porphyry and reports the actual system used; choose Equal or Whole Sign for other polar-compatible frameworks."
+          : "Koch (Birthplace) houses are selected for an explicitly Koch-school natal profile. The standard modern Western Auto profile remains Placidus; Koch is not silently substituted for other schools.",
+      };
+    }
 
     case "hellenistic-natal":
     case "hellenistic-time-lord":
