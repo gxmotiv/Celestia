@@ -158,7 +158,13 @@ export interface KPStepDetail {
   planet: string;
   occupiesHouse: number;
   ownsHouses: number[];
+  /** Houses assigned primary strength by the selected 4-Step rule. */
+  primaryHouses: number[];
+  /** Houses assigned secondary strength by the selected 4-Step rule. */
+  secondaryHouses: number[];
+  /** Union retained for compatibility; does not imply equal strength. */
   allHouses: number[];
+  strengthRule: "planet-positional-status" | "star-lord-principal";
   isRetrograde?: boolean;
   hasPositionalStatus?: boolean;
 }
