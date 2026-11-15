@@ -1304,7 +1304,7 @@ export function KPSystemPanel({
                 Classical KP Planet-Level Fourfold Signification (A–D)
               </h4>
               <p className="text-xs text-slate-400">
-                This is the classical planet-to-house strength sequence, not the separate Sunil Gondhalekar 4-Step method. A = star lord&apos;s occupied house, B = planet&apos;s occupied house, C = star lord&apos;s owned houses, D = planet&apos;s owned houses. Tenantless / own-star planets use B → A → D → C priority.
+                This is the classical planet-to-house strength sequence, not the separate Sunil Gondhalekar 4-Step method. A = star lord&apos;s occupied house, B = planet&apos;s occupied house, C = star lord&apos;s owned houses, D = planet&apos;s owned houses. Planets with no other tenants in their stars use B → A → D → C priority. This classical tenant test is not the modern Gondhalekar own-star PS rule.
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
