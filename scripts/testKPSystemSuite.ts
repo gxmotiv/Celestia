@@ -471,7 +471,11 @@ const expandedNodeHouseSignifications = nodeCalculator.applyNodeAgentsToHouseSig
 );
 assert.ok(baseNodeHouseSignifications[9].levels.levelB.includes("Jupiter"));
 assert.ok(!baseNodeHouseSignifications[9].levels.levelB.includes("Rahu"));
-assert.ok(expandedNodeHouseSignifications[9].levels.levelB.includes("Rahu"), "Rahu must inherit its preferred Jupiter agent's Level B house signification");
+
+assert.ok(baseNodeHouseSignifications[6].levels.levelA.includes("Jupiter"), "Jupiter is Grade I in House 6 because it occupies Saturn's star");
+assert.ok(expandedNodeHouseSignifications[6].levels.levelA.includes("Rahu"), "Rahu inherits Jupiter's Grade I role in House 6");
+assert.ok(!expandedNodeHouseSignifications[9].levels.levelA.includes("Rahu"), "Rahu must not be promoted to Grade I merely because Jupiter's separate planet-to-house A grade contains House 9");
+assert.ok(expandedNodeHouseSignifications[9].levels.levelB.includes("Rahu"), "Rahu inherits Jupiter's actual Grade II occupant role in House 9");
 assert.ok(expandedNodeHouseSignifications[9].allSignificators.includes("Rahu"));
 assert.ok(expandedNodeHouseSignifications[10].levels.levelB.includes("Ketu"), "Ketu must inherit its preferred conjoined Sun's Level B house signification");
 assert.ok(baseNodeHouseSignifications[9].levels.levelB.includes("Jupiter"), "Raw source house significations remain unchanged");
