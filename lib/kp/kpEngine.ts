@@ -90,10 +90,10 @@ export class KPEngine {
     });
 
     // 3. Calculate 4-Fold House Significators
-    const houseSignificators: Record<number, KPHouseSignificators> =
+    const baseHouseSignificators: Record<number, KPHouseSignificators> =
       this.significatorsCalc.calculateAllHouseSignificators(kpCusps, kpPlanets);
 
-    // 4. Calculate Planet Significations
+    // 4. Calculate base Planet Significations
     const basePlanetSignifications: Record<string, KPPlanetSignification> =
       this.significatorsCalc.calculateAllPlanetSignifications(kpCusps, kpPlanets);
 
@@ -109,6 +109,11 @@ export class KPEngine {
       this.significatorsCalc.applyNodeAgentSignifications(
         kpPlanets,
         basePlanetSignifications,
+        nodeRepresentations
+      );
+    const houseSignificators: Record<number, KPHouseSignificators> =
+      this.significatorsCalc.applyNodeAgentsToHouseSignificators(
+        baseHouseSignificators,
         nodeRepresentations
       );
 
