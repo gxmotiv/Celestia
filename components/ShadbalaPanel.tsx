@@ -33,6 +33,9 @@ export function ShadbalaPanel({
 }: ShadbalaPanelProps) {
   const [selectedPlanet, setSelectedPlanet] = useState<string>("Sun");
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
+  const [saptavargajaScale, setSaptavargajaScale] = useState<
+    "bphs-santhanam" | "raman-halving"
+  >("bphs-santhanam");
 
   const chartInput: ShadbalaChartInput = useMemo(() => {
     const planetsMap: ShadbalaChartInput["planets"] = {};
@@ -64,8 +67,9 @@ export function ShadbalaPanel({
       ascendant: vedicData.lagna.siderealLongitude,
       planets: planetsMap,
       birthDate: bDateObj,
+      saptavargajaScale,
     };
-  }, [vedicData, westernData, birthDate, birthTime]);
+  }, [vedicData, westernData, birthDate, birthTime, saptavargajaScale]);
 
   const engine = useMemo(() => new ShadbalaEngine(), []);
 
@@ -131,6 +135,41 @@ export function ShadbalaPanel({
               <li key={item}>{item}</li>
             ))}
           </ul>
+        </div>
+
+        <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="min-w-0">
+            <div className="text-xs font-semibold text-slate-300">Saptavargaja scoring variant</div>
+            <p className="text-[11px] text-slate-500">
+              The selected source scale recalculates all seven varga contributions.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              aria-pressed={saptavargajaScale === "bphs-santhanam"}
+              onClick={() => setSaptavargajaScale("bphs-santhanam")}
+              className={`px-3 py-2 rounded-lg border text-xs transition-colors ${
+                saptavargajaScale === "bphs-santhanam"
+                  ? "border-purple-400/60 bg-purple-500/15 text-purple-100"
+                  : "border-slate-700 bg-slate-950/60 text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              BPHS · Santhanam (45/30/20/15/10/4/2)
+            </button>
+            <button
+              type="button"
+              aria-pressed={saptavargajaScale === "raman-halving"}
+              onClick={() => setSaptavargajaScale("raman-halving")}
+              className={`px-3 py-2 rounded-lg border text-xs transition-colors ${
+                saptavargajaScale === "raman-halving"
+                  ? "border-purple-400/60 bg-purple-500/15 text-purple-100"
+                  : "border-slate-700 bg-slate-950/60 text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              Raman alternative (45/30/22.5/15/7.5/3.75/1.875)
+            </button>
+          </div>
         </div>
 
         <div className="pt-4 flex items-center gap-2 overflow-x-auto no-scrollbar">
