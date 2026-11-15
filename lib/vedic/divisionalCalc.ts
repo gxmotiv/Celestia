@@ -68,6 +68,16 @@ function normalizeDeg(deg: number): number {
   return d;
 }
 
+function assertDivisionalInput(siderealLon: number, divisionCode: string): void {
+  if (!Number.isFinite(siderealLon)) {
+    throw new RangeError("A divisional chart requires a finite sidereal longitude.");
+  }
+  if (!Object.prototype.hasOwnProperty.call(DIVISIONAL_CHARTS_CONFIG, divisionCode)) {
+    throw new RangeError("Unsupported Parashari divisional chart: " + divisionCode);
+  }
+}
+
+
 /**
  * Degree within the selected divisional sign. Equal-width vargas map each
  * subdivision linearly to 0°–30°. D30 uses its traditional unequal segments.
@@ -76,6 +86,7 @@ export function calculateDivisionalDegreeInSign(
   siderealLon: number,
   divisionCode: string
 ): number {
+  assertDivisionalInput(siderealLon, divisionCode);
   const normalized = normalizeDeg(siderealLon);
   const signIndex = Math.floor(normalized / 30);
   const degreeInRasi = normalized - signIndex * 30;
@@ -95,7 +106,7 @@ export function calculateDivisionalDegreeInSign(
     return 0;
   }
 
-  const harmonic = DIVISIONAL_CHARTS_CONFIG[divisionCode]?.harmonic ?? 1;
+  const harmonic = DIVISIONAL_CHARTS_CONFIG[divisionCode].harmonic;
   return (degreeInRasi * harmonic) % 30;
 }
 
@@ -113,6 +124,7 @@ export function calculateDivisionalSignIndex(
   siderealLon: number,
   divisionCode: string
 ): number {
+  assertDivisionalInput(siderealLon, divisionCode);
   const normLon = normalizeDeg(siderealLon);
   const rasiIdx = Math.floor(normLon / 30);
   const degInRasi = normLon - rasiIdx * 30;
@@ -266,7 +278,8 @@ export function calculateDivisionalChart(
   ascendantSiderealLon: number,
   divisionCode: string
 ): DivisionalChartResult {
-  const config = DIVISIONAL_CHARTS_CONFIG[divisionCode] || DIVISIONAL_CHARTS_CONFIG.D1;
+  assertDivisionalInput(ascendantSiderealLon, divisionCode);
+  const config = DIVISIONAL_CHARTS_CONFIG[divisionCode];
 
   // 1. Ascendant in Division
   const ascSignIdx = calculateDivisionalSignIndex(ascendantSiderealLon, divisionCode);
