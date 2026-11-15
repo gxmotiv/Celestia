@@ -758,6 +758,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
                 <option value="Koch">Koch (Birthplace / MC semi-diurnal arc)</option>
                 <option value="Campanus">Campanus (Prime Vertical Great Circles)</option>
                 <option value="Alcabitius">Alcabitius (Ascendant semi-arc thirds)</option>
+                <option value="Morinus">Morinus (Equatorial 30° divisions)</option>
               </select>
             </div>
           </div>

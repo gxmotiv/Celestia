@@ -16,9 +16,10 @@ import { PlanetaryHoursCalculator, PlanetaryHoursResult } from "./planetaryHours
 import { AlmutenFigurisCalculator, AlmutenFigurisResult } from "./almutenFigurisCalculator";
 import { isSunAboveHorizon } from "./horizon";
 import { recommendWesternHouseSystem } from "./westernHouseSystemPolicy";
+import { calculateMorinusHouses } from "./morinusHouses";
 
 export type SolarProximity = "Cazimi" | "Combust" | "UnderBeams" | "Free";
-export type WesternHouseSystem = "Auto" | "Placidus" | "Equal" | "WholeSign" | "Porphyry" | "Regiomontanus" | "Koch" | "Campanus" | "Alcabitius";
+export type WesternHouseSystem = "Auto" | "Placidus" | "Equal" | "WholeSign" | "Porphyry" | "Regiomontanus" | "Koch" | "Campanus" | "Alcabitius" | "Morinus";
 export type ResolvedWesternHouseSystem = Exclude<WesternHouseSystem, "Auto">;
 
 export interface PlanetPosition {
@@ -484,13 +485,13 @@ export function calculateLunarNode(T: number): number {
 
 /**
  * Houses calculation:
- * Midheaven (MC), Ascendant (ASC), and intermediate cusps (Placidus, Equal, Whole Sign)
+ * Midheaven (MC), Ascendant (ASC), and house cusps (Placidus, Equal, Whole Sign, Morinus)
  */
 export function calculateHouses(
   ramc: number, // Right Ascension of Midheaven in degrees (Local Sidereal Time)
   lat: number, // Geographic latitude in degrees
   obliquity: number, // Obliquity of ecliptic in degrees
-  system: "Placidus" | "Equal" | "WholeSign" = "Placidus"
+  system: "Placidus" | "Equal" | "WholeSign" | "Morinus" = "Placidus"
 ): { mc: number; asc: number; cusps: number[] } {
   const ramcRad = ramc * DEG2RAD;
   const latRad = lat * DEG2RAD;
@@ -509,7 +510,18 @@ export function calculateHouses(
 
   const cusps = new Array<number>(12).fill(0);
 
-  if (system === "Equal") {
+  if (system === "Morinus") {
+    // Morinus cusps are projected from the celestial equator and do not
+    // depend on geographic latitude. Keep the astronomical Ascendant as a
+    // separate angle, adjusting it only when the raw solution is on the
+    // western half of the horizon at a polar orientation.
+    const morinus = calculateMorinusHouses(ramc, obliquity);
+    const ascendantToMidheaven = ((asc - mc + 540) % 360) - 180;
+    if (ascendantToMidheaven < 0) asc = normalizeDegrees(asc + 180);
+    for (let house = 0; house < 12; house += 1) {
+      cusps[house] = morinus.houseCusps[house];
+    }
+  } else if (system === "Equal") {
     // Equal house: Each house is exactly 30 degrees starting from Ascendant
     for (let h = 0; h < 12; h++) {
       cusps[h] = normalizeDegrees(asc + h * 30);
@@ -751,7 +763,8 @@ export function calculateWesternChart(
     : resolvedRequest === "Regiomontanus" ? "R"
     : resolvedRequest === "Koch" ? "K"
     : resolvedRequest === "Campanus" ? "C"
-    : resolvedRequest === "Alcabitius" ? "B" : "P";
+    : resolvedRequest === "Alcabitius" ? "B"
+    : resolvedRequest === "Morinus" ? "M" : "P";
   const houseResult = swissEphemeris.calculateHouses(jd, latitude, longitude, sysCode);
   const rawCusps = houseResult.houseCusps;
   const actualHouseSystem: ResolvedWesternHouseSystem = houseResult.houseSystemUsed === "W" ? "WholeSign"
@@ -760,7 +773,8 @@ export function calculateWesternChart(
     : houseResult.houseSystemUsed === "R" ? "Regiomontanus"
     : houseResult.houseSystemUsed === "K" ? "Koch"
     : houseResult.houseSystemUsed === "C" ? "Campanus"
-    : houseResult.houseSystemUsed === "B" ? "Alcabitius" : "Placidus";
+    : houseResult.houseSystemUsed === "B" ? "Alcabitius"
+    : houseResult.houseSystemUsed === "M" ? "Morinus" : "Placidus";
   const houseSystemNote = polarPlacidusFallback
     ? autoHouseRecommendation?.rationale ??
       "Celestia's conservative policy selected Porphyry at |latitude| ≥ 66.5622°. This is an application fallback, not a claim that Placidus is impossible at every such location; other implementations may resolve it at some high-latitude dates and coordinates."

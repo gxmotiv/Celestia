@@ -1,7 +1,7 @@
 /**
  * Multi-System Planetary Transit Prediction Engine
  * Provides clean, pure separation between:
- * 1. Western Modern (Tropical, Placidus/Equal/Whole Sign/Porphyry/Regiomontanus/Koch/Campanus/Alcabitius, Ptolemaic Aspects, Psychological)
+ * 1. Western Modern (Tropical, Placidus/Equal/Whole Sign/Porphyry/Regiomontanus/Koch/Campanus/Alcabitius/Morinus, Ptolemaic Aspects, Psychological)
  * 2. Vedic Jyotish (Sidereal Lahiri/Raman/KP, Whole Sign / Chandra Lagna Gochara, Graha Drishti, Karmic + Remedies)
  * 3. Hellenistic Traditional (Tropical, Whole Sign, Sect, Ptolemaic)
  * 4. Western Sidereal (Fagan-Bradley, Placidus/Equal/Porphyry, Ptolemaic)
@@ -41,7 +41,7 @@ export const PLANET_SYMBOLS: Record<string, string> = {
 export type ZodiacSystem = "tropical" | "sidereal";
 
 /** Only systems actually calculated by this engine are selectable. */
-export type HouseSystem = "placidus" | "whole-sign" | "equal" | "porphyry" | "regiomontanus" | "koch" | "campanus" | "alcabitius";
+export type HouseSystem = "placidus" | "whole-sign" | "equal" | "porphyry" | "regiomontanus" | "koch" | "campanus" | "alcabitius" | "morinus";
 
 export type AspectSystem = "western" | "vedic" | "hellenistic";
 
@@ -839,7 +839,8 @@ export class MultiSystemTransitEngine {
       : config.houseSystem === "regiomontanus" ? "R"
       : config.houseSystem === "koch" ? "K"
       : config.houseSystem === "campanus" ? "C"
-      : config.houseSystem === "alcabitius" ? "B" : "P";
+      : config.houseSystem === "alcabitius" ? "B"
+      : config.houseSystem === "morinus" ? "M" : "P";
     if (Number.isFinite(birthWestern.birthLatitude) && Number.isFinite(birthWestern.birthLongitude)) {
       const houseResult = swissEphemeris.calculateHouses(
         birthWestern.julianDay,
@@ -865,7 +866,8 @@ export class MultiSystemTransitEngine {
         : houseResult.houseSystemUsed === "R" ? "regiomontanus"
         : houseResult.houseSystemUsed === "K" ? "koch"
         : houseResult.houseSystemUsed === "C" ? "campanus"
-        : houseResult.houseSystemUsed === "B" ? "alcabitius" : "placidus";
+        : houseResult.houseSystemUsed === "B" ? "alcabitius"
+        : houseResult.houseSystemUsed === "M" ? "morinus" : "placidus";
     } else {
       this.natalHouseCusps = birthWestern.houses.map((house) =>
         config.zodiac === "sidereal" ? normalizeDegrees(house.longitude - natalAyanamsa) : normalizeDegrees(house.longitude)

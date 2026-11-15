@@ -77,8 +77,9 @@ check(isWesternHouseSystemImplemented("Placidus") &&
   isWesternHouseSystemImplemented("Regiomontanus") &&
   isWesternHouseSystemImplemented("Koch") &&
   isWesternHouseSystemImplemented("Campanus") &&
-  isWesternHouseSystemImplemented("Alcabitius"),
-  "The implementation registry recognizes the eight currently calculated Western house systems");
+  isWesternHouseSystemImplemented("Alcabitius") &&
+  isWesternHouseSystemImplemented("Morinus"),
+  "The implementation registry recognizes the nine currently calculated Western house systems");
 
 check(toWesternTransitHouseSystem("Koch") === "koch" &&
   toWesternTransitHouseSystem("Regiomontanus") === "regiomontanus" &&
@@ -87,8 +88,9 @@ check(toWesternTransitHouseSystem("Koch") === "koch" &&
   toWesternTransitHouseSystem("Equal") === "equal" &&
   toWesternTransitHouseSystem("WholeSign") === "whole-sign" &&
   toWesternTransitHouseSystem("Campanus") === "campanus" &&
-  toWesternTransitHouseSystem("Alcabitius") === "alcabitius",
-  "Transit Auto mapping preserves every implemented natal house method, including Koch, Campanus and Alcabitius");
+  toWesternTransitHouseSystem("Alcabitius") === "alcabitius" &&
+  toWesternTransitHouseSystem("Morinus") === "morinus",
+  "Transit Auto mapping preserves every implemented natal house method, including Koch, Campanus, Alcabitius and Morinus");
 
 const kochSchool = recommendWesternHouseSystem("koch-school-natal", 52.2);
 check(kochSchool.status === "supported" && kochSchool.preferredSystem === "Koch" &&
@@ -127,6 +129,17 @@ const alcabitiusNatal = calculateWesternChart(2000, 1, 1, 12, 0, 45, 0, 0, "Alca
 check(alcabitiusNatal.requestedHouseSystem === "Alcabitius" &&
   alcabitiusNatal.houseSystem === "Alcabitius" && alcabitiusNatal.houses.length === 12,
   "The Western natal calculator resolves and exposes twelve Alcabitius houses");
+
+const morinusProfile = recommendWesternHouseSystem("morinus-house-profile");
+check(morinusProfile.status === "supported" &&
+  morinusProfile.preferredSystem === "Morinus" &&
+  morinusProfile.resolvedSystem === "Morinus" &&
+  !morinusProfile.usedPolarFallback,
+  "The named Morinus house profile selects Morinus without a latitude fallback");
+const morinusNatal = calculateWesternChart(2000, 1, 1, 12, 0, 45, 0, 0, "Morinus");
+check(morinusNatal.requestedHouseSystem === "Morinus" &&
+  morinusNatal.houseSystem === "Morinus" && morinusNatal.houses.length === 12,
+  "The Western natal calculator resolves and exposes twelve Morinus houses");
 
 const natal = calculateWesternChart(2000, 1, 1, 12, 0, 40.7, -74, -5, "Auto");
 check(natal.requestedHouseSystem === "Auto" && natal.houseSystem === "Placidus",
