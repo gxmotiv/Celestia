@@ -664,13 +664,16 @@ export function KPSystemPanel({
                   <div>Occupies: <strong className="text-slate-200">H{fourStepData.step1.occupiesHouse}</strong></div>
                   <div>Owns: <strong className="text-slate-200">{fourStepData.step1.ownsHouses.join(", ") || "None"}</strong></div>
                   <div className="pt-1 text-amber-300 font-bold">
-                    Effective: [{fourStepData.step1.allHouses.join(", ")}]
+                    Primary: [{fourStepData.step1.primaryHouses.join(", ") || "—"}]
+                  </div>
+                  <div className="text-slate-300 font-semibold">
+                    Secondary: [{fourStepData.step1.secondaryHouses.join(", ") || "—"}]
                   </div>
                 </div>
                 <p className="text-[10px] text-slate-400 pt-1 border-t border-slate-800">
                   {fourStepData.step1.hasPositionalStatus
-                    ? "Strongly triggers source houses due to Positional Status."
-                    : "Acts primarily through Star Lord (Step 2)."}
+                    ? "PS active: residence is primary; owned houses are primary only when empty."
+                    : "PS inactive: residence and owned houses are secondary in Step 1."}
                 </p>
               </div>
 
@@ -692,7 +695,10 @@ export function KPSystemPanel({
                   <div>Occupies: <strong className="text-slate-200">H{fourStepData.step2.occupiesHouse}</strong></div>
                   <div>Owns: <strong className="text-slate-200">{fourStepData.step2.ownsHouses.join(", ") || "None"}</strong></div>
                   <div className="pt-1 text-cyan-300 font-bold">
-                    Effective: [{fourStepData.step2.allHouses.join(", ")}]
+                    Primary: [{fourStepData.step2.primaryHouses.join(", ") || "—"}]
+                  </div>
+                  <div className="text-slate-300 font-semibold">
+                    Secondary: [{fourStepData.step2.secondaryHouses.join(", ") || "—"}]
                   </div>
                 </div>
                 <p className="text-[10px] text-slate-400 pt-1 border-t border-slate-800">
@@ -718,7 +724,10 @@ export function KPSystemPanel({
                   <div>Occupies: <strong className="text-slate-200">H{fourStepData.step3.occupiesHouse}</strong></div>
                   <div>Owns: <strong className="text-slate-200">{fourStepData.step3.ownsHouses.join(", ") || "None"}</strong></div>
                   <div className="pt-1 text-purple-300 font-bold">
-                    Effective: [{fourStepData.step3.allHouses.join(", ")}]
+                    Primary: [{fourStepData.step3.primaryHouses.join(", ") || "—"}]
+                  </div>
+                  <div className="text-slate-300 font-semibold">
+                    Secondary: [{fourStepData.step3.secondaryHouses.join(", ") || "—"}]
                   </div>
                 </div>
                 <p className="text-[10px] text-slate-400 pt-1 border-t border-slate-800">
@@ -744,7 +753,10 @@ export function KPSystemPanel({
                   <div>Occupies: <strong className="text-slate-200">H{fourStepData.step4.occupiesHouse}</strong></div>
                   <div>Owns: <strong className="text-slate-200">{fourStepData.step4.ownsHouses.join(", ") || "None"}</strong></div>
                   <div className="pt-1 text-emerald-300 font-bold">
-                    Effective: [{fourStepData.step4.allHouses.join(", ")}]
+                    Primary: [{fourStepData.step4.primaryHouses.join(", ") || "—"}]
+                  </div>
+                  <div className="text-slate-300 font-semibold">
+                    Secondary: [{fourStepData.step4.secondaryHouses.join(", ") || "—"}]
                   </div>
                 </div>
                 <p className="text-[10px] text-slate-400 pt-1 border-t border-slate-800">
