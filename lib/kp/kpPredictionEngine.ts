@@ -137,32 +137,60 @@ export class KPPredictionEngine {
     house: number,
     cusps: KPCusps,
     planets: KPPlanet[],
-    dashaLord = "Jupiter",
-    antardashaLord = "Venus",
+    dashaLord: string,
+    antardashaLord: string,
     pratyantardashaLord?: string
   ): KPPrediction {
-    const rule = KP_EVENT_RULES[house] || KP_EVENT_RULES[1];
+    if (!Number.isInteger(house) || house < 1 || house > 12) {
+      throw new Error(`KP prediction house must be between 1 and 12; received ${house}.`);
+    }
+    if (!Array.isArray(cusps.cusps) || cusps.cusps.length !== 12 ||
+        cusps.cusps.some((value) => !Number.isFinite(value))) {
+      throw new Error("KP prediction requires twelve finite cusp longitudes.");
+    }
+    if (!Array.isArray(cusps.houseLords) || cusps.houseLords.length !== 12 ||
+        cusps.houseLords.some((lord) => typeof lord !== "string" || !lord.trim())) {
+      throw new Error("KP prediction requires twelve valid cusp sign lords.");
+    }
+    if (!Array.isArray(cusps.houseDetails) || cusps.houseDetails.length !== 12) {
+      throw new Error("KP prediction requires twelve complete cusp records.");
+    }
+    if (!Array.isArray(planets)) {
+      throw new Error("KP prediction requires a planetary position array.");
+    }
+
+    const rule = KP_EVENT_RULES[house];
+    if (!rule) throw new Error(`KP prediction has no declared event rule for house ${house}.`);
     const cusp = cusps.houseDetails[house - 1];
-    const csl = cusp.subLord; // Cuspal Sub Lord
-    const cslPlanet = planets.find((p) => p.name === csl) || planets[0];
+    if (!cusp?.subLord) throw new Error(`KP prediction requires cusp ${house} sub-lord data.`);
+    const csl = cusp.subLord;
+    const cslPlanet = planets.find((p) => p.name === csl);
+    if (!cslPlanet) throw new Error(`KP prediction cannot resolve CSL planet ${csl} for house ${house}.`);
+    if (!cslPlanet.starLord || !cslPlanet.subLord) {
+      throw new Error(`KP prediction requires star-lord and sub-lord data for CSL planet ${csl}.`);
+    }
+    if (!dashaLord?.trim() || !antardashaLord?.trim()) {
+      throw new Error("KP prediction requires explicit Mahadasha and Antardasha lords.");
+    }
+    if (!planets.some((planet) => planet.name === dashaLord)) {
+      throw new Error(`KP prediction cannot resolve Mahadasha lord ${dashaLord} in the chart.`);
+    }
+    if (!planets.some((planet) => planet.name === antardashaLord)) {
+      throw new Error(`KP prediction cannot resolve Antardasha lord ${antardashaLord} in the chart.`);
+    }
+    if (pratyantardashaLord && !planets.some((planet) => planet.name === pratyantardashaLord)) {
+      throw new Error(`KP prediction cannot resolve Pratyantardasha lord ${pratyantardashaLord} in the chart.`);
+    }
 
     // Calculate Significators across chart
     const houseSignificators = this.significatorsEngine.calculateAllHouseSignificators(cusps, planets);
     const planetSignifications = this.significatorsEngine.calculateAllPlanetSignifications(cusps, planets);
 
     // Get CSL signification
-    const cslSignification = planetSignifications[csl] || {
-      planet: csl,
-      occupiesHouse: 1,
-      ownsHouses: [],
-      starLord: "Ketu",
-      starLordOccupiesHouse: 1,
-      starLordOwnsHouses: [],
-      subLord: "Ketu",
-      subLordOccupiesHouse: 1,
-      subLordOwnsHouses: [],
-      signifiedHouses: [1],
-    };
+    const cslSignification = planetSignifications[csl];
+    if (!cslSignification) {
+      throw new Error(`KP prediction could not calculate house signification for CSL planet ${csl}.`);
+    }
 
     const cslSignifiedHouses = cslSignification.signifiedHouses;
 
@@ -277,10 +305,24 @@ export class KPPredictionEngine {
     const dayNames = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"];
     const dayLord = dayNames[birthDate.getUTCDay()];
 
-    const moon = planets.find((p) => p.name === "Moon") || planets[0];
-    const lagna = cusps.houseDetails[0];
+    if (!(birthDate instanceof Date) || !Number.isFinite(birthDate.getTime())) {
+      throw new Error("KP ruling planets require a valid birth/judgment Date.");
+    }
+    const moon = planets.find((p) => p.name === "Moon");
+    if (!moon) throw new Error("KP ruling planets require Moon position data; no substitute is permitted.");
+    if (!moon.signLord || !moon.starLord || !moon.subLord) {
+      throw new Error("KP ruling planets require Moon sign, star, and sub-lord data.");
+    }
+    const lagna = cusps.houseDetails?.[0];
+    if (!lagna?.signLord || !lagna.starLord || !lagna.subLord) {
+      throw new Error("KP ruling planets require complete first-cusp sign, star, and sub-lord data.");
+    }
 
-    const ordered = [dayLord, moon.signLord, moon.starLord, lagna.signLord, lagna.starLord];
+    // KP Reader VI's five-ruler preference order: Lagna star, Lagna sign,
+    // Moon star, Moon sign, then weekday lord. The weekday below currently
+    // uses the UTC civil date; a local sunrise-to-sunrise boundary is a
+    // separately disclosed limitation until birth-place sunrise data is wired.
+    const ordered = [lagna.starLord, lagna.signLord, moon.starLord, moon.signLord, dayLord];
     const uniqueOrdered = Array.from(new Set(ordered));
 
     return {
