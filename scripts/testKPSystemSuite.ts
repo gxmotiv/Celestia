@@ -410,6 +410,7 @@ const nodeTestPlanets = [
   nodePlanet("Rahu", 3, 4, "Jupiter", "Venus"),
   nodePlanet("Ketu", 9, 10, "Saturn", "Mercury"),
   nodePlanet("Pluto", 4, 5, "Rahu", "Mars"),
+  nodePlanet("Uranus", 3, 4, "Sun", "Mercury"),
 ];
 const nodeTestSignifications = Object.fromEntries(
   nodeTestPlanets.map((planet) => [
@@ -425,6 +426,7 @@ const readerVINodes = nodeCalculator.calculateNodeRepresentations(
 );
 assert.deepEqual(readerVINodes.Rahu?.priorityOrder, ["conjunction", "star-lord", "aspect", "sign-lord"]);
 assert.deepEqual(readerVINodes.Rahu?.agentTiers.map((tier) => tier.planets), [[], ["Jupiter"], ["Sun", "Mars"], ["Venus"]]);
+assert.equal(readerVINodes.Rahu?.agentTiers[0].planets.length, 0, "The classical KP node conjunction tier excludes modern outer planets such as Uranus");
 assert.equal(readerVINodes.Rahu?.preferredAgentSource, "star-lord", "Reader VI prefers star lord before aspecting planets");
 assert.deepEqual(readerVINodes.Rahu?.preferredAgentHouses, [9], "Rahu inherits the preferred agent's chart signification");
 assert.ok(readerVINodes.Rahu?.representedHouses.includes(4), "Rahu always signifies its own occupied house");
