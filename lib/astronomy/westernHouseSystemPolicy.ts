@@ -230,12 +230,25 @@ export function recommendWesternHouseSystem(
       };
     }
 
-    case "campanus-school-natal":
+    case "campanus-school-natal": {
+      if (latitude !== undefined && (!Number.isFinite(latitude) || latitude < -90 || latitude > 90)) {
+        throw new RangeError("Campanus house-system recommendation latitude must be finite and between -90° and +90°.");
+      }
+      if (latitude !== undefined && Math.abs(latitude) >= 90 - 1e-12) {
+        return unavailable(
+          technique,
+          "automatic",
+          "unsupported",
+          "Campanus",
+          "Campanus is indeterminate at the exact geographic poles because the local north/east frame is not unique. Use another supported house method or an explicitly defined local frame."
+        );
+      }
       return implementedPreset(
         technique,
         "Campanus",
         "Campanus is selected for an explicitly named Campanus-school natal profile. The standard modern Western Auto profile remains Placidus; no school is silently substituted."
       );
+    }
 
     case "hellenistic-natal":
     case "hellenistic-time-lord":
