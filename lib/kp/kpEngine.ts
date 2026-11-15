@@ -105,6 +105,7 @@ export class KPEngine {
     );
 
     return {
+      bodySet: "extended-twelve",
       nodeConvention: "mean",
       ayanamsa: kpAyanamsa,
       ayanamsaFormatted: SubLordCalculator.formatDMS(kpAyanamsa),
