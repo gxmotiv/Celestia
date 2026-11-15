@@ -232,7 +232,7 @@ assert.throws(
 // Modern KP 4-Step/CIL must fail closed when source-chain data are absent.
 // It must never invent house 1 or substitute Sun/Moon/Mars for missing links.
 const fourStep = new KPFourStepEngine();
-const emptyCusps = {} as unknown as KPCusps;
+const emptyCusps = { houseLords: Array.from({ length: 12 }, () => "Sun") } as unknown as KPCusps;
 assert.throws(
   () => fourStep.evaluatePlanetFourStep("Pluto", emptyCusps, [], {}),
   /cannot evaluate missing planet Pluto/
