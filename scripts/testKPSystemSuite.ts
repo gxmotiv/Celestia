@@ -349,6 +349,7 @@ assert.deepEqual(mercuryClassicalStrength.strengthOrder, ["A", "B", "C", "D"]);
 const sunClassicalStrength = classicalPlanetSignifications.Sun;
 assert.equal(sunClassicalStrength.hasSelfStrength, true, "A planet with no other planets in its stars receives self-strength");
 assert.deepEqual(sunClassicalStrength.starTenants, []);
+assert.deepEqual(sunClassicalStrength.strengthOrder, ["B", "A", "D", "C"], "Tenantless planet must prefer own occupation, then stellar occupation, then own ownership, then stellar ownership");
 
 
 
