@@ -4,6 +4,7 @@ import { KPCuspsCalculator } from "../lib/kp/kpCusps";
 import { SubLordCalculator } from "../lib/kp/subLordEngine";
 import { KPFourStepEngine } from "../lib/kp/kpFourStepEngine";
 import { KPSignificators } from "../lib/kp/kpSignificators";
+import { KPPredictionEngine } from "../lib/kp/kpPredictionEngine";
 import type { KPCusps, KPPlanet } from "../lib/kp/kpTypes";
 
 
@@ -264,7 +265,7 @@ assert.throws(
   /requires positional-status data for Venus/
 );
 assert.throws(
-  () => fourStep.evaluatePlanetFourStep("Venus", emptyCusps, [partialPlanet], {}, 13),
+  () => fourStep.evaluatePlanetFourStep("Venus", emptyCusps, [partialPlanet, moonWithStar], {}, 13),
   /target house must be between 1 and 12/
 );
 assert.throws(
@@ -285,6 +286,56 @@ assert.throws(
   ),
   /requires complete sign, star, sub, and sub-sub lord data for cusp 1/
 );
+
+const predictionEngine = new KPPredictionEngine();
+assert.throws(
+  () => predictionEngine.predictEvent(13, emptyCusps, [], "Jupiter", "Venus"),
+  /house must be between 1 and 12/
+);
+const missingCslCusps = {
+  ...kpFromPlacidus,
+  houseDetails: kpFromPlacidus.houseDetails.map((cusp, index) =>
+    index === 9 ? { ...cusp, subLord: "Pluto" } : cusp
+  ),
+};
+assert.throws(
+  () => predictionEngine.predictEvent(10, missingCslCusps, [], "Jupiter", "Venus"),
+  /cannot resolve CSL planet Pluto/
+);
+
+const rulingPlanetCusps = {
+  ...kpFromPlacidus,
+  houseDetails: kpFromPlacidus.houseDetails.map((cusp, index) =>
+    index === 0
+      ? { ...cusp, signLord: "Mercury", starLord: "Saturn", subLord: "Venus" }
+      : cusp
+  ),
+};
+const moonForRulingPlanets = {
+  name: "Moon",
+  signLord: "Venus",
+  starLord: "Mars",
+  subLord: "Jupiter",
+} as KPPlanet;
+const rulingPlanets = predictionEngine.calculateRulingPlanets(
+  rulingPlanetCusps,
+  [moonForRulingPlanets],
+  new Date(Date.UTC(2000, 0, 2))
+);
+assert.deepEqual(
+  rulingPlanets.rulingPlanetsOrdered,
+  ["Saturn", "Mercury", "Mars", "Venus", "Sun"],
+  "KP ruling planets must follow Lagna star, Lagna sign, Moon star, Moon sign, Day Lord preference"
+);
+assert.throws(
+  () => predictionEngine.calculateRulingPlanets(rulingPlanetCusps, [], new Date(Date.UTC(2000, 0, 2))),
+  /require Moon position data/
+);
+assert.throws(
+  () => predictionEngine.calculateRulingPlanets(rulingPlanetCusps, [moonForRulingPlanets], new Date(Number.NaN)),
+  /valid birth\/judgment Date/
+);
+
 
 console.log(
   "KP house-system isolation suite passed: KP always uses its own Placidus cusps and rejects unsupported polar fallbacks."
