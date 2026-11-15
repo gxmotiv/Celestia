@@ -172,6 +172,9 @@ export class KPFourStepEngine {
     psMap: Record<string, PositionalStatus>,
     targetHouse?: number
   ): KPFourStepData {
+    if (targetHouse !== undefined && (!Number.isInteger(targetHouse) || targetHouse < 1 || targetHouse > 12)) {
+      throw new Error(`KP 4-Step target house must be between 1 and 12; received ${targetHouse}.`);
+    }
     const pObj = planets.find((p) => p.name === planetName);
     if (!pObj) throw new Error(`KP 4-Step cannot evaluate missing planet ${planetName}.`);
     const starLord = pObj.starLord;
@@ -202,10 +205,7 @@ export class KPFourStepEngine {
       ])
     ).sort((a, b) => a - b);
 
-    // Event determination if targetHouse is provided
-    if (targetHouse !== undefined && (!Number.isInteger(targetHouse) || targetHouse < 1 || targetHouse > 12)) {
-      throw new Error(`KP 4-Step target house must be between 1 and 12; received ${targetHouse}.`);
-    }
+    // Event determination if a validated target house is provided.
     const rule = targetHouse === undefined ? undefined : KP_EVENT_RULES[targetHouse];
     const favorable = rule ? rule.favorableHouses : [];
     const detrimental = rule ? rule.negationHouses : [];
