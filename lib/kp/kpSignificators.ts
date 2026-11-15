@@ -270,7 +270,7 @@ export class KPSignificators {
         signLord: node.signLord,
         starLord: node.starLord,
         rule,
-        conjunctionPolicy: "same-sidereal-sign-no-degree-orb",
+        conjunctionPolicy: "same-sidereal-sign-provisional",
         aspectPolicy: "parashari-full-sign-drishti-classical-seven",
         priorityOrder,
         agentTiers,
