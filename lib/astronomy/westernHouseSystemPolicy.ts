@@ -8,6 +8,7 @@
 export type WesternHouseTechnique =
   | "modern-natal"
   | "koch-school-natal"
+  | "campanus-school-natal"
   | "western-sidereal-natal"
   | "hellenistic-natal"
   | "hellenistic-time-lord"
@@ -56,7 +57,8 @@ export type ImplementedWesternHouseSystem =
   | "WholeSign"
   | "Porphyry"
   | "Regiomontanus"
-  | "Koch";
+  | "Koch"
+  | "Campanus";
 
 export type HouseSystemRecommendationMode =
   | "automatic"
@@ -92,6 +94,7 @@ const IMPLEMENTED_SYSTEMS = new Set<WesternHouseSystemName>([
   "Porphyry",
   "Regiomontanus",
   "Koch",
+  "Campanus",
 ]);
 
 /** House-system names accepted by the Western transit engine. */
@@ -101,7 +104,8 @@ export type WesternTransitHouseSystem =
   | "equal"
   | "porphyry"
   | "regiomontanus"
-  | "koch";
+  | "koch"
+  | "campanus";
 
 /** Convert a resolved natal method to the transit engine's explicit method key. */
 export function toWesternTransitHouseSystem(
@@ -114,6 +118,7 @@ export function toWesternTransitHouseSystem(
     case "Porphyry": return "porphyry";
     case "Regiomontanus": return "regiomontanus";
     case "Koch": return "koch";
+    case "Campanus": return "campanus";
   }
 }
 
@@ -222,6 +227,24 @@ export function recommendWesternHouseSystem(
         rationale: usedKochPolarFallback
           ? "Koch houses are undefined within the polar circle. Celestia therefore uses Porphyry and reports the actual system used; choose Equal or Whole Sign for other polar-compatible frameworks."
           : "Koch (Birthplace) houses are selected for an explicitly Koch-school natal profile. The standard modern Western Auto profile remains Placidus; Koch is not silently substituted for other schools.",
+      };
+    }
+
+    case "campanus-school-natal": {
+      if (latitude !== undefined && (!Number.isFinite(latitude) || latitude < -90 || latitude > 90)) {
+        throw new RangeError("Campanus house-system recommendation latitude must be finite and between -90° and +90°.");
+      }
+      const exactPoleFallback = latitude !== undefined && Math.abs(latitude) >= 90;
+      return {
+        technique,
+        mode: "automatic",
+        status: "supported",
+        preferredSystem: "Campanus",
+        resolvedSystem: exactPoleFallback ? "Porphyry" : "Campanus",
+        usedPolarFallback: exactPoleFallback,
+        rationale: exactPoleFallback
+          ? "Campanus' horizon north/south points are indeterminate at the exact geographic poles. Celestia uses Porphyry and reports the actual system used."
+          : "Campanus is selected for an explicitly Campanus-school chart. It divides the prime vertical into equal arcs; it is not silently substituted for the modern Western default.",
       };
     }
 

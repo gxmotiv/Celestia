@@ -75,19 +75,18 @@ check(isWesternHouseSystemImplemented("Placidus") &&
   isWesternHouseSystemImplemented("WholeSign") &&
   isWesternHouseSystemImplemented("Porphyry") &&
   isWesternHouseSystemImplemented("Regiomontanus") &&
-  isWesternHouseSystemImplemented("Koch"),
-  "The implementation registry recognizes the six currently calculated Western house systems");
-
-check(!isWesternHouseSystemImplemented("Campanus"),
-  "Campanus remains unavailable until its own calculation engine is implemented");
+  isWesternHouseSystemImplemented("Koch") &&
+  isWesternHouseSystemImplemented("Campanus"),
+  "The implementation registry recognizes the seven currently calculated Western house systems");
 
 check(toWesternTransitHouseSystem("Koch") === "koch" &&
   toWesternTransitHouseSystem("Regiomontanus") === "regiomontanus" &&
   toWesternTransitHouseSystem("Porphyry") === "porphyry" &&
   toWesternTransitHouseSystem("Placidus") === "placidus" &&
   toWesternTransitHouseSystem("Equal") === "equal" &&
-  toWesternTransitHouseSystem("WholeSign") === "whole-sign",
-  "Transit Auto mapping preserves every implemented natal house method, including Koch");
+  toWesternTransitHouseSystem("WholeSign") === "whole-sign" &&
+  toWesternTransitHouseSystem("Campanus") === "campanus",
+  "Transit Auto mapping preserves every implemented natal house method, including Koch and Campanus");
 
 const kochSchool = recommendWesternHouseSystem("koch-school-natal", 52.2);
 check(kochSchool.status === "supported" && kochSchool.preferredSystem === "Koch" &&
@@ -97,6 +96,21 @@ const polarKochSchool = recommendWesternHouseSystem("koch-school-natal", 70);
 check(polarKochSchool.preferredSystem === "Koch" &&
   polarKochSchool.resolvedSystem === "Porphyry" && polarKochSchool.usedPolarFallback,
   "A Koch-school profile discloses Porphyry as the actual polar-latitude fallback");
+
+const campanusSchool = recommendWesternHouseSystem("campanus-school-natal", 45);
+check(campanusSchool.status === "supported" &&
+  campanusSchool.preferredSystem === "Campanus" &&
+  campanusSchool.resolvedSystem === "Campanus",
+  "A named Campanus-school profile selects Campanus without altering the modern Western Auto default");
+const campanusPole = recommendWesternHouseSystem("campanus-school-natal", 90);
+check(campanusPole.preferredSystem === "Campanus" &&
+  campanusPole.resolvedSystem === "Porphyry" && campanusPole.usedPolarFallback,
+  "A Campanus request at the exact geographic pole reports Porphyry as the actual fallback");
+
+const campanusNatal = calculateWesternChart(2000, 1, 1, 12, 0, 45, 0, 0, "Campanus");
+check(campanusNatal.requestedHouseSystem === "Campanus" &&
+  campanusNatal.houseSystem === "Campanus" && campanusNatal.houses.length === 12,
+  "The Western natal chart resolves and exposes twelve Campanus houses");
 
 const natal = calculateWesternChart(2000, 1, 1, 12, 0, 40.7, -74, -5, "Auto");
 check(natal.requestedHouseSystem === "Auto" && natal.houseSystem === "Placidus",

@@ -15,6 +15,7 @@ import {
   ZODIAC_SIGNS,
   isAngularAspectApplying,
   filterCalculationReadyPoints,
+  getHouseNumber,
 } from "./ephemeris";
 import { VedicChartData } from "./vedic";
 import { isSunAboveHorizonInChart } from "./horizon";
@@ -40,7 +41,7 @@ export const PLANET_SYMBOLS: Record<string, string> = {
 export type ZodiacSystem = "tropical" | "sidereal";
 
 /** Only systems actually calculated by this engine are selectable. */
-export type HouseSystem = "placidus" | "whole-sign" | "equal" | "porphyry" | "regiomontanus" | "koch";
+export type HouseSystem = "placidus" | "whole-sign" | "equal" | "porphyry" | "regiomontanus" | "koch" | "campanus";
 
 export type AspectSystem = "western" | "vedic" | "hellenistic";
 
@@ -836,7 +837,8 @@ export class MultiSystemTransitEngine {
       : config.houseSystem === "equal" ? "E"
       : config.houseSystem === "porphyry" ? "O"
       : config.houseSystem === "regiomontanus" ? "R"
-      : config.houseSystem === "koch" ? "K" : "P";
+      : config.houseSystem === "koch" ? "K"
+      : config.houseSystem === "campanus" ? "C" : "P";
     if (Number.isFinite(birthWestern.birthLatitude) && Number.isFinite(birthWestern.birthLongitude)) {
       const houseResult = swissEphemeris.calculateHouses(
         birthWestern.julianDay,
@@ -860,7 +862,8 @@ export class MultiSystemTransitEngine {
         : houseResult.houseSystemUsed === "W" ? "whole-sign"
         : houseResult.houseSystemUsed === "E" ? "equal"
         : houseResult.houseSystemUsed === "R" ? "regiomontanus"
-        : houseResult.houseSystemUsed === "K" ? "koch" : "placidus";
+        : houseResult.houseSystemUsed === "K" ? "koch"
+        : houseResult.houseSystemUsed === "C" ? "campanus" : "placidus";
     } else {
       this.natalHouseCusps = birthWestern.houses.map((house) =>
         config.zodiac === "sidereal" ? normalizeDegrees(house.longitude - natalAyanamsa) : normalizeDegrees(house.longitude)
@@ -912,22 +915,9 @@ export class MultiSystemTransitEngine {
    * Calculate House Placement in the chosen House System
    */
   public calculateHouse(longitude: number, _isSidereal: boolean = false): number {
-    const normLon = normalizeDegrees(longitude);
-    const cusps = this.natalHouseCusps;
-    if (!cusps || cusps.length !== 12) {
-      throw new RangeError("The selected natal house system has no valid twelve-cusp framework.");
-    }
-
-    for (let i = 0; i < 12; i++) {
-      const currentCusp = cusps[i];
-      const nextCusp = cusps[(i + 1) % 12];
-      if (currentCusp < nextCusp) {
-        if (normLon >= currentCusp && normLon < nextCusp) return i + 1;
-      } else if (normLon >= currentCusp || normLon < nextCusp) {
-        return i + 1;
-      }
-    }
-    return 1;
+    // Shared assignment handles both the ordinary zodiacal cusp order and
+    // the reversed order used by some high-latitude polar position-circle frames.
+    return getHouseNumber(normalizeDegrees(longitude), this.natalHouseCusps);
   }
 
   /**
