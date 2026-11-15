@@ -118,7 +118,11 @@ export class KPFourStepEngine {
     psMap: Record<string, PositionalStatus>
   ): KPStepDetail {
     const planetObj = planets.find((p) => p.name === planetName);
-    const occupies = planetObj ? planetObj.house : 1;
+    if (!planetObj) throw new Error(`KP 4-Step requires planet data for ${planetName}; refusing to substitute a synthetic house.`);
+    if (!Number.isInteger(planetObj.house) || planetObj.house < 1 || planetObj.house > 12) {
+      throw new Error(`KP 4-Step requires a valid occupied house (1–12) for ${planetName}.`);
+    }
+    const occupies = planetObj.house;
     const owns: number[] = [];
 
     cusps.houseLords.forEach((lord, idx) => {
@@ -140,7 +144,9 @@ export class KPFourStepEngine {
     }
 
     const allHouses = Array.from(new Set([occupies, ...owns])).sort((a, b) => a - b);
-    const ps = psMap[planetName]?.hasPositionalStatus || false;
+    const positionalStatus = psMap[planetName];
+    if (!positionalStatus) throw new Error(`KP 4-Step requires positional-status data for ${planetName}.`);
+    const ps = positionalStatus.hasPositionalStatus;
 
     return {
       planet: planetName,
@@ -163,12 +169,15 @@ export class KPFourStepEngine {
     targetHouse?: number
   ): KPFourStepData {
     const pObj = planets.find((p) => p.name === planetName);
-    const starLord = pObj ? pObj.starLord : "Sun";
-    const subLord = pObj ? pObj.subLord : "Moon";
+    if (!pObj) throw new Error(`KP 4-Step cannot evaluate missing planet ${planetName}.`);
+    const starLord = pObj.starLord;
+    const subLord = pObj.subLord;
+    if (!starLord || !subLord) throw new Error(`KP 4-Step requires both star lord and sub lord for ${planetName}.`);
 
     // Sub Lord's Star Lord
     const subObj = planets.find((p) => p.name === subLord);
-    const subStarLord = subObj ? subObj.starLord : "Mars";
+    if (!subObj?.starLord) throw new Error(`KP 4-Step cannot resolve the star lord of ${subLord}.`);
+    const subStarLord = subObj.starLord;
 
     const step1 = this.buildStepDetail(planetName, cusps, planets, psMap);
     const step2 = this.buildStepDetail(starLord, cusps, planets, psMap);
@@ -251,7 +260,9 @@ export class KPFourStepEngine {
     planets: KPPlanet[],
     psMap: Record<string, PositionalStatus>
   ): KPFourStepData {
+    if (!Number.isInteger(houseNum) || houseNum < 1 || houseNum > 12) throw new Error(`KP 4-Step cusp house must be between 1 and 12; received ${houseNum}.`);
     const cusp = cusps.houseDetails[houseNum - 1];
+    if (!cusp?.subLord) throw new Error(`KP 4-Step requires cusp ${houseNum} sub-lord data.`);
     const csl = cusp.subLord;
     const result = this.evaluatePlanetFourStep(csl, cusps, planets, psMap, houseNum);
 
@@ -273,27 +284,27 @@ export class KPFourStepEngine {
 
     for (let h = 1; h <= 12; h++) {
       const cusp = cusps.houseDetails[h - 1];
+      if (!cusp?.signLord || !cusp.starLord || !cusp.subLord || !cusp.subSubLord) {
+        throw new Error(`KP CIL requires complete sign, star, sub, and sub-sub lord data for cusp ${h}.`);
+      }
       const signLord = cusp.signLord;
       const starLord = cusp.starLord;
       const csl = cusp.subLord;
-      const cssl = cusp.subSubLord || cusp.subLord;
+      const cssl = cusp.subSubLord;
 
-      const rule = KP_EVENT_RULES[h] || {
-        house: h,
-        eventName: `House ${h} Affairs`,
-        primaryHouses: [h],
-        favorableHouses: [h, (h + 10) % 12 || 12],
-        negationHouses: [(h + 10) % 12 || 12],
-      };
+      const rule = KP_EVENT_RULES[h];
+      if (!rule) throw new Error(`KP CIL has no declared event rule for cusp ${h}.`);
 
       // CSL planet & its connections
       const cslObj = planets.find((p) => p.name === csl);
-      const cslStarLord = cslObj ? cslObj.starLord : "Sun";
-      const cslSubLord = cslObj ? cslObj.subLord : "Moon";
+      if (!cslObj?.starLord || !cslObj.subLord) throw new Error(`KP CIL cannot resolve complete planet data for cusp ${h} CSL ${csl}.`);
+      const cslStarLord = cslObj.starLord;
+      const cslSubLord = cslObj.subLord;
 
       // CSSL planet & its connections
       const csslObj = planets.find((p) => p.name === cssl);
-      const csslStarLord = csslObj ? csslObj.starLord : "Mars";
+      if (!csslObj?.starLord) throw new Error(`KP CIL cannot resolve the star lord of cusp ${h} CSSL ${cssl}.`);
+      const csslStarLord = csslObj.starLord;
 
       // Houses linked by CSL & CSSL
       const cslStep = this.buildStepDetail(csl, cusps, planets, psMap);
