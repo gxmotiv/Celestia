@@ -116,7 +116,8 @@ export class KPFourStepEngine {
     planetName: string,
     cusps: KPCusps,
     planets: KPPlanet[],
-    psMap: Record<string, PositionalStatus>
+    psMap: Record<string, PositionalStatus>,
+    strengthRule: KPStepDetail["strengthRule"]
   ): KPStepDetail {
     const planetObj = planets.find((p) => p.name === planetName);
     if (!planetObj) throw new Error(`KP 4-Step requires planet data for ${planetName}; refusing to substitute a synthetic house.`);
@@ -147,16 +148,47 @@ export class KPFourStepEngine {
       }
     }
 
-    const allHouses = Array.from(new Set([occupies, ...owns])).sort((a, b) => a - b);
     const positionalStatus = psMap[planetName];
     if (!positionalStatus) throw new Error(`KP 4-Step requires positional-status data for ${planetName}.`);
     const ps = positionalStatus.hasPositionalStatus;
+    const isHouseEmpty = (house: number) => !planets.some((planet) => planet.house === house);
+    const primaryHouses = new Set<number>();
+    const secondaryHouses = new Set<number>();
+
+    if (strengthRule === "planet-positional-status") {
+      // Gondhalekar Steps 1 and 3: PS makes the planet principal for
+      // residence. Owned houses are principal only when empty.
+      if (ps) primaryHouses.add(occupies);
+      else secondaryHouses.add(occupies);
+
+      owns.forEach((house) => {
+        if (ps && isHouseEmpty(house)) primaryHouses.add(house);
+        else secondaryHouses.add(house);
+      });
+    } else {
+      // Steps 2 and 4: the star lord is principal for residence;
+      // owned houses are principal only when empty.
+      primaryHouses.add(occupies);
+      owns.forEach((house) => {
+        if (isHouseEmpty(house)) primaryHouses.add(house);
+        else secondaryHouses.add(house);
+      });
+    }
+
+    // A house cannot be primary and secondary at the same tier.
+    secondaryHouses.forEach((house) => primaryHouses.delete(house));
+    const primary = Array.from(primaryHouses).sort((a, b) => a - b);
+    const secondary = Array.from(secondaryHouses).sort((a, b) => a - b);
+    const allHouses = Array.from(new Set([...primary, ...secondary])).sort((a, b) => a - b);
 
     return {
       planet: planetName,
       occupiesHouse: occupies,
       ownsHouses: owns,
+      primaryHouses: primary,
+      secondaryHouses: secondary,
       allHouses,
+      strengthRule,
       isRetrograde: planetObj?.isRetrograde || false,
       hasPositionalStatus: ps,
     };
@@ -186,10 +218,10 @@ export class KPFourStepEngine {
     if (!subObj?.starLord) throw new Error(`KP 4-Step cannot resolve the star lord of ${subLord}.`);
     const subStarLord = subObj.starLord;
 
-    const step1 = this.buildStepDetail(planetName, cusps, planets, psMap);
-    const step2 = this.buildStepDetail(starLord, cusps, planets, psMap);
-    const step3 = this.buildStepDetail(subLord, cusps, planets, psMap);
-    const step4 = this.buildStepDetail(subStarLord, cusps, planets, psMap);
+    const step1 = this.buildStepDetail(planetName, cusps, planets, psMap, "planet-positional-status");
+    const step2 = this.buildStepDetail(starLord, cusps, planets, psMap, "star-lord-principal");
+    const step3 = this.buildStepDetail(subLord, cusps, planets, psMap, "planet-positional-status");
+    const step4 = this.buildStepDetail(subStarLord, cusps, planets, psMap, "star-lord-principal");
 
     // Combine signified houses according to 4-Step principles:
     // If Planet has PS: Step 1 houses are primary.
@@ -235,7 +267,9 @@ export class KPFourStepEngine {
         analysisText = `Mixed significations across 4 tiers. Step 2 & 3 provide moderate alignment, indicating fruition after persistent effort or during supportive transit.`;
       }
 
-      gondhalekarRule = `4-Step Principle: Source (Step 1 ${step1.hasPositionalStatus ? "★PS Active" : "Weak"} = ${step1.allHouses.join(",")}) → Offer (Step 2 ${starLord} = ${step2.allHouses.join(",")}) → Decision (Step 3 ${subLord} = ${step3.allHouses.join(",")}) → Final End (Step 4 ${subStarLord} = ${step4.allHouses.join(",")}).`;
+      const describeStrength = (step: KPStepDetail) =>
+        `P[${step.primaryHouses.join(",") || "—"}] / S[${step.secondaryHouses.join(",") || "—"}]`;
+      gondhalekarRule = `4-Step (P=primary, S=secondary): Source Step 1 ${step1.hasPositionalStatus ? "PS active" : "PS inactive"} ${describeStrength(step1)} → Offer Step 2 ${starLord} ${describeStrength(step2)} → Decision Step 3 ${subLord} ${describeStrength(step3)} → Final End Step 4 ${subStarLord} ${describeStrength(step4)}. Verdict still uses combined houses; primary/secondary status is displayed but not yet applied as a complete adjudication algorithm.`;
     } else {
       analysisText = `Planet ${planetName} acts through Star-Lord ${starLord} and is qualified by Sub-Lord ${subLord} and Sub's Star ${subStarLord}. Signifies houses: ${allSig.join(", ")}.`;
       gondhalekarRule = `Gondhalekar 4-Step Chain for ${planetName}: [${step1.planet}] → [${step2.planet}] → [${step3.planet}] → [${step4.planet}].`;
@@ -314,10 +348,10 @@ export class KPFourStepEngine {
       const csslStarLord = csslObj.starLord;
 
       // Houses linked by CSL & CSSL
-      const cslStep = this.buildStepDetail(csl, cusps, planets, psMap);
-      const cslStarStep = this.buildStepDetail(cslStarLord, cusps, planets, psMap);
-      const csslStep = this.buildStepDetail(cssl, cusps, planets, psMap);
-      const csslStarStep = this.buildStepDetail(csslStarLord, cusps, planets, psMap);
+      const cslStep = this.buildStepDetail(csl, cusps, planets, psMap, "planet-positional-status");
+      const cslStarStep = this.buildStepDetail(cslStarLord, cusps, planets, psMap, "star-lord-principal");
+      const csslStep = this.buildStepDetail(cssl, cusps, planets, psMap, "planet-positional-status");
+      const csslStarStep = this.buildStepDetail(csslStarLord, cusps, planets, psMap, "star-lord-principal");
 
       const linkedHouses = Array.from(
         new Set([
