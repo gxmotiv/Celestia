@@ -491,7 +491,7 @@ export class SwissEphemerisEngine {
   }
 
   /**
-   * Calculate Placidus, Equal, Whole Sign, Porphyry or Regiomontanus houses.
+   * Calculate Placidus, Equal, Whole Sign, Porphyry, Regiomontanus or Koch houses.
    */
   public calculateHouses(
     julianDay: number,
