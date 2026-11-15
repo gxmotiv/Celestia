@@ -1,6 +1,8 @@
 /**
- * Krishnamurti Padhdhati (KP) Cusps Calculator
- * Calculates Placidus cusps with Krishnamurti Ayanamsa & KP boundary rules.
+ * Krishnamurti Padhdhati (KP) Cusps Calculator.
+ * Uses KP's Placidus cusp framework and the explicitly provisional Celestia
+ * linear ayanamsa profile documented below; the historical KSK table and
+ * later KP ayanamsa variants remain under source reconciliation.
  */
 
 import { KPCusp, KPCusps } from "./kpTypes";
@@ -23,9 +25,14 @@ export class KPCuspsCalculator {
   private subLordCalc = new SubLordCalculator();
 
   /**
-   * Krishnamurti Ayanamsa:
-   * Value at 1900.0 is 22° 22' 14" (22.370555°)
-   * Annual precession rate = 50.2388475 arcseconds/year
+   * Celestia's legacy linear KP ayanamsa approximation.
+   *
+   * This compatibility profile is anchored at 22°22′14″ at nominal 1900.0
+   * and advances at 50.2388475 arcseconds/year. It is NOT certified as an
+   * exact reproduction of K.S. Krishnamurti's printed 1840–2001 table,
+   * Swiss Ephemeris SIDM_KRISHNAMURTI (table-derived), or the later
+   * Krishnamurti/Senthilathiban equinox-291 mode. Keep the formula named
+   * explicitly until those distinct source variants are reconciled.
    */
   public static calculateKPAyanamsa(year: number, month: number, day: number): number {
     const fractionOfYear = (month - 1) / 12 + day / 365.25;
@@ -130,7 +137,7 @@ export class KPCuspsCalculator {
       houseSigns: houseDetails.map((h) => h.signName),
       houseLords: houseDetails.map((h) => h.signLord),
       ayanamsa: kpAyanamsa,
-      ayanamsaName: "KP (Krishnamurti) Standard",
+      ayanamsaName: "Celestia KP linear (provisional)",
     };
   }
 }
