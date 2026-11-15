@@ -7,6 +7,7 @@
  */
 export type WesternHouseTechnique =
   | "modern-natal"
+  | "koch-school-natal"
   | "western-sidereal-natal"
   | "hellenistic-natal"
   | "hellenistic-time-lord"
@@ -54,7 +55,8 @@ export type ImplementedWesternHouseSystem =
   | "Equal"
   | "WholeSign"
   | "Porphyry"
-  | "Regiomontanus";
+  | "Regiomontanus"
+  | "Koch";
 
 export type HouseSystemRecommendationMode =
   | "automatic"
@@ -89,6 +91,7 @@ const IMPLEMENTED_SYSTEMS = new Set<WesternHouseSystemName>([
   "WholeSign",
   "Porphyry",
   "Regiomontanus",
+  "Koch",
 ]);
 
 function automatic(
@@ -179,6 +182,13 @@ export function recommendWesternHouseSystem(
         "Placidus",
         latitude,
         "Placidus is Celestia's current default for a modern Western natal chart. It is a configurable convention, not a universally superior system."
+      );
+
+    case "koch-school-natal":
+      return implementedPreset(
+        technique,
+        "Koch",
+        "Koch (Birthplace) houses are selected for an explicitly Koch-school natal profile. The standard modern Western Auto profile remains Placidus; Koch is not silently substituted for other schools."
       );
 
     case "hellenistic-natal":
