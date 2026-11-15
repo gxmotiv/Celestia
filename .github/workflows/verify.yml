@@ -28,6 +28,7 @@ jobs:
           - testWesternIntegritySuite.ts
           - testWesternHouseSystemPolicySuite.ts
           - testKPSystemSuite.ts
+          - testParashariVargaSuite.ts
           - testRegiomontanusHouseSystemSuite.ts
           - testKochHouseSystemSuite.ts
           - testCampanusHouseSystemSuite.ts
