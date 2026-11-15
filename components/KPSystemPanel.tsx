@@ -1134,7 +1134,7 @@ export function KPSystemPanel({
               Classical KP 4-Fold Significators (Grades I, II, III, IV)
             </h3>
             <p className="text-xs text-slate-400">
-              In KP, signification is graded strictly by planetary stellar tenancy: Grade I (Planets in Star of Occupants - Strongest) ➔ Grade II (Occupants) ➔ Grade III (Planets in Star of House Lord) ➔ Grade IV (House Lord - Weakest).
+              Base grades remain: I (planets in stars of occupants) → II (occupants) → III (planets in star of house lord) → IV (house lord). The selected KSK Reader VI Rahu/Ketu agent is added to the same grade(s) as its preferred representative; see the Planets tab for the full source chain.
             </p>
           </div>
 
