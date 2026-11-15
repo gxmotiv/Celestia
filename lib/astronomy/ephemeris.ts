@@ -18,7 +18,7 @@ import { isSunAboveHorizon } from "./horizon";
 import { recommendWesternHouseSystem } from "./westernHouseSystemPolicy";
 
 export type SolarProximity = "Cazimi" | "Combust" | "UnderBeams" | "Free";
-export type WesternHouseSystem = "Auto" | "Placidus" | "Equal" | "WholeSign" | "Porphyry" | "Regiomontanus" | "Koch";
+export type WesternHouseSystem = "Auto" | "Placidus" | "Equal" | "WholeSign" | "Porphyry" | "Regiomontanus" | "Koch" | "Campanus";
 export type ResolvedWesternHouseSystem = Exclude<WesternHouseSystem, "Auto">;
 
 export interface PlanetPosition {
@@ -571,16 +571,35 @@ export function calculateHouses(
  * Determine which house a given ecliptic longitude falls into
  */
 export function getHouseNumber(lon: number, cusps: number[]): number {
+  if (cusps.length !== 12 || !cusps.every(Number.isFinite) || !Number.isFinite(lon)) {
+    throw new RangeError("House assignment requires twelve finite house cusps and a finite longitude.");
+  }
   const norm = normalizeDegrees(lon);
+
+  // Most house systems list cusps in increasing zodiacal longitude. Some
+  // high-latitude position-circle systems rotate the entire celestial frame
+  // by 180°, producing a valid reversed cusp sequence. Determine which of the
+  // two possible circular directions makes one complete 360° circuit.
+  let forwardTotal = 0;
+  let reverseTotal = 0;
   for (let i = 0; i < 12; i++) {
-    const c1 = cusps[i];
-    const c2 = cusps[(i + 1) % 12];
-    if (c1 <= c2) {
-      if (norm >= c1 && norm < c2) return i + 1;
-    } else {
-      // Crosses 0 degrees Aries
-      if (norm >= c1 || norm < c2) return i + 1;
-    }
+    const current = normalizeDegrees(cusps[i]);
+    const next = normalizeDegrees(cusps[(i + 1) % 12]);
+    forwardTotal += normalizeDegrees(next - current);
+    reverseTotal += normalizeDegrees(current - next);
+  }
+  const forward = forwardTotal <= reverseTotal;
+
+  for (let i = 0; i < 12; i++) {
+    const current = normalizeDegrees(cusps[i]);
+    const next = normalizeDegrees(cusps[(i + 1) % 12]);
+    const arc = forward
+      ? normalizeDegrees(next - current)
+      : normalizeDegrees(current - next);
+    const offset = forward
+      ? normalizeDegrees(norm - current)
+      : normalizeDegrees(current - norm);
+    if (offset < arc) return i + 1;
   }
   return 1;
 }
@@ -726,20 +745,27 @@ export function calculateWesternChart(
     (explicitPolarPlacidusFallback ? "Porphyry" : houseSystem === "Auto" ? "Placidus" : houseSystem);
   const polarPlacidusFallback =
     autoHouseRecommendation?.usedPolarFallback ?? explicitPolarPlacidusFallback;
-  const sysCode = resolvedRequest === "WholeSign" ? "W" : resolvedRequest === "Equal" ? "E" : resolvedRequest === "Porphyry" ? "O" : resolvedRequest === "Regiomontanus" ? "R" : resolvedRequest === "Koch" ? "K" : "P";
+  const sysCode = resolvedRequest === "WholeSign" ? "W"
+    : resolvedRequest === "Equal" ? "E"
+    : resolvedRequest === "Porphyry" ? "O"
+    : resolvedRequest === "Regiomontanus" ? "R"
+    : resolvedRequest === "Koch" ? "K"
+    : resolvedRequest === "Campanus" ? "C" : "P";
   const houseResult = swissEphemeris.calculateHouses(jd, latitude, longitude, sysCode);
   const rawCusps = houseResult.houseCusps;
   const actualHouseSystem: ResolvedWesternHouseSystem = houseResult.houseSystemUsed === "W" ? "WholeSign"
     : houseResult.houseSystemUsed === "E" ? "Equal"
     : houseResult.houseSystemUsed === "O" ? "Porphyry"
     : houseResult.houseSystemUsed === "R" ? "Regiomontanus"
-    : houseResult.houseSystemUsed === "K" ? "Koch" : "Placidus";
+    : houseResult.houseSystemUsed === "K" ? "Koch"
+    : houseResult.houseSystemUsed === "C" ? "Campanus" : "Placidus";
   const houseSystemNote = polarPlacidusFallback
     ? autoHouseRecommendation?.rationale ??
       "Celestia's conservative policy selected Porphyry at |latitude| ≥ 66.5622°. This is an application fallback, not a claim that Placidus is impossible at every such location; other implementations may resolve it at some high-latitude dates and coordinates."
-    : actualHouseSystem !== resolvedRequest
-      ? `${resolvedRequest} houses are undefined at this latitude; Porphyry quadrant houses were used instead.`
-      : autoHouseRecommendation?.rationale;
+    : houseResult.houseSystemNote ??
+      (actualHouseSystem !== resolvedRequest
+        ? `${resolvedRequest} houses are undefined at this latitude; Porphyry quadrant houses were used instead.`
+        : autoHouseRecommendation?.rationale);
   const asc = houseResult.ascendant;
   const mc = houseResult.midheaven;
 
