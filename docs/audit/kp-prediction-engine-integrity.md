@@ -56,7 +56,7 @@ The selected default is labelled **KSK Reader VI**:
 3. Planet(s) aspecting the node
 4. Lord of the sign occupied by the node
 
-A selectable **Reader III/V** order is also implemented for source comparison:
+A programmatic **Reader III/V** order is also supported by the engine for source comparison; the current chart generator and screen use Reader VI:
 
 1. Planet(s) conjoined with the node
 2. Planet(s) aspecting the node
@@ -71,10 +71,10 @@ https://archive.org/stream/krishnamurti-padhdhati-vol-3-english/KP-Simple-Rules_
 
 ### Explicit calculation conventions
 
-- **Conjunction:** current bridge uses same KP sidereal sign, with no degree orb. This is a provisional software convention, not asserted to be a universal KSK orb. Some later four-step teaching notes use 3°20′ (and sometimes extensions); other KP practitioners dispute fixed 3°20′ orbs. The classical KP reader orb and same-sign practice require their own configurable profile before this default is treated as settled.
+- **Conjunction:** current bridge uses same KP sidereal sign, with no degree orb, among the seven classical planets only. Outer planets are not node agents in this classical KSK profile. This is a provisional software convention, not asserted to be a universal KSK orb. Some later four-step teaching notes use 3°20′ (and sometimes extensions); other KP practitioners dispute fixed 3°20′ orbs. The classical KP reader orb and same-sign practice require their own configurable profile before this default is treated as settled.
 - **Aspects:** node agent lookup uses full Parashari sign-based graha drishti from the seven classical planets: universal 7th; Mars 4th/7th/8th; Jupiter 5th/7th/9th; Saturn 3rd/7th/10th. No Western Ptolemaic angles or angular orbs are used. Rahu/Ketu are not treated as aspect-casting agents here, and the nodes do not act as agents for each other.
 - **Agent houses:** the node's own occupied house is included directly. Each agent tier separately lists the agent planet(s) and their calculated KP house-signification union. The UI shows the first available tier as the selected/preferred agent and separately shows all other candidate tiers/houses. Those alternative tiers must not be added together as though all had equal priority.
-- **A–D / event integration:** the first available Reader VI agent tier is now applied to the node's own house-signification union. If a planet's star lord is Rahu/Ketu, the node's selected representative houses are added to that planet's Level A with a separate provenance field. The same expanded node signification is used when Rahu/Ketu is the CSL in event-promise assessment. Lower-priority candidate tiers remain visible but are not added as equal-strength houses. This is a first source-labelled integration, not a calibrated grade-weighting model.
+- **A–D / event integration:** the first available Reader VI agent tier is now applied to the node's own house-signification union. If a planet's star lord is Rahu/Ketu, the node's selected representative houses are added to that planet's Level A with a separate provenance field. The same expanded node signification is used when Rahu/Ketu is the CSL in event-promise assessment. Lower-priority candidate tiers remain visible but are not added as equal-strength houses. This is a first source-labelled integration, not a calibrated grade-weighting model. The node-agent expansion is not applied to the other representative tiers yet.
 
 The sources differ in both edition priority and orb practice. Keep the selected source label, aspect policy and conjunction convention attached to every calculation. Do not describe this implementation as a universal or final KP node rule.
 
