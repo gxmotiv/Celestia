@@ -73,12 +73,17 @@ check(isWesternHouseSystemImplemented("Placidus") &&
   isWesternHouseSystemImplemented("Equal") &&
   isWesternHouseSystemImplemented("WholeSign") &&
   isWesternHouseSystemImplemented("Porphyry") &&
-  isWesternHouseSystemImplemented("Regiomontanus"),
-  "The implementation registry recognizes the five currently calculated Western house systems");
+  isWesternHouseSystemImplemented("Regiomontanus") &&
+  isWesternHouseSystemImplemented("Koch"),
+  "The implementation registry recognizes the six currently calculated Western house systems");
 
-check(!isWesternHouseSystemImplemented("Koch") &&
-  !isWesternHouseSystemImplemented("Campanus"),
-  "House-system labels without calculation engines are not treated as implemented");
+check(!isWesternHouseSystemImplemented("Campanus"),
+  "Campanus remains unavailable until its own calculation engine is implemented");
+
+const kochSchool = recommendWesternHouseSystem("koch-school-natal", 52.2);
+check(kochSchool.status === "supported" && kochSchool.preferredSystem === "Koch" &&
+  kochSchool.resolvedSystem === "Koch",
+  "A named Koch-school natal profile selects Koch without altering the modern Western Auto default");
 
 const natal = calculateWesternChart(2000, 1, 1, 12, 0, 40.7, -74, -5, "Auto");
 check(natal.requestedHouseSystem === "Auto" && natal.houseSystem === "Placidus",
