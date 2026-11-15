@@ -176,7 +176,7 @@ Swiss Ephemeris publishes a much broader house-method list than Celestia current
 | Porphyry | Implemented |
 | Koch | Implemented; requests inside the polar circle resolve to Porphyry with the actual system disclosed |
 | Regiomontanus | Implemented |
-| Campanus | Not implemented |
+| Campanus | Implemented; polar 180° orientation is disclosed, exact geographic poles are rejected as geometrically indeterminate |
 | Alcabitius | Not implemented |
 | Morinus | Not implemented |
 | Meridian / Axial Rotation | Not implemented |
@@ -194,7 +194,7 @@ Swiss Ephemeris publishes a much broader house-method list than Celestia current
 | Pullen SR | Not implemented |
 | Sripati | Not implemented |
 
-Swiss Ephemeris documents that Placidus and Koch are not defined within the polar circle, and other house methods have their own calculation limits. Celestia's Koch calculator is independently derived from the MC semi-diurnal-arc construction and tested against Swiss Ephemeris 2.10.03 reference values. Koch requests inside the polar circle resolve to Porphyry and disclose the actual system used. This remains a calculation fallback, not a claim that Porphyry is the historically correct choice for every chart.
+Swiss Ephemeris documents that Placidus and Koch are not defined within the polar circle, and other house methods have their own calculation limits. Celestia's Koch calculator is independently derived from the MC semi-diurnal-arc construction and tested against Swiss Ephemeris 2.10.03 reference values. Koch requests inside the polar circle resolve to Porphyry and disclose the actual system used. Regiomontanus and Campanus preserve their distinct 180° polar-orientation convention where it applies; Campanus rejects the exact geographic poles because a unique local north/east frame is not defined there. These orientation rules do not change the named method into a different house system.
 
 ### Technique-aware automatic house-system rules
 
@@ -205,6 +205,7 @@ Swiss Ephemeris documents that Placidus and Koch are not defined within the pola
 - Composite/Davison: require the named construction/house convention rather than silently inheriting a natal chart's system.
 - Lilly-style horary/electional: the Regiomontanus house calculation is now available as a named method. The full horary judgement and election-search workflows remain unimplemented; never infer the complete technique from house-system support alone.
 - Primary directions: direction method, key and domification are coupled; require an explicit direction profile.
+- Campanus: available as an explicit Campanus-school natal method; this does not make Campanus the automatic default for modern Western astrology.
 - Uranian/Cosmobiology and mundane methods: require source/school-specific settings; do not invent one universal default.
 - Astrocartography: no ordinary house system is required for the planet-line geometry itself.
 
