@@ -188,7 +188,7 @@ export function KPSystemPanel({
               KP Astrology Master Console &amp; Predictive Engine
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">
-              Calculated for <strong className="text-slate-200">{fullName}</strong> with Krishnamurti Ayanamsa ({kpData.ayanamsaFormatted})
+              Calculated for <strong className="text-slate-200">{fullName}</strong> with {kpData.cusps.ayanamsaName} ({kpData.ayanamsaFormatted})
             </p>
           </div>
 
@@ -1191,7 +1191,7 @@ export function KPSystemPanel({
               12 Placidus Cusps &amp; KP Sub-Lord Division
             </h3>
             <p className="text-xs text-slate-400">
-              Accurate Placidus cuspal longitudes computed with Krishnamurti Ayanamsa ({kpData.ayanamsaFormatted}).
+              KP Placidus cuspal longitudes converted with {kpData.cusps.ayanamsaName} ({kpData.ayanamsaFormatted}). The historical KSK table and alternate KP ayanamsa variants are still being reconciled.
             </p>
           </div>
 
