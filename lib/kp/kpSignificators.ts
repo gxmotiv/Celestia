@@ -74,7 +74,7 @@ export class KPSignificators {
     if (!Number.isFinite(planetLon)) {
       throw new Error("KP house assignment requires a finite planetary longitude.");
     }
-    this.validateCusps(cusps);
+    KPSignificators.validateCusps(cusps);
     for (let h = 1; h <= 12; h++) {
       if (this.isPlanetInHouseUnchecked(planetLon, h, cusps)) return h;
     }
@@ -89,7 +89,7 @@ export class KPSignificators {
     cusps: KPCusps,
     planets: KPPlanet[]
   ): KPHouseSignificators {
-    this.validateCusps(cusps);
+    KPSignificators.validateCusps(cusps);
     if (!Number.isInteger(house) || house < 1 || house > 12) {
       throw new Error(`KP significator house must be between 1 and 12; received ${house}.`);
     }
