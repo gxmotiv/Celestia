@@ -6,7 +6,10 @@ import {
   ShadbalaResult,
   ShadbalaChartInput,
   SHADBALA_IMPLEMENTATION_STATUS,
+  DrikFullAspectReading,
+  DrikMercuryAssociationRule,
 } from "@/lib/vedic/shadbalaEngine";
+import type { DrishtiVirupaVariant } from "@/lib/vedic/drishtiEngine";
 import { WesternChartData } from "@/lib/astronomy/ephemeris";
 import { VedicChartData } from "@/lib/astronomy/vedic";
 import {
@@ -36,6 +39,13 @@ export function ShadbalaPanel({
   const [saptavargajaScale, setSaptavargajaScale] = useState<
     "bphs-santhanam" | "raman-halving"
   >("bphs-santhanam");
+  const [drishtiVirupaVariant, setDrishtiVirupaVariant] =
+    useState<DrishtiVirupaVariant>("bphs-verse-special-formula");
+  const [drikFullAspectReading, setDrikFullAspectReading] =
+    useState<DrikFullAspectReading>("added-to-quarter");
+  const [drikMercuryAssociationRule, setDrikMercuryAssociationRule] =
+    useState<DrikMercuryAssociationRule>("same-sign");
+  const [mercuryAssociationOrbInput, setMercuryAssociationOrbInput] = useState("2");
 
   const chartInput: ShadbalaChartInput = useMemo(() => {
     const planetsMap: ShadbalaChartInput["planets"] = {};
@@ -75,8 +85,24 @@ export function ShadbalaPanel({
       planets: planetsMap,
       birthDate: bDateObj,
       saptavargajaScale,
+      drishtiVirupaVariant,
+      drikFullAspectReading,
+      drikMercuryAssociationRule,
+      ...(drikMercuryAssociationRule === "degree-orb"
+        ? { drikMercuryAssociationOrbDeg: Number(mercuryAssociationOrbInput) }
+        : {}),
     };
-  }, [vedicData, westernData, birthDate, birthTime, saptavargajaScale]);
+  }, [
+    vedicData,
+    westernData,
+    birthDate,
+    birthTime,
+    saptavargajaScale,
+    drishtiVirupaVariant,
+    drikFullAspectReading,
+    drikMercuryAssociationRule,
+    mercuryAssociationOrbInput,
+  ]);
 
   const engine = useMemo(() => new ShadbalaEngine(), []);
 
@@ -179,6 +205,63 @@ export function ShadbalaPanel({
           </div>
         </div>
 
+        <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-3 rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+          <label className="flex flex-col gap-1.5 text-xs text-slate-400">
+            Exact Drishti curve (BPHS Ch. 26)
+            <select
+              value={drishtiVirupaVariant}
+              onChange={(event) => setDrishtiVirupaVariant(event.target.value as DrishtiVirupaVariant)}
+              className="rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-xs text-slate-200"
+            >
+              <option value="bphs-verse-special-formula">BPHS 26.9–12 per-sign special formulae</option>
+              <option value="bphs-base-longitude-curve">BPHS 26.6–8 generic curve only</option>
+              <option value="bphs-translator-special-adjustments">Raman / translator-note +15/+30/+45 additions</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1.5 text-xs text-slate-400">
+            Mercury/Jupiter term (BPHS 27.19)
+            <select
+              value={drikFullAspectReading}
+              onChange={(event) => setDrikFullAspectReading(event.target.value as DrikFullAspectReading)}
+              className="rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-xs text-slate-200"
+            >
+              <option value="added-to-quarter">Add full term after quarter term</option>
+              <option value="in-place-of-quarter">Full term replaces quarter term</option>
+              <option value="quarter-only">Quarter term only (Raman worked method)</option>
+            </select>
+          </label>
+          <div className="flex flex-col gap-1.5 text-xs text-slate-400">
+            <label htmlFor="shadbala-mercury-association">Mercury association</label>
+            <select
+              id="shadbala-mercury-association"
+              value={drikMercuryAssociationRule}
+              onChange={(event) => setDrikMercuryAssociationRule(event.target.value as DrikMercuryAssociationRule)}
+              className="rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-xs text-slate-200"
+            >
+              <option value="same-sign">Same sidereal sign</option>
+              <option value="degree-orb">Explicit degree orb</option>
+            </select>
+            {drikMercuryAssociationRule === "degree-orb" && (
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="number"
+                  min="0"
+                  max="30"
+                  step="0.25"
+                  value={mercuryAssociationOrbInput}
+                  onChange={(event) => setMercuryAssociationOrbInput(event.target.value)}
+                  aria-label="Mercury association orb in degrees"
+                  className="w-20 rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs text-slate-200"
+                />
+                <span>degrees (user-selected; no universal orb is assumed)</span>
+              </div>
+            )}
+          </div>
+          <p className="lg:col-span-3 text-[10px] leading-relaxed text-slate-500">
+            Nodes are not Shadbala grahas and do not cast Drik Bala here. Rahu/Ketu may only be considered as malefic companions when the optional Mercury association rule is evaluated. Waxing/waning Moon nature is derived from the directed Sun–Moon elongation.
+          </p>
+        </div>
+
         <div className="pt-4 flex items-center gap-2 overflow-x-auto no-scrollbar">
           <span className="text-xs text-slate-400 font-semibold shrink-0">Rank Order:</span>
           {shadbalaList.map((p) => (
@@ -222,7 +305,7 @@ export function ShadbalaPanel({
                 { name: "Kala (Temporal)", points: planet.kalaBala.total, max: 200, color: "bg-purple-500" },
                 { name: "Cheshta (Motional)", points: planet.cheshtaBala.points, max: 60, color: "bg-emerald-500" },
                 { name: "Naisargika (Natural)", points: planet.naisargikaBala.points, max: 60, color: "bg-blue-500" },
-                { name: "Drik (Aspectual)", points: planet.drikBala.points, max: 30, color: "bg-rose-500" },
+                { name: "Drik (signed aspect)", points: planet.drikBala.points, max: 210, color: "bg-rose-500", absolute: true },
               ];
 
               return (
@@ -315,7 +398,7 @@ export function ShadbalaPanel({
                               <div
                                 className={`h-full rounded-full ${b.color}`}
                                 style={{
-                                  width: `${Math.min(100, Math.max(0, (b.points / b.max) * 100))}%`,
+                                  width: `${Math.min(100, (b.absolute ? Math.abs(b.points) : Math.max(0, b.points)) / b.max * 100)}%`,
                                 }}
                               />
                             </div>
@@ -445,14 +528,43 @@ export function ShadbalaPanel({
                 </p>
               </div>
 
-              <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80 space-y-1.5">
+              <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80 space-y-2">
                 <div className="flex justify-between font-semibold text-slate-200">
-                  <span>6. Drik Bala (Aspectual)</span>
-                  <span className="font-mono text-rose-300">{activeResult.drikBala.points} Virupas</span>
+                  <span>6. Drik Bala (signed Drishti Pinda)</span>
+                  <span className={`font-mono ${activeResult.drikBala.points >= 0 ? "text-emerald-300" : "text-rose-300"}`}>
+                    {activeResult.drikBala.available ? activeResult.drikBala.points : "Unavailable"} Virupas
+                  </span>
                 </div>
                 <p className="text-[11px] text-slate-400 leading-snug">
                   {activeResult.drikBala.description}
                 </p>
+                {activeResult.drikBala.available && (
+                  <>
+                    <div className="grid grid-cols-3 gap-2 text-[10px] font-mono">
+                      <div><span className="text-slate-500 block">Net Pinda</span>{activeResult.drikBala.drishtiPinda}</div>
+                      <div><span className="text-emerald-400 block">Benefic</span>+{activeResult.drikBala.beneficDrishtiPinda}</div>
+                      <div><span className="text-rose-400 block">Malefic</span>−{activeResult.drikBala.maleficDrishtiPinda}</div>
+                    </div>
+                    <div className="space-y-1 border-t border-slate-800 pt-2">
+                      {activeResult.drikBala.aspects.map((aspect) => (
+                        <div key={aspect.aspectingPlanet} className="grid grid-cols-[auto_1fr_auto] gap-2 text-[10px] items-center">
+                          <span className="font-semibold text-slate-200">{aspect.aspectingPlanet}</span>
+                          <span className="text-slate-500">
+                            {aspect.angle.toFixed(2)}° · raw {aspect.rawVirupas.toFixed(2)} · quarter {aspect.quarterVirupas.toFixed(2)} · full {aspect.fullAspectVirupas.toFixed(2)}
+                          </span>
+                          <span className={aspect.virupas >= 0 ? "text-emerald-300" : "text-rose-300"}>
+                            {aspect.virupas > 0 ? "+" : ""}{aspect.virupas.toFixed(2)}v
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+                {!activeResult.drikBala.available && activeResult.drikBala.missingPlanetInputs.length > 0 && (
+                  <p className="text-[10px] text-amber-300">
+                    Missing seven-graha positions: {activeResult.drikBala.missingPlanetInputs.join(", ")}
+                  </p>
+                )}
               </div>
             </div>
 
