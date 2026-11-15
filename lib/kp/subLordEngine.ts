@@ -296,9 +296,6 @@ export class SubLordCalculator {
   }
 
   /**
-   * Generates the Modern KP 1 to 2193 Sub-Sub Lord Table.
-   */
-  /**
    * Generates the extended KP 1–2193 sub-sub table.
    *
    * Build the 2,187 theoretical intervals from the 243 unsplit
