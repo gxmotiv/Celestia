@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { calculateMorinusHouses } from "../lib/astronomy/morinusHouses";
 import { SwissEphemerisEngine } from "../lib/astronomy/swissEphemeris";
-import { calculateWesternChart, getHouseNumber } from "../lib/astronomy/ephemeris";
+import { calculateHouses as calculateLegacyHouses, calculateWesternChart, getHouseNumber } from "../lib/astronomy/ephemeris";
 import { MultiSystemTransitEngine, TRANSIT_SYSTEM_PRESETS } from "../lib/astronomy/MultiSystemTransitEngine";
 import {
   isWesternHouseSystemImplemented,
@@ -123,6 +123,11 @@ for (const [armc, obliquity] of [
   );
   assertions += 1;
 }
+
+const legacy = calculateLegacyHouses(0, 45, 23 + 26 / 60 + 21 / 3600, "Morinus");
+check(angularDifference(legacy.cusps[9], 0) < 0.02 &&
+  angularDifference(legacy.cusps[10], 27 + 55 / 60) < 0.02,
+  "The legacy Western house helper also exposes Morinus cusps");
 
 const swiss = new SwissEphemerisEngine();
 const referenceDateJd = 2451545.0;
