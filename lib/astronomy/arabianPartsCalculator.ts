@@ -1,8 +1,18 @@
 /**
  * Arabian Parts (Lots) Calculation System
- * Implements classical diurnal/nocturnal Hellenistic and Medieval Arabic formulas:
+ * Default profile: common Hellenistic sect-reversed formulae (not a universal
+ * formula shared by every ancient author):
  * - Part of Fortune: Day: ASC + Moon - Sun; Night: ASC + Sun - Moon
- * - Part of Spirit (Pars Solis): Day: ASC + Sun - Moon; Night: ASC + Moon - Sun
+ * - Part of Spirit / Daimon: Day: ASC + Sun - Moon; Night: ASC + Moon - Sun
+ *
+ * Source boundary:
+ * - Valens, Anthology II.23 and III.11, Dorotheus I.26 and Paulus support
+ *   sect-aware/reversed formula traditions, though Valens III.11 preserves a
+ *   more nuanced alternative for night Fortune based on the Moon's position.
+ * - Ptolemy, Tetrabiblos III.10, uses Sun-to-Moon for Fortune by both day and
+ *   night; this calculator does NOT implement that Ptolemaic profile.
+ * - This file implements the common sect-reversed profile only. It must not be
+ *   described as the sole "classical" method or as Ptolemy's formula.
  * - Part of Eros: Day: ASC + Venus - Spirit; Night: ASC + Spirit - Venus
  * - Part of Necessity: Day: ASC + Fortune - Mercury; Night: ASC + Mercury - Fortune
  * - Part of Courage: Day: ASC + Fortune - Mars; Night: ASC + Mars - Fortune
@@ -35,6 +45,8 @@ export interface ArabianPart {
 
 export interface ArabianPartsResult {
   isDayChart: boolean;
+  /** Explicit method provenance: this result uses the common sect-reversed Hellenistic profile. */
+  formulaProfile: "common-hellenistic-sect-reversed";
   partOfFortune: ArabianPart;
   partOfSpirit: ArabianPart;
   partOfLove: ArabianPart;
@@ -342,6 +354,7 @@ export class ArabianPartsCalculator {
 
     return {
       isDayChart: isDay,
+      formulaProfile: "common-hellenistic-sect-reversed",
       partOfFortune,
       partOfSpirit,
       partOfLove,
