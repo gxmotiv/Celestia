@@ -17,9 +17,32 @@ export interface GrahaAspect {
   aspectedHouse: number; // 1 to 12
   aspectedSign: string;
   aspectedSignIndex: number;
-  aspectType: "7th (Universal)" | "4th (Mars Special)" | "8th (Mars Special)" | "5th (Jupiter/Nodes Special)" | "9th (Jupiter/Nodes Special)" | "3rd (Saturn Special)" | "10th (Saturn Special)" | "Partial";
-  strengthVirupas: number; // 0 to 60 (60 = 100% full aspect)
-  strengthPercent: number; // 0 to 100%
+  aspectType:
+    | "3rd (Quarter)"
+    | "4th (Three-Quarter)"
+    | "5th (Half)"
+    | "7th (Universal)"
+    | "8th (Three-Quarter)"
+    | "9th (Half)"
+    | "10th (Quarter)"
+    | "4th (Mars Special)"
+    | "8th (Mars Special)"
+    | "5th (Jupiter Special)"
+    | "9th (Jupiter Special)"
+    | "3rd (Saturn Special)"
+    | "10th (Saturn Special)"
+    | "5th (Node 5/7/9 Special — later convention)"
+    | "7th (Node 7th-only — later convention)"
+    | "9th (Node 5/7/9 Special — later convention)";
+  /** Whole-sign BPHS graded aspect: 15, 30, 45 or 60 Virupas. */
+  strengthVirupas: number;
+  /** Whole-sign aspect grade as a percentage of 60 Virupas. */
+  strengthPercent: number;
+  /** Exact-longitude Drishti Pinda to the target planet, when one is present. */
+  degreeStrengthVirupas?: number;
+  degreeStrengthPercent?: number;
+  /** Declares the longitude-strength interpretation used for this report. */
+  degreeStrengthVariant?: DrishtiVirupaVariant;
   nature: "Benefic" | "Malefic" | "Neutral";
   description: string;
 }
@@ -59,35 +82,141 @@ export interface DrishtiMatrixReport {
   mutualAspects: MutualAspect[];
   rashiDrishtis: RashiDrishtiInfo[];
   houseAspectTotals: Record<number, { beneficScore: number; maleficScore: number; netScore: number; aspectingPlanets: string[] }>;
+  grahaAspectPolicy: "bphs-chapter-26-seven-grahas";
+  nodeAspectRule: NodeAspectRule;
+  degreeStrengthVariant: DrishtiVirupaVariant;
 }
 
 const BENEFIC_PLANETS = new Set(["Jupiter", "Venus", "Mercury", "Moon"]);
 const MALEFIC_PLANETS = new Set(["Saturn", "Mars", "Rahu", "Ketu", "Sun"]);
 
+export type NodeAspectRule = "none" | "seventh-only" | "fifth-seventh-ninth";
+export type DrishtiVirupaVariant = "bphs-base-longitude-curve" | "bphs-translator-special-adjustments";
+
+export interface DrishtiMatrixOptions {
+  /** BPHS does not explicitly settle node aspects; default is no nodal Graha Drishti. */
+  nodeAspectRule?: NodeAspectRule;
+  /** The latter variant applies the commonly printed translator-note boosts for Mars/Jupiter/Saturn. */
+  degreeStrengthVariant?: DrishtiVirupaVariant;
+}
+
 /**
- * Calculates continuous Drishti Pinda (Virupas 0 to 60) based on angular distance
+ * Exact-longitude Drishti Pinda curve from BPHS Ch. 26, vv. 6–8.
+ *
+ * The angle is measured forward from the aspecting graha to the aspected
+ * point. The optional translator-note variant applies the Mars/Jupiter/Saturn
+ * special-aspect boosts commonly printed with the Santhanam/Kapoor edition.
+ * It is kept separate because the notes/editions are not identical.
  */
-export function calculateDrishtiVirupas(diffDeg: number, planetName: string, houseOffset: number): number {
-  const normDiff = ((diffDeg % 360) + 360) % 360;
+export function calculateLongitudeDrishtiVirupas(
+  diffDeg: number,
+  planetName: string,
+  variant: DrishtiVirupaVariant = "bphs-translator-special-adjustments"
+): number {
+  if (!Number.isFinite(diffDeg)) {
+    throw new RangeError("Drishti longitude difference must be finite.");
+  }
+  const angle = ((diffDeg % 360) + 360) % 360;
+  let value = 0;
 
-  // Exact 7th aspect (180°) is full (60 Virupas)
-  if (houseOffset === 7) return 60;
+  if (angle < 30 || angle >= 300) value = 0;
+  else if (angle < 60) value = (angle - 30) / 2;
+  else if (angle < 90) value = angle - 45;
+  else if (angle < 120) value = (120 - angle) / 2 + 30;
+  else if (angle < 150) value = 150 - angle;
+  else if (angle < 180) value = 2 * (angle - 150);
+  else value = (300 - angle) / 2;
 
-  // Mars Special: 4th (90°) and 8th (210°)
-  if (planetName === "Mars" && (houseOffset === 4 || houseOffset === 8)) return 60;
+  if (variant === "bphs-translator-special-adjustments") {
+    // Translator-note special increases: Mars +15, Jupiter +30, Saturn +45
+    // in their respective special-aspect angular bands.
+    if (planetName === "Mars" &&
+        ((angle >= 90 && angle < 120) || (angle >= 210 && angle < 240))) {
+      value += 15;
+    } else if (planetName === "Jupiter" &&
+        ((angle >= 120 && angle < 150) || (angle >= 240 && angle < 270))) {
+      value += 30;
+    } else if (planetName === "Saturn" &&
+        ((angle >= 60 && angle < 90) || (angle >= 270 && angle < 300))) {
+      value += 45;
+    }
+  }
 
-  // Jupiter & Rahu/Ketu Special: 5th (120°) and 9th (240°)
-  if (["Jupiter", "Rahu", "Ketu"].includes(planetName) && (houseOffset === 5 || houseOffset === 9)) return 60;
+  return Math.max(0, Math.min(60, value));
+}
 
-  // Saturn Special: 3rd (60°) and 10th (270°)
-  if (planetName === "Saturn" && (houseOffset === 3 || houseOffset === 10)) return 60;
+/**
+ * Compatibility wrapper. The houseOffset argument is intentionally ignored:
+ * exact Drishti Pinda is a function of angular separation, not a fixed house
+ * offset. New code should call calculateLongitudeDrishtiVirupas directly.
+ */
+export function calculateDrishtiVirupas(
+  diffDeg: number,
+  planetName: string,
+  _houseOffset?: number,
+  variant: DrishtiVirupaVariant = "bphs-translator-special-adjustments"
+): number {
+  return calculateLongitudeDrishtiVirupas(diffDeg, planetName, variant);
+}
 
-  // Classical partial aspects
-  if (houseOffset === 3 || houseOffset === 10) return planetName === "Saturn" ? 60 : 15; // 1/4 aspect for others
-  if (houseOffset === 5 || houseOffset === 9) return ["Jupiter", "Rahu", "Ketu"].includes(planetName) ? 60 : 30; // 1/2 aspect for others
-  if (houseOffset === 4 || houseOffset === 8) return planetName === "Mars" ? 60 : 45; // 3/4 aspect for others
+/** Whole-sign Graha Drishti grades from BPHS Ch. 26, vv. 2–5. */
+export function calculateSignDrishtiVirupas(
+  planetName: string,
+  signOffset: number,
+  nodeAspectRule: NodeAspectRule = "none"
+): number {
+  if (!Number.isInteger(signOffset) || signOffset < 1 || signOffset > 12) {
+    throw new RangeError("Graha Drishti sign offset must be an integer from 1 through 12.");
+  }
 
+  if (planetName === "Rahu" || planetName === "Ketu") {
+    if (nodeAspectRule === "none") return 0;
+    if (nodeAspectRule === "seventh-only") return signOffset === 7 ? 60 : 0;
+    return [5, 7, 9].includes(signOffset) ? 60 : 0;
+  }
+
+  if (signOffset === 7) return 60;
+  if ((planetName === "Mars") && (signOffset === 4 || signOffset === 8)) return 60;
+  if ((planetName === "Jupiter") && (signOffset === 5 || signOffset === 9)) return 60;
+  if ((planetName === "Saturn") && (signOffset === 3 || signOffset === 10)) return 60;
+  if (signOffset === 3 || signOffset === 10) return 15;
+  if (signOffset === 5 || signOffset === 9) return 30;
+  if (signOffset === 4 || signOffset === 8) return 45;
   return 0;
+}
+
+function getGrahaAspectType(
+  planetName: string,
+  signOffset: number,
+  nodeAspectRule: NodeAspectRule
+): GrahaAspect["aspectType"] | null {
+  const strength = calculateSignDrishtiVirupas(planetName, signOffset, nodeAspectRule);
+  if (strength === 0) return null;
+
+  if (planetName === "Rahu" || planetName === "Ketu") {
+    if (signOffset === 7) return "7th (Node 7th-only — later convention)";
+    return signOffset === 5
+      ? "5th (Node 5/7/9 Special — later convention)"
+      : "9th (Node 5/7/9 Special — later convention)";
+  }
+
+  if (planetName === "Mars" && (signOffset === 4 || signOffset === 8)) {
+    return signOffset === 4 ? "4th (Mars Special)" : "8th (Mars Special)";
+  }
+  if (planetName === "Jupiter" && (signOffset === 5 || signOffset === 9)) {
+    return signOffset === 5 ? "5th (Jupiter Special)" : "9th (Jupiter Special)";
+  }
+  if (planetName === "Saturn" && (signOffset === 3 || signOffset === 10)) {
+    return signOffset === 3 ? "3rd (Saturn Special)" : "10th (Saturn Special)";
+  }
+  if (signOffset === 3) return "3rd (Quarter)";
+  if (signOffset === 4) return "4th (Three-Quarter)";
+  if (signOffset === 5) return "5th (Half)";
+  if (signOffset === 7) return "7th (Universal)";
+  if (signOffset === 8) return "8th (Three-Quarter)";
+  if (signOffset === 9) return "9th (Half)";
+  if (signOffset === 10) return "10th (Quarter)";
+  return null;
 }
 
 /**
@@ -121,6 +250,8 @@ export function getJaiminiAspectedSigns(signIndex: number): number[] {
 
 export interface DrishtiPlanetInput {
   name: string;
+  /** Exact sidereal longitude in degrees, normalized to [0, 360). */
+  siderealLongitude: number;
   house: number;
   rasiIndex: number;
   rasiName: string;
@@ -128,106 +259,126 @@ export interface DrishtiPlanetInput {
 
 export function calculateDrishtiMatrix(
   planets: DrishtiPlanetInput[],
-  ascendantSignIndex: number
+  ascendantSignIndex: number,
+  options: DrishtiMatrixOptions = {}
 ): DrishtiMatrixReport {
+  if (!Array.isArray(planets)) {
+    throw new TypeError("Graha Drishti requires a planetary position array.");
+  }
+  if (!Number.isInteger(ascendantSignIndex) || ascendantSignIndex < 0 || ascendantSignIndex > 11) {
+    throw new RangeError("Graha Drishti requires an Ascendant sign index from 0 through 11.");
+  }
+
+  const nodeAspectRule = options.nodeAspectRule ?? "none";
+  const degreeStrengthVariant = options.degreeStrengthVariant ?? "bphs-translator-special-adjustments";
+  const names = new Set<string>();
+  planets.forEach((planet) => {
+    if (!planet || typeof planet.name !== "string" || !planet.name.trim()) {
+      throw new RangeError("Every Drishti position requires a planet name.");
+    }
+    if (names.has(planet.name)) {
+      throw new RangeError("Duplicate Drishti position supplied for " + planet.name + ".");
+    }
+    names.add(planet.name);
+    if (!Number.isFinite(planet.siderealLongitude) ||
+        planet.siderealLongitude < 0 || planet.siderealLongitude >= 360 ||
+        !Number.isInteger(planet.rasiIndex) || planet.rasiIndex < 0 || planet.rasiIndex > 11 ||
+        planet.rasiIndex !== Math.floor(planet.siderealLongitude / 30) ||
+        planet.rasiName !== VEDIC_RASIS[planet.rasiIndex].name ||
+        !Number.isInteger(planet.house) || planet.house < 1 || planet.house > 12) {
+      throw new RangeError("Drishti position for " + planet.name + " has inconsistent longitude, sign or house metadata.");
+    }
+  });
+
   const grahaAspects: GrahaAspect[] = [];
   const aspectedByPlanet: Record<string, GrahaAspect[]> = {};
   const aspectedTargetPlanet: Record<string, GrahaAspect[]> = {};
   const houseAspectTotals: Record<number, { beneficScore: number; maleficScore: number; netScore: number; aspectingPlanets: string[] }> = {};
 
-  for (let h = 1; h <= 12; h++) {
-    houseAspectTotals[h] = { beneficScore: 0, maleficScore: 0, netScore: 0, aspectingPlanets: [] };
+  for (let house = 1; house <= 12; house += 1) {
+    houseAspectTotals[house] = { beneficScore: 0, maleficScore: 0, netScore: 0, aspectingPlanets: [] };
   }
 
-  // 1. Calculate Parashari Graha Drishti
-  planets.forEach((p1) => {
-    aspectedByPlanet[p1.name] = [];
-    const p1House = p1.house;
-    const isBenefic = BENEFIC_PLANETS.has(p1.name);
+  // Whole-sign Graha Drishti is counted from the planet's Rasi, not its
+  // Bhava-house number. The target sign is mapped back to a whole-sign house
+  // from the supplied sidereal Ascendant sign.
+  planets.forEach((source) => {
+    aspectedByPlanet[source.name] = [];
+    const isBenefic = BENEFIC_PLANETS.has(source.name);
 
-    // Check all 12 houses relative to p1
-    for (let offset = 1; offset <= 12; offset++) {
-      if (offset === 1) continue; // Same house is conjunction, not aspect
+    for (let signOffset = 2; signOffset <= 12; signOffset += 1) {
+      const strengthVirupas = calculateSignDrishtiVirupas(
+        source.name,
+        signOffset,
+        nodeAspectRule
+      );
+      if (strengthVirupas === 0) continue;
 
-      const targetHouse = ((p1House + offset - 2) % 12) + 1;
-      const targetSignIdx = ((p1.rasiIndex + offset - 1) % 12);
-      const targetSign = VEDIC_RASIS[targetSignIdx].name;
+      const aspectType = getGrahaAspectType(source.name, signOffset, nodeAspectRule);
+      if (!aspectType) continue;
 
-      let aspectType: GrahaAspect["aspectType"] | null = null;
+      const targetSignIndex = (source.rasiIndex + signOffset - 1) % 12;
+      const targetSign = VEDIC_RASIS[targetSignIndex].name;
+      const targetHouse = ((targetSignIndex - ascendantSignIndex + 12) % 12) + 1;
+      const targetPlanets = planets.filter(
+        (target) => target.rasiIndex === targetSignIndex && target.name !== source.name
+      );
 
-      if (offset === 7) {
-        aspectType = "7th (Universal)";
-      } else if (p1.name === "Mars" && offset === 4) {
-        aspectType = "4th (Mars Special)";
-      } else if (p1.name === "Mars" && offset === 8) {
-        aspectType = "8th (Mars Special)";
-      } else if (["Jupiter", "Rahu", "Ketu"].includes(p1.name) && offset === 5) {
-        aspectType = "5th (Jupiter/Nodes Special)";
-      } else if (["Jupiter", "Rahu", "Ketu"].includes(p1.name) && offset === 9) {
-        aspectType = "9th (Jupiter/Nodes Special)";
-      } else if (p1.name === "Saturn" && offset === 3) {
-        aspectType = "3rd (Saturn Special)";
-      } else if (p1.name === "Saturn" && offset === 10) {
-        aspectType = "10th (Saturn Special)";
+      const makeAspect = (target?: DrishtiPlanetInput): GrahaAspect => {
+        const degreeStrengthVirupas = target
+          ? calculateLongitudeDrishtiVirupas(
+              target.siderealLongitude - source.siderealLongitude,
+              source.name,
+              degreeStrengthVariant
+            )
+          : undefined;
+        const degreeStrengthPercent = degreeStrengthVirupas === undefined
+          ? undefined
+          : Math.round((degreeStrengthVirupas / 60) * 100);
+
+        return {
+          aspectingPlanet: source.name,
+          aspectedPlanet: target?.name,
+          aspectedHouse: targetHouse,
+          aspectedSign: targetSign,
+          aspectedSignIndex: targetSignIndex,
+          aspectType,
+          strengthVirupas,
+          strengthPercent: Math.round((strengthVirupas / 60) * 100),
+          degreeStrengthVirupas,
+          degreeStrengthPercent,
+          degreeStrengthVariant: target ? degreeStrengthVariant : undefined,
+          nature: isBenefic ? "Benefic" : "Malefic",
+          description: target
+            ? source.name + " casts " + aspectType + " on " + target.name +
+              " in " + targetSign + " (House " + targetHouse + "); whole-sign grade " +
+              strengthVirupas + " Virupas" +
+              (degreeStrengthVirupas === undefined ? "" : ", exact-longitude " + degreeStrengthVirupas.toFixed(2) + " Virupas") + "."
+            : source.name + " casts " + aspectType + " on " + targetSign +
+              " (House " + targetHouse + ") at whole-sign grade " + strengthVirupas + " Virupas.",
+        };
+      };
+
+      if (targetPlanets.length > 0) {
+        targetPlanets.forEach((target) => {
+          const aspect = makeAspect(target);
+          grahaAspects.push(aspect);
+          aspectedByPlanet[source.name].push(aspect);
+          if (!aspectedTargetPlanet[target.name]) aspectedTargetPlanet[target.name] = [];
+          aspectedTargetPlanet[target.name].push(aspect);
+        });
+      } else {
+        const aspect = makeAspect();
+        grahaAspects.push(aspect);
+        aspectedByPlanet[source.name].push(aspect);
       }
 
-      if (aspectType) {
-        const virupas = calculateDrishtiVirupas(offset * 30, p1.name, offset);
-        const percent = Math.round((virupas / 60) * 100);
-
-        // Find target planets in that house
-        const targetPlanets = planets.filter((tp) => tp.house === targetHouse && tp.name !== p1.name);
-
-        if (targetPlanets.length > 0) {
-          targetPlanets.forEach((tp) => {
-            const aspectObj: GrahaAspect = {
-              aspectingPlanet: p1.name,
-              aspectedPlanet: tp.name,
-              aspectedHouse: targetHouse,
-              aspectedSign: targetSign,
-              aspectedSignIndex: targetSignIdx,
-              aspectType: aspectType!,
-              strengthVirupas: virupas,
-              strengthPercent: percent,
-              nature: isBenefic ? "Benefic" : "Malefic",
-              description: `${p1.name} casts full ${aspectType} on ${tp.name} in House ${targetHouse} (${targetSign}).`,
-            };
-
-            grahaAspects.push(aspectObj);
-            aspectedByPlanet[p1.name].push(aspectObj);
-
-            if (!aspectedTargetPlanet[tp.name]) aspectedTargetPlanet[tp.name] = [];
-            aspectedTargetPlanet[tp.name].push(aspectObj);
-          });
-        } else {
-          // Empty house aspected
-          const aspectObj: GrahaAspect = {
-            aspectingPlanet: p1.name,
-            aspectedHouse: targetHouse,
-            aspectedSign: targetSign,
-            aspectedSignIndex: targetSignIdx,
-            aspectType: aspectType!,
-            strengthVirupas: virupas,
-            strengthPercent: percent,
-            nature: isBenefic ? "Benefic" : "Malefic",
-            description: `${p1.name} casts ${aspectType} onto House ${targetHouse} (${targetSign}).`,
-          };
-
-          grahaAspects.push(aspectObj);
-          aspectedByPlanet[p1.name].push(aspectObj);
-        }
-
-        // Tally on house
-        if (isBenefic) {
-          houseAspectTotals[targetHouse].beneficScore += virupas;
-        } else {
-          houseAspectTotals[targetHouse].maleficScore += virupas;
-        }
-        houseAspectTotals[targetHouse].netScore =
-          houseAspectTotals[targetHouse].beneficScore - houseAspectTotals[targetHouse].maleficScore;
-        if (!houseAspectTotals[targetHouse].aspectingPlanets.includes(p1.name)) {
-          houseAspectTotals[targetHouse].aspectingPlanets.push(p1.name);
-        }
+      if (isBenefic) houseAspectTotals[targetHouse].beneficScore += strengthVirupas;
+      else houseAspectTotals[targetHouse].maleficScore += strengthVirupas;
+      houseAspectTotals[targetHouse].netScore =
+        houseAspectTotals[targetHouse].beneficScore - houseAspectTotals[targetHouse].maleficScore;
+      if (!houseAspectTotals[targetHouse].aspectingPlanets.includes(source.name)) {
+        houseAspectTotals[targetHouse].aspectingPlanets.push(source.name);
       }
     }
   });
@@ -329,5 +480,8 @@ export function calculateDrishtiMatrix(
     mutualAspects,
     rashiDrishtis,
     houseAspectTotals,
+    grahaAspectPolicy: "bphs-chapter-26-seven-grahas",
+    nodeAspectRule,
+    degreeStrengthVariant,
   };
 }
