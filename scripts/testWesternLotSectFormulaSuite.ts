@@ -78,7 +78,7 @@ for (const isDayChart of [true, false]) {
 // Malformed cusps must never be represented by an apparently valid chart
 // position or an arbitrary House 1 result.
 assert.throws(
-  () => calculator.calculateAll({ ...base, houseCusps: [0, 30, 60] }),
+  () => calculator.calculateAll({ ...base, houseCusps: [0, 30, 60], isDayChart: true }),
   /exactly twelve finite house cusps/
 );
 
