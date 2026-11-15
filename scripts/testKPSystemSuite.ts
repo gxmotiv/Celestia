@@ -422,7 +422,7 @@ const nodeTestPlanets = [
   nodePlanet("Mercury", 7, 8, "Saturn", "Jupiter"),
   nodePlanet("Venus", 1, 2, "Sun", "Mars"),
   nodePlanet("Mars", 0, 1, "Saturn", "Jupiter"),
-  nodePlanet("Jupiter", 8, 9, "Moon", "Saturn"),
+  nodePlanet("Jupiter", 8, 9, "Saturn", "Saturn"),
   nodePlanet("Saturn", 5, 6, "Jupiter", "Mercury"),
   nodePlanet("Rahu", 3, 4, "Jupiter", "Venus"),
   nodePlanet("Ketu", 9, 10, "Saturn", "Mercury"),
