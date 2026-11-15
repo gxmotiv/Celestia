@@ -1261,7 +1261,12 @@ export function KPSystemPanel({
               <span className="text-[11px] text-slate-500">KP body profile:</span>
               <button
                 type="button"
-                onClick={() => setKPBodySet("classical-nine")}
+                onClick={() => {
+                  setKPBodySet("classical-nine");
+                  if (["Uranus", "Neptune", "Pluto"].includes(fourStepTarget)) {
+                    setFourStepTarget("Sun");
+                  }
+                }}
                 aria-pressed={kpBodySet === "classical-nine"}
                 className={`rounded-md border px-2.5 py-1 text-[11px] font-semibold ${kpBodySet === "classical-nine" ? "border-cyan-500 bg-cyan-950/60 text-cyan-200" : "border-slate-700 text-slate-400"}`}
               >
