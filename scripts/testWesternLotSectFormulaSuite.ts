@@ -21,8 +21,8 @@ const day = calculator.calculateAll({ ...base, isDayChart: true });
 assert.equal(day.formulaProfile, "common-hellenistic-sect-reversed");
 assert.equal(day.partOfFortune.longitude, 160); // ASC + Moon - Sun
 assert.equal(day.partOfSpirit.longitude, 40);   // ASC + Sun - Moon
-assert.equal(day.partOfFortune.formula, "ASC + Moon - Sun (Day)");
-assert.equal(day.partOfSpirit.formula, "ASC + Sun - Moon (Day)");
+assert.equal(day.partOfFortune.formula, "ASC + Moon - Sun (Common Hellenistic Day)");
+assert.equal(day.partOfSpirit.formula, "ASC + Sun - Moon (Common Hellenistic Day)");
 assert.equal(day.partOfFortune.house, 6);
 assert.equal(day.partOfSpirit.house, 2);
 
@@ -31,8 +31,8 @@ const night = calculator.calculateAll({ ...base, isDayChart: false });
 assert.equal(night.formulaProfile, "common-hellenistic-sect-reversed");
 assert.equal(night.partOfFortune.longitude, 40); // ASC + Sun - Moon
 assert.equal(night.partOfSpirit.longitude, 160); // ASC + Moon - Sun
-assert.equal(night.partOfFortune.formula, "ASC + Sun - Moon (Night)");
-assert.equal(night.partOfSpirit.formula, "ASC + Moon - Sun (Night)");
+assert.equal(night.partOfFortune.formula, "ASC + Sun - Moon (Common Hellenistic Night)");
+assert.equal(night.partOfSpirit.formula, "ASC + Moon - Sun (Common Hellenistic Night)");
 assert.equal(night.partOfFortune.house, 2);
 assert.equal(night.partOfSpirit.house, 6);
 
