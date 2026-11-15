@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import { VedicChartData } from "@/lib/astronomy/vedic";
-import { calculateDrishtiMatrix, DrishtiMatrixReport, GrahaAspect } from "@/lib/vedic/drishtiEngine";
+import { calculateDrishtiMatrix, DrishtiMatrixReport, GrahaAspect, NodeAspectRule, DrishtiVirupaVariant } from "@/lib/vedic/drishtiEngine";
 import { Eye, Compass, Shield, Sparkles, Filter, ChevronRight, Activity } from "lucide-react";
 
 interface DrishtiMatrixPanelProps {
@@ -14,10 +14,16 @@ export function DrishtiMatrixPanel({ vedicData, fullName = "Seeker" }: DrishtiMa
   const [activeTab, setActiveTab] = useState<"graha" | "rashi" | "mutual">("graha");
   const [aspectFilter, setAspectFilter] = useState<"all" | "special" | "benefic" | "malefic">("all");
   const [selectedPlanetFilter, setSelectedPlanetFilter] = useState<string | "all">("all");
+  const [nodeAspectRule, setNodeAspectRule] = useState<NodeAspectRule>("none");
+  const [degreeStrengthVariant, setDegreeStrengthVariant] =
+    useState<DrishtiVirupaVariant>("bphs-translator-special-adjustments");
 
   const drishtiReport: DrishtiMatrixReport = useMemo(() => {
-    return calculateDrishtiMatrix(vedicData.planets, vedicData.lagna.rasiIndex);
-  }, [vedicData]);
+    return calculateDrishtiMatrix(vedicData.planets, vedicData.lagna.rasiIndex, {
+      nodeAspectRule,
+      degreeStrengthVariant,
+    });
+  }, [vedicData, nodeAspectRule, degreeStrengthVariant]);
 
   const planetsList = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu"];
 
@@ -57,7 +63,7 @@ export function DrishtiMatrixPanel({ vedicData, fullName = "Seeker" }: DrishtiMa
               Planetary (Graha) & Sign (Rashi) Drishti
             </h2>
             <p className="text-xs text-slate-400 max-w-2xl mt-0.5">
-              Comprehensive evaluation of planetary sight (Graha Drishti with special Parashari full aspects) and Jaimini sign sight (Rashi Drishti) with Virupa strength scores.
+              Separate BPHS whole-sign Graha Drishti grades from exact-longitude Virupa strength, alongside Jaimini Rashi Drishti. Nodal aspects are a separately labelled later-school option.
             </p>
           </div>
 
@@ -143,6 +149,35 @@ export function DrishtiMatrixPanel({ vedicData, fullName = "Seeker" }: DrishtiMa
             </div>
           </div>
 
+          <div className="flex flex-col md:flex-row md:items-center gap-3 p-3 bg-slate-950 border border-slate-800 rounded-xl">
+            <label className="flex flex-col gap-1 text-[11px] text-slate-400">
+              Rahu / Ketu Graha Drishti variant
+              <select
+                value={nodeAspectRule}
+                onChange={(event) => setNodeAspectRule(event.target.value as NodeAspectRule)}
+                className="bg-slate-900 border border-slate-700 rounded-md px-2.5 py-1.5 text-xs text-slate-200"
+              >
+                <option value="none">No nodal Graha Drishti (conservative BPHS profile)</option>
+                <option value="seventh-only">7th only (later convention)</option>
+                <option value="fifth-seventh-ninth">5th / 7th / 9th (later convention)</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-[11px] text-slate-400">
+              Exact-longitude Drishti Pinda
+              <select
+                value={degreeStrengthVariant}
+                onChange={(event) => setDegreeStrengthVariant(event.target.value as DrishtiVirupaVariant)}
+                className="bg-slate-900 border border-slate-700 rounded-md px-2.5 py-1.5 text-xs text-slate-200"
+              >
+                <option value="bphs-base-longitude-curve">BPHS Ch. 26 base longitude curve</option>
+                <option value="bphs-translator-special-adjustments">Base curve + printed special-aspect adjustments</option>
+              </select>
+            </label>
+            <p className="text-[10px] text-slate-500 md:ml-auto max-w-xl">
+              Whole-sign grades remain separate from degree strength. The second longitude option applies a commonly printed translator-note interpretation; it is not silently treated as the only edition.
+            </p>
+          </div>
+
           {/* Two-Way Aspect Matrix Grid */}
           <div className="p-4 bg-slate-950 border border-slate-800 rounded-2xl overflow-x-auto shadow-lg space-y-3">
             <div className="flex items-center justify-between">
@@ -212,9 +247,14 @@ export function DrishtiMatrixPanel({ vedicData, fullName = "Seeker" }: DrishtiMa
                                     : "bg-rose-500/25 text-rose-300 border border-rose-500/40"
                                   : "bg-amber-500/15 text-amber-300"
                               }`}
-                              title={`${aspect.aspectType}: ${aspect.strengthVirupas} Virupas (${aspect.strengthPercent}%)`}
+                              title={`${aspect.aspectType}: whole-sign ${aspect.strengthVirupas} Virupas (${aspect.strengthPercent}%)${aspect.degreeStrengthVirupas === undefined ? "" : ", exact-longitude " + aspect.degreeStrengthVirupas.toFixed(2) + " Virupas"}`}
                             >
                               {aspect.strengthVirupas}v
+                              {aspect.degreeStrengthVirupas !== undefined && (
+                                <span className="block text-[9px] font-normal text-slate-400">
+                                  exact {aspect.degreeStrengthVirupas.toFixed(1)}v
+                                </span>
+                              )}
                             </span>
                           </td>
                         );
