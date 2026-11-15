@@ -30,10 +30,21 @@ The ruling-planet list now follows the five-ruler preference sequence described 
 
 - The classical KP house significator hierarchy is the four grades: planets in the stars of house occupants; occupants; planets in the stars of house owners; and the house owner. See the digitized *KP Astrology Basics* transcription: https://archive.org/stream/krishnamurti-padhdhati-vol-3-english/KP-Astrology-Basics_djvu.txt
 - The planet-level four-fold strength sequence is separately described in *Astro Secrets and Krishnamurti Padhdhati*, Part I, pp. 12–14 in the digitized transcription: the star lord's occupied/owned houses precede the planet's own occupied/owned houses, with conditions tied to planets tenanting the planet's stars. https://archive.org/stream/krishnamurti-padhdhati-vol-3-english/Astro-secrets%20%26%20KP%20Part1_djvu.txt
-- The later Sunil Gondhalekar 4-Step method is not the same thing as the classical four-grade house-significator table. The available practitioner lesson notes describe primary/secondary status and empty-house conditions that the present `KPFourStepEngine` does not yet fully implement: https://kpastrology.astrosage.com/kp-learning-home/related-systems/four-step-theory
+- The later Sunil Gondhalekar 4-Step method is not the same thing as the classical four-grade house-significator table. `KPFourStepEngine` now separately reports primary and secondary houses for Steps 1/3 using Positional Status and empty-house rules, and for Steps 2/4 using the star-lord principal rule. Practitioner lesson notes describing these conditions: https://kpastrology.astrosage.com/kp-learning-home/related-systems/four-step-theory
 - KP Reader VI's five-ruler preference order is represented in the searchable digitized *KP Simple Rules* material: https://archive.org/stream/krishnamurti-padhdhati-vol-3-english/KP-Simple-Rules_djvu.txt. The specific page reference p. 138 is also cited by a secondary explanatory source; the edition and pagination should be verified against a physical/scan copy before treating that secondary page citation as a critical-edition reference: https://vedik.com.br/en/blog/ruling-planets-astrologia-vedica-timing
 
 These transcriptions and teaching notes are research witnesses, not a critical edition. Keep the implementation variant-labelled and preserve any disagreements between KP lineages instead of blending their rules.
+
+## Gondhalekar primary / secondary strength
+
+The engine now keeps the four steps distinct and exposes `primaryHouses` and `secondaryHouses` on each `KPStepDetail` rather than presenting every connection as equally strong.
+
+- **Steps 1 and 3 (planet / sub-lord):** a planet with Positional Status is primary for its occupied house; otherwise it is secondary. Owned houses are primary only when the planet has Positional Status and the owned house is empty. Owned houses of a planet without Positional Status remain secondary even when empty.
+- **Steps 2 and 4 (star lord / sub's star lord):** the star lord is principal for its occupied house; its owned houses are primary only when empty, with occupied owned houses secondary.
+- A planet in its own star retains Positional Status even when other planets tenant that star. The engine therefore does not turn that case into a secondary placement.
+- The existing combined `allHouses` field is retained for compatibility. The current 4-Step verdict and CIL verdict still aggregate that union; they have **not** yet been upgraded to a fully sourced primary/secondary adjudication model. Conjunction within 3°20′, complete node-agent rules, and retrograde filters remain unimplemented. The panel now displays the primary and secondary sets separately.
+
+This implements the practitioner lesson's stated strength distinctions, but does not certify the lesson as an original KSK primary text or as the only Gondhalekar lineage variant.
 
 ## Regression coverage added
 
@@ -42,6 +53,10 @@ These transcriptions and teaching notes are research witnesses, not a critical e
 - invalid KP prediction house rejection;
 - rejection of an unresolved CSL planet rather than synthetic House 1 signification;
 - the five ruling planets in the prescribed preference order;
-- missing Moon and invalid date rejection.
+- missing Moon and invalid date rejection;
+- own-star Positional Status despite star tenants;
+- primary occupied-house and empty-owned-house classification;
+- secondary owned-house classification when a house is occupied;
+- star-lord Step 2/4 principal vs secondary ownership classification.
 
 The latest verification result must be read from GitHub Actions for the commit under test. A successful Cloudflare deploy does not replace the verification gate.
