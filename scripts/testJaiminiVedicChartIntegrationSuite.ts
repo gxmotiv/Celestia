@@ -25,14 +25,17 @@ assert.ok(
   Number.isFinite(vedic.lagna.siderealLongitude),
   "The Vedic chart must have a finite sidereal Lagna"
 );
+const atmakarakaPosition = vedic.planets.find(
+  (planet) => planet.name === atmakaraka.planet
+);
+assert.ok(atmakarakaPosition, "Atmakaraka must resolve to a natal graha position");
+const normalizedAtmakarakaLongitude =
+  ((atmakarakaPosition!.siderealLongitude % 360) + 360) % 360;
+const expectedKarakamsaSign =
+  Math.floor(normalizedAtmakarakaLongitude / (30 / 9)) % 12;
 assert.equal(
   result.karakamsaSignIndex,
-  Math.floor(atmakaraka.rasiDegree + (result.karakamsaSignIndex * 30)) < 0
-    ? -1
-    : Math.floor(
-        (((vedic.planets.find((p) => p.name === atmakaraka.planet)!.siderealLongitude % 360) + 360) % 360) /
-          (30 / 9)
-      ) % 12,
+  expectedKarakamsaSign,
   "Karakamsa D9 sign is derived from the Atmakaraka's sidereal longitude"
 );
 const expectedHouseFromLagna =
