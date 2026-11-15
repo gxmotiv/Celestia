@@ -7,6 +7,7 @@ on:
       - main
       - fix/celestia-calculation-integrity
       - fix/western-house-sect-predictive-integrity
+      - deploy/cloudflare-workers-free
 
 permissions:
   contents: write
@@ -26,6 +27,7 @@ jobs:
           - testAstrologySuite.ts
           - testWesternIntegritySuite.ts
           - testWesternHouseSystemPolicySuite.ts
+          - testKPSystemSuite.ts
           - testRegiomontanusHouseSystemSuite.ts
           - testKochHouseSystemSuite.ts
           - testCampanusHouseSystemSuite.ts
