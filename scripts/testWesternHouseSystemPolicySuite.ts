@@ -3,6 +3,7 @@ import { calculateWesternChart } from "../lib/astronomy/ephemeris";
 import {
   isWesternHouseSystemImplemented,
   recommendWesternHouseSystem,
+  toWesternTransitHouseSystem,
 } from "../lib/astronomy/westernHouseSystemPolicy";
 
 let assertions = 0;
@@ -79,6 +80,14 @@ check(isWesternHouseSystemImplemented("Placidus") &&
 
 check(!isWesternHouseSystemImplemented("Campanus"),
   "Campanus remains unavailable until its own calculation engine is implemented");
+
+check(toWesternTransitHouseSystem("Koch") === "koch" &&
+  toWesternTransitHouseSystem("Regiomontanus") === "regiomontanus" &&
+  toWesternTransitHouseSystem("Porphyry") === "porphyry" &&
+  toWesternTransitHouseSystem("Placidus") === "placidus" &&
+  toWesternTransitHouseSystem("Equal") === "equal" &&
+  toWesternTransitHouseSystem("WholeSign") === "whole-sign",
+  "Transit Auto mapping preserves every implemented natal house method, including Koch");
 
 const kochSchool = recommendWesternHouseSystem("koch-school-natal", 52.2);
 check(kochSchool.status === "supported" && kochSchool.preferredSystem === "Koch" &&
