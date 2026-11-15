@@ -184,7 +184,17 @@ export class KPPredictionEngine {
 
     // Calculate Significators across chart
     const houseSignificators = this.significatorsEngine.calculateAllHouseSignificators(cusps, planets);
-    const planetSignifications = this.significatorsEngine.calculateAllPlanetSignifications(cusps, planets);
+    const basePlanetSignifications = this.significatorsEngine.calculateAllPlanetSignifications(cusps, planets);
+    const nodeRepresentations = this.significatorsEngine.calculateNodeRepresentations(
+      planets,
+      basePlanetSignifications,
+      "reader-vi"
+    );
+    const planetSignifications = this.significatorsEngine.applyNodeAgentSignifications(
+      planets,
+      basePlanetSignifications,
+      nodeRepresentations
+    );
 
     // Get CSL signification
     const cslSignification = planetSignifications[csl];
