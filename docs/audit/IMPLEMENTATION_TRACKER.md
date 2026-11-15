@@ -1,6 +1,6 @@
 # Celestia master implementation tracker
 
-Last reviewed: 2026-11-13  
+Last reviewed: 2026-11-15  
 Source of scope: `docs/audit/2026-10-31-master-audit-spec.md` and the current GitHub source tree.  
 Policy: keep changes on isolated branches; do not merge or deploy until the owner reviews the PR chain. Passing internal tests is not proof of astronomical correctness.
 
@@ -55,7 +55,7 @@ Policy: keep changes on isolated branches; do not merge or deploy until the owne
 
 | Item | Current status | Evidence / next acceptance gate |
 |---|---|---|
-| KP sub-lord calculations | Audit required | Verify star/sub division sequence, cusp/planet sub-lords, ayanamsa and boundary behavior. |
+| KP sub-lord calculations | Partial — KP 1–2193 table corrected; broader audit remains | KP 1–249 remains 249 rows; later 1–2193 extension now derives 2,187 sub-sub intervals from the 243 unsplit parent intervals and applies six sign-edge splits, correcting the prior 2,241-row defect. Regression fixtures check published AstroNeemo rows 1–2, 192–193 and equivalent seeds 1/732/1463, full coverage and point-lookup lord agreement. KP ayanamsa variants, full cusp/planet boundary coverage, 4-Step/CIL source rules and predictive scoring still need independent reconciliation. |
 | KP percentages | Known concern | Trace actual formulas and classify every score as deterministic, heuristic, empirical or display-only. Do not label unvalidated scores as probability. |
 | Interpretations | Audit required | Trace each text/score to calculated inputs and clearly separate traditional interpretation from factual calculation. |
 
