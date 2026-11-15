@@ -50,7 +50,7 @@ Shared astronomy may provide raw positions and time conversions. It does not aut
 
 ### Shadbala status correction
 
-**Finding:** the Shadbala screen claimed a complete classical six-fold result, but the engine still used provisional/fixed values and simplified approximations for several components. In particular, Saptavargaja currently repeats one Rashi relationship across seven Vargas; Dig Bala uses a simplified ecliptic offset from the Ascendant; Kala Bala contains fixed values for some subcomponents; and Drik Bala uses simplified fixed aspect bands.
+**Finding:** the Shadbala screen previously claimed a complete classical six-fold result while the engine used provisional/fixed values and simplified approximations. Saptavargaja initially repeated one Rashi relationship across seven Vargas; Dig Bala uses a simplified ecliptic offset from the Ascendant; Kala Bala contains fixed values for some subcomponents; and Drik Bala uses simplified fixed aspect bands.
 
 **Correction:** the UI now labels Shadbala as partial/approximate, explains the known limitations, and changes “Strong/Weak” to “Above/Below modeled threshold.” Cheshta Bala no longer invents a default daily motion for non-luminary planets: it uses an actual supplied speed or returns an unavailable result. The website passes through the Western chart's computed planetary speed when available.
 
