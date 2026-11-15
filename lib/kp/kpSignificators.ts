@@ -286,6 +286,68 @@ export class KPSignificators {
   }
 
   /**
+   * Apply the selected node-agent chain to the otherwise classical A-D table.
+   * Only the preferred Reader tier is injected into the main A-D result;
+   * alternate tiers remain visible in the node cascade for auditability.
+   */
+  public applyNodeAgentSignifications(
+    planets: KPPlanet[],
+    baseSignifications: Record<string, KPPlanetSignification>,
+    nodeRepresentations: Partial<Record<"Rahu" | "Ketu", KPNodeRepresentation>>
+  ): Record<string, KPPlanetSignification> {
+    const expanded: Record<string, KPPlanetSignification> = {};
+
+    planets.forEach((planet) => {
+      const base = baseSignifications[planet.name];
+      if (!base) throw new Error(`KP node integration is missing base signification for ${planet.name}.`);
+
+      const isNode = planet.name === "Rahu" || planet.name === "Ketu";
+      const nodeForStarLord = planet.starLord === "Rahu" || planet.starLord === "Ketu"
+        ? planet.starLord
+        : undefined;
+      const nodeRepresentation = isNode
+        ? nodeRepresentations[planet.name as "Rahu" | "Ketu"]
+        : nodeForStarLord
+        ? nodeRepresentations[nodeForStarLord]
+        : undefined;
+
+      if ((isNode || nodeForStarLord) && !nodeRepresentation) {
+        throw new Error(`KP node integration cannot resolve the representative cascade for ${isNode ? planet.name : nodeForStarLord}.`);
+      }
+
+      const nodeAgentHouses = isNode
+        ? [...(nodeRepresentation?.representedHouses ?? [])]
+        : undefined;
+      const starLordNodeAgentHouses = nodeForStarLord
+        ? [...(nodeRepresentation?.representedHouses ?? [])]
+        : undefined;
+
+      const levelA = Array.from(new Set([
+        ...base.levels.levelA,
+        ...(starLordNodeAgentHouses ?? []),
+      ])).sort((a, b) => a - b);
+      const signifiedHouses = Array.from(new Set([
+        ...base.signifiedHouses,
+        ...(nodeAgentHouses ?? []),
+        ...(starLordNodeAgentHouses ?? []),
+      ])).sort((a, b) => a - b);
+
+      expanded[planet.name] = {
+        ...base,
+        levels: {
+          ...base.levels,
+          levelA,
+        },
+        nodeAgentHouses,
+        starLordNodeAgentHouses,
+        signifiedHouses,
+      };
+    });
+
+    return expanded;
+  }
+
+  /**
    * Calculate all 12 houses significators
    */
   public calculateAllHouseSignificators(
