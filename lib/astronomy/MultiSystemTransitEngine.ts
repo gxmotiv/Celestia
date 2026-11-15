@@ -1,7 +1,7 @@
 /**
  * Multi-System Planetary Transit Prediction Engine
  * Provides clean, pure separation between:
- * 1. Western Modern (Tropical, Placidus/Equal/Porphyry/Whole Sign/Regiomontanus, Ptolemaic Aspects, Psychological)
+ * 1. Western Modern (Tropical, Placidus/Equal/Porphyry/Whole Sign/Regiomontanus/Koch/Campanus, Ptolemaic Aspects, Psychological)
  * 2. Vedic Jyotish (Sidereal Lahiri/Raman/KP, Whole Sign / Chandra Lagna Gochara, Graha Drishti, Karmic + Remedies)
  * 3. Hellenistic Traditional (Tropical, Whole Sign, Sect, Ptolemaic)
  * 4. Western Sidereal (Fagan-Bradley, Placidus/Equal/Porphyry, Ptolemaic)
