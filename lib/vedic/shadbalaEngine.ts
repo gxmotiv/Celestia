@@ -15,7 +15,7 @@ export const SHADBALA_IMPLEMENTATION_STATUS = {
   summary:
     "This is a provisional six-component estimate, not yet an independently verified classical Shadbala calculation.",
   limitations: [
-    "Saptavargaja now evaluates D1, D2, D3, D7, D9, D12 and D30 separately. Its default score scale is the R. Santhanam BPHS translation (45/30/20/15/10/4/2); the alternative Raman halving scale can be selected explicitly. Five-fold friendship is derived from D1 relationships, and Moolatrikona is applied in D1 only."
+    "Saptavargaja now evaluates D1, D2, D3, D7, D9, D12 and D30 separately. Its default score scale is the R. Santhanam BPHS translation (45/30/20/15/10/4/2); the alternative Raman halving scale can be selected explicitly. Five-fold friendship is derived from D1 relationships, and Moolatrikona is applied in D1 only.",
     "Dig Bala uses a simplified ecliptic offset from the Ascendant instead of the exact relevant angle (IC, Descendant, MC or Ascendant).",
     "Kala Bala still contains fixed placeholder values for Tribhaga, year, month and Ayana components, and its Hora estimate is not a sunrise-based planetary-hour calculation.",
     "Cheshta Bala uses coarse motion bands; non-luminary scores require an actual daily-motion value. Sun and Moon still use provisional constants rather than their textually specified Ayana/Paksha derivations.",
@@ -665,32 +665,6 @@ export class ShadbalaEngine {
       aspects: aspectsList,
       description: `Net Drishti aspect score is ${drikPoints} Virupas.`,
     };
-  }
-
-  private isOwnSign(planet: string, sign: number): boolean {
-    const ownSigns: Record<string, number[]> = {
-      Sun: [4],
-      Moon: [3],
-      Mars: [0, 7],
-      Mercury: [2, 5],
-      Jupiter: [8, 11],
-      Venus: [1, 6],
-      Saturn: [9, 10],
-    };
-    return (ownSigns[planet] || []).includes(sign);
-  }
-
-  private isFriendSign(planet: string, sign: number): boolean {
-    const friends: Record<string, number[]> = {
-      Sun: [3, 8, 0],
-      Moon: [4, 2, 5],
-      Mars: [4, 3, 8],
-      Mercury: [4, 1, 6],
-      Jupiter: [4, 3, 0],
-      Venus: [2, 5, 9, 10],
-      Saturn: [2, 5, 1, 6],
-    };
-    return (friends[planet] || []).includes(sign);
   }
 
   private interpretPlanetStrength(
