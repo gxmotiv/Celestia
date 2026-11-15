@@ -398,7 +398,7 @@ export function ShadbalaPanel({
                               <div
                                 className={`h-full rounded-full ${b.color}`}
                                 style={{
-                                  width: `${Math.min(100, (b.absolute ? Math.abs(b.points) : Math.max(0, b.points)) / b.max * 100)}%`,
+                                  width: `${Math.min(100, (("absolute" in b && b.absolute) ? Math.abs(b.points) : Math.max(0, b.points)) / b.max * 100)}%`,
                                 }}
                               />
                             </div>
