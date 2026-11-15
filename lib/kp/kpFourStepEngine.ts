@@ -1,11 +1,12 @@
 /**
- * Modern Krishnamurti Padhdhati (KP) 4-Step Theory & Cuspal Interlinks (CIL) Engine
+ * Modern KP extensions: Gondhalekar 4-Step and later CIL variants.
+ * These are kept distinct from the classical KP four-fold house-significator hierarchy.
  * 
  * Includes:
  * 1. Automatic Positional Status (PS) Engine
  *    - In own star OR no tenants in star.
  *    - Node (Rahu/Ketu) special representation.
- * 2. Sunil Gondhalekar 4-Step Theory:
+ * 2. Later Sunil Gondhalekar 4-Step method (not the classical four-fold hierarchy):
  *    - Step 1 (Source): Planet itself (Active if PS, else secondary)
  *    - Step 2 (The Offer): Star Lord of the Planet
  *    - Step 3 (The Fruit / Decision): Sub Lord of the Planet
@@ -199,11 +200,14 @@ export class KPFourStepEngine {
     ).sort((a, b) => a - b);
 
     // Event determination if targetHouse is provided
-    const rule = targetHouse ? KP_EVENT_RULES[targetHouse] : undefined;
+    if (targetHouse !== undefined && (!Number.isInteger(targetHouse) || targetHouse < 1 || targetHouse > 12)) {
+      throw new Error(`KP 4-Step target house must be between 1 and 12; received ${targetHouse}.`);
+    }
+    const rule = targetHouse === undefined ? undefined : KP_EVENT_RULES[targetHouse];
     const favorable = rule ? rule.favorableHouses : [];
     const detrimental = rule ? rule.negationHouses : [];
 
-    let stepVerdict: KPFourStepData["stepVerdict"] = "Favorable";
+    let stepVerdict: KPFourStepData["stepVerdict"] = "Delayed / Mixed";
     let analysisText = "";
     let gondhalekarRule = "";
 
