@@ -71,8 +71,8 @@ assert.equal(
 );
 assert.equal(
   calculateLongitudeDrishtiVirupas(270, "Jupiter", "bphs-verse-special-formula"),
-  0,
-  "BPHS Jupiter c=8 formula reaches zero at the 270-degree boundary"
+  15,
+  "At 270 degrees Jupiter enters the ninth-sign interval and the generic curve returns 15"
 );
 assert.equal(
   calculateLongitudeDrishtiVirupas(270, "Jupiter", "bphs-verse-special-formula"),
