@@ -35,8 +35,45 @@ export class KPCuspsCalculator {
    * explicitly until those distinct source variants are reconciled.
    */
   public static calculateKPAyanamsa(year: number, month: number, day: number): number {
-    const fractionOfYear = (month - 1) / 12 + day / 365.25;
-    const decimalYear = year + fractionOfYear;
+    if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+      throw new RangeError("KP ayanamsa date must use integer Gregorian year, month, and day values.");
+    }
+    if (month < 1 || month > 12) {
+      throw new RangeError("KP ayanamsa month must be between 1 and 12.");
+    }
+
+    const isLeapYear =
+      year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+    const monthLengths = [
+      31,
+      isLeapYear ? 29 : 28,
+      31,
+      30,
+      31,
+      30,
+      31,
+      31,
+      30,
+      31,
+      30,
+      31,
+    ];
+    const daysInYear = isLeapYear ? 366 : 365;
+    const daysInPreviousMonths = monthLengths
+      .slice(0, month - 1)
+      .reduce((total, length) => total + length, 0);
+
+    if (day < 1 || day > monthLengths[month - 1]) {
+      throw new RangeError("KP ayanamsa day is outside the selected Gregorian month.");
+    }
+
+    // The API accepts a civil date rather than a timestamp, so use the start
+    // of that Gregorian date as the interpolation point. This makes 1 Jan
+    // 1900 exactly the declared 1900.0 anchor and advances one full stated
+    // year between consecutive New Years. This is still the provisional
+    // straight-line Celestia profile, not a claim to reproduce the KSK table.
+    const elapsedDays = daysInPreviousMonths + day - 1;
+    const decimalYear = year + elapsedDays / daysInYear;
     const diffYears = decimalYear - 1900.0;
     const ayanamsaSeconds = 22 * 3600 + 22 * 60 + 14 + diffYears * 50.2388475;
     return ayanamsaSeconds / 3600;
