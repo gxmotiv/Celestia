@@ -288,13 +288,17 @@ assert.throws(
 );
 
 const strengthCusps = {
+  cusps: Array.from({ length: 12 }, (_, index) => index * 30),
   houseLords: [
     "Mercury", "Sun", "Jupiter", "Saturn", "Mercury", "Mercury",
     "Sun", "Sun", "Mars", "Venus", "Venus", "Jupiter",
   ],
 } as unknown as KPCusps;
 const strengthPlanet = (name: string, house: number, starLord: string, subLord = "Moon", signLord = "Mars") =>
-  ({ name, house, starLord, subLord, signLord, isRetrograde: false }) as unknown as KPPlanet;
+  ({
+    name, house, starLord, subLord, signLord, isRetrograde: false,
+    siderealLon: (house - 1) * 30 + 10,
+  }) as unknown as KPPlanet;
 const strengthPlanets = [
   strengthPlanet("Mercury", 1, "Mercury"),
   strengthPlanet("Sun", 2, "Venus"),
@@ -326,6 +330,26 @@ assert.ok(venusFourStep.step2.primaryHouses.includes(2), "Step 2 star lord is pr
 assert.ok(venusFourStep.step2.primaryHouses.includes(7), "Step 2 star lord is primary for an empty owned house");
 assert.ok(venusFourStep.step2.secondaryHouses.includes(8), "Step 2 star lord is secondary for its occupied owned house");
 assert.equal(venusFourStep.step2.strengthRule, "star-lord-principal");
+
+const classicalPlanetSignifications = new KPSignificators().calculateAllPlanetSignifications(
+  strengthCusps,
+  strengthPlanets
+);
+const venusClassicalStrength = classicalPlanetSignifications.Venus;
+assert.deepEqual(venusClassicalStrength.levels.levelA, [2], "Level A is the house occupied by Venus's star lord Sun");
+assert.deepEqual(venusClassicalStrength.levels.levelB, [9], "Level B is the house occupied by Venus itself");
+assert.deepEqual(venusClassicalStrength.levels.levelC, [2, 7, 8], "Level C is the set of houses owned by Venus's star lord Sun");
+assert.deepEqual(venusClassicalStrength.levels.levelD, [10, 11], "Level D is the set of houses owned by Venus itself");
+assert.equal(venusClassicalStrength.hasSelfStrength, false, "A planet with a tenant in its stars uses standard A-B-C-D order");
+assert.deepEqual(venusClassicalStrength.strengthOrder, ["A", "B", "C", "D"]);
+assert.deepEqual(venusClassicalStrength.starTenants, ["Sun"]);
+const mercuryClassicalStrength = classicalPlanetSignifications.Mercury;
+assert.equal(mercuryClassicalStrength.hasSelfStrength, true, "A planet in its own star receives self-strength");
+assert.deepEqual(mercuryClassicalStrength.strengthOrder, ["B", "A", "D", "C"]);
+const sunClassicalStrength = classicalPlanetSignifications.Sun;
+assert.equal(sunClassicalStrength.hasSelfStrength, true, "A planet with no other planets in its stars receives self-strength");
+assert.deepEqual(sunClassicalStrength.starTenants, []);
+
 
 
 const predictionEngine = new KPPredictionEngine();
