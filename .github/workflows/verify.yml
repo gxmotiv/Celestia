@@ -30,6 +30,7 @@ jobs:
           - testKochHouseSystemSuite.ts
           - testCampanusHouseSystemSuite.ts
           - testAlcabitiusHouseSystemSuite.ts
+          - testMorinusHouseSystemSuite.ts
           - testWesternReferenceHarness.ts
           - testInpopWesternEphemerisHarness.ts
           - testAstrometricJ2000Harness.ts
