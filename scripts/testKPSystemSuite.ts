@@ -381,11 +381,13 @@ const strengthPlanets = [
   strengthPlanet("Saturn", 6, "Jupiter"),
   strengthPlanet("Jupiter", 8, "Saturn"),
   strengthPlanet("Rahu", 11, "Mercury"),
+  strengthPlanet("Ketu", 12, "Jupiter"),
 ];
 const strengthPS = fourStep.calculatePositionalStatus(strengthCusps, strengthPlanets);
 assert.equal(strengthPS.Mercury.hasPositionalStatus, true, "A planet in its own star retains PS even when a planet tenants its star");
 assert.equal(strengthPS.Venus.hasPositionalStatus, false, "A non-own-star planet with a tenant in its star has no PS");
-assert.equal(strengthPS.Sun.hasPositionalStatus, true, "A planet with no tenants in its stars has PS");
+assert.equal(strengthPS.Sun.hasPositionalStatus, false, "Sun has a tenant in its star because Venus is in Sun's star");
+assert.equal(strengthPS.Ketu.hasPositionalStatus, true, "A planet with no tenants in its stars has Positional Status");
 const mercuryFourStep = fourStep.evaluatePlanetFourStep("Mercury", strengthCusps, strengthPlanets, strengthPS);
 assert.ok(mercuryFourStep.step1.primaryHouses.includes(1), "Own-star planet must be primary for its occupied house, even when it also owns that same occupied house");
 assert.ok(mercuryFourStep.step2.primaryHouses.includes(1), "Star lord's occupied and owned house must remain primary");
