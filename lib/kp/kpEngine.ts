@@ -3,7 +3,7 @@
  * Integrates Cusps, Sub-Lords, Significators, Ruling Planets & Predictions
  */
 
-import { WesternChartData, normalizeDegrees } from "../astronomy/ephemeris";
+import { WesternChartData, normalizeDegrees, filterCalculationReadyPoints } from "../astronomy/ephemeris";
 import { VedicChartData } from "../astronomy/vedic";
 import {
   KPChartData,
@@ -47,7 +47,15 @@ export class KPEngine {
     const kpAyanamsa = kpCusps.ayanamsa;
 
     // 2. Convert Western Planets to KP Sidereal with Sub-Lord and Sub-Sub Lord
-    const kpPlanets: KPPlanet[] = westernData.planets.map((p) => {
+    const kpPlanets: KPPlanet[] = filterCalculationReadyPoints(westernData.planets).map((p) => {
+      // Western point names are translated into KP's traditional node names.
+      // The shared astronomy engine currently provides mean Rahu and its
+      // exactly opposite Ketu; the selected node convention is exposed below.
+      const kpName = p.name === "NorthNode"
+        ? "Rahu"
+        : p.name === "SouthNode"
+        ? "Ketu"
+        : p.name;
       const siderealLon = normalizeDegrees(p.longitude - kpAyanamsa);
       const signIndex = Math.floor(siderealLon / 30);
       const sign = SubLordCalculator.getSignName(signIndex);
@@ -59,8 +67,8 @@ export class KPEngine {
       const house = KPSignificators.getPlanetHouse(siderealLon, kpCusps);
 
       return {
-        id: p.id,
-        name: p.name,
+        id: kpName,
+        name: kpName,
         symbol: p.symbol,
         tropicalLon: p.longitude,
         siderealLon,
@@ -97,6 +105,7 @@ export class KPEngine {
     );
 
     return {
+      nodeConvention: "mean",
       ayanamsa: kpAyanamsa,
       ayanamsaFormatted: SubLordCalculator.formatDMS(kpAyanamsa),
       cusps: kpCusps,
