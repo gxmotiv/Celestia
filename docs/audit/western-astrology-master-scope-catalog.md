@@ -168,7 +168,7 @@ Track every item separately; do not merge physical ephemeris objects with hypoth
 
 Swiss Ephemeris publishes a much broader house-method list than Celestia currently implements. The presence of a name in a reference manual, a type union or a UI option is not proof that Celestia can calculate it.
 
-| House method | Celestia calculation status at baseline |
+| House method | Celestia calculation status |
 |---|---|
 | Placidus | Implemented |
 | Equal (Ascendant = cusp 1) | Implemented |
@@ -247,4 +247,4 @@ For every distinct technique/profile, maintain these gates:
 - [Internet Encyclopedia of Philosophy — Hellenistic Astrology](https://iep.utm.edu/hellenistic-astrology/): scholarly historical context for the Hellenistic tradition.
 - Each future technique entry must add the primary work / authoritative technical specification it actually uses. These general links are not a substitute for method-specific provenance.
 
-**Release boundary:** this catalogue is present in production from commit `b19de32a54f238bc73cb2c788605e0d12235840b`, which includes the validated Regiomontanus implementation. The Koch implementation, selector integration and reference suite are on the current review branch and must not be called live until merged and deployed.
+**Release boundary:** the catalogue and Regiomontanus implementation are in production at `b19de32a54f238bc73cb2c788605e0d12235840b`. Koch is implemented on the current review branch with independent Swiss Ephemeris 2.10.03 fixtures, natal/transit integration and a disclosed Porphyry fallback inside the polar circle; it must not be called live until merged and deployed.
