@@ -177,7 +177,22 @@ const kpIntegratedChart = new KPEngine().generateKPChart(
   } as VedicChartData,
   new Date(Date.UTC(2000, 0, 1, 12))
 );
-assert.equal(kpIntegratedChart.bodySet, "extended-twelve", "KP chart must disclose that outer planets are included in the current extended body set");
+assert.equal(kpIntegratedChart.bodySet, "classical-nine", "KP must default to the traditional seven planets plus Rahu and Ketu");
+assert.ok(!kpIntegratedChart.planets.some((planet) => ["Uranus", "Neptune", "Pluto"].includes(planet.name)), "Classical-nine KP profile must exclude the optional outer planets");
+const kpExtendedChart = new KPEngine().generateKPChart(
+  westernPlacidus,
+  {
+    currentMahadasha: "Jupiter",
+    currentAntardasha: "Venus",
+  } as VedicChartData,
+  new Date(Date.UTC(2000, 0, 1, 12)),
+  "extended-twelve"
+);
+assert.equal(kpExtendedChart.bodySet, "extended-twelve");
+assert.ok(kpExtendedChart.planets.some((planet) => planet.name === "Uranus"));
+assert.ok(kpExtendedChart.planets.some((planet) => planet.name === "Neptune"));
+assert.ok(kpExtendedChart.planets.some((planet) => planet.name === "Pluto"));
+assert.ok(!kpExtendedChart.planets.some((planet) => planet.name === "Chiron"), "Unvalidated placeholder bodies remain excluded from both KP profiles");
 assert.equal(kpIntegratedChart.nodeConvention, "mean", "KP chart must disclose the inherited mean-node convention");
 assert.equal(kpIntegratedChart.nodeAgentRule, "reader-vi", "KP chart must disclose its selected Reader VI node-agent ordering");
 assert.equal(kpIntegratedChart.nodeConjunctionPolicy, "same-sidereal-sign-provisional");
