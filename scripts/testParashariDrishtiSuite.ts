@@ -66,7 +66,7 @@ assert.equal(
 );
 assert.equal(
   calculateLongitudeDrishtiVirupas(255, "Jupiter", "bphs-verse-special-formula"),
-  10,
+  30,
   "BPHS 26.12 Jupiter c=8 uses 60 minus twice the degrees past the eighth sign"
 );
 assert.equal(
