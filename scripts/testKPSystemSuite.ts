@@ -52,6 +52,28 @@ assert.throws(
   /KP requires Placidus house cusps/
 );
 
+// KP must retain the exact cusp longitude even near the end of a sign.
+// Snapping 29°30' to the next sign would alter its sign lord and star/sub.
+const lateSignCuspChart = {
+  ...westernPlacidus,
+  birthLatitude: undefined,
+  birthLongitude: undefined,
+  houses: westernPlacidus.houses.map((house, index) =>
+    index === 0 ? { ...house, longitude: 29.5 } : house
+  ),
+};
+const lateSignKp = calculator.calculateKPCuspsFromWestern(
+  lateSignCuspChart,
+  2000,
+  1,
+  1
+);
+const expectedExactCusp = ((29.5 - lateSignKp.ayanamsa) % 360 + 360) % 360;
+assert.ok(
+  Math.abs(lateSignKp.cusps[0] - expectedExactCusp) < 1e-10,
+  "KP preserves the exact late-sign cusp instead of snapping it to the next sign"
+);
+
 // Without original coordinates, a non-Placidus chart cannot be repurposed.
 const chartWithoutBirthGeometry = {
   ...westernWholeSign,
