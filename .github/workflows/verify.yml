@@ -33,6 +33,7 @@ jobs:
           - testParashariVargaSuite.ts
           - testParashariNatalDignitySuite.ts
           - testJaiminiVedicChartIntegrationSuite.ts
+          - testJaiminiKarakasSuite.ts
           - testShadbalaStatusSuite.ts
           - testShadbalaSaptavargajaSuite.ts
           - testShadbalaRamanReferenceSuite.ts
