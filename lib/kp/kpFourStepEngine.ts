@@ -162,6 +162,9 @@ export class KPFourStepEngine {
       else secondaryHouses.add(occupies);
 
       owns.forEach((house) => {
+        // An occupied house that is also owned is already covered by the
+        // residence rule above; never downgrade that primary result.
+        if (primaryHouses.has(house)) return;
         if (ps && isHouseEmpty(house)) primaryHouses.add(house);
         else secondaryHouses.add(house);
       });
@@ -170,6 +173,9 @@ export class KPFourStepEngine {
       // owned houses are principal only when empty.
       primaryHouses.add(occupies);
       owns.forEach((house) => {
+        // If the star lord occupies a house it also owns, residence remains
+        // principal rather than being overwritten by ownership status.
+        if (primaryHouses.has(house)) return;
         if (isHouseEmpty(house)) primaryHouses.add(house);
         else secondaryHouses.add(house);
       });
