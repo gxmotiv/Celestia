@@ -321,7 +321,7 @@ export class VedicBenchmarkRunner {
     const retroJupiterInput: ShadbalaChartInput = {
       ascendant: 0,
       planets: {
-        Jupiter: { longitude: 100, isRetrograde: true },
+        Jupiter: { longitude: 100, isRetrograde: true, dailyMotion: -0.1 },
       },
     };
     const retroCheshta = this.shadbalaEngine.calculateCheshtaBala("Jupiter", retroJupiterInput);
@@ -332,7 +332,7 @@ export class VedicBenchmarkRunner {
       shastraReference: "BPHS Ch. 27, Sloka 21-22",
       expected: "60.0 Virupas (Vakra max potency)",
       actual: `${retroCheshta.points} Virupas (${retroCheshta.state})`,
-      passed: retroCheshta.points === 60.0,
+      passed: retroCheshta.available && retroCheshta.points === 60.0,
       notes: "A retrograde planet receives maximum Cheshta Bala (60 Virupas) due to proximity to Earth.",
     });
 
