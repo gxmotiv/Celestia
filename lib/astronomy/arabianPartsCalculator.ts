@@ -147,7 +147,7 @@ export class ArabianPartsCalculator {
     const partOfFortune = this.buildPart(
       "fortune",
       "Part of Fortune",
-      isDay ? "ASC + Moon - Sun (Day)" : "ASC + Sun - Moon (Night)",
+      isDay ? "ASC + Moon - Sun (Common Hellenistic Day)" : "ASC + Sun - Moon (Common Hellenistic Night)",
       fortuneLon,
       houseCusps,
       "Represents the physical vessel, bodily vitality, material prosperity, spontaneous fortune, and worldly fulfillment.",
@@ -159,7 +159,7 @@ export class ArabianPartsCalculator {
     const partOfSpirit = this.buildPart(
       "spirit",
       "Part of Spirit",
-      isDay ? "ASC + Sun - Moon (Day)" : "ASC + Moon - Sun (Night)",
+      isDay ? "ASC + Sun - Moon (Common Hellenistic Day)" : "ASC + Moon - Sun (Common Hellenistic Night)",
       spiritLon,
       houseCusps,
       "Represents the inner divine spark, willpower, intellect, creative vocation, and soul intentions.",
