@@ -384,15 +384,17 @@ export class SubLordCalculator {
 
           // A sub-sub interval can cross a sign boundary. Split that interval
           // into adjacent sign-local rows while retaining the same lords.
-          const splitPoints: number[] = [subSubStart];
-          let nextBoundary = (Math.floor(subSubStart / 30) + 1) * 30;
-          while (nextBoundary < subSubEnd - boundaryEpsilon) {
-            if (nextBoundary > subSubStart + boundaryEpsilon) {
+          const normalizedSubSubStart = snapToSignBoundary(subSubStart);
+          const normalizedSubSubEnd = snapToSignBoundary(subSubEnd);
+          const splitPoints: number[] = [normalizedSubSubStart];
+          let nextBoundary = (Math.floor(normalizedSubSubStart / 30) + 1) * 30;
+          while (nextBoundary < normalizedSubSubEnd - boundaryEpsilon) {
+            if (nextBoundary > normalizedSubSubStart + boundaryEpsilon) {
               splitPoints.push(nextBoundary);
             }
             nextBoundary += 30;
           }
-          splitPoints.push(subSubEnd);
+          splitPoints.push(normalizedSubSubEnd);
 
           for (let part = 0; part < splitPoints.length - 1; part++) {
             appendSegment(
