@@ -79,6 +79,7 @@ export function VedicKundliChart({
     return calculateDrishtiMatrix(
       currentChart.planets.map((planet) => ({
         name: planet.name,
+        siderealLongitude: planet.signIndex * 30 + planet.degreeInSign,
         house: planet.house,
         rasiIndex: planet.signIndex,
         rasiName: planet.sign,
