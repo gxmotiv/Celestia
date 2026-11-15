@@ -104,9 +104,8 @@ export class KPEngine {
       houseSignificators,
       planetSignifications,
       rulingPlanets,
-      currentDashaLord: vedicData.currentMahadasha || "Jupiter",
-      currentAntardashaLord: vedicData.currentAntardasha || "Venus",
-      currentPratyantardashaLord: "Sun",
+      currentDashaLord: vedicData.currentMahadasha,
+      currentAntardashaLord: vedicData.currentAntardasha,
     };
   }
 }
