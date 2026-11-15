@@ -71,6 +71,21 @@ for (const entry of kp2193) {
   assert.equal(resolved.subSubLord, entry.subSubLord, `KP 2193 row ${entry.seed} sub-sub lord`);
 }
 
+// The six additional rows must correspond exactly to the six child intervals
+// split by a zodiac-sign boundary, not to restarted parent subdivisions.
+const signSplitPairCount = kp2193.filter((entry, index) => {
+  if (index === 0) return false;
+  const previous = kp2193[index - 1];
+  return (
+    Math.abs(previous.endLongitude - entry.startLongitude) < 1e-10 &&
+    previous.signIndex + 1 === entry.signIndex &&
+    previous.starLord === entry.starLord &&
+    previous.subLord === entry.subLord &&
+    previous.subSubLord === entry.subSubLord
+  );
+}).length;
+assert.equal(signSplitPairCount, 6, "Exactly six micro-intervals should be split at sign boundaries");
+
 // Every interval is ordered, contiguous, positive-width, and contained in one sign.
 assert.ok(Math.abs(kp2193[0].startLongitude) < 1e-12);
 assert.ok(Math.abs(kp2193[kp2193.length - 1].endLongitude - 360) < 1e-10);
