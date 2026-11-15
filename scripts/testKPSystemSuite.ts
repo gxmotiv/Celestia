@@ -179,6 +179,12 @@ const kpIntegratedChart = new KPEngine().generateKPChart(
 );
 assert.equal(kpIntegratedChart.bodySet, "extended-twelve", "KP chart must disclose that outer planets are included in the current extended body set");
 assert.equal(kpIntegratedChart.nodeConvention, "mean", "KP chart must disclose the inherited mean-node convention");
+assert.equal(kpIntegratedChart.nodeAgentRule, "reader-vi", "KP chart must disclose its selected Reader VI node-agent ordering");
+assert.equal(kpIntegratedChart.nodeConjunctionPolicy, "same-sidereal-sign-provisional");
+assert.equal(kpIntegratedChart.nodeAspectPolicy, "parashari-full-sign-drishti-classical-seven");
+assert.ok(kpIntegratedChart.nodeRepresentations?.Rahu, "KP chart must expose the Rahu representative cascade");
+assert.ok(kpIntegratedChart.nodeRepresentations?.Ketu, "KP chart must expose the Ketu representative cascade");
+assert.equal(kpIntegratedChart.nodeRepresentations?.Rahu?.rule, "reader-vi");
 assert.ok(kpIntegratedChart.planets.some((planet) => planet.name === "Rahu"), "Western NorthNode must map to KP Rahu");
 assert.ok(kpIntegratedChart.planets.some((planet) => planet.name === "Ketu"), "Western SouthNode must map to KP Ketu");
 assert.ok(!kpIntegratedChart.planets.some((planet) => planet.name === "NorthNode" || planet.name === "SouthNode"), "KP must not expose Western point names in its planetary system");
@@ -415,7 +421,7 @@ const readerVINodes = nodeCalculator.calculateNodeRepresentations(
   "reader-vi"
 );
 assert.deepEqual(readerVINodes.Rahu?.priorityOrder, ["conjunction", "star-lord", "aspect", "sign-lord"]);
-assert.deepEqual(readerVINodes.Rahu?.agentTiers.map((tier) => tier.planets), [[], ["Jupiter"], ["Mars", "Sun"], ["Venus"]]);
+assert.deepEqual(readerVINodes.Rahu?.agentTiers.map((tier) => tier.planets), [[], ["Jupiter"], ["Sun", "Mars"], ["Venus"]]);
 assert.equal(readerVINodes.Rahu?.preferredAgentSource, "star-lord", "Reader VI prefers star lord before aspecting planets");
 assert.deepEqual(readerVINodes.Rahu?.preferredAgentHouses, [9], "Rahu inherits the preferred agent's chart signification");
 assert.ok(readerVINodes.Rahu?.representedHouses.includes(4), "Rahu always signifies its own occupied house");
@@ -427,7 +433,7 @@ const readerIIINodes = nodeCalculator.calculateNodeRepresentations(
 );
 assert.deepEqual(readerIIINodes.Rahu?.priorityOrder, ["conjunction", "aspect", "star-lord", "sign-lord"]);
 assert.equal(readerIIINodes.Rahu?.preferredAgentSource, "aspect", "Reader III/V puts aspecting planets before the star lord");
-assert.deepEqual(readerIIINodes.Rahu?.preferredAgentPlanets, ["Mars", "Sun"]);
+assert.deepEqual(readerIIINodes.Rahu?.preferredAgentPlanets, ["Sun", "Mars"]);
 assert.equal(readerVINodes.Ketu?.preferredAgentSource, "conjunction", "Conjunction remains first in both reader variants");
 assert.deepEqual(readerVINodes.Ketu?.preferredAgentPlanets, ["Sun"]);
 
