@@ -10,6 +10,7 @@ export type WesternHouseTechnique =
   | "koch-school-natal"
   | "campanus-school-natal"
   | "alcabitius-school-natal"
+  | "morinus-house-profile"
   | "western-sidereal-natal"
   | "hellenistic-natal"
   | "hellenistic-time-lord"
@@ -60,7 +61,8 @@ export type ImplementedWesternHouseSystem =
   | "Regiomontanus"
   | "Koch"
   | "Campanus"
-  | "Alcabitius";
+  | "Alcabitius"
+  | "Morinus";
 
 export type HouseSystemRecommendationMode =
   | "automatic"
@@ -98,6 +100,7 @@ const IMPLEMENTED_SYSTEMS = new Set<WesternHouseSystemName>([
   "Koch",
   "Campanus",
   "Alcabitius",
+  "Morinus",
 ]);
 
 /** House-system names accepted by the Western transit engine. */
@@ -109,7 +112,8 @@ export type WesternTransitHouseSystem =
   | "regiomontanus"
   | "koch"
   | "campanus"
-  | "alcabitius";
+  | "alcabitius"
+  | "morinus";
 
 /** Convert a resolved natal method to the transit engine's explicit method key. */
 export function toWesternTransitHouseSystem(
@@ -124,6 +128,7 @@ export function toWesternTransitHouseSystem(
     case "Koch": return "koch";
     case "Campanus": return "campanus";
     case "Alcabitius": return "alcabitius";
+    case "Morinus": return "morinus";
   }
 }
 
@@ -270,6 +275,13 @@ export function recommendWesternHouseSystem(
           : "Alcabitius is selected for an explicitly named Alcabitius-school chart. Its cusps trisect the Ascendant's diurnal and nocturnal semi-arcs; this does not make it the universal Western default.",
       };
     }
+
+    case "morinus-house-profile":
+      return implementedPreset(
+        technique,
+        "Morinus",
+        "Morinus houses divide the celestial equator into twelve equal 30° arcs from the local meridian and project those points onto the ecliptic. The cusps are latitude-independent and are not the Meridian/Axial Rotation system. This supports the named house calculation, not a claim that every historical Morinus doctrine or school workflow is implemented."
+      );
 
     case "hellenistic-natal":
     case "hellenistic-time-lord":
