@@ -22,7 +22,7 @@ assert.equal(kp2193[0].starLord, "Ketu");
 assert.equal(kp2193[0].subLord, "Ketu");
 assert.equal(kp2193[0].subSubLord, "Ketu");
 assert.ok(
-  Math.abs(arcSeconds(kp2193[0].endLongitude) - (7 / 120) * (7 / 120) * 13 * 3600 + 0) < 1e-7,
+  Math.abs(arcSeconds(kp2193[0].endLongitude) - (7 / 120) * (7 / 120) * (360 / 27) * 3600 + 0) < 1e-7,
   "First KP micro-division must be 7/120 of the Ketu sub, itself 7/120 of a nakshatra"
 );
 assert.ok(
