@@ -148,6 +148,8 @@ export interface KPPlanetSignification {
   signifiedHouses: number[]; // Unique ordered list of all signified houses
 }
 
+export type KPHouseSignificatorGrade = "I" | "II" | "III" | "IV";
+
 export interface KPPrediction {
   house: number;
   event: string;
@@ -164,10 +166,13 @@ export interface KPPrediction {
   dashaAnalysis: {
     dashaLord: string;
     isDashaSignificator: boolean;
+    dashaSignificatorGrade?: KPHouseSignificatorGrade;
     antardashaLord: string;
     isAntardashaSignificator: boolean;
+    antardashaSignificatorGrade?: KPHouseSignificatorGrade;
     pratyantardashaLord?: string;
     isPratyantarSignificator?: boolean;
+    pratyantardashaSignificatorGrade?: KPHouseSignificatorGrade;
     verdict: string;
   };
   verdict: "Highly Favorable" | "Favorable" | "Mixed / Moderate" | "Unfavorable";
