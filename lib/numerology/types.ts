@@ -277,7 +277,11 @@ export interface KabbalahProfile {
 export interface TamilNumerologyProfile {
   janmaEn: number; // Birth number
   vidhiEn: number; // Destiny number
-  peyarEn: number; // Name number in Tamil system
+  /** Null when the input cannot be calculated by the explicitly declared Latin transliteration method. */
+  peyarEn: number | null;
+  /** Current implementation uses the Chaldean-Indian A–Z table, not a validated Tamil-script table. */
+  peyarEnMethod: "Chaldean-Indian Latin A-Z mapping";
+  peyarEnNote: string;
   tamilGraha: string;
   auspiciousDays: string[];
   auspiciousColors: string[];
