@@ -57,6 +57,7 @@ jobs:
           - testBaZiTimeEngineSuite.ts
           - testSolarTermsSolverSuite.ts
           - testBaZiSolarPillarsSuite.ts
+          - testBaZiJieQiBoundarySuite.ts
           - testBaZiProfileAdapterSuite.ts
           - testLunarNodeConsistencySuite.ts
           - testAyanamsaConsistencySuite.ts
