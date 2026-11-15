@@ -1253,6 +1253,9 @@ export function KPSystemPanel({
             <p className="text-xs text-slate-400">
               Each planet&apos;s KP sidereal coordinate, house occupancy, star lord, sub-lord, and separately graded classical house signification.
             </p>
+            <p className="text-[11px] text-slate-500">
+              Body profile: {kpData.bodySet === "classical-nine" ? "Classical nine" : "Extended twelve (Uranus, Neptune and Pluto included)"}. Node convention: {kpData.nodeConvention === "true" ? "True node" : "Mean Rahu with Ketu exactly opposite"}. The true-node and classical-nine switches are not yet exposed here; unvalidated placeholder bodies such as Chiron are excluded.
+            </p>
           </div>
 
           <div className="overflow-x-auto">
