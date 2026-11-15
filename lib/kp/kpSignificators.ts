@@ -21,6 +21,7 @@ import {
   KPNodeAgentSource,
   KPNodeAgentTier,
   KPNodeRepresentation,
+  KPHouseSignificatorGrade,
   SignificatorLevels,
 } from "./kpTypes";
 import { normalizeDegrees } from "../astronomy/ephemeris";
@@ -165,6 +166,34 @@ export class KPSignificators {
       levels,
       allSignificators: Array.from(allSet),
     };
+  }
+
+  /**
+   * Return the strongest Grade I-IV house signification for a planet across
+   * the requested houses. Grade I outranks II, III and IV; no result means no
+   * direct significator match in the requested set.
+   */
+  public getStrongestHouseSignificatorGrade(
+    planetName: string,
+    houses: number[],
+    houseSignificators: Record<number, KPHouseSignificators>
+  ): KPHouseSignificatorGrade | undefined {
+    const grades: Array<[keyof SignificatorLevels, KPHouseSignificatorGrade]> = [
+      ["levelA", "I"],
+      ["levelB", "II"],
+      ["levelC", "III"],
+      ["levelD", "IV"],
+    ];
+
+    for (const [levelKey, grade] of grades) {
+      if (houses.some((houseNumber) =>
+        houseSignificators[houseNumber]?.levels[levelKey].includes(planetName)
+      )) {
+        return grade;
+      }
+    }
+
+    return undefined;
   }
 
   /**
