@@ -52,7 +52,7 @@ The list of schools should be treated as an extensible registry. A school may co
 | Major asteroids | Approximate | Ceres, Pallas, Juno and Vesta use simplified fixed-element models; upgrade to integrated/perturbed small-body positions and independent references |
 | Further minor planets / TNOs | Not implemented / symbolic by school | Eris, Haumea, Makemake, Sedna, Orcus, Quaoar, Ixion, Varuna and source-specific objects; distinguish physical bodies from hypothetical points |
 | Angles and local geometry | Implemented in part | ASC, MC, DSC, IC, Vertex and East Point exist; complete angle/house/prime-vertical/equatorial conventions and independent fixtures |
-| House systems | Ten calculation methods supported on the Meridian feature branch | Placidus, Equal, Whole Sign, Porphyry, Regiomontanus, Koch, Campanus, Alcabitius, Morinus and Meridian / Axial Rotation; many other named systems listed in Section 10 remain unsupported |
+| House systems | Ten calculation methods merged into the deployment branch; public deployment status must be verified separately | Placidus, Equal, Whole Sign, Porphyry, Regiomontanus, Koch, Campanus, Alcabitius, Morinus and Meridian / Axial Rotation; many other named systems listed in Section 10 remain unsupported |
 | Planetary phase and visibility | Partial | Heliacal rising/setting, morning/evening star phases, combustion, under-beams, cazimi, elongations, visibility criteria and sect/light condition variants |
 | Fixed stars | Approximate | Current set is 20 stored J2000 tropical longitudes; need epoch precession, proper motion, nutation/aberration conventions, expanded catalogue, star identity and uncertainty |
 | Lunar mansions / decans | Partial or separate tradition | Western decans/faces, Chaldean decans, bounds/terms, monomoiria, dodecatemoria, dwads and source-specific subdivisions |
@@ -179,7 +179,7 @@ Swiss Ephemeris publishes a much broader house-method list than Celestia current
 | Campanus | Implemented; independent prime-vertical great-circle calculation, polar orientation handling and Swiss Ephemeris reference tests |
 | Alcabitius | Implemented; Ascendant semi-arc divisions, independently reference-tested |
 | Morinus | Implemented; equatorial 30° divisions projected to the ecliptic, latitude-independent and independently checked against published Swiss Ephemeris tables |
-| Meridian / Axial Rotation | Implemented on the current feature branch; ecliptic points with right ascension spaced by 30° from ARMC, independently checked against Swiss Ephemeris 2.10.03 `X` fixtures |
+| Meridian / Axial Rotation | Implemented and merged in commit `9e702d9f6281b5a8ace12a320c32caaf5e8f3324`; independent Swiss Ephemeris 2.10.03 `X` fixtures and CI passed; public deployment is a separate gate |
 | Topocentric / Polich-Page | Not implemented |
 | Horizontal / Azimuthal | Not implemented |
 | Krusinski-Pisa-Goelzer | Not implemented |
@@ -229,7 +229,7 @@ For every distinct technique/profile, maintain these gates:
 
 1. Centralize technique-aware house-system selection and accurately disclose what is actually supported.
 2. Expand the Western reference suite for house systems, angles, time scales and natal placements.
-3. Add and validate further house engines (next candidates include Meridian/Axial Rotation, Topocentric, Horizontal, Krusinski-Pisa-Goelzer and the remaining documented systems), then extend source-specific house-method profiles.
+3. Add and validate further house engines (next candidates include Topocentric, Horizontal, Krusinski-Pisa-Goelzer and the remaining documented systems), then extend source-specific house-method profiles.
 4. Complete traditional natal judgement: dignity, reception, rulers, dispositors, sect, lots, antiscia and patterns with source profiles.
 5. Build the exact transit event timeline.
 6. Implement primary directions as a separate, variant-driven engine.
@@ -254,4 +254,4 @@ For every distinct technique/profile, maintain these gates:
 - [Internet Encyclopedia of Philosophy — Hellenistic Astrology](https://iep.utm.edu/hellenistic-astrology/): scholarly historical context for the Hellenistic tradition.
 - Each future technique entry must add the primary work / authoritative technical specification it actually uses. These general links are not a substitute for method-specific provenance.
 
-**Production release boundary:** production commit `d21dafdbc5854f06b023e436abf976709339d8a5` (15 November 2026) contains nine calculated Western house systems through Morinus: Placidus, Equal, Whole Sign, Porphyry, Regiomontanus, Koch, Campanus, Alcabitius and Morinus. Morinus passed its published Swiss Ephemeris table/reference and integration suite; the verification workflow, production build and Cloudflare Worker validation were recorded for that release. The production Worker deployment and public HTTP/HTML smoke test are recorded in workflow run `43691595617`. The separate Meridian / Axial Rotation implementation is being prepared on a follow-up feature branch; it must pass CI and be deployed before being described as live. The broader Western astrology catalogue remains an active roadmap, not a claim that every Western technique is implemented.
+**Production release boundary:** the earlier production commit `d21dafdbc5854f06b023e436abf976709339d8a5` contained nine calculated Western house systems through Morinus. Meridian / Axial Rotation was subsequently merged into `deploy/cloudflare-workers-free` in commit `9e702d9f6281b5a8ace12a320c32caaf5e8f3324` via PR #45. Its dedicated Swiss Ephemeris reference suite, Android offline suite, ESLint, production build, ARM32/ARM64 APK build and Cloudflare Worker dry-run all passed in verification runs `43694587079` and `43694587086`. The Cloudflare workflow's actual deployment job was skipped, and the Android prerelease publishing step was skipped; therefore this merge proves branch integration and build validation, not a new public Worker deployment or a published Android release. The broader Western astrology catalogue remains an active roadmap, not a claim that every Western technique is implemented.
