@@ -1338,6 +1338,56 @@ export function KPSystemPanel({
                 );
               })}
             </div>
+            <div className="space-y-3 pt-2">
+              <div className="space-y-1">
+                <h4 className="text-sm font-bold text-rose-300 uppercase tracking-wider">
+                  Rahu / Ketu Representative Cascade
+                </h4>
+                <p className="text-xs text-slate-400">
+                  Selected source profile: {kpData.nodeAgentRule === "reader-iii-v" ? "KSK Reader III/V order" : "KSK Reader VI order"}.
+                  Priority: {kpData.nodeRepresentations?.Rahu?.priorityOrder.map((source) => source.replace("-", " ")).join(" → ") || "not available"}.
+                  Node conjunction is currently a provisional same-sidereal-sign convention with no degree orb; aspects use full Parashari sign-based graha drishti from the seven classical planets. This is not a 3°20′ modern 4-Step orb rule.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                {(["Rahu", "Ketu"] as const).map((nodeName) => {
+                  const node = kpData.nodeRepresentations?.[nodeName];
+                  if (!node) return null;
+                  return (
+                    <div key={nodeName} className="p-3.5 bg-slate-900/60 border border-rose-900/40 rounded-xl space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-sm text-rose-200">{nodeName}</span>
+                        <span className="text-[10px] text-slate-400">House {node.occupiedHouse} · {node.sign}</span>
+                      </div>
+                      <div className="text-[10px] text-slate-400">
+                        Star lord: <strong className="text-cyan-300">{node.starLord}</strong>
+                        {" · "}Sign lord: <strong className="text-amber-300">{node.signLord}</strong>
+                      </div>
+                      <div className="space-y-1">
+                        {node.agentTiers.map((tier) => (
+                          <div key={tier.source} className="flex items-start justify-between gap-2 border-t border-slate-800 pt-1.5 text-[10px]">
+                            <span className="text-slate-400 min-w-24">
+                              {tier.priority}. {tier.source.replace("-", " ")}
+                            </span>
+                            <span className="text-slate-200 text-right">
+                              {tier.planets.join(", ") || "None"}
+                              {" · Houses ["}{tier.signifiedHouses.join(", ") || "—"}{"]"}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="pt-1 border-t border-slate-800 text-[10px] text-emerald-300">
+                        Selected agent: {node.preferredAgentPlanets.join(", ") || "none"}
+                        {" · "}Represented houses: [{node.representedHouses.join(", ")}]
+                      </div>
+                      <div className="text-[10px] text-slate-500">
+                        All candidate-agent houses (not all simultaneously selected): [{node.allAgentHouses.join(", ")}]
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
       )}
