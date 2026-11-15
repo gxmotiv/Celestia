@@ -48,6 +48,14 @@ Shared astronomy may provide raw positions and time conversions. It does not aut
 
 **Regression coverage:** `scripts/testParashariVargaSuite.ts` checks the named rules and exact boundaries across all 16 configured Shodashavarga charts, degree mapping, and invalid-input rejection. This validates the implemented sign-assignment algorithms at the tested boundaries; it does not certify every Varga interpretation, dignity doctrine, or textual variant.
 
+### BaZi Jie / Qi solar-month boundaries
+
+**Finding:** BaZi's twelve monthly branches are opened by the twelve Jie (節) terms, spaced 30° apart from Lichun at 315°. The alternating Qi (氣) terms at the 15° midpoints do not advance the month branch. Treating all twenty-four solar terms as month boundaries would incorrectly advance the Month Pillar twice in each month.
+
+**Validation:** `scripts/testBaZiJieQiBoundarySuite.ts` checks all twelve Jie branch starts and all twelve Qi non-boundaries, then tests the actual Swiss Ephemeris Sun longitude around the 2024 Lichun, Yushui, Jingzhe, Chunfen and Qingming instants. The expected result is checked two hours either side of each calendar instant to avoid overfitting a few seconds of model/almanac difference.
+
+**Sources:** the [Hong Kong Observatory's 2024 solar-term reference](https://www.hko.gov.hk/en/gts/astron2024/files/2024SolarTerms24.pdf) explains the 24 terms as Sun-longitude events and specifies Hong Kong Time as UTC+8; the [2024 term table with Jie/Qi classification](https://almanark.com/jieqi/2024/) provides exact term instants and identifies the twelve Jie as month boundaries. These are astronomical/calendar test references, not claims that BaZi interpretations are scientifically predictive.
+
 ### Shadbala status correction
 
 **Finding:** the Shadbala screen previously claimed a complete classical six-fold result while the engine used provisional/fixed values and simplified approximations. Saptavargaja initially repeated one Rashi relationship across seven Vargas; Dig Bala initially used a fixed ecliptic quarter-turn from the Ascendant; Kala Bala contains fixed values for some subcomponents; and Drik Bala uses simplified fixed aspect bands.
