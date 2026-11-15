@@ -420,9 +420,9 @@ const nodeTestPlanets = [
   nodePlanet("Sun", 9, 10, "Mercury", "Venus"),
   nodePlanet("Moon", 6, 7, "Venus", "Mercury"),
   nodePlanet("Mercury", 7, 8, "Saturn", "Jupiter"),
-  nodePlanet("Venus", 1, 2, "Sun", "Mars"),
+  nodePlanet("Venus", 8, 9, "Sun", "Mars"),
   nodePlanet("Mars", 0, 1, "Saturn", "Jupiter"),
-  nodePlanet("Jupiter", 8, 9, "Saturn", "Saturn"),
+  nodePlanet("Jupiter", 7, 8, "Saturn", "Saturn"),
   nodePlanet("Saturn", 5, 6, "Jupiter", "Mercury"),
   nodePlanet("Rahu", 3, 4, "Jupiter", "Venus"),
   nodePlanet("Ketu", 9, 10, "Saturn", "Mercury"),
@@ -437,13 +437,13 @@ const nodeTestSignifications = Object.fromEntries(
       occupiesHouse: planet.house,
       ownsHouses: [],
       starLord: planet.starLord,
-      starLordOccupiesHouse: planet.house,
+      starLordOccupiesHouse: planet.name === "Jupiter" ? 9 : planet.house,
       starLordOwnsHouses: [],
       subLord: planet.subLord,
       subLordOccupiesHouse: planet.house,
       subLordOwnsHouses: [],
       levels: {
-        levelA: [],
+        levelA: planet.name === "Jupiter" ? [9] : [],
         levelB: [planet.house],
         levelC: [],
         levelD: [],
@@ -451,7 +451,7 @@ const nodeTestSignifications = Object.fromEntries(
       strengthOrder: ["A", "B", "C", "D"],
       starTenants: [],
       hasSelfStrength: false,
-      signifiedHouses: [planet.house],
+      signifiedHouses: planet.name === "Jupiter" ? [8, 9] : [planet.house],
     } as KPPlanetSignification,
   ])
 ) as Record<string, KPPlanetSignification>;
@@ -465,7 +465,7 @@ assert.deepEqual(readerVINodes.Rahu?.priorityOrder, ["conjunction", "star-lord",
 assert.deepEqual(readerVINodes.Rahu?.agentTiers.map((tier) => tier.planets), [[], ["Jupiter"], ["Sun", "Mars"], ["Venus"]]);
 assert.equal(readerVINodes.Rahu?.agentTiers[0].planets.length, 0, "The classical KP node conjunction tier excludes modern outer planets such as Uranus");
 assert.equal(readerVINodes.Rahu?.preferredAgentSource, "star-lord", "Reader VI prefers star lord before aspecting planets");
-assert.deepEqual(readerVINodes.Rahu?.preferredAgentHouses, [9], "Rahu inherits the preferred agent's chart signification");
+assert.deepEqual(readerVINodes.Rahu?.preferredAgentHouses, [8, 9], "Rahu inherits the preferred agent's chart signification");
 assert.ok(readerVINodes.Rahu?.representedHouses.includes(4), "Rahu always signifies its own occupied house");
 assert.ok(!readerVINodes.Rahu?.agentTiers.some((tier) => tier.planets.includes("Ketu")), "A node must never treat the opposite node as an agent");
 const readerIIINodes = nodeCalculator.calculateNodeRepresentations(
@@ -484,10 +484,10 @@ const expandedNodeSignifications = nodeCalculator.applyNodeAgentSignifications(
   nodeTestSignifications,
   readerVINodes
 );
-assert.deepEqual(expandedNodeSignifications.Rahu.nodeAgentHouses, [4, 9], "Rahu's own signification must include its house and preferred agent's KP houses");
+assert.deepEqual(expandedNodeSignifications.Rahu.nodeAgentHouses, [4, 8, 9], "Rahu's own signification must include its house and preferred agent's KP houses");
 assert.ok(expandedNodeSignifications.Rahu.signifiedHouses.includes(9));
-assert.deepEqual(expandedNodeSignifications.Pluto.starLordNodeAgentHouses, [4, 9], "A planet in Rahu's star must inherit Rahu's preferred agent cascade");
-assert.deepEqual(expandedNodeSignifications.Pluto.levels.levelA, [4, 9], "Node agent houses must be represented in the star-lord A grade");
+assert.deepEqual(expandedNodeSignifications.Pluto.starLordNodeAgentHouses, [4, 8, 9], "A planet in Rahu's star must inherit Rahu's preferred agent cascade");
+assert.deepEqual(expandedNodeSignifications.Pluto.levels.levelA, [4, 8, 9], "Node agent houses must be represented in the star-lord A grade");
 
 const baseNodeHouseSignifications = nodeCalculator.calculateAllHouseSignificators(
   strengthCusps,
@@ -497,13 +497,14 @@ const expandedNodeHouseSignifications = nodeCalculator.applyNodeAgentsToHouseSig
   baseNodeHouseSignifications,
   readerVINodes
 );
-assert.ok(baseNodeHouseSignifications[9].levels.levelB.includes("Jupiter"));
+assert.ok(baseNodeHouseSignifications[8].levels.levelB.includes("Jupiter"));
 assert.ok(!baseNodeHouseSignifications[9].levels.levelB.includes("Rahu"));
 
 assert.ok(baseNodeHouseSignifications[6].levels.levelA.includes("Jupiter"), "Jupiter is Grade I in House 6 because it occupies Saturn's star");
 assert.ok(expandedNodeHouseSignifications[6].levels.levelA.includes("Rahu"), "Rahu inherits Jupiter's Grade I role in House 6");
-assert.ok(!expandedNodeHouseSignifications[9].levels.levelA.includes("Rahu"), "Rahu must not be promoted to Grade I merely because Jupiter's separate planet-to-house A grade contains House 9");
-assert.ok(expandedNodeHouseSignifications[9].levels.levelB.includes("Rahu"), "Rahu inherits Jupiter's actual Grade II occupant role in House 9");
+assert.ok(!baseNodeHouseSignifications[9].levels.levelA.includes("Jupiter"), "Jupiter's planet-to-house A grade containing House 9 does not make it a House 9 Grade I significator");
+assert.ok(!expandedNodeHouseSignifications[9].levels.levelA.includes("Rahu"), "Rahu must not be promoted to Grade I in House 9 merely because the agent's separate planet-to-house A grade contains House 9");
+assert.ok(expandedNodeHouseSignifications[8].levels.levelB.includes("Rahu"), "Rahu inherits Jupiter's actual Grade II occupant role in House 8");
 assert.ok(expandedNodeHouseSignifications[9].allSignificators.includes("Rahu"));
 assert.ok(expandedNodeHouseSignifications[10].levels.levelB.includes("Ketu"), "Ketu must inherit its preferred conjoined Sun's Level B house signification");
 
@@ -515,7 +516,7 @@ assert.equal(
 assert.equal(
   nodeCalculator.getStrongestHouseSignificatorGrade("Rahu", [9], expandedNodeHouseSignifications),
   "II",
-  "Rahu's House 9 occupancy inherits the agent's actual Grade II"
+  "Rahu's House 8 occupancy inherits the agent's actual Grade II"
 );
 assert.equal(
   nodeCalculator.getStrongestHouseSignificatorGrade("Pluto", [6, 9], expandedNodeHouseSignifications),
