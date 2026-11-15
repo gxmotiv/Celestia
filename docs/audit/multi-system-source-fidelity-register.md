@@ -64,6 +64,16 @@ Shared astronomy may provide raw positions and time conversions. It does not aut
 
 **Sources:** the [Hong Kong Observatory's 2024 solar-term reference](https://www.hko.gov.hk/en/gts/astron2024/files/2024SolarTerms24.pdf) explains the 24 terms as Sun-longitude events and specifies Hong Kong Time as UTC+8; the [2024 term table with Jie/Qi classification](https://almanark.com/jieqi/2024/) provides exact term instants and identifies the twelve Jie as month boundaries. These are astronomical/calendar test references, not claims that BaZi interpretations are scientifically predictive.
 
+### Parashari natal dignity cut-offs (BPHS 3.51–54)
+
+**Finding:** Mercury in Virgo was classified as Moolatrikona from 15° through 30°, but BPHS 3.52–53 divides Virgo into three consecutive zones: 0°–15° exaltation, 15°–20° Moolatrikona and 20°–30° own sign. The same audit also found that other classical Moolatrikona limits used inclusive upper bounds, causing an exact boundary degree to remain in the preceding dignity zone.
+
+**Correction:** `evaluateVedicDignity` is now exported for direct testing and validates its inputs. The seven classical planets use explicit half-open intervals: Sun/Leo [0°,20°), Moon/Taurus exaltation [0°,3°) then Moolatrikona [3°,30°), Mars/Aries [0°,12°), Mercury/Virgo exaltation [0°,15°), Moolatrikona [15°,20°), own [20°,30°), Jupiter/Sagittarius [0°,10°), Venus/Libra [0°,15°), and Saturn/Aquarius [0°,20°). This ensures the exact boundary belongs to the following zone, consistently.
+
+**Regression coverage:** `scripts/testParashariNatalDignitySuite.ts` checks all seven planets' boundaries, all three Mercury Virgo zones, ordinary late-Virgo own-sign degrees and invalid sign/degree rejection. Since dignity feeds chart labels and some Yoga predicates, the correction affects downstream calculations as well as the displayed dignity badge.
+
+**Sources:** [BPHS Chapter 3, verses 51–55 Sanskrit and translation](https://www.siva.sh/brihat-parashara-hora-shastra/3/51-55) and the [digitized BPHS full text, verses 49–56](https://archive.org/stream/ParasharaHoraSastra/BrihatParasharaHoraSastraVedicAstrologyEbook_djvu.txt). Verse 53 specifically states Mercury's next five Virgo degrees are Moolatrikona and the remaining degrees are own sign.
+
 ### Shadbala status correction
 
 **Finding:** the Shadbala screen previously claimed a complete classical six-fold result while the engine used provisional/fixed values and simplified approximations. Saptavargaja initially repeated one Rashi relationship across seven Vargas; Dig Bala initially used a fixed ecliptic quarter-turn from the Ascendant; Kala Bala contains fixed values for some subcomponents; and Drik Bala uses simplified fixed aspect bands.
