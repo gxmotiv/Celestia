@@ -16,7 +16,7 @@ export const SHADBALA_IMPLEMENTATION_STATUS = {
     "This is a provisional six-component estimate, not yet an independently verified classical Shadbala calculation.",
   limitations: [
     "Saptavargaja now evaluates D1, D2, D3, D7, D9, D12 and D30 separately. Its default score scale is the R. Santhanam BPHS translation (45/30/20/15/10/4/2); the alternative Raman halving scale can be selected explicitly. Five-fold friendship is derived from D1 relationships, and Moolatrikona is applied in D1 only.",
-    "Dig Bala uses a simplified ecliptic offset from the Ascendant instead of the exact relevant angle (IC, Descendant, MC or Ascendant).",
+    "Dig Bala uses the actual sidereal Midheaven when supplied by the chart; callers without a Midheaven retain the disclosed 90° ecliptic fallback.",
     "Kala Bala still contains fixed placeholder values for Tribhaga, year, month and Ayana components, and its Hora estimate is not a sunrise-based planetary-hour calculation.",
     "Cheshta Bala uses coarse motion bands; non-luminary scores require an actual daily-motion value. Sun and Moon still use provisional constants rather than their textually specified Ayana/Paksha derivations.",
     "Drik Bala uses simplified fixed aspect bands and point values rather than a complete angular Drishti-Pinda computation."
@@ -106,6 +106,8 @@ export type SaptavargajaScale = "bphs-santhanam" | "raman-halving";
 
 export interface ShadbalaChartInput {
   ascendant: number;
+  /** Sidereal Midheaven longitude; used to derive the MC and IC Dig Bala peaks. */
+  midheaven?: number;
   /** Source-labelled point scale; defaults to the R. Santhanam BPHS translation. */
   saptavargajaScale?: SaptavargajaScale;
   planets: {
@@ -449,40 +451,44 @@ export class ShadbalaEngine {
 
   public calculateDigBala(planet: string, input: ShadbalaChartInput): DigBalaResult {
     let strongestHouse = 1;
-    let peakAngleFromAsc = 0;
+    const asc = ((input.ascendant % 360) + 360) % 360;
+    const hasMidheaven = Number.isFinite(input.midheaven);
+    const midheaven = hasMidheaven
+      ? (((input.midheaven as number) % 360) + 360) % 360
+      : ((asc + 270) % 360);
+    let peakLongitude = asc;
 
     switch (planet) {
       case "Jupiter":
       case "Mercury":
         strongestHouse = 1;
-        peakAngleFromAsc = 0;
+        peakLongitude = asc;
         break;
       case "Sun":
       case "Mars":
         strongestHouse = 10;
-        peakAngleFromAsc = 270;
+        // Dig Bala peaks at the actual Midheaven, not at a fixed 270° offset.
+        peakLongitude = hasMidheaven ? midheaven : ((asc + 270) % 360);
         break;
       case "Saturn":
         strongestHouse = 7;
-        peakAngleFromAsc = 180;
+        peakLongitude = (asc + 180) % 360;
         break;
       case "Moon":
       case "Venus":
         strongestHouse = 4;
-        peakAngleFromAsc = 90;
+        // The IC is exactly opposite the supplied MC.
+        peakLongitude = hasMidheaven
+          ? (midheaven + 180) % 360
+          : (asc + 90) % 360;
         break;
     }
 
     const pPos = input.planets[planet];
     const lon = pPos ? ((pPos.longitude % 360) + 360) % 360 : 0;
-    const asc = ((input.ascendant % 360) + 360) % 360;
-
     const actualHouse = ((Math.floor(lon / 30) - Math.floor(asc / 30) + 12) % 12) + 1;
-    const planetAngleFromAsc = ((lon - asc + 360) % 360);
-
-    let angularDiff = Math.abs(planetAngleFromAsc - peakAngleFromAsc);
-    if (angularDiff > 180) angularDiff = 360 - angularDiff;
-
+    const rawAngularDifference = Math.abs(lon - peakLongitude);
+    const angularDiff = Math.min(rawAngularDifference, 360 - rawAngularDifference);
     const points = Math.round(Math.max(0, (1 - angularDiff / 180) * 60) * 100) / 100;
 
     return {
@@ -490,7 +496,9 @@ export class ShadbalaEngine {
       strongestHouse,
       actualHouse,
       angularDistance: Math.round(angularDiff * 10) / 10,
-      description: `${planet} receives ${points} Virupas in House ${actualHouse} (Strongest in House ${strongestHouse}).`,
+      description: hasMidheaven
+        ? `${planet} receives ${points} Virupas relative to its chart-derived directional peak at ${peakLongitude.toFixed(2)}°.`
+        : `${planet} receives ${points} Virupas using the approximate quadrant peak for House ${strongestHouse}; no Midheaven was supplied.`,
     };
   }
 
