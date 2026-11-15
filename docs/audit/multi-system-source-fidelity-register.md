@@ -50,13 +50,15 @@ Shared astronomy may provide raw positions and time conversions. It does not aut
 
 ### Shadbala status correction
 
-**Finding:** the Shadbala screen previously claimed a complete classical six-fold result while the engine used provisional/fixed values and simplified approximations. Saptavargaja initially repeated one Rashi relationship across seven Vargas; Dig Bala uses a simplified ecliptic offset from the Ascendant; Kala Bala contains fixed values for some subcomponents; and Drik Bala uses simplified fixed aspect bands.
+**Finding:** the Shadbala screen previously claimed a complete classical six-fold result while the engine used provisional/fixed values and simplified approximations. Saptavargaja initially repeated one Rashi relationship across seven Vargas; Dig Bala initially used a fixed ecliptic quarter-turn from the Ascendant; Kala Bala contains fixed values for some subcomponents; and Drik Bala uses simplified fixed aspect bands.
 
 **Correction:** the UI now labels Shadbala as partial/approximate, explains the known limitations, and changes “Strong/Weak” to “Above/Below modeled threshold.” Cheshta Bala no longer invents a default daily motion for non-luminary planets: it uses an actual supplied speed or returns an unavailable result. The website passes through the Western chart's computed planetary speed when available.
 
+**Dig Bala correction:** the engine now uses the chart-derived sidereal Midheaven for Sun/Mars, the opposite IC for Moon/Venus, the Descendant for Saturn and the Ascendant for Jupiter/Mercury. The Shadbala panel converts the Western tropical Midheaven into the Vedic sidereal frame using the chart's ayanamsa. Callers that do not supply a Midheaven retain a disclosed approximate quarter-turn fallback.
+
 **Saptavargaja correction:** the engine now scores the seven individual vargas (D1, D2, D3, D7, D9, D12 and D30), derives each varga sign lord, combines natural and temporary friendship from the natal Rasi positions according to BPHS 3.55–58, and applies the BPHS Chapter 27 point scale from the R. Santhanam translation by default (45/30/20/15/10/4/2). The alternate Raman halving scale (45/30/22.5/15/7.5/3.75/1.875) is selectable explicitly. The current declared Moolatrikona policy awards the 45-point Moolatrikona bonus in D1 only; other Vargas use own-sign or compound-relationship scores.
 
-**Next work:** the Saptavargaja implementation still needs comparison against independently worked classical example charts and edition-specific variants. Reimplement the remaining Bala components from their cited BPHS chapter/verse and selected translation, including exact quadrant reference points, local apparent time and planetary-hour lords, declination/Ayana, true motional kendra, and full Drishti-Pinda. Add independent worked-example fixtures before removing the partial label.
+**Next work:** the Saptavargaja implementation still needs comparison against independently worked classical example charts and edition-specific variants. Reimplement the remaining Bala components from their cited BPHS chapter/verse and selected translation, including local apparent time and planetary-hour lords, declination/Ayana, true motional kendra, and full Drishti-Pinda. Add independent worked-example fixtures before removing the partial label.
 
 ### KP house-system isolation
 
