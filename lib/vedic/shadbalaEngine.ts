@@ -1,4 +1,8 @@
 import { calculateDivisionalSignIndex } from "./divisionalCalc";
+import {
+  calculateLongitudeDrishtiVirupas,
+  type DrishtiVirupaVariant,
+} from "./drishtiEngine";
 
 /**
  * Partial Shadbala research estimator.
@@ -19,7 +23,7 @@ export const SHADBALA_IMPLEMENTATION_STATUS = {
     "Dig Bala uses the actual sidereal Midheaven when supplied by the chart; callers without a Midheaven retain the disclosed 90° ecliptic fallback.",
     "Kala Bala still contains fixed placeholder values for Tribhaga, year, month and Ayana components, and its Hora estimate is not a sunrise-based planetary-hour calculation.",
     "Cheshta Bala uses coarse motion bands; non-luminary scores require an actual daily-motion value. Sun and Moon still use provisional constants rather than their textually specified Ayana/Paksha derivations.",
-    "Drik Bala uses simplified fixed aspect bands and point values rather than a complete angular Drishti-Pinda computation."
+    "Drik Bala now uses directed longitude-based Drishti Pinda for the seven classical grahas, with source-labelled BPHS verse and Raman/translator aspect curves and explicit Mercury/Jupiter full-aspect readings. It still requires validation against a complete independent Shadbala worked chart before the Shadbala module can be promoted beyond partial."
   ]
 } as const;
 
@@ -73,9 +77,40 @@ export interface NaisargikaBalaResult {
   description: string;
 }
 
+export type DrikFullAspectReading =
+  | "added-to-quarter"
+  | "in-place-of-quarter"
+  | "quarter-only";
+
+export type DrikMercuryAssociationRule = "same-sign" | "degree-orb";
+
+export interface DrikBalaAspect {
+  aspectingPlanet: string;
+  nature: "Benefic" | "Malefic";
+  /** Directed separation: aspected longitude minus aspecting longitude, [0°, 360°). */
+  angle: number;
+  /** Unadjusted Sputa Drishti from the selected Ch. 26 curve. */
+  rawVirupas: number;
+  /** Signed one-quarter contribution under BPHS 27.19. */
+  quarterVirupas: number;
+  /** Signed full Mercury/Jupiter term under the selected 27.19 reading. */
+  fullAspectVirupas: number;
+  /** Net signed contribution to Drik Bala. */
+  virupas: number;
+}
+
 export interface DrikBalaResult {
   points: number;
-  aspects: { aspectingPlanet: string; nature: "Benefic" | "Malefic"; angle: number; virupas: number }[];
+  /** Signed sum of all raw benefic and malefic Drishti Pinda contributions. */
+  drishtiPinda: number;
+  beneficDrishtiPinda: number;
+  maleficDrishtiPinda: number;
+  aspects: DrikBalaAspect[];
+  available: boolean;
+  missingPlanetInputs: string[];
+  degreeStrengthVariant: DrishtiVirupaVariant;
+  fullAspectReading: DrikFullAspectReading;
+  mercuryAssociationRule: DrikMercuryAssociationRule;
   description: string;
 }
 
@@ -110,6 +145,17 @@ export interface ShadbalaChartInput {
   midheaven?: number;
   /** Source-labelled point scale; defaults to the R. Santhanam BPHS translation. */
   saptavargajaScale?: SaptavargajaScale;
+  /** Exact-longitude Sputa Drishti source profile; defaults to BPHS 26.9-12. */
+  drishtiVirupaVariant?: DrishtiVirupaVariant;
+  /**
+   * BPHS 27.19 says to add Mercury/Jupiter's whole aspect after the quarter
+   * terms, but editions/commentators differ on replacement vs addition.
+   */
+  drikFullAspectReading?: DrikFullAspectReading;
+  /** Mercury becomes malefic when conjoined/associated with a malefic. */
+  drikMercuryAssociationRule?: DrikMercuryAssociationRule;
+  /** Required only by the explicitly chosen degree-orb Mercury association rule. */
+  drikMercuryAssociationOrbDeg?: number;
   planets: {
     [name: string]: {
       longitude: number;
@@ -629,49 +675,162 @@ export class ShadbalaEngine {
   }
 
   public calculateDrikBala(planet: string, input: ShadbalaChartInput): DrikBalaResult {
-    let drikPoints = 0;
-    const aspectsList: {
-      aspectingPlanet: string;
-      nature: "Benefic" | "Malefic";
-      angle: number;
-      virupas: number;
-    }[] = [];
+    const degreeStrengthVariant = input.drishtiVirupaVariant ?? "bphs-verse-special-formula";
+    const fullAspectReading = input.drikFullAspectReading ?? "added-to-quarter";
+    const mercuryAssociationRule = input.drikMercuryAssociationRule ?? "same-sign";
+    const missingPlanetInputs = ShadbalaEngine.PLANETS.filter(
+      (name) => !input.planets[name]
+    );
+
+    const unavailable = (missing: string[], reason: string): DrikBalaResult => ({
+      points: 0,
+      drishtiPinda: 0,
+      beneficDrishtiPinda: 0,
+      maleficDrishtiPinda: 0,
+      aspects: [],
+      available: false,
+      missingPlanetInputs: missing,
+      degreeStrengthVariant,
+      fullAspectReading,
+      mercuryAssociationRule,
+      description: reason,
+    });
+
+    if (!ShadbalaEngine.PLANETS.includes(planet)) {
+      throw new RangeError(`Drik Bala is defined here only for the seven classical planets; received ${planet}.`);
+    }
+    if (mercuryAssociationRule === "degree-orb") {
+      const orb = input.drikMercuryAssociationOrbDeg;
+      if (!Number.isFinite(orb) || (orb as number) < 0 || (orb as number) > 30) {
+        throw new RangeError("Degree-orb Mercury association requires a finite orb from 0° through 30°.");
+      }
+    }
+
+    const allLongitudes = Object.entries(input.planets);
+    allLongitudes.forEach(([name, position]) => {
+      if (!Number.isFinite(position.longitude) ||
+          position.longitude < 0 || position.longitude >= 360) {
+        throw new RangeError(`Drik Bala requires normalized [0°, 360°) longitude for ${name}.`);
+      }
+    });
 
     const targetPos = input.planets[planet];
     if (!targetPos) {
-      return { points: 0, aspects: [], description: "No aspects calculated." };
+      return unavailable(missingPlanetInputs, `Drik Bala unavailable: target position for ${planet} is missing.`);
     }
+    if (missingPlanetInputs.length > 0) {
+      return unavailable(
+        missingPlanetInputs,
+        `Drik Bala unavailable: the seven-graha chart is missing ${missingPlanetInputs.join(", ")}; no partial aspect total is substituted.`
+      );
+    }
+
+    const normalizedAngle = (value: number) => ((value % 360) + 360) % 360;
+    const moonLongitude = input.planets.Moon.longitude;
+    const sunLongitude = input.planets.Sun.longitude;
+    const moonElongation = normalizedAngle(moonLongitude - sunLongitude);
+    // BPHS Ch.3 classifies the waxing Moon as benefic and the waning Moon as
+    // malefic. At New Moon (0°) the Moon is treated as waning/malefic.
+    const isWaxingMoon = moonElongation > 0 && moonElongation <= 180;
+
+    const isMaleficPlanet = (name: string): boolean => {
+      if (name === "Sun" || name === "Mars" || name === "Saturn" || name === "Rahu" || name === "Ketu") {
+        return true;
+      }
+      if (name === "Moon") return !isWaxingMoon;
+      return false;
+    };
+
+    const isMercuryMalefic = (): boolean => {
+      const mercury = input.planets.Mercury;
+      const associatedMalefics = ["Sun", "Moon", "Mars", "Saturn", "Rahu", "Ketu"]
+        .filter((name) => input.planets[name] && isMaleficPlanet(name));
+      return associatedMalefics.some((name) => {
+        const other = input.planets[name];
+        const separation = Math.min(
+          normalizedAngle(other.longitude - mercury.longitude),
+          normalizedAngle(mercury.longitude - other.longitude)
+        );
+        if (mercuryAssociationRule === "same-sign") {
+          return Math.floor(other.longitude / 30) === Math.floor(mercury.longitude / 30);
+        }
+        return separation <= (input.drikMercuryAssociationOrbDeg as number);
+      });
+    };
+
+    const getNature = (name: string): "Benefic" | "Malefic" => {
+      if (name === "Mercury") return isMercuryMalefic() ? "Malefic" : "Benefic";
+      if (name === "Moon") return isWaxingMoon ? "Benefic" : "Malefic";
+      return isMaleficPlanet(name) ? "Malefic" : "Benefic";
+    };
+
+    const aspectsList: DrikBalaAspect[] = [];
+    let drishtiPinda = 0;
+    let beneficDrishtiPinda = 0;
+    let maleficDrishtiPinda = 0;
 
     for (const otherPlanet of ShadbalaEngine.PLANETS) {
       if (otherPlanet === planet) continue;
       const otherPos = input.planets[otherPlanet];
-      if (!otherPos) continue;
+      // Direction is important: BPHS 26.6-8 defines aspected minus aspecting.
+      const angle = normalizedAngle(targetPos.longitude - otherPos.longitude);
+      const rawVirupas = calculateLongitudeDrishtiVirupas(
+        angle,
+        otherPlanet,
+        degreeStrengthVariant
+      );
+      if (rawVirupas <= 0) continue;
 
-      const angle = Math.abs(otherPos.longitude - targetPos.longitude) % 360;
-      let aspectValue = 0;
-      if (angle >= 170 && angle <= 190) aspectValue = 15;
-      else if (otherPlanet === "Mars" && ((angle >= 80 && angle <= 100) || (angle >= 230 && angle <= 250))) aspectValue = 15;
-      else if (otherPlanet === "Jupiter" && ((angle >= 110 && angle <= 130) || (angle >= 230 && angle <= 250))) aspectValue = 15;
-      else if (otherPlanet === "Saturn" && ((angle >= 50 && angle <= 70) || (angle >= 290 && angle <= 310))) aspectValue = 15;
+      const nature = getNature(otherPlanet);
+      const sign = nature === "Benefic" ? 1 : -1;
+      const quarterVirupas = sign * rawVirupas / 4;
+      const isFullAspectPlanet = otherPlanet === "Mercury" || otherPlanet === "Jupiter";
+      let fullAspectVirupas = 0;
 
-      if (aspectValue > 0) {
-        const isBenefic = ["Jupiter", "Venus", "Mercury"].includes(otherPlanet);
-        const signedVirupas = isBenefic ? aspectValue : -aspectValue;
-        drikPoints += signedVirupas;
-
-        aspectsList.push({
-          aspectingPlanet: otherPlanet,
-          nature: isBenefic ? "Benefic" : "Malefic",
-          angle: Math.round(angle * 10) / 10,
-          virupas: Math.round(signedVirupas * 10) / 10,
-        });
+      if (isFullAspectPlanet) {
+        if (fullAspectReading === "added-to-quarter") {
+          fullAspectVirupas = sign * rawVirupas;
+        } else if (fullAspectReading === "in-place-of-quarter") {
+          fullAspectVirupas = sign * rawVirupas - quarterVirupas;
+        }
       }
+      const quarterContribution =
+        isFullAspectPlanet && fullAspectReading === "in-place-of-quarter"
+          ? 0
+          : quarterVirupas;
+      const netVirupas = quarterContribution + fullAspectVirupas;
+
+      if (nature === "Benefic") beneficDrishtiPinda += rawVirupas;
+      else maleficDrishtiPinda += rawVirupas;
+      drishtiPinda += sign * rawVirupas;
+
+      aspectsList.push({
+        aspectingPlanet: otherPlanet,
+        nature,
+        angle: Math.round(angle * 1000) / 1000,
+        rawVirupas: Math.round(rawVirupas * 100) / 100,
+        quarterVirupas: Math.round(quarterContribution * 100) / 100,
+        fullAspectVirupas: Math.round(fullAspectVirupas * 100) / 100,
+        virupas: Math.round(netVirupas * 100) / 100,
+      });
     }
 
+    const points = aspectsList.reduce((sum, aspect) => sum + aspect.virupas, 0);
+    const roundedPoints = Math.round(points * 100) / 100;
+    const roundedPinda = Math.round(drishtiPinda * 100) / 100;
     return {
-      points: Math.round(drikPoints * 100) / 100,
+      points: roundedPoints,
+      drishtiPinda: roundedPinda,
+      beneficDrishtiPinda: Math.round(beneficDrishtiPinda * 100) / 100,
+      maleficDrishtiPinda: Math.round(maleficDrishtiPinda * 100) / 100,
       aspects: aspectsList,
-      description: `Net Drishti aspect score is ${drikPoints} Virupas.`,
+      available: true,
+      missingPlanetInputs: [],
+      degreeStrengthVariant,
+      fullAspectReading,
+      mercuryAssociationRule,
+      description:
+        `Drik Bala ${roundedPoints} Virupas from signed Drishti Pinda ${roundedPinda}; waxing/waning Moon and Mercury association are evaluated with the ${mercuryAssociationRule} rule. Degree curve: ${degreeStrengthVariant}; Mercury/Jupiter 27.19 reading: ${fullAspectReading}.`,
     };
   }
 
