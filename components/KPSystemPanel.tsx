@@ -79,6 +79,7 @@ export function KPSystemPanel({
   >("prediction");
 
   const [selectedHouse, setSelectedHouse] = useState<number>(10); // Default to Career (House 10)
+  const [kpBodySet, setKPBodySet] = useState<"classical-nine" | "extended-twelve">("classical-nine");
 
   // 4-Step Theory state
   const [fourStepTarget, setFourStepTarget] = useState<string>("Sun");
@@ -101,8 +102,8 @@ export function KPSystemPanel({
 
   // Master KP Chart Data
   const kpData: KPChartData = useMemo(() => {
-    return kpEngine.generateKPChart(westernData, vedicData, birthDateObj);
-  }, [kpEngine, westernData, vedicData, birthDateObj]);
+    return kpEngine.generateKPChart(westernData, vedicData, birthDateObj, kpBodySet);
+  }, [kpEngine, westernData, vedicData, birthDateObj, kpBodySet]);
 
   // Positional Status (PS)
   const psMap: Record<string, PositionalStatus> = useMemo(() => {
@@ -1256,9 +1257,28 @@ export function KPSystemPanel({
             <p className="text-xs text-slate-400">
               Each planet&apos;s KP sidereal coordinate, house occupancy, star lord, sub-lord, and separately graded classical house signification.
             </p>
-            <p className="text-[11px] text-slate-500">
-              Body profile: {kpData.bodySet === "classical-nine" ? "Classical nine" : "Extended twelve (Uranus, Neptune and Pluto included)"}. Node convention: {kpData.nodeConvention === "true" ? "True node" : "Mean Rahu with Ketu exactly opposite"}. The true-node and classical-nine switches are not yet exposed here; unvalidated placeholder bodies such as Chiron are excluded.
-            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] text-slate-500">KP body profile:</span>
+              <button
+                type="button"
+                onClick={() => setKPBodySet("classical-nine")}
+                aria-pressed={kpBodySet === "classical-nine"}
+                className={`rounded-md border px-2.5 py-1 text-[11px] font-semibold ${kpBodySet === "classical-nine" ? "border-cyan-500 bg-cyan-950/60 text-cyan-200" : "border-slate-700 text-slate-400"}`}
+              >
+                Classical nine
+              </button>
+              <button
+                type="button"
+                onClick={() => setKPBodySet("extended-twelve")}
+                aria-pressed={kpBodySet === "extended-twelve"}
+                className={`rounded-md border px-2.5 py-1 text-[11px] font-semibold ${kpBodySet === "extended-twelve" ? "border-cyan-500 bg-cyan-950/60 text-cyan-200" : "border-slate-700 text-slate-400"}`}
+              >
+                Extended twelve
+              </button>
+              <span className="text-[10px] text-slate-500">
+                {kpData.bodySet === "classical-nine" ? "Seven classical planets + mean Rahu/Ketu" : "Adds Uranus, Neptune and Pluto"} · Node model: mean Rahu / opposite Ketu · Chiron placeholder excluded
+              </span>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
