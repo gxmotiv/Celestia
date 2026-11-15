@@ -475,7 +475,7 @@ const readerIIINodes = nodeCalculator.calculateNodeRepresentations(
 );
 assert.deepEqual(readerIIINodes.Rahu?.priorityOrder, ["conjunction", "aspect", "star-lord", "sign-lord"]);
 assert.equal(readerIIINodes.Rahu?.preferredAgentSource, "aspect", "Reader III/V puts aspecting planets before the star lord");
-assert.deepEqual(readerIIINodes.Rahu?.preferredAgentPlanets, ["Sun", "Mars"]);
+assert.deepEqual(readerIIINodes.Rahu?.preferredAgentPlanets, ["Sun", "Mars", "Jupiter"]);
 assert.equal(readerVINodes.Ketu?.preferredAgentSource, "conjunction", "Conjunction remains first in both reader variants");
 assert.deepEqual(readerVINodes.Ketu?.preferredAgentPlanets, ["Sun"]);
 
