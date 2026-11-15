@@ -78,6 +78,16 @@ https://archive.org/stream/krishnamurti-padhdhati-vol-3-english/KP-Simple-Rules_
 
 The sources differ in both edition priority and orb practice. Keep the selected source label, aspect policy and conjunction convention attached to every calculation. Do not describe this implementation as a universal or final KP node rule.
 
+## Dasha / Bhukti / Antara house-grade evidence
+
+The event predictor no longer stops at a union membership test for current period lords. For each favorable event house, it checks the house-to-planet KP grades and records the strongest grade reached by the Mahadasha lord, Antardasha lord and (when supplied) Pratyantardasha lord.
+
+Priority is Grade I (planet in star of a house occupant), then Grade II (occupant), Grade III (planet in star of the house lord), then Grade IV (house lord). If a period lord appears in several favorable houses/grades, the strongest grade is returned. No grade means there is no direct period-lord match in those favorable house tables.
+
+The UI displays the grade separately for each period lord. The current rule-score arithmetic is intentionally unchanged and is still a heuristic; it does not assign arbitrary numeric multipliers to Grades I-IV and is not an empirical probability. A future calibrated scoring layer requires source-specific rules and a validated outcome dataset, not invented percentages.
+
+Regression tests check that Grade I outranks Grade II across multiple favorable houses, a Grade II-only match is reported as II, and a non-matching planet remains ungraded.
+
 ## Classical planet-level A–D strength
 
 The KP planet-signification engine now exposes the four distinct house sets rather than only one merged set:
@@ -125,6 +135,8 @@ This implements the practitioner lesson's stated strength distinctions, but does
 - preferred node-agent A/B/C/D grades are mapped into the corresponding house Grades I–IV;
 - the raw house table remains unmodified while the derived table adds the node to its agent's grade;
 - expanded house significators feed KP event Dasha/Bhukti matching.
+- strongest favorable-house grade is resolved for Mahadasha, Bhukti and Antara period lords;
+- Grade I takes precedence over Grades II-IV without changing the uncalibrated heuristic score.
 - the Western NorthNode/SouthNode to KP Rahu/Ketu mapping;
 - mean-node and extended-twelve chart metadata;
 - exclusion of unvalidated calculation-note points such as the placeholder Chiron point.
