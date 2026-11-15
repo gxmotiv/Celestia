@@ -16,6 +16,7 @@ import {
   KPHouseSignificators,
   KPPlanetSignification,
   KPPlanetSignificationGrade,
+  KPPlanetSignificationLevels,
   KPNodeAgentRule,
   KPNodeAgentSource,
   KPNodeAgentTier,
