@@ -255,13 +255,16 @@ export function calculateDivisionalSignIndex(
     }
 
     case "D30": { // Trimsamsa
-      // Odd signs: Mars (Aries=0, 0-5°), Saturn (Aquarius=10, 5-10°), Jupiter (Sagittarius=8, 10-18°), Mercury (Gemini=2, 18-25°), Venus (Taurus=1, 25-30°)
-      // Even signs: Venus (Taurus=1, 0-5°), Mercury (Virgo=5, 5-12°), Jupiter (Pisces=11, 12-20°), Saturn (Capricorn=9, 20-25°), Mars (Scorpio=7, 25-30°)
+      // BPHS 6.27 gives the unequal segment widths and planetary lords.
+      // This declared Parashari D30 chart variant maps each segment lord to
+      // its odd-sign domicile in odd rasis and even-sign domicile in even rasis.
+      // Odd: Mars/Aries, Saturn/Aquarius, Jupiter/Sagittarius, Mercury/Gemini, Venus/Libra.
+      // Even: Venus/Taurus, Mercury/Virgo, Jupiter/Pisces, Saturn/Capricorn, Mars/Scorpio.
       const parts = unequalVargaPart(
         degInRasi,
         isOddSign ? [5, 5, 8, 7, 5] : [5, 7, 8, 5, 5]
       );
-      const oddSignDestinations = [0, 10, 8, 2, 1]; // Aries, Aquarius, Sagittarius, Gemini, Taurus
+      const oddSignDestinations = [0, 10, 8, 2, 6]; // Aries, Aquarius, Sagittarius, Gemini, Libra
       const evenSignDestinations = [1, 5, 11, 9, 7]; // Taurus, Virgo, Pisces, Capricorn, Scorpio
       return (isOddSign ? oddSignDestinations : evenSignDestinations)[parts.index];
     }
