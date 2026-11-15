@@ -6,6 +6,7 @@
 import { KPCusp, KPCusps } from "./kpTypes";
 import { SubLordCalculator } from "./subLordEngine";
 import { WesternChartData, normalizeDegrees } from "../astronomy/ephemeris";
+import { swissEphemeris } from "../astronomy/swissEphemeris";
 
 export interface BirthData {
   year: number;
@@ -45,10 +46,50 @@ export class KPCuspsCalculator {
   ): KPCusps {
     const kpAyanamsa = KPCuspsCalculator.calculateKPAyanamsa(birthYear, birthMonth, birthDay);
 
-    // 1. Convert Western Tropical Placidus Cusps to KP Sidereal
-    const siderealPlacidusCusps = westernData.houses.map((h) => {
-      return normalizeDegrees(h.longitude - kpAyanamsa);
-    });
+    // 1. KP uses Placidus cusps regardless of the user's separate Western
+    // natal house preference. Recalculate tropical Placidus from the chart's
+    // own UTC Julian Day and birthplace before applying KP ayanamsa.
+    // Reusing westernData.houses directly would silently import Whole Sign,
+    // Morinus, Meridian, etc. into KP when the user selected another system.
+    let tropicalPlacidusCusps: number[];
+    const hasBirthGeometry =
+      Number.isFinite(westernData.julianDay) &&
+      Number.isFinite(westernData.birthLatitude) &&
+      Number.isFinite(westernData.birthLongitude);
+
+    if (hasBirthGeometry) {
+      const placidus = swissEphemeris.calculateHouses(
+        westernData.julianDay,
+        westernData.birthLatitude as number,
+        westernData.birthLongitude as number,
+        "P"
+      );
+      if (placidus.houseSystemUsed !== "P") {
+        throw new RangeError(
+          "KP requires Placidus house cusps. Placidus is undefined for this birthplace/epoch in the current calculation, so KP cusps were not silently replaced by another house system."
+        );
+      }
+      tropicalPlacidusCusps = placidus.houseCusps;
+    } else if (westernData.houseSystem === "Placidus") {
+      // Backward-compatible path for callers that supply a verified Placidus
+      // chart without its original birthplace geometry.
+      tropicalPlacidusCusps = westernData.houses.map((house) => house.longitude);
+    } else {
+      throw new RangeError(
+        "KP requires Placidus cusps and the original birth latitude/longitude. The supplied Western chart uses " +
+        westernData.houseSystem +
+        " and cannot be reused as KP house geometry."
+      );
+    }
+
+    if (tropicalPlacidusCusps.length !== 12 || !tropicalPlacidusCusps.every(Number.isFinite)) {
+      throw new RangeError("KP Placidus cusp calculation must produce twelve finite cusps.");
+    }
+
+    // Convert only the KP-required tropical Placidus cusps to the KP sidereal frame.
+    const siderealPlacidusCusps = tropicalPlacidusCusps.map((cusp) =>
+      normalizeDegrees(cusp - kpAyanamsa)
+    );
 
     // 2. Apply KP Cusp Corrections (as requested in KP specification:
     // If cusp falls in last 3°20' (26°40' or 26.6667°) of sign, move to next sign)
