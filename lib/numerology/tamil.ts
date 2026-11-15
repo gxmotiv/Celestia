@@ -1,6 +1,10 @@
 /**
- * Complete Tamil Numerology (En Kaniyam - எண் கணிதம்) Engine
- * Classical Southern Siddhanta Numerology
+ * Tamil-language En Kanitham (எண் கணிதம்) profile.
+ *
+ * Provenance boundary: the current English-name (Peyar En) calculation uses
+ * the Chaldean-Indian Latin A–Z mapping shared with the Vedic numerology module.
+ * It is not a verified classical Tamil-script letter-value method. Non-Latin
+ * names are therefore reported as unavailable rather than assigned a fake value.
  * Incorporates:
  * 1. Janma En (Birth Number / பிறந்த எண்)
  * 2. Vidhi En (Destiny Number / விதி எண்)
@@ -173,13 +177,23 @@ export function calculateTamilNumerology(
     .reduce((s, c) => s + parseInt(c, 10), 0);
   const vidhiEn = reduceTo9(dSum + mSum + ySum);
 
-  // Peyar En (Tamil phonetic name sum)
-  const clean = fullName.toUpperCase().replace(/[^A-Z]/g, "");
+  // Peyar En: this declared variant accepts Latin A–Z transliteration only.
+  // Do not silently drop Tamil/other scripts or turn an empty sum into 1.
+  const normalizedName = fullName
+    .normalize("NFKD")
+    .replace(/\p{M}/gu, "")
+    .toUpperCase();
+  const clean = normalizedName.replace(/[^A-Z]/g, "");
+  const hasUnsupportedCharacters = /[^A-Z\s.'’\-]/u.test(normalizedName);
   let nameSum = 0;
   for (const ch of clean) {
     nameSum += VEDIC_CHALDEAN_MAP[ch] || 0;
   }
-  const peyarEn = reduceTo9(nameSum || 1);
+  const canCalculatePeyarEn = clean.length > 0 && !hasUnsupportedCharacters;
+  const peyarEn = canCalculatePeyarEn ? reduceTo9(nameSum) : null;
+  const peyarEnNote = canCalculatePeyarEn
+    ? "Calculated from the Chaldean-Indian Latin A–Z letter table. This is a declared Latin-transliteration variant, not a validated Tamil-script phonetic table."
+    : "Not calculated: this method currently supports Latin A–Z transliteration only. A Tamil-script or mixed-script name is not silently stripped or assigned a default number.";
 
   const profile = TAMIL_GRAHA_PROFILES[janmaEn] || TAMIL_GRAHA_PROFILES[1];
 
@@ -187,6 +201,8 @@ export function calculateTamilNumerology(
     janmaEn,
     vidhiEn,
     peyarEn,
+    peyarEnMethod: "Chaldean-Indian Latin A-Z mapping",
+    peyarEnNote,
     tamilGraha: profile.tamilGraha,
     auspiciousDays: profile.auspiciousDays,
     auspiciousColors: profile.auspiciousColors,
