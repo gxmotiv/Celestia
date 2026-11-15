@@ -16,7 +16,7 @@ export function DrishtiMatrixPanel({ vedicData, fullName = "Seeker" }: DrishtiMa
   const [selectedPlanetFilter, setSelectedPlanetFilter] = useState<string | "all">("all");
   const [nodeAspectRule, setNodeAspectRule] = useState<NodeAspectRule>("none");
   const [degreeStrengthVariant, setDegreeStrengthVariant] =
-    useState<DrishtiVirupaVariant>("bphs-translator-special-adjustments");
+    useState<DrishtiVirupaVariant>("bphs-verse-special-formula");
 
   const drishtiReport: DrishtiMatrixReport = useMemo(() => {
     return calculateDrishtiMatrix(vedicData.planets, vedicData.lagna.rasiIndex, {
@@ -169,12 +169,13 @@ export function DrishtiMatrixPanel({ vedicData, fullName = "Seeker" }: DrishtiMa
                 onChange={(event) => setDegreeStrengthVariant(event.target.value as DrishtiVirupaVariant)}
                 className="bg-slate-900 border border-slate-700 rounded-md px-2.5 py-1.5 text-xs text-slate-200"
               >
-                <option value="bphs-base-longitude-curve">BPHS Ch. 26 base longitude curve</option>
-                <option value="bphs-translator-special-adjustments">Base curve + printed special-aspect adjustments</option>
+                <option value="bphs-base-longitude-curve">BPHS Ch. 26 vv. 6–8 generic curve</option>
+                <option value="bphs-verse-special-formula">BPHS Ch. 26 vv. 9–12 Sanskrit special formulae</option>
+                <option value="bphs-translator-special-adjustments">B. V. Raman / translator-note +15/+30/+45 additions</option>
               </select>
             </label>
             <p className="text-[10px] text-slate-500 md:ml-auto max-w-xl">
-              Whole-sign grades remain separate from degree strength. The second longitude option applies a commonly printed translator-note interpretation; it is not silently treated as the only edition.
+              Whole-sign grades remain separate from longitude strength. BPHS vv. 9–12 replace the generic curve with planet-specific formulas; Raman/translator notes use a different additive method and can exceed 60 Virupas.
             </p>
           </div>
 
