@@ -127,13 +127,15 @@ for (const fixture of referenceFixtures) {
     ) < 1e-7,
     `${fixture.name}: house ${index + 1} is opposite house ${((index + 6) % 12) + 1}`);
   }
-  const spans = actual.houseCusps.map((cusp, index) =>
-    (actual.houseCusps[(index + 1) % 12] - cusp + 360) % 360
-  );
-  check(spans.every((span) => span > 0 && span < 180),
-    `${fixture.name}: cusps are in increasing zodiacal order`);
-  check(Math.abs(spans.reduce((sum, span) => sum + span, 0) - 360) < 1e-7,
-    `${fixture.name}: twelve house arcs close to 360 degrees`);
+  const signedSpans = actual.houseCusps.map((cusp, index) => {
+    const next = actual.houseCusps[(index + 1) % 12];
+    return ((next - cusp + 540) % 360) - 180;
+  });
+  check(signedSpans.every((span) => Math.abs(span) > 0 && Math.abs(span) < 180),
+    `${fixture.name}: adjacent Campanus cusps have finite non-zero arcs`);
+  const expectedOrientation = actual.polarShifted ? -360 : 360;
+  check(Math.abs(signedSpans.reduce((sum, span) => sum + span, 0) - expectedOrientation) < 1e-7,
+    `${fixture.name}: twelve signed house arcs close in the documented polar orientation`);
 }
 
 let invalidInputs = 0;
