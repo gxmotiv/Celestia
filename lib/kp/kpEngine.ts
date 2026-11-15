@@ -53,20 +53,16 @@ export class KPEngine {
       "Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn",
       "NorthNode", "SouthNode",
     ]);
+    const requiredMissing = Array.from(classicalNineNames).filter(
+      (name) => !calculationReadyPoints.some((point) => point.name === name)
+    );
+    if (requiredMissing.length > 0) {
+      throw new Error(`KP chart is missing required classical points: ${requiredMissing.join(", ")}.`);
+    }
+
     const selectedPoints = bodySet === "classical-nine"
       ? calculationReadyPoints.filter((point) => classicalNineNames.has(point.name))
       : calculationReadyPoints;
-
-    if (selectedPoints.length !== (bodySet === "classical-nine" ? 9 : calculationReadyPoints.length)) {
-      const requiredMissing = Array.from(classicalNineNames).filter(
-        (name) => !selectedPoints.some((point) =>
-          point.name === (name === "NorthNode" ? "NorthNode" : name === "SouthNode" ? "SouthNode" : name)
-        )
-      );
-      if (requiredMissing.length > 0) {
-        throw new Error(`KP ${bodySet} profile is missing required chart points: ${requiredMissing.join(", ")}.`);
-      }
-    }
 
     const kpPlanets: KPPlanet[] = selectedPoints.map((p) => {
       // Western point names are translated into KP's traditional node names.
