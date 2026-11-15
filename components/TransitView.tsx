@@ -79,7 +79,7 @@ export function TransitView({
 
   // Custom House System Override (for Western)
   const [selectedHouseSystem, setSelectedHouseSystem] = useState<
-    "auto" | "placidus" | "whole-sign" | "equal" | "porphyry" | "regiomontanus" | "koch" | "campanus"
+    "auto" | "placidus" | "whole-sign" | "equal" | "porphyry" | "regiomontanus" | "koch" | "campanus" | "alcabitius"
   >("auto");
 
   // BaZi Gender (for Da Yun progression direction)
@@ -298,6 +298,7 @@ export function TransitView({
                   <option value="regiomontanus">Regiomontanus (Equatorial)</option>
                   <option value="koch">Koch (Birthplace / MC semi-diurnal arc)</option>
                   <option value="campanus">Campanus (Prime Vertical Great Circles)</option>
+                  <option value="alcabitius">Alcabitius (Ascendant semi-arc thirds)</option>
                 </select>
               </div>
             )}
