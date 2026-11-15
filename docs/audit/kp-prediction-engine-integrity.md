@@ -39,9 +39,11 @@ These transcriptions and teaching notes are research witnesses, not a critical e
 
 The chart bridge now maps the Western engine's `NorthNode` to KP `Rahu` and `SouthNode` to KP `Ketu`. The upstream astronomy calculation explicitly uses **mean Rahu** with Ketu exactly opposite; the KP chart records this as `nodeConvention: "mean"`. A true-node option is not currently exposed.
 
-The bridge now runs Western points through `filterCalculationReadyPoints` before converting them into KP planets. This removes Chiron's explicitly marked illustrative, unvalidated sine-formula position instead of assigning it KP star/sub lords and significations. The KP body profile is now recorded as `extended-twelve`: seven classical planets, Rahu/Ketu, Uranus, Neptune and Pluto. A selectable classical-nine-only profile is not yet available.
+The bridge runs Western points through `filterCalculationReadyPoints` before converting them into KP planets, excluding Chiron's explicitly marked illustrative, unvalidated sine-formula position. The chart defaults to `classical-nine` (Sun, Moon, Mars, Mercury, Jupiter, Venus, Saturn, Rahu and Ketu), and the UI offers `extended-twelve` to add Uranus, Neptune and Pluto. Both profiles keep the true/mean node choice explicit; the current ephemeris uses mean Rahu and opposite Ketu.
 
-Mapping the node names makes the existing modern 4-Step engine's Rahu/Ketu Positional Status and sign-lord representation paths reachable. The classical planet-level A–D significator matrix still does not fully model node agency through sign lord, conjunction and aspect. Do not infer that those rules are complete from the name mapping alone.
+The digitized *KP Astrology Basics* tutorial lists both profiles, says Uranus/Neptune/Pluto are optional because not all KP astrologers use them, and states that its emphasis is on the original nine grahas: https://archive.org/stream/krishnamurti-padhdhati-vol-3-english/KP-Astrology-Basics_djvu.txt. This is a teaching transcription rather than KSK's own critical edition, so the app preserves both variants instead of claiming that all KP lineages exclude outer planets.
+
+Mapping the node names makes the modern 4-Step engine's Rahu/Ketu Positional Status and sign-lord representation paths reachable. The selected Reader VI cascade is now applied to the planet-level A–D significations, the house-level Grades I–IV and event-period house matching, but only the first populated representative tier is injected. Other editions, all-tier weighting, node-to-RP substitution, and exact conjunction/orb variants remain open.
 
 ## Rahu / Ketu representative-agent cascade
 
