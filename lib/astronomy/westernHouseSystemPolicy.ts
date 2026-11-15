@@ -8,6 +8,7 @@
 export type WesternHouseTechnique =
   | "modern-natal"
   | "koch-school-natal"
+  | "campanus-school-natal"
   | "western-sidereal-natal"
   | "hellenistic-natal"
   | "hellenistic-time-lord"
@@ -56,7 +57,8 @@ export type ImplementedWesternHouseSystem =
   | "WholeSign"
   | "Porphyry"
   | "Regiomontanus"
-  | "Koch";
+  | "Koch"
+  | "Campanus";
 
 export type HouseSystemRecommendationMode =
   | "automatic"
@@ -92,6 +94,7 @@ const IMPLEMENTED_SYSTEMS = new Set<WesternHouseSystemName>([
   "Porphyry",
   "Regiomontanus",
   "Koch",
+  "Campanus",
 ]);
 
 /** House-system names accepted by the Western transit engine. */
@@ -101,7 +104,8 @@ export type WesternTransitHouseSystem =
   | "equal"
   | "porphyry"
   | "regiomontanus"
-  | "koch";
+  | "koch"
+  | "campanus";
 
 /** Convert a resolved natal method to the transit engine's explicit method key. */
 export function toWesternTransitHouseSystem(
@@ -114,6 +118,7 @@ export function toWesternTransitHouseSystem(
     case "Porphyry": return "porphyry";
     case "Regiomontanus": return "regiomontanus";
     case "Koch": return "koch";
+    case "Campanus": return "campanus";
   }
 }
 
@@ -224,6 +229,13 @@ export function recommendWesternHouseSystem(
           : "Koch (Birthplace) houses are selected for an explicitly Koch-school natal profile. The standard modern Western Auto profile remains Placidus; Koch is not silently substituted for other schools.",
       };
     }
+
+    case "campanus-school-natal":
+      return implementedPreset(
+        technique,
+        "Campanus",
+        "Campanus is the explicitly selected house method for this named profile. Its prime-vertical geometry remains available at high latitudes with the method's polar orientation correction. This profile does not change the modern Western Auto default or imply that Campanus is universally superior."
+      );
 
     case "hellenistic-natal":
     case "hellenistic-time-lord":
