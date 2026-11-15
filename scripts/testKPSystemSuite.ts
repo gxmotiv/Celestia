@@ -415,7 +415,16 @@ const nodeTestPlanets = [
 const nodeTestSignifications = Object.fromEntries(
   nodeTestPlanets.map((planet) => [
     planet.name,
-    { planet: planet.name, signifiedHouses: [planet.house] } as KPPlanetSignification,
+    {
+      planet: planet.name,
+      levels: {
+        levelA: [],
+        levelB: [planet.house],
+        levelC: [],
+        levelD: [],
+      },
+      signifiedHouses: [planet.house],
+    } as KPPlanetSignification,
   ])
 ) as Record<string, KPPlanetSignification>;
 const nodeCalculator = new KPSignificators();
@@ -451,6 +460,22 @@ assert.deepEqual(expandedNodeSignifications.Rahu.nodeAgentHouses, [4, 9], "Rahu'
 assert.ok(expandedNodeSignifications.Rahu.signifiedHouses.includes(9));
 assert.deepEqual(expandedNodeSignifications.Pluto.starLordNodeAgentHouses, [4, 9], "A planet in Rahu's star must inherit Rahu's preferred agent cascade");
 assert.deepEqual(expandedNodeSignifications.Pluto.levels.levelA, [4, 9], "Node agent houses must be represented in the star-lord A grade");
+
+const baseNodeHouseSignifications = nodeCalculator.calculateAllHouseSignificators(
+  strengthCusps,
+  nodeTestPlanets
+);
+const expandedNodeHouseSignifications = nodeCalculator.applyNodeAgentsToHouseSignificators(
+  baseNodeHouseSignifications,
+  readerVINodes
+);
+assert.ok(baseNodeHouseSignifications[9].levels.levelB.includes("Jupiter"));
+assert.ok(!baseNodeHouseSignifications[9].levels.levelB.includes("Rahu"));
+assert.ok(expandedNodeHouseSignifications[9].levels.levelB.includes("Rahu"), "Rahu must inherit its preferred Jupiter agent's Level B house signification");
+assert.ok(expandedNodeHouseSignifications[9].allSignificators.includes("Rahu"));
+assert.ok(expandedNodeHouseSignifications[10].levels.levelB.includes("Ketu"), "Ketu must inherit its preferred conjoined Sun's Level B house signification");
+assert.ok(baseNodeHouseSignifications[9].levels.levelB.includes("Jupiter"), "Raw source house significations remain unchanged");
+
 assert.throws(
   () => nodeCalculator.applyNodeAgentSignifications(
     nodeTestPlanets,
