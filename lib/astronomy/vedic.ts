@@ -199,22 +199,29 @@ export function calculateNavamsa(siderealLon: number): { rasiIndex: number; rasi
 /**
  * Evaluates dignity of a planet in a sidereal sign
  */
-function evaluateDignity(
+export function evaluateVedicDignity(
   planetName: string,
   rasiIdx: number,
   degInRasi: number
 ): VedicPlanet["dignity"] {
+  if (!Number.isInteger(rasiIdx) || rasiIdx < 0 || rasiIdx > 11) {
+    throw new RangeError("Vedic dignity requires a zodiac sign index from 0 through 11.");
+  }
+  if (!Number.isFinite(degInRasi) || degInRasi < 0 || degInRasi >= 30) {
+    throw new RangeError("Vedic dignity requires an in-sign degree in the half-open interval [0, 30).");
+  }
+
   switch (planetName) {
     case "Sun":
       if (rasiIdx === 0) return "Exalted"; // Aries
       if (rasiIdx === 6) return "Debilitated"; // Libra
-      if (rasiIdx === 4) return degInRasi <= 20 ? "Moolatrikona" : "Own Sign"; // Leo
+      if (rasiIdx === 4) return degInRasi < 20 ? "Moolatrikona" : "Own Sign"; // Leo [0°, 20°)
       if ([8, 3].includes(rasiIdx)) return "Friendly"; // Sagittarius, Cancer
       if ([1, 10, 11].includes(rasiIdx)) return "Enemy"; // Taurus, Capricorn, Aquarius
       return "Neutral";
 
     case "Moon":
-      if (rasiIdx === 1) return degInRasi <= 3 ? "Exalted" : "Moolatrikona"; // Taurus
+      if (rasiIdx === 1) return degInRasi < 3 ? "Exalted" : "Moolatrikona"; // Taurus [0°, 3°) / [3°, 30°)
       if (rasiIdx === 7) return "Debilitated"; // Scorpio
       if (rasiIdx === 3) return "Own Sign"; // Cancer
       if ([0, 2, 4, 5].includes(rasiIdx)) return "Friendly";
@@ -223,13 +230,17 @@ function evaluateDignity(
     case "Mars":
       if (rasiIdx === 9) return "Exalted"; // Capricorn
       if (rasiIdx === 3) return "Debilitated"; // Cancer
-      if (rasiIdx === 0) return degInRasi <= 12 ? "Moolatrikona" : "Own Sign"; // Aries
+      if (rasiIdx === 0) return degInRasi < 12 ? "Moolatrikona" : "Own Sign"; // Aries [0°, 12°)
       if (rasiIdx === 7) return "Own Sign"; // Scorpio
       if ([4, 8, 11].includes(rasiIdx)) return "Friendly";
       return "Neutral";
 
     case "Mercury":
-      if (rasiIdx === 5) return degInRasi <= 15 ? "Exalted" : "Moolatrikona"; // Virgo
+      if (rasiIdx === 5) {
+        if (degInRasi < 15) return "Exalted";
+        if (degInRasi < 20) return "Moolatrikona";
+        return "Own Sign";
+      } // Virgo: exaltation [0°, 15°), moolatrikona [15°, 20°), own [20°, 30°)
       if (rasiIdx === 11) return "Debilitated"; // Pisces
       if (rasiIdx === 2) return "Own Sign"; // Gemini
       if ([1, 4, 6].includes(rasiIdx)) return "Friendly";
@@ -238,7 +249,7 @@ function evaluateDignity(
     case "Jupiter":
       if (rasiIdx === 3) return "Exalted"; // Cancer
       if (rasiIdx === 9) return "Debilitated"; // Capricorn
-      if (rasiIdx === 8) return degInRasi <= 10 ? "Moolatrikona" : "Own Sign"; // Sagittarius
+      if (rasiIdx === 8) return degInRasi < 10 ? "Moolatrikona" : "Own Sign"; // Sagittarius [0°, 10°)
       if (rasiIdx === 11) return "Own Sign"; // Pisces
       if ([0, 4, 7].includes(rasiIdx)) return "Friendly";
       return "Neutral";
@@ -246,7 +257,7 @@ function evaluateDignity(
     case "Venus":
       if (rasiIdx === 11) return "Exalted"; // Pisces
       if (rasiIdx === 5) return "Debilitated"; // Virgo
-      if (rasiIdx === 6) return degInRasi <= 15 ? "Moolatrikona" : "Own Sign"; // Libra
+      if (rasiIdx === 6) return degInRasi < 15 ? "Moolatrikona" : "Own Sign"; // Libra [0°, 15°)
       if (rasiIdx === 1) return "Own Sign"; // Taurus
       if ([2, 9, 10].includes(rasiIdx)) return "Friendly";
       return "Neutral";
@@ -254,7 +265,7 @@ function evaluateDignity(
     case "Saturn":
       if (rasiIdx === 6) return "Exalted"; // Libra
       if (rasiIdx === 0) return "Debilitated"; // Aries
-      if (rasiIdx === 10) return degInRasi <= 20 ? "Moolatrikona" : "Own Sign"; // Aquarius
+      if (rasiIdx === 10) return degInRasi < 20 ? "Moolatrikona" : "Own Sign"; // Aquarius [0°, 20°)
       if (rasiIdx === 9) return "Own Sign"; // Capricorn
       if ([1, 2, 5].includes(rasiIdx)) return "Friendly";
       return "Neutral";
@@ -616,7 +627,7 @@ export function calculateVedicChart(
     const nakIdx = Math.floor(siderealLon / nakshatraSpan);
     const pada = Math.floor((siderealLon - nakIdx * nakshatraSpan) / (nakshatraSpan / 4)) + 1;
     const nav = calculateNavamsa(siderealLon);
-    const dignity = evaluateDignity(wp.name, rasiIdx, degInRasi);
+    const dignity = evaluateVedicDignity(wp.name, rasiIdx, degInRasi);
 
     // In Vedic Whole Sign house system (standard Jyotish), house = (rasiIdx - lagnaRasiIdx + 12) % 12 + 1
     const house = ((rasiIdx - lagnaRasiIdx + 12) % 12) + 1;
