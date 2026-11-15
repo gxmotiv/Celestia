@@ -11,6 +11,7 @@ import { calculateRegiomontanusHouses } from "./regiomontanusHouses";
 import { calculateKochHouses } from "./kochHouses";
 import { calculateCampanusHouses } from "./campanusHouses";
 import { calculateAlcabitiusHouses } from "./alcabitiusHouses";
+import { calculateMorinusHouses } from "./morinusHouses";
 
 export interface SwissPlanetPosition {
   longitude: number;      // Ecliptic longitude in degrees, rounded for display (not an accuracy guarantee)
@@ -50,7 +51,7 @@ export interface SwissHouseResult {
   localSiderealTime: number;
   /** True obliquity of date in degrees, matching Astronomy Engine GAST. */
   obliquity: number;
-  houseSystemUsed: "P" | "W" | "E" | "O" | "R" | "K" | "C" | "B";
+  houseSystemUsed: "P" | "W" | "E" | "O" | "R" | "K" | "C" | "B" | "M";
   /** Discloses a documented method-specific orientation adjustment or fallback. */
   houseSystemNote?: string;
   equatorialAscendant: number;
@@ -495,13 +496,13 @@ export class SwissEphemerisEngine {
   }
 
   /**
-   * Calculate Placidus, Equal, Whole Sign, Porphyry, Regiomontanus, Koch, Campanus or Alcabitius houses.
+   * Calculate Placidus, Equal, Whole Sign, Porphyry, Regiomontanus, Koch, Campanus, Alcabitius or Morinus houses.
    */
   public calculateHouses(
     julianDay: number,
     latitude: number,
     longitude: number,
-    system: "P" | "W" | "E" | "O" | "R" | "K" | "C" | "B" = "P"
+    system: "P" | "W" | "E" | "O" | "R" | "K" | "C" | "B" | "M" = "P"
   ): SwissHouseResult {
     if (!Number.isFinite(julianDay) || !Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
       throw new RangeError("House calculation requires a finite Julian Day, latitude within ±90°, and longitude within ±180°.");
@@ -542,7 +543,7 @@ export class SwissEphemerisEngine {
     // Placidus is undefined at polar-circle latitudes. Use the standard Porphyry
     // quadrant fallback explicitly instead of allowing a trigonometric result to
     // masquerade as a valid Placidus chart.
-    let systemUsed: "P" | "W" | "E" | "O" | "R" | "K" | "C" | "B" =
+    let systemUsed: "P" | "W" | "E" | "O" | "R" | "K" | "C" | "B" | "M" =
       system === "P" && Math.abs(latitude) >= 66.5622
         ? "O"
         : system === "K" && Math.abs(latitude) >= 90 - epsDeg
@@ -638,6 +639,22 @@ export class SwissEphemerisEngine {
       }
       for (let index = 0; index < 12; index += 1) {
         cusps[index] = alcabitius.houseCusps[index];
+      }
+    } else if (systemUsed === "M") {
+      // Morinus divides the celestial equator into twelve equal 30° arcs
+      // beginning at ARMC and projects each point to the ecliptic. These
+      // cusps are latitude-independent and differ from the Meridian system.
+      const morinus = calculateMorinusHouses(ramc, epsDeg);
+      for (let index = 0; index < 12; index += 1) {
+        cusps[index] = morinus.houseCusps[index];
+      }
+
+      // Swiss Ephemeris keeps the Ascendant on the eastern horizon at polar
+      // orientations where the raw angular difference places it on the west.
+      const ascendantToMidheaven = ((asc - mc + 540) % 360) - 180;
+      if (ascendantToMidheaven < 0) {
+        asc = (asc + 180) % 360;
+        houseSystemNote = "Morinus preserved the Ascendant on the eastern horizon by applying the documented 180° polar-orientation adjustment; the latitude-independent Morinus cusps are unchanged.";
       }
     } else {
       // Placidus House System
