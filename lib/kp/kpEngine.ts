@@ -30,7 +30,8 @@ export class KPEngine {
   public generateKPChart(
     westernData: WesternChartData,
     vedicData: VedicChartData,
-    birthDate: Date
+    birthDate: Date,
+    bodySet: "classical-nine" | "extended-twelve" = "classical-nine"
   ): KPChartData {
     const year = birthDate.getUTCFullYear();
     const month = birthDate.getUTCMonth() + 1;
@@ -47,7 +48,27 @@ export class KPEngine {
     const kpAyanamsa = kpCusps.ayanamsa;
 
     // 2. Convert Western Planets to KP Sidereal with Sub-Lord and Sub-Sub Lord
-    const kpPlanets: KPPlanet[] = filterCalculationReadyPoints(westernData.planets).map((p) => {
+    const calculationReadyPoints = filterCalculationReadyPoints(westernData.planets);
+    const classicalNineNames = new Set([
+      "Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn",
+      "NorthNode", "SouthNode",
+    ]);
+    const selectedPoints = bodySet === "classical-nine"
+      ? calculationReadyPoints.filter((point) => classicalNineNames.has(point.name))
+      : calculationReadyPoints;
+
+    if (selectedPoints.length !== (bodySet === "classical-nine" ? 9 : calculationReadyPoints.length)) {
+      const requiredMissing = Array.from(classicalNineNames).filter(
+        (name) => !selectedPoints.some((point) =>
+          point.name === (name === "NorthNode" ? "NorthNode" : name === "SouthNode" ? "SouthNode" : name)
+        )
+      );
+      if (requiredMissing.length > 0) {
+        throw new Error(`KP ${bodySet} profile is missing required chart points: ${requiredMissing.join(", ")}.`);
+      }
+    }
+
+    const kpPlanets: KPPlanet[] = selectedPoints.map((p) => {
       // Western point names are translated into KP's traditional node names.
       // The shared astronomy engine currently provides mean Rahu and its
       // exactly opposite Ketu; the selected node convention is exposed below.
@@ -125,7 +146,7 @@ export class KPEngine {
     );
 
     return {
-      bodySet: "extended-twelve",
+      bodySet,
       nodeConvention: "mean",
       nodeAgentRule,
       nodeConjunctionPolicy: "same-sidereal-sign-provisional",
