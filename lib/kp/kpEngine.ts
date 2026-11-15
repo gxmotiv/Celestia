@@ -94,16 +94,23 @@ export class KPEngine {
       this.significatorsCalc.calculateAllHouseSignificators(kpCusps, kpPlanets);
 
     // 4. Calculate Planet Significations
-    const planetSignifications: Record<string, KPPlanetSignification> =
+    const basePlanetSignifications: Record<string, KPPlanetSignification> =
       this.significatorsCalc.calculateAllPlanetSignifications(kpCusps, kpPlanets);
 
-    // 4a. Resolve nodes through the selected KSK Reader VI representative chain.
+    // 4a. Resolve nodes from the base A-D table, then apply the preferred
+    // KSK Reader VI node tier to Rahu/Ketu and planets in their stars.
     const nodeAgentRule = "reader-vi" as const;
     const nodeRepresentations = this.significatorsCalc.calculateNodeRepresentations(
       kpPlanets,
-      planetSignifications,
+      basePlanetSignifications,
       nodeAgentRule
     );
+    const planetSignifications: Record<string, KPPlanetSignification> =
+      this.significatorsCalc.applyNodeAgentSignifications(
+        kpPlanets,
+        basePlanetSignifications,
+        nodeRepresentations
+      );
 
     // 5. Calculate KP Ruling Planets (RP)
     const rulingPlanets: KPRulingPlanets = this.predictionEngine.calculateRulingPlanets(
