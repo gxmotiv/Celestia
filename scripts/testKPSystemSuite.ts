@@ -177,6 +177,7 @@ const kpIntegratedChart = new KPEngine().generateKPChart(
   } as VedicChartData,
   new Date(Date.UTC(2000, 0, 1, 12))
 );
+assert.equal(kpIntegratedChart.bodySet, "extended-twelve", "KP chart must disclose that outer planets are included in the current extended body set");
 assert.equal(kpIntegratedChart.nodeConvention, "mean", "KP chart must disclose the inherited mean-node convention");
 assert.ok(kpIntegratedChart.planets.some((planet) => planet.name === "Rahu"), "Western NorthNode must map to KP Rahu");
 assert.ok(kpIntegratedChart.planets.some((planet) => planet.name === "Ketu"), "Western SouthNode must map to KP Ketu");
