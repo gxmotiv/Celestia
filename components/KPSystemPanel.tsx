@@ -1334,6 +1334,16 @@ export function KPSystemPanel({
                     <div className="pt-1 border-t border-slate-800 text-[10px] text-slate-500">
                       Combined houses: [{sig.signifiedHouses.join(", ")}]
                     </div>
+                    {sig.nodeAgentHouses && (
+                      <div className="text-[10px] text-rose-300">
+                        Node-agent houses: [{sig.nodeAgentHouses.join(", ")}]
+                      </div>
+                    )}
+                    {sig.starLordNodeAgentHouses && (
+                      <div className="text-[10px] text-cyan-300">
+                        Star-lord node expansion (Level A): [{sig.starLordNodeAgentHouses.join(", ")}]
+                      </div>
+                    )}
                   </div>
                 );
               })}
