@@ -118,7 +118,7 @@ function aspect(result: ReturnType<typeof engine.calculateDrikBala>, name: strin
 // 6. Mercury's malefic status is not hard-coded: same-sign association is the
 // default, and an explicitly supplied degree orb is a separate method option.
 {
-  const input = chart({ Saturn: 209, Mercury: 29, Mars: 31 });
+  const input = chart({ Saturn: 209, Mercury: 29, Mars: 31, Sun: 120 });
   const sameSign = engine.calculateDrikBala("Saturn", input);
   const mercurySameSign = aspect(sameSign, "Mercury");
   assert.equal(mercurySameSign.nature, "Benefic");
