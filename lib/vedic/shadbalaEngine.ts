@@ -791,7 +791,7 @@ export class ShadbalaEngine {
         if (fullAspectReading === "added-to-quarter") {
           fullAspectVirupas = sign * rawVirupas;
         } else if (fullAspectReading === "in-place-of-quarter") {
-          fullAspectVirupas = sign * rawVirupas - quarterVirupas;
+          fullAspectVirupas = sign * rawVirupas;
         }
       }
       const quarterContribution =
