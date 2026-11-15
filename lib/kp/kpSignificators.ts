@@ -57,7 +57,7 @@ export class KPSignificators {
     if (!Number.isFinite(planetLon)) {
       throw new Error("KP house assignment requires a finite planetary longitude.");
     }
-    this.validateCusps(cusps);
+    KPSignificators.validateCusps(cusps);
     return this.isPlanetInHouseUnchecked(planetLon, houseNum, cusps);
   }
 
