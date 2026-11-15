@@ -205,9 +205,8 @@ export class KPSignificators {
 
       const conjoined = planets
         .filter((planet) =>
+          classicalAspectors.has(planet.name) &&
           planet.name !== nodeName &&
-          planet.name !== "Rahu" &&
-          planet.name !== "Ketu" &&
           planet.signIndex === node.signIndex
         )
         .map((planet) => planet.name);
