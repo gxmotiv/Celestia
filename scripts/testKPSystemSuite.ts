@@ -185,6 +185,8 @@ assert.equal(kpIntegratedChart.nodeAspectPolicy, "parashari-full-sign-drishti-cl
 assert.ok(kpIntegratedChart.nodeRepresentations?.Rahu, "KP chart must expose the Rahu representative cascade");
 assert.ok(kpIntegratedChart.nodeRepresentations?.Ketu, "KP chart must expose the Ketu representative cascade");
 assert.equal(kpIntegratedChart.nodeRepresentations?.Rahu?.rule, "reader-vi");
+assert.ok(kpIntegratedChart.planetSignifications.Rahu.nodeAgentHouses, "Integrated KP A-D significations must include Rahu's preferred representative houses");
+assert.ok(kpIntegratedChart.planetSignifications.Ketu.nodeAgentHouses, "Integrated KP A-D significations must include Ketu's preferred representative houses");
 assert.ok(kpIntegratedChart.planets.some((planet) => planet.name === "Rahu"), "Western NorthNode must map to KP Rahu");
 assert.ok(kpIntegratedChart.planets.some((planet) => planet.name === "Ketu"), "Western SouthNode must map to KP Ketu");
 assert.ok(!kpIntegratedChart.planets.some((planet) => planet.name === "NorthNode" || planet.name === "SouthNode"), "KP must not expose Western point names in its planetary system");
@@ -407,6 +409,7 @@ const nodeTestPlanets = [
   nodePlanet("Saturn", 5, 6, "Jupiter", "Mercury"),
   nodePlanet("Rahu", 3, 4, "Jupiter", "Venus"),
   nodePlanet("Ketu", 9, 10, "Saturn", "Mercury"),
+  nodePlanet("Pluto", 4, 5, "Rahu", "Mars"),
 ];
 const nodeTestSignifications = Object.fromEntries(
   nodeTestPlanets.map((planet) => [
@@ -436,6 +439,25 @@ assert.equal(readerIIINodes.Rahu?.preferredAgentSource, "aspect", "Reader III/V 
 assert.deepEqual(readerIIINodes.Rahu?.preferredAgentPlanets, ["Sun", "Mars"]);
 assert.equal(readerVINodes.Ketu?.preferredAgentSource, "conjunction", "Conjunction remains first in both reader variants");
 assert.deepEqual(readerVINodes.Ketu?.preferredAgentPlanets, ["Sun"]);
+
+const expandedNodeSignifications = nodeCalculator.applyNodeAgentSignifications(
+  nodeTestPlanets,
+  nodeTestSignifications,
+  readerVINodes
+);
+assert.deepEqual(expandedNodeSignifications.Rahu.nodeAgentHouses, [4, 9], "Rahu's own signification must include its house and preferred agent's KP houses");
+assert.ok(expandedNodeSignifications.Rahu.signifiedHouses.includes(9));
+assert.deepEqual(expandedNodeSignifications.Pluto.starLordNodeAgentHouses, [4, 9], "A planet in Rahu's star must inherit Rahu's preferred agent cascade");
+assert.deepEqual(expandedNodeSignifications.Pluto.levels.levelA, [4, 9], "Node agent houses must be represented in the star-lord A grade");
+assert.throws(
+  () => nodeCalculator.applyNodeAgentSignifications(
+    nodeTestPlanets,
+    nodeTestSignifications,
+    { Rahu: readerVINodes.Rahu }
+  ),
+  /cannot resolve the representative cascade for Ketu/
+);
+
 
 const classicalPlanetSignifications = new KPSignificators().calculateAllPlanetSignifications(
   strengthCusps,
