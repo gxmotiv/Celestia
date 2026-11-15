@@ -18,7 +18,7 @@ import { isSunAboveHorizon } from "./horizon";
 import { recommendWesternHouseSystem } from "./westernHouseSystemPolicy";
 
 export type SolarProximity = "Cazimi" | "Combust" | "UnderBeams" | "Free";
-export type WesternHouseSystem = "Auto" | "Placidus" | "Equal" | "WholeSign" | "Porphyry" | "Regiomontanus" | "Koch";
+export type WesternHouseSystem = "Auto" | "Placidus" | "Equal" | "WholeSign" | "Porphyry" | "Regiomontanus" | "Koch" | "Campanus";
 export type ResolvedWesternHouseSystem = Exclude<WesternHouseSystem, "Auto">;
 
 export interface PlanetPosition {
@@ -571,16 +571,28 @@ export function calculateHouses(
  * Determine which house a given ecliptic longitude falls into
  */
 export function getHouseNumber(lon: number, cusps: number[]): number {
+  if (cusps.length !== 12 || !cusps.every(Number.isFinite) || !Number.isFinite(lon)) {
+    return 1;
+  }
   const norm = normalizeDegrees(lon);
-  for (let i = 0; i < 12; i++) {
-    const c1 = cusps[i];
-    const c2 = cusps[(i + 1) % 12];
-    if (c1 <= c2) {
-      if (norm >= c1 && norm < c2) return i + 1;
-    } else {
-      // Crosses 0 degrees Aries
-      if (norm >= c1 || norm < c2) return i + 1;
-    }
+  const signedStep = (from: number, to: number) =>
+    ((to - from + 540) % 360) - 180;
+  const spans = cusps.map((cusp, index) =>
+    signedStep(cusp, cusps[(index + 1) % 12])
+  );
+
+  // Most house frames advance through zodiacal longitude. At some polar
+  // coordinates, Regiomontanus and Campanus use the equivalent 180-degree
+  // orientation in which their cusp sequence runs in reverse. Infer the
+  // direction from the complete twelve-cusp circuit instead of assuming it.
+  const direction = spans.reduce((sum, span) => sum + span, 0) < 0 ? -1 : 1;
+  for (let index = 0; index < 12; index += 1) {
+    const width = direction * spans[index];
+    if (!(width > 0 && width < 180)) continue;
+    const offset = direction > 0
+      ? normalizeDegrees(norm - cusps[index])
+      : normalizeDegrees(cusps[index] - norm);
+    if (offset < width) return index + 1;
   }
   return 1;
 }
@@ -726,20 +738,23 @@ export function calculateWesternChart(
     (explicitPolarPlacidusFallback ? "Porphyry" : houseSystem === "Auto" ? "Placidus" : houseSystem);
   const polarPlacidusFallback =
     autoHouseRecommendation?.usedPolarFallback ?? explicitPolarPlacidusFallback;
-  const sysCode = resolvedRequest === "WholeSign" ? "W" : resolvedRequest === "Equal" ? "E" : resolvedRequest === "Porphyry" ? "O" : resolvedRequest === "Regiomontanus" ? "R" : resolvedRequest === "Koch" ? "K" : "P";
+  const sysCode = resolvedRequest === "WholeSign" ? "W" : resolvedRequest === "Equal" ? "E" : resolvedRequest === "Porphyry" ? "O" : resolvedRequest === "Regiomontanus" ? "R" : resolvedRequest === "Koch" ? "K" : resolvedRequest === "Campanus" ? "C" : "P";
   const houseResult = swissEphemeris.calculateHouses(jd, latitude, longitude, sysCode);
   const rawCusps = houseResult.houseCusps;
   const actualHouseSystem: ResolvedWesternHouseSystem = houseResult.houseSystemUsed === "W" ? "WholeSign"
     : houseResult.houseSystemUsed === "E" ? "Equal"
     : houseResult.houseSystemUsed === "O" ? "Porphyry"
     : houseResult.houseSystemUsed === "R" ? "Regiomontanus"
-    : houseResult.houseSystemUsed === "K" ? "Koch" : "Placidus";
+    : houseResult.houseSystemUsed === "K" ? "Koch"
+    : houseResult.houseSystemUsed === "C" ? "Campanus" : "Placidus";
   const houseSystemNote = polarPlacidusFallback
     ? autoHouseRecommendation?.rationale ??
       "Celestia's conservative policy selected Porphyry at |latitude| ≥ 66.5622°. This is an application fallback, not a claim that Placidus is impossible at every such location; other implementations may resolve it at some high-latitude dates and coordinates."
     : actualHouseSystem !== resolvedRequest
-      ? `${resolvedRequest} houses are undefined at this latitude; Porphyry quadrant houses were used instead.`
-      : autoHouseRecommendation?.rationale;
+      ? `${resolvedRequest} houses could not be used at this place/date; ${actualHouseSystem} houses were used instead.`
+      : houseResult.polarOrientationShifted
+        ? `${actualHouseSystem} applied its 180° polar-orientation rule. The house system remains ${actualHouseSystem}; only the orientation of the cusp frame was adjusted.`
+        : autoHouseRecommendation?.rationale;
   const asc = houseResult.ascendant;
   const mc = houseResult.midheaven;
 
