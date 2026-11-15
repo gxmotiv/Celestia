@@ -130,7 +130,8 @@ function aspect(result: ReturnType<typeof engine.calculateDrikBala>, name: strin
   });
   const mercuryDegreeOrb = aspect(degreeOrb, "Mercury");
   assert.equal(mercuryDegreeOrb.nature, "Malefic", "Two-degree association is included at the chosen orb boundary");
-  assert.equal(mercuryDegreeOrb.virupas, -15);
+  assert.equal(mercuryDegreeOrb.virupas, -75,
+    "Malefic Mercury receives the negative quarter plus the full negative aspect under the selected add-after-quarter reading");
   assert.throws(
     () => engine.calculateDrikBala("Saturn", {
       ...input,
