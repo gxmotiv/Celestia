@@ -1,6 +1,7 @@
 import {
   calculateWesternChart,
   type WesternChartData,
+  type ResolvedWesternHouseSystem,
 } from "../astronomy/ephemeris";
 import {
   calculateVedicChart,
@@ -27,7 +28,7 @@ export interface OfflineBirthInput {
   latitude: number;
   longitude: number;
   timezoneOffsetHours: number;
-  houseSystem: "Placidus" | "Equal" | "WholeSign";
+  houseSystem: ResolvedWesternHouseSystem;
   baziTimeBasis: BaZiTimeBasis;
   baziDayBoundaryPolicy: BaZiDayBoundaryPolicy;
 }
