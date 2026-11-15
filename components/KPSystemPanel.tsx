@@ -448,12 +448,15 @@ export function KPSystemPanel({
                   KP Timing of Realization (DBAS Synchronization)
                 </span>
                 <span className="text-[11px] text-slate-400 font-mono">
-                  Dasha: {currentPrediction.dashaAnalysis.dashaLord} · Bhukti: {currentPrediction.dashaAnalysis.antardashaLord}
+                  Dasha: {currentPrediction.dashaAnalysis.dashaLord} · Grade {currentPrediction.dashaAnalysis.dashaSignificatorGrade ?? "—"} · Bhukti: {currentPrediction.dashaAnalysis.antardashaLord} · Grade {currentPrediction.dashaAnalysis.antardashaSignificatorGrade ?? "—"}
                 </span>
               </div>
 
               <p className="text-xs text-slate-300 leading-relaxed">
                 {currentPrediction.timing}
+              </p>
+              <p className="text-[10px] text-slate-500">
+                Grade I = strongest; Grade II = occupants; Grade III = planets in the house lord&apos;s star; Grade IV = house lord. Pratyantardasha: {currentPrediction.dashaAnalysis.pratyantardashaLord ?? "not supplied"} · Grade {currentPrediction.dashaAnalysis.pratyantardashaSignificatorGrade ?? "—"}.
               </p>
             </div>
 
