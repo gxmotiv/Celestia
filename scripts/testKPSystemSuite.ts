@@ -274,9 +274,15 @@ assert.throws(
 );
 assert.throws(
   () => KPSignificators.getPlanetHouse(42, {
+    cusps: Array.from({ length: 12 }, () => 0),
+  } as unknown as KPCusps),
+  /twelve distinct, cyclically ordered cusps/
+);
+assert.throws(
+  () => KPSignificators.isPlanetInHouse(42, 13, {
     cusps: Array.from({ length: 12 }, (_, index) => index * 30),
   } as unknown as KPCusps),
-  /could not assign longitude 42/
+  /house number must be between 1 and 12/
 );
 assert.throws(
   () => fourStep.calculateCuspalInterlinks(
