@@ -134,7 +134,7 @@ assert.throws(
 );
 assert.throws(
   () => engine.calculate7Karakas(sevenPositions),
-  /requires the sidereal Ascendant longitude/,
+  /requires a sidereal Ascendant longitude in \[0°, 360°\)/,
   "Direct API does not fabricate the Lagna"
 );
 
