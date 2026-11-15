@@ -52,7 +52,7 @@ The list of schools should be treated as an extensible registry. A school may co
 | Major asteroids | Approximate | Ceres, Pallas, Juno and Vesta use simplified fixed-element models; upgrade to integrated/perturbed small-body positions and independent references |
 | Further minor planets / TNOs | Not implemented / symbolic by school | Eris, Haumea, Makemake, Sedna, Orcus, Quaoar, Ixion, Varuna and source-specific objects; distinguish physical bodies from hypothetical points |
 | Angles and local geometry | Implemented in part | ASC, MC, DSC, IC, Vertex and East Point exist; complete angle/house/prime-vertical/equatorial conventions and independent fixtures |
-| House systems | Five calculation methods supported | Placidus, Equal, Whole Sign, Porphyry and Regiomontanus; many named systems listed in Section 10 do not yet have Celestia calculation engines |
+| House systems | Six calculation methods deployed; Campanus in review | Placidus, Equal, Whole Sign, Porphyry, Regiomontanus and Koch are deployed; Campanus has a separate reference-tested implementation in PR review and is not counted as live until deployed |
 | Planetary phase and visibility | Partial | Heliacal rising/setting, morning/evening star phases, combustion, under-beams, cazimi, elongations, visibility criteria and sect/light condition variants |
 | Fixed stars | Approximate | Current set is 20 stored J2000 tropical longitudes; need epoch precession, proper motion, nutation/aberration conventions, expanded catalogue, star identity and uncertainty |
 | Lunar mansions / decans | Partial or separate tradition | Western decans/faces, Chaldean decans, bounds/terms, monomoiria, dodecatemoria, dwads and source-specific subdivisions |
@@ -176,7 +176,7 @@ Swiss Ephemeris publishes a much broader house-method list than Celestia current
 | Porphyry | Implemented |
 | Koch | Implemented; requests inside the polar circle resolve to Porphyry with the actual system disclosed |
 | Regiomontanus | Implemented |
-| Campanus | Not implemented |
+| Campanus | In review; independent Swiss Ephemeris 2.10.03 fixtures and natal/transit integration added |
 | Alcabitius | Not implemented |
 | Morinus | Not implemented |
 | Meridian / Axial Rotation | Not implemented |
@@ -194,11 +194,12 @@ Swiss Ephemeris publishes a much broader house-method list than Celestia current
 | Pullen SR | Not implemented |
 | Sripati | Not implemented |
 
-Swiss Ephemeris documents that Placidus and Koch are not defined within the polar circle, and other house methods have their own calculation limits. Celestia's Koch calculator is independently derived from the MC semi-diurnal-arc construction and tested against Swiss Ephemeris 2.10.03 reference values. Koch requests inside the polar circle resolve to Porphyry and disclose the actual system used. This remains a calculation fallback, not a claim that Porphyry is the historically correct choice for every chart.
+Swiss Ephemeris documents that Placidus and Koch are not defined within the polar circle, and other house methods have their own calculation limits. Celestia's Koch calculator is independently derived from the MC semi-diurnal-arc construction and tested against Swiss Ephemeris 2.10.03 reference values; Koch requests inside the polar circle resolve to Porphyry and disclose the actual system used. Campanus divides the prime vertical and uses its own 180° polar orientation correction; it does not inherit the Placidus/Koch Porphyry fallback. These calculation policies are not claims that Porphyry is historically correct for every chart.
 
 ### Technique-aware automatic house-system rules
 
 - Modern Western natal: recommend Placidus as the current Celestia default; disclose that it is a convention, not a universal best system.
+- Campanus-school natal: use Campanus only when the user explicitly selects that profile; retain Campanus' own polar orientation handling and do not change the general modern Western Auto default.
 - Hellenistic natal and selected Hellenistic time-lord workflows: use Whole Sign where that framework is the declared source convention.
 - Western transits and return charts: inherit the user's selected natal chart framework unless the named technique explicitly requires another method.
 - Synastry: preserve each person's own natal house setting; disclose whose houses receive the overlay.
@@ -227,7 +228,7 @@ For every distinct technique/profile, maintain these gates:
 
 1. Centralize technique-aware house-system selection and accurately disclose what is actually supported.
 2. Expand the Western reference suite for house systems, angles, time scales and natal placements.
-3. Add and validate further house engines (next candidates include Campanus and Alcabitius), then extend source-specific house-method profiles.
+3. Finish Campanus reference/integration review, then add and validate further house engines (next candidates include Alcabitius and Morinus) and extend source-specific house-method profiles.
 4. Complete traditional natal judgement: dignity, reception, rulers, dispositors, sect, lots, antiscia and patterns with source profiles.
 5. Build the exact transit event timeline.
 6. Implement primary directions as a separate, variant-driven engine.
