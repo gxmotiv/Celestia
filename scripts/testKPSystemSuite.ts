@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { calculateWesternChart } from "../lib/astronomy/ephemeris";
 import { KPCuspsCalculator } from "../lib/kp/kpCusps";
 import { SubLordCalculator } from "../lib/kp/subLordEngine";
+import { KPFourStepEngine } from "../lib/kp/kpFourStepEngine";
+import type { KPCusps, KPPlanet } from "../lib/kp/kpTypes";
 
 
 const kp249 = SubLordCalculator.generate249Table();
@@ -223,6 +225,54 @@ const chartWithoutBirthGeometry = {
 assert.throws(
   () => calculator.calculateKPCuspsFromWestern(chartWithoutBirthGeometry, 2000, 1, 1),
   /cannot be reused as KP house geometry/
+);
+
+
+// Modern KP 4-Step/CIL must fail closed when source-chain data are absent.
+// It must never invent house 1 or substitute Sun/Moon/Mars for missing links.
+const fourStep = new KPFourStepEngine();
+const emptyCusps = {} as unknown as KPCusps;
+assert.throws(
+  () => fourStep.evaluatePlanetFourStep("Pluto", emptyCusps, [], {}),
+  /cannot evaluate missing planet Pluto/
+);
+const partialPlanet = {
+  name: "Venus",
+  starLord: "Sun",
+  subLord: "Moon",
+  house: 1,
+} as unknown as KPPlanet;
+assert.throws(
+  () => fourStep.evaluatePlanetFourStep("Venus", emptyCusps, [partialPlanet], {}),
+  /cannot resolve the star lord of Moon/
+);
+const missingStatusPlanet = {
+  name: "Venus",
+  starLord: "Sun",
+  subLord: "Moon",
+  house: 1,
+} as unknown as KPPlanet;
+const moonWithStar = {
+  name: "Moon",
+  starLord: "Mars",
+  subLord: "Jupiter",
+  house: 2,
+} as unknown as KPPlanet;
+assert.throws(
+  () => fourStep.evaluatePlanetFourStep("Venus", emptyCusps, [missingStatusPlanet, moonWithStar], {}),
+  /requires positional-status data for Venus/
+);
+assert.throws(
+  () => fourStep.evaluatePlanetFourStep("Venus", emptyCusps, [partialPlanet], {}, 13),
+  /target house must be between 1 and 12/
+);
+assert.throws(
+  () => fourStep.calculateCuspalInterlinks(
+    { houseDetails: [{}] } as unknown as KPCusps,
+    [],
+    {}
+  ),
+  /requires complete sign, star, sub, and sub-sub lord data for cusp 1/
 );
 
 console.log(
