@@ -244,18 +244,36 @@ export class KPSignificators {
       };
       const agentTiers: KPNodeAgentTier[] = priorityOrder.map((source, index) => {
         const names = agentPlanets[source];
+        const levelSets = {
+          levelA: new Set<number>(),
+          levelB: new Set<number>(),
+          levelC: new Set<number>(),
+          levelD: new Set<number>(),
+        };
         const houses = new Set<number>();
         names.forEach((name) => {
           const agentSignification = planetSignifications[name];
           if (!agentSignification) {
             throw new Error(`KP node agent ${name} has no calculated house signification.`);
           }
-          agentSignification.signifiedHouses.forEach((house) => houses.add(house));
+          (Object.keys(levelSets) as Array<keyof typeof levelSets>).forEach((grade) => {
+            agentSignification.levels[grade].forEach((house) => {
+              levelSets[grade].add(house);
+              houses.add(house);
+            });
+          });
         });
+        const levels = {
+          levelA: Array.from(levelSets.levelA).sort((a, b) => a - b),
+          levelB: Array.from(levelSets.levelB).sort((a, b) => a - b),
+          levelC: Array.from(levelSets.levelC).sort((a, b) => a - b),
+          levelD: Array.from(levelSets.levelD).sort((a, b) => a - b),
+        };
         return {
           source,
           priority: index + 1,
           planets: names,
+          levels,
           signifiedHouses: Array.from(houses).sort((a, b) => a - b),
         };
       });
@@ -289,6 +307,61 @@ export class KPSignificators {
         allAgentHouses,
         representedHouses,
       };
+    });
+
+    return result;
+  }
+
+  /**
+   * Promote each selected node agent into the same house-grade slots occupied
+   * by its represented planet(s). Raw occupants and star-tenants stay intact.
+   */
+  public applyNodeAgentsToHouseSignificators(
+    baseHouseSignificators: Record<number, KPHouseSignificators>,
+    nodeRepresentations: Partial<Record<"Rahu" | "Ketu", KPNodeRepresentation>>
+  ): Record<number, KPHouseSignificators> {
+    const result: Record<number, KPHouseSignificators> = {};
+    Object.entries(baseHouseSignificators).forEach(([houseKey, house]) => {
+      result[Number(houseKey)] = {
+        ...house,
+        levels: {
+          levelA: [...house.levels.levelA],
+          levelB: [...house.levels.levelB],
+          levelC: [...house.levels.levelC],
+          levelD: [...house.levels.levelD],
+        },
+        allSignificators: [...house.allSignificators],
+      };
+    });
+
+    (["Rahu", "Ketu"] as const).forEach((nodeName) => {
+      const representation = nodeRepresentations[nodeName];
+      if (!representation) return;
+      const preferredTier = representation.agentTiers.find(
+        (tier) => tier.source === representation.preferredAgentSource
+      );
+      if (!preferredTier) return;
+
+      (Object.keys(preferredTier.levels) as Array<keyof KPPlanetSignificationLevels>).forEach((grade) => {
+        preferredTier.levels[grade].forEach((houseNumber) => {
+          const house = result[houseNumber];
+          if (!house) {
+            throw new Error(`KP node agent ${nodeName} references missing house ${houseNumber}.`);
+          }
+          if (!house.levels[grade].includes(nodeName)) {
+            house.levels[grade].push(nodeName);
+          }
+        });
+      });
+    });
+
+    Object.values(result).forEach((house) => {
+      house.allSignificators = Array.from(new Set([
+        ...house.levels.levelA,
+        ...house.levels.levelB,
+        ...house.levels.levelC,
+        ...house.levels.levelD,
+      ]));
     });
 
     return result;
