@@ -75,19 +75,24 @@ check(isWesternHouseSystemImplemented("Placidus") &&
   isWesternHouseSystemImplemented("WholeSign") &&
   isWesternHouseSystemImplemented("Porphyry") &&
   isWesternHouseSystemImplemented("Regiomontanus") &&
-  isWesternHouseSystemImplemented("Koch"),
-  "The implementation registry recognizes the six currently calculated Western house systems");
-
-check(!isWesternHouseSystemImplemented("Campanus"),
-  "Campanus remains unavailable until its own calculation engine is implemented");
+  isWesternHouseSystemImplemented("Koch") &&
+  isWesternHouseSystemImplemented("Campanus"),
+  "The implementation registry recognizes the seven currently calculated Western house systems");
 
 check(toWesternTransitHouseSystem("Koch") === "koch" &&
   toWesternTransitHouseSystem("Regiomontanus") === "regiomontanus" &&
+  toWesternTransitHouseSystem("Campanus") === "campanus" &&
   toWesternTransitHouseSystem("Porphyry") === "porphyry" &&
   toWesternTransitHouseSystem("Placidus") === "placidus" &&
   toWesternTransitHouseSystem("Equal") === "equal" &&
   toWesternTransitHouseSystem("WholeSign") === "whole-sign",
   "Transit Auto mapping preserves every implemented natal house method, including Koch");
+
+const campanusSchool = recommendWesternHouseSystem("campanus-school-natal", 52.2);
+check(campanusSchool.status === "supported" &&
+  campanusSchool.preferredSystem === "Campanus" &&
+  campanusSchool.resolvedSystem === "Campanus",
+  "A named Campanus-school natal profile selects Campanus without altering the modern Western Auto default");
 
 const kochSchool = recommendWesternHouseSystem("koch-school-natal", 52.2);
 check(kochSchool.status === "supported" && kochSchool.preferredSystem === "Koch" &&
