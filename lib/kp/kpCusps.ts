@@ -91,22 +91,14 @@ export class KPCuspsCalculator {
       normalizeDegrees(cusp - kpAyanamsa)
     );
 
-    // 2. Apply KP Cusp Corrections (as requested in KP specification:
-    // If cusp falls in last 3°20' (26°40' or 26.6667°) of sign, move to next sign)
-    const correctedCusps = siderealPlacidusCusps.map((cusp) => {
-      const signIndex = Math.floor(cusp / 30);
-      const degreeInSign = cusp % 30;
-
-      if (degreeInSign >= 26.6667) {
-        return normalizeDegrees((signIndex + 1) * 30);
-      }
-      return cusp;
-    });
-
+    // 2. Preserve the exact KP sidereal cusp longitude. Determine its sign,
+    // star and sub at that precise point; never snap a late-sign cusp to 0°
+    // of the next sign. That would change the cusp's sign lord and can change
+    // its star/sub lord, contradicting minute-accurate KP cusp work.
     // 3. Assemble detailed KPCusp objects
-    const houseDetails: KPCusp[] = correctedCusps.map((cuspLon, index) => {
+    const houseDetails: KPCusp[] = siderealPlacidusCusps.map((cuspLon, index) => {
       const houseNum = index + 1;
-      const nextCuspLon = correctedCusps[index === 11 ? 0 : index + 1];
+      const nextCuspLon = siderealPlacidusCusps[index === 11 ? 0 : index + 1];
       const signIndex = Math.floor(cuspLon / 30);
       const signName = SubLordCalculator.getSignName(signIndex);
       const signLord = SubLordCalculator.getSignLord(signIndex);
@@ -133,7 +125,7 @@ export class KPCuspsCalculator {
     });
 
     return {
-      cusps: correctedCusps,
+      cusps: siderealPlacidusCusps,
       houseDetails,
       houseSigns: houseDetails.map((h) => h.signName),
       houseLords: houseDetails.map((h) => h.signLord),
