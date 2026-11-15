@@ -63,8 +63,15 @@ export function ShadbalaPanel({
       )
     );
 
+    const tropicalMidheaven = westernData?.midheaven.longitude;
+    const siderealMidheaven =
+      typeof tropicalMidheaven === "number" && Number.isFinite(tropicalMidheaven)
+        ? ((tropicalMidheaven - vedicData.ayanamsa) % 360 + 360) % 360
+        : undefined;
+
     return {
       ascendant: vedicData.lagna.siderealLongitude,
+      midheaven: siderealMidheaven,
       planets: planetsMap,
       birthDate: bDateObj,
       saptavargajaScale,
