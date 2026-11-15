@@ -94,6 +94,9 @@ export function calculateDrishtiVirupas(diffDeg: number, planetName: string, hou
  * Classical Jaimini Rashi Drishti rules
  */
 export function getJaiminiAspectedSigns(signIndex: number): number[] {
+  if (!Number.isInteger(signIndex) || signIndex < 0 || signIndex > 11) {
+    throw new RangeError("Jaimini Rashi Drishti requires a sign index from 0 through 11.");
+  }
   const modality = signIndex % 3; // 0 = Movable, 1 = Fixed, 2 = Dual
 
   if (modality === 0) {
