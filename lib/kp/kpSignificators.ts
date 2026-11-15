@@ -187,14 +187,20 @@ export class KPSignificators {
       return [7];
     };
 
+    planets.forEach((planet) => {
+      if (!Number.isInteger(planet.signIndex) || planet.signIndex < 0 || planet.signIndex > 11) {
+        throw new Error(`KP node representation requires a valid sidereal sign index for ${planet.name}.`);
+      }
+      if (!Number.isInteger(planet.house) || planet.house < 1 || planet.house > 12) {
+        throw new Error(`KP node representation requires a valid occupied house for ${planet.name}.`);
+      }
+    });
+
     nodeNames.forEach((nodeName) => {
       const node = planets.find((planet) => planet.name === nodeName);
       if (!node) return;
-      if (!Number.isInteger(node.signIndex) || node.signIndex < 0 || node.signIndex > 11) {
-        throw new Error(`KP node representation requires a valid sidereal sign index for ${nodeName}.`);
-      }
-      if (!Number.isInteger(node.house) || node.house < 1 || node.house > 12) {
-        throw new Error(`KP node representation requires a valid occupied house for ${nodeName}.`);
+      if (!node.starLord?.trim() || !node.signLord?.trim()) {
+        throw new Error(`KP node representation requires star lord and sign lord data for ${nodeName}.`);
       }
 
       const conjoined = planets
@@ -241,7 +247,11 @@ export class KPSignificators {
         const names = agentPlanets[source];
         const houses = new Set<number>();
         names.forEach((name) => {
-          planetSignifications[name]?.signifiedHouses.forEach((house) => houses.add(house));
+          const agentSignification = planetSignifications[name];
+          if (!agentSignification) {
+            throw new Error(`KP node agent ${name} has no calculated house signification.`);
+          }
+          agentSignification.signifiedHouses.forEach((house) => houses.add(house));
         });
         return {
           source,
