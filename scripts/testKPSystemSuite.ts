@@ -3,6 +3,7 @@ import { calculateWesternChart } from "../lib/astronomy/ephemeris";
 import { KPCuspsCalculator } from "../lib/kp/kpCusps";
 import { SubLordCalculator } from "../lib/kp/subLordEngine";
 import { KPFourStepEngine } from "../lib/kp/kpFourStepEngine";
+import { KPSignificators } from "../lib/kp/kpSignificators";
 import type { KPCusps, KPPlanet } from "../lib/kp/kpTypes";
 
 
@@ -265,6 +266,16 @@ assert.throws(
 assert.throws(
   () => fourStep.evaluatePlanetFourStep("Venus", emptyCusps, [partialPlanet], {}, 13),
   /target house must be between 1 and 12/
+);
+assert.throws(
+  () => KPSignificators.getPlanetHouse(42, { cusps: [] } as unknown as KPCusps),
+  /requires a finite longitude and twelve valid cusps/
+);
+assert.throws(
+  () => KPSignificators.getPlanetHouse(42, {
+    cusps: Array.from({ length: 12 }, (_, index) => index * 30),
+  } as unknown as KPCusps),
+  /could not assign longitude 42/
 );
 assert.throws(
   () => fourStep.calculateCuspalInterlinks(
