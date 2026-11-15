@@ -35,6 +35,21 @@ The ruling-planet list now follows the five-ruler preference sequence described 
 
 These transcriptions and teaching notes are research witnesses, not a critical edition. Keep the implementation variant-labelled and preserve any disagreements between KP lineages instead of blending their rules.
 
+## Classical planet-level A–D strength
+
+The KP planet-signification engine now exposes the four distinct house sets rather than only one merged set:
+
+- **A:** house occupied by the planet's star lord
+- **B:** house occupied by the planet itself
+- **C:** houses owned by the planet's star lord
+- **D:** houses owned by the planet itself
+
+It also records other planets tenanting the planet's stars. When there are no other tenants, `strengthOrder` is B → A → D → C (self-strength); otherwise it is A → B → C → D. This is the planet-to-house hierarchy and is not the same matrix as the house-to-planet Grades I–IV, even though both use four ordered levels.
+
+The UI now prints A/B/C/D separately for each planet in the KP Planets tab. The legacy `signifiedHouses` set is retained for compatibility; the current prediction scoring still uses this union, not a complete grade-weighted selection algorithm. Node representation and conjunction/aspect agency need a separately sourced implementation before Rahu/Ketu are treated as fully resolved by this grade table.
+
+Research witness: the digitized *KP Astrology Basics* material, Sections 11.3 and 12, describes the A/B/C/D sequence and the B-A-D-C self-strength order: https://archive.org/stream/krishnamurti-padhdhati-vol-3-english/KP-Astrology-Basics_djvu.txt. This is a teaching transcription rather than a critical edition; preserve its lineage label in the app.
+
 ## Gondhalekar primary / secondary strength
 
 The engine now keeps the four steps distinct and exposes `primaryHouses` and `secondaryHouses` on each `KPStepDetail` rather than presenting every connection as equally strong. It preserves a primary occupied-house result when that same house is also owned; the ownership rule must not demote the residence rule.
@@ -57,6 +72,9 @@ This implements the practitioner lesson's stated strength distinctions, but does
 - own-star Positional Status despite star tenants;
 - primary occupied-house and empty-owned-house classification;
 - secondary owned-house classification when a house is occupied;
-- star-lord Step 2/4 principal vs secondary ownership classification.
+- star-lord Step 2/4 principal vs secondary ownership classification;
+- the classical planet-level A/B/C/D occupied-house and ownership levels;
+- standard A-B-C-D vs tenantless B-A-D-C strength preference;
+- distinction between classical self-strength and the modern own-star Gondhalekar PS override.
 
 The latest verification result must be read from GitHub Actions for the commit under test. A successful Cloudflare deploy does not replace the verification gate.
