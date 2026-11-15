@@ -94,6 +94,12 @@ check(campanusSchool.status === "supported" &&
   campanusSchool.resolvedSystem === "Campanus",
   "A named Campanus-school natal profile selects Campanus without altering the modern Western Auto default");
 
+const campanusPole = recommendWesternHouseSystem("campanus-school-natal", 90);
+check(campanusPole.status === "unsupported" &&
+  campanusPole.resolvedSystem === undefined &&
+  campanusPole.rationale.includes("exact geographic poles"),
+  "The Campanus profile refuses the singular exact-pole frame instead of claiming a valid chart");
+
 const kochSchool = recommendWesternHouseSystem("koch-school-natal", 52.2);
 check(kochSchool.status === "supported" && kochSchool.preferredSystem === "Koch" &&
   kochSchool.resolvedSystem === "Koch",
