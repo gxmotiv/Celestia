@@ -176,7 +176,7 @@ Swiss Ephemeris publishes a much broader house-method list than Celestia current
 | Porphyry | Implemented |
 | Koch | Implemented; requests inside the polar circle resolve to Porphyry with the actual system disclosed |
 | Regiomontanus | Implemented |
-| Campanus | Not implemented |
+| Campanus | Implemented; independent prime-vertical great-circle calculation, polar orientation handling and Swiss Ephemeris reference tests |
 | Alcabitius | Not implemented |
 | Morinus | Not implemented |
 | Meridian / Axial Rotation | Not implemented |
@@ -194,7 +194,7 @@ Swiss Ephemeris publishes a much broader house-method list than Celestia current
 | Pullen SR | Not implemented |
 | Sripati | Not implemented |
 
-Swiss Ephemeris documents that Placidus and Koch are not defined within the polar circle, and other house methods have their own calculation limits. Celestia's Koch calculator is independently derived from the MC semi-diurnal-arc construction and tested against Swiss Ephemeris 2.10.03 reference values. Koch requests inside the polar circle resolve to Porphyry and disclose the actual system used. This remains a calculation fallback, not a claim that Porphyry is the historically correct choice for every chart.
+Swiss Ephemeris documents that Placidus and Koch are not defined within the polar circle, and other house methods have their own calculation limits. Celestia's Koch calculator is independently derived from the MC semi-diurnal-arc construction and tested against Swiss Ephemeris 2.10.03 reference values. Campanus is independently derived from prime-vertical great-circle geometry and tested against Swiss Ephemeris 2.10.03 fixtures in both hemispheres, including polar orientation shifts. Koch requests inside the polar circle resolve to Porphyry and disclose the actual system used; Campanus requests at the exact geographic poles resolve to Porphyry because the north/south horizon-point construction is indeterminate there. These are disclosed calculation fallbacks, not claims that Porphyry is the historically correct choice for every chart.
 
 ### Technique-aware automatic house-system rules
 
@@ -240,6 +240,8 @@ For every distinct technique/profile, maintain these gates:
 ## References and source policy
 
 - [Swiss Ephemeris Programmer's Manual — house methods](https://www.astro.com/swisseph/swephprg.pdf): technical method identifiers and computation behavior.
+- [Swiss Ephemeris Campanus Table of Houses](https://www.astro.com/swisseph/ae/hts_C_e.pdf): independent tabular reference for Campanus cusps.
+- [Campanus geometry and implementation notes](https://docs.rs/libephemeris-core/latest/libephemeris_core/houses/fn.houses_campanus.html): prime-vertical divisions and great-circle projection.
 - [Swiss Ephemeris 2.10.03 house-calculation source (`swehouse.c`)](https://github.com/aloistr/swisseph/blob/v2.10.03/swehouse.c): authoritative reference for documented Koch and Regiomontanus house-method and polar-limit behavior. Celestia's Koch calculator uses an independent mathematical implementation.
 - [Cambridge Casebooks — Regiomontanus house construction](https://casebooks-production.casebooks.lib.cam.ac.uk/data/astrology-in-the-casebooks.pdf): historical/geometrical explanation of dividing the celestial equator into 30° intervals and projecting position circles to the ecliptic.
 - [Astrodienst house-system overview](https://www.astro.com/faq/fq_fh_owhouse_e.htm): descriptions of named house systems and historical context.
