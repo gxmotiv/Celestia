@@ -21,32 +21,56 @@ import {
 import { normalizeDegrees } from "../astronomy/ephemeris";
 
 export class KPSignificators {
-  /**
-   * Determine which house a planet occupies based on KP cuspal boundaries
-   */
-  public static isPlanetInHouse(planetLon: number, houseNum: number, cusps: KPCusps): boolean {
-    const idx = houseNum - 1;
-    const c1 = cusps.cusps[idx];
-    const c2 = cusps.cusps[(idx + 1) % 12];
-    const norm = normalizeDegrees(planetLon);
+  private static validateCusps(cusps: KPCusps): void {
+    if (!Array.isArray(cusps?.cusps) || cusps.cusps.length !== 12 ||
+        cusps.cusps.some((cusp) => !Number.isFinite(cusp))) {
+      throw new Error("KP house assignment requires twelve finite cusp longitudes.");
+    }
 
-    if (c1 <= c2) {
-      return norm >= c1 && norm < c2;
-    } else {
-      // Crosses 0° Aries
-      return norm >= c1 || norm < c2;
+    const normalized = cusps.cusps.map(normalizeDegrees);
+    const spans = normalized.map((cusp, index) =>
+      (normalized[(index + 1) % 12] - cusp + 360) % 360
+    );
+    if (spans.some((span) => span <= 1e-10) ||
+        Math.abs(spans.reduce((sum, span) => sum + span, 0) - 360) > 1e-7) {
+      throw new Error("KP house assignment requires twelve distinct, cyclically ordered cusps covering 360 degrees exactly once.");
     }
   }
 
+  private static isPlanetInHouseUnchecked(planetLon: number, houseNum: number, cusps: KPCusps): boolean {
+    if (!Number.isInteger(houseNum) || houseNum < 1 || houseNum > 12) {
+      throw new Error(`KP house number must be between 1 and 12; received ${houseNum}.`);
+    }
+    const idx = houseNum - 1;
+    const c1 = normalizeDegrees(cusps.cusps[idx]);
+    const c2 = normalizeDegrees(cusps.cusps[(idx + 1) % 12]);
+    const norm = normalizeDegrees(planetLon);
+
+    if (c1 < c2) return norm >= c1 && norm < c2;
+    return norm >= c1 || norm < c2;
+  }
+
   /**
-   * Find house index (1-12) for a given longitude
+   * Determine which house a planet occupies based on validated KP cuspal boundaries.
+   */
+  public static isPlanetInHouse(planetLon: number, houseNum: number, cusps: KPCusps): boolean {
+    if (!Number.isFinite(planetLon)) {
+      throw new Error("KP house assignment requires a finite planetary longitude.");
+    }
+    this.validateCusps(cusps);
+    return this.isPlanetInHouseUnchecked(planetLon, houseNum, cusps);
+  }
+
+  /**
+   * Find house index (1-12) for a given longitude.
    */
   public static getPlanetHouse(planetLon: number, cusps: KPCusps): number {
-    if (!Number.isFinite(planetLon) || cusps.cusps.length !== 12 || cusps.cusps.some((cusp) => !Number.isFinite(cusp))) {
-      throw new Error("KP house assignment requires a finite longitude and twelve valid cusps.");
+    if (!Number.isFinite(planetLon)) {
+      throw new Error("KP house assignment requires a finite planetary longitude.");
     }
+    this.validateCusps(cusps);
     for (let h = 1; h <= 12; h++) {
-      if (this.isPlanetInHouse(planetLon, h, cusps)) return h;
+      if (this.isPlanetInHouseUnchecked(planetLon, h, cusps)) return h;
     }
     throw new Error(`KP could not assign longitude ${planetLon} to any house; refusing to default to house 1.`);
   }
@@ -59,6 +83,14 @@ export class KPSignificators {
     cusps: KPCusps,
     planets: KPPlanet[]
   ): KPHouseSignificators {
+    this.validateCusps(cusps);
+    if (!Number.isInteger(house) || house < 1 || house > 12) {
+      throw new Error(`KP significator house must be between 1 and 12; received ${house}.`);
+    }
+    if (!Array.isArray(cusps.houseLords) || cusps.houseLords.length !== 12 ||
+        cusps.houseLords.some((lord) => typeof lord !== "string" || !lord.trim())) {
+      throw new Error("KP house significators require twelve valid cusp sign lords.");
+    }
     const houseLord = cusps.houseLords[house - 1];
     const occupants: string[] = [];
     const planetsInStar: string[] = [];
@@ -66,7 +98,7 @@ export class KPSignificators {
 
     // 1. Find Occupants (Grade II / Level B)
     planets.forEach((p) => {
-      if (KPSignificators.isPlanetInHouse(p.siderealLon, house, cusps)) {
+      if (KPSignificators.isPlanetInHouseUnchecked(p.siderealLon, house, cusps)) {
         occupants.push(p.name);
       }
     });
