@@ -143,7 +143,7 @@ export interface KPPlanetSignification {
   nodeAgentHouses?: number[];
   /** Houses inherited when this planet's star lord is Rahu or Ketu. */
   starLordNodeAgentHouses?: number[];
-  /** A tenantless planet (or a planet in its own star) uses B-A-D-C strength order. */
+  /** A planet with no other tenants in its stars uses B-A-D-C strength order. */
   hasSelfStrength: boolean;
   signifiedHouses: number[]; // Unique ordered list of all signified houses
 }
