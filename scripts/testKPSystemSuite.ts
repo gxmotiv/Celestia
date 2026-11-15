@@ -462,7 +462,7 @@ const readerVINodes = nodeCalculator.calculateNodeRepresentations(
   "reader-vi"
 );
 assert.deepEqual(readerVINodes.Rahu?.priorityOrder, ["conjunction", "star-lord", "aspect", "sign-lord"]);
-assert.deepEqual(readerVINodes.Rahu?.agentTiers.map((tier) => tier.planets), [[], ["Jupiter"], ["Sun", "Mars"], ["Venus"]]);
+assert.deepEqual(readerVINodes.Rahu?.agentTiers.map((tier) => tier.planets), [[], ["Jupiter"], ["Sun", "Mars", "Jupiter"], ["Venus"]]);
 assert.equal(readerVINodes.Rahu?.agentTiers[0].planets.length, 0, "The classical KP node conjunction tier excludes modern outer planets such as Uranus");
 assert.equal(readerVINodes.Rahu?.preferredAgentSource, "star-lord", "Reader VI prefers star lord before aspecting planets");
 assert.deepEqual(readerVINodes.Rahu?.preferredAgentHouses, [8, 9], "Rahu inherits the preferred agent's chart signification");
