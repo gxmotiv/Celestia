@@ -183,7 +183,7 @@ export class KPPredictionEngine {
     }
 
     // Calculate Significators across chart
-    const houseSignificators = this.significatorsEngine.calculateAllHouseSignificators(cusps, planets);
+    const baseHouseSignificators = this.significatorsEngine.calculateAllHouseSignificators(cusps, planets);
     const basePlanetSignifications = this.significatorsEngine.calculateAllPlanetSignifications(cusps, planets);
     const nodeRepresentations = this.significatorsEngine.calculateNodeRepresentations(
       planets,
@@ -193,6 +193,10 @@ export class KPPredictionEngine {
     const planetSignifications = this.significatorsEngine.applyNodeAgentSignifications(
       planets,
       basePlanetSignifications,
+      nodeRepresentations
+    );
+    const houseSignificators = this.significatorsEngine.applyNodeAgentsToHouseSignificators(
+      baseHouseSignificators,
       nodeRepresentations
     );
 
