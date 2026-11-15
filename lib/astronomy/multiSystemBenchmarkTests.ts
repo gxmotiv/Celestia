@@ -258,18 +258,38 @@ export class MultiSystemBenchmarkRunner {
       notes: "Smoke check only. This does not validate asteroid longitude accuracy. The model uses fixed J2000-era Keplerian elements and a simplified Earth orbit; it omits N-body perturbations and lacks an independent JPL Horizons benchmark.",
     });
 
-    // 18. Part of Fortune Day/Night Diurnal/Nocturnal Invariant
-    const fortune = chart.arabianParts?.partOfFortune;
+    // 18. Part of Fortune & Spirit common Hellenistic sect-reversed profile
+    const lots = chart.arabianParts;
+    const fortune = lots?.partOfFortune;
+    const spirit = lots?.partOfSpirit;
+    const sun = chart.planets.find((planet) => planet.name === "Sun")?.longitude;
+    const moon = chart.planets.find((planet) => planet.name === "Moon")?.longitude;
+    const asc = chart.ascendant.longitude;
+    const isDay = lots?.isDayChart;
+    const expectedFortune = isDay ? asc + (moon ?? 0) - (sun ?? 0) : asc + (sun ?? 0) - (moon ?? 0);
+    const expectedSpirit = isDay ? asc + (sun ?? 0) - (moon ?? 0) : asc + (moon ?? 0) - (sun ?? 0);
+    const normalizedFortune = ((expectedFortune % 360) + 360) % 360;
+    const normalizedSpirit = ((expectedSpirit % 360) + 360) % 360;
+    const formulaTolerance = (actual: number | undefined, expected: number) => {
+      if (!Number.isFinite(actual)) return false;
+      const difference = Math.abs((((actual as number) - expected + 540) % 360) - 180);
+      return difference < 0.001;
+    };
     list.push({
       id: "W-FOR-01",
       system: "Western",
-      name: "Part of Fortune Sect Reversal Invariant",
+      name: "Part of Fortune & Spirit Sect-Reversed Formula",
       category: "Arabian Parts / Hermetic Lots",
-      classicalAuthority: "Ptolemy (Tetrabiblos) & Dorotheus of Sidon",
-      expectedFormula: "Day: ASC + Moon - Sun; Night: ASC + Sun - Moon",
-      actualResult: fortune ? `${fortune.longitude.toFixed(2)}° (${fortune.sign})` : "Missing",
-      passed: fortune !== undefined && fortune.longitude >= 0 && fortune.longitude < 360,
-      notes: "Sect-aware Part of Fortune correctly implemented.",
+      classicalAuthority: "Valens, Anthology II.23 & III.11; Dorotheus I.26; Paulus Alexandrinus. Common sect-reversed profile; Ptolemy's non-reversing Fortune method is a separate variant.",
+      expectedFormula: "Day: Fortune = ASC + Moon - Sun; Spirit = ASC + Sun - Moon. Night: reverse both arcs.",
+      actualResult: lots
+        ? `${lots.formulaProfile}; Fortune ${fortune?.longitude.toFixed(3)}°; Spirit ${spirit?.longitude.toFixed(3)}°`
+        : "Missing",
+      passed: !!lots &&
+        lots.formulaProfile === "common-hellenistic-sect-reversed" &&
+        formulaTolerance(fortune?.longitude, normalizedFortune) &&
+        formulaTolerance(spirit?.longitude, normalizedSpirit),
+      notes: "Numerically checks both Fortune and Spirit against the selected common Hellenistic sect-reversed profile. Ptolemy III.10 is deliberately not cited as the source for the nocturnal reversal.",
     });
 
     // 19. Major Ptolemaic Aspects Consistency
