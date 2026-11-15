@@ -43,6 +43,41 @@ The bridge now runs Western points through `filterCalculationReadyPoints` before
 
 Mapping the node names makes the existing modern 4-Step engine's Rahu/Ketu Positional Status and sign-lord representation paths reachable. The classical planet-level A–D significator matrix still does not fully model node agency through sign lord, conjunction and aspect. Do not infer that those rules are complete from the name mapping alone.
 
+## Rahu / Ketu representative-agent cascade
+
+The chart now exposes a separate node cascade for Rahu and Ketu. It is not folded silently into the classical A–D grade table or into the current event-prediction score.
+
+### Reader priority variants
+
+The selected default is labelled **KSK Reader VI**:
+
+1. Planet(s) conjoined with the node
+2. Lord of the node's nakshatra
+3. Planet(s) aspecting the node
+4. Lord of the sign occupied by the node
+
+A selectable **Reader III/V** order is also implemented for source comparison:
+
+1. Planet(s) conjoined with the node
+2. Planet(s) aspecting the node
+3. Lord of the node's nakshatra
+4. Lord of the sign occupied by the node
+
+This difference is not theoretical: a 20 July 2006 survey comparing KSK's Reader II, III, V and VI editions records that the star-lord was placed after aspecting planets in Readers III/V, but before aspecting planets in Reader VI. The survey cites Reader III OE Part I p.123 (NE p.130), Reader V (1983) p.123, and Reader VI (1978/2002) pp.187, 212–214, 274, 276. It also notes that actual chart examples can use several factors together, so the cascade output preserves all tiers instead of treating the first non-empty tier as the only possible influence:
+https://www.indiadivine.org/content/topic/1444376-revisit-of-rahuketu-rules/
+
+A digitized *KP Simple Rules* transcription independently gives the Reader-VI-style sequence: conjunction, star lord, aspecting planet(s), sign lord:
+https://archive.org/stream/krishnamurti-padhdhati-vol-3-english/KP-Simple-Rules_djvu.txt
+
+### Explicit calculation conventions
+
+- **Conjunction:** current bridge uses same KP sidereal sign, with no degree orb. This is a provisional software convention, not asserted to be a universal KSK orb. Some later four-step teaching notes use 3°20′ (and sometimes extensions); other KP practitioners dispute fixed 3°20′ orbs. The classical KP reader orb and same-sign practice require their own configurable profile before this default is treated as settled.
+- **Aspects:** node agent lookup uses full Parashari sign-based graha drishti from the seven classical planets: universal 7th; Mars 4th/7th/8th; Jupiter 5th/7th/9th; Saturn 3rd/7th/10th. No Western Ptolemaic angles or angular orbs are used. Rahu/Ketu are not treated as aspect-casting agents here, and the nodes do not act as agents for each other.
+- **Agent houses:** the node's own occupied house is included directly. Each agent tier separately lists the agent planet(s) and their calculated KP house-signification union. The UI shows the first available tier as the selected/preferred agent and separately shows all other candidate tiers/houses. Those alternative tiers must not be added together as though all had equal priority.
+- **Not yet wired into graded A–D:** the new node cascade is inspectable, but the classical A–D matrix and KP event-prediction engine still do not consume it as a complete grade-aware node expansion. A planet whose star lord is Rahu/Ketu therefore still needs this cascade to be integrated into the A–D and prediction paths. The same applies when the CSL itself is Rahu/Ketu. This is an explicit remaining implementation item, not a completed prediction capability.
+
+The sources differ in both edition priority and orb practice. Keep the selected source label, aspect policy and conjunction convention attached to every calculation. Do not describe this implementation as a universal or final KP node rule.
+
 ## Classical planet-level A–D strength
 
 The KP planet-signification engine now exposes the four distinct house sets rather than only one merged set:
@@ -84,6 +119,9 @@ This implements the practitioner lesson's stated strength distinctions, but does
 - the classical planet-level A/B/C/D occupied-house and ownership levels;
 - standard A-B-C-D vs tenantless B-A-D-C strength preference;
 - distinction between classical self-strength and the modern own-star Gondhalekar PS override.
+- KSK Reader VI vs Reader III/V node priority order;
+- Rahu/Ketu same-sign conjunction and Parashari sign-aspect tier separation;
+- exclusion of node-to-node agency;
 - the Western NorthNode/SouthNode to KP Rahu/Ketu mapping;
 - mean-node and extended-twelve chart metadata;
 - exclusion of unvalidated calculation-note points such as the placeholder Chiron point.
