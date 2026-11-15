@@ -7,7 +7,6 @@ on:
       - main
       - fix/celestia-calculation-integrity
       - fix/western-house-sect-predictive-integrity
-      - deploy/cloudflare-workers-free
 
 permissions:
   contents: write
@@ -155,7 +154,7 @@ jobs:
           retention-days: 30
 
       - name: Publish GitHub prerelease with ARM32 and ARM64 APKs
-        if: github.event_name == 'push' && (github.ref_name == 'fix/celestia-calculation-integrity' || github.ref_name == 'deploy/cloudflare-workers-free')
+        if: github.event_name == 'push' && github.ref_name == 'fix/celestia-calculation-integrity'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
