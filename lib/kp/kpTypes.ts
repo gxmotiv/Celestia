@@ -93,6 +93,34 @@ export interface KPPlanetSignificationLevels {
 
 export type KPPlanetSignificationGrade = "A" | "B" | "C" | "D";
 
+export type KPNodeAgentSource = "conjunction" | "star-lord" | "aspect" | "sign-lord";
+export type KPNodeAgentRule = "reader-vi" | "reader-iii-v";
+
+export interface KPNodeAgentTier {
+  source: KPNodeAgentSource;
+  priority: number;
+  planets: string[];
+  signifiedHouses: number[];
+}
+
+export interface KPNodeRepresentation {
+  node: "Rahu" | "Ketu";
+  occupiedHouse: number;
+  sign: string;
+  signLord: string;
+  starLord: string;
+  rule: KPNodeAgentRule;
+  conjunctionPolicy: "same-sidereal-sign-no-degree-orb";
+  aspectPolicy: "parashari-full-sign-drishti-classical-seven";
+  priorityOrder: KPNodeAgentSource[];
+  agentTiers: KPNodeAgentTier[];
+  preferredAgentSource?: KPNodeAgentSource;
+  preferredAgentPlanets: string[];
+  preferredAgentHouses: number[];
+  allAgentHouses: number[];
+  representedHouses: number[];
+}
+
 export interface KPPlanetSignification {
   planet: string;
   occupiesHouse: number;
@@ -156,6 +184,12 @@ export interface KPChartData {
   bodySet?: "classical-nine" | "extended-twelve";
   /** Shared ephemeris currently supplies mean Rahu and exactly opposite Ketu. */
   nodeConvention?: "mean" | "true";
+  /** Selects which KSK reader-era node-agent priority is applied. */
+  nodeAgentRule?: KPNodeAgentRule;
+  /** Separate disclosed node-agent conjunction and aspect conventions. */
+  nodeConjunctionPolicy?: "same-sidereal-sign-no-degree-orb";
+  nodeAspectPolicy?: "parashari-full-sign-drishti-classical-seven";
+  nodeRepresentations?: Partial<Record<"Rahu" | "Ketu", KPNodeRepresentation>>;
   ayanamsa: number;
   ayanamsaFormatted: string;
   cusps: KPCusps;
