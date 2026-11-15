@@ -14,6 +14,7 @@ import {
   DeclinationCalculator,
   DeclinationReport,
 } from "@/lib/astronomy/advancedWesternCalculators";
+import { AntisciaCalculator } from "@/lib/astronomy/antisciaCalculator";
 import {
   ProgressionsEngine,
   ProgressedChartResult,
@@ -105,6 +106,7 @@ export function AdvancedWesternPanel({
     | "asteroids"
     | "lilith"
     | "arabian"
+    | "antiscia"
     | "midpoints"
     | "harmonics"
     | "declinations"
@@ -151,6 +153,17 @@ export function AdvancedWesternPanel({
   const declinationReport: DeclinationReport = useMemo(() => {
     return declinationCalc.calculateAll(chartData.planets, chartData.obliquity);
   }, [declinationCalc, chartData.planets, chartData.obliquity]);
+
+  // Traditional solstitial antiscia / contra-antiscia (Lilly, Christian Astrology I).
+  const antisciaCalc = useMemo(() => new AntisciaCalculator(), []);
+  const antisciaPositions = useMemo(() => antisciaCalc.calculateAll([
+    ...chartData.planets.map((planet) => ({
+      name: planet.name,
+      longitude: planet.longitude,
+    })),
+    { name: "Ascendant", longitude: chartData.ascendant.longitude },
+    { name: "Midheaven", longitude: chartData.midheaven.longitude },
+  ]), [antisciaCalc, chartData.planets, chartData.ascendant.longitude, chartData.midheaven.longitude]);
 
   // Use the main chart's already-resolved UTC instant whenever available.
   // Fallback converts the supplied local clock using its explicit UTC offset.
@@ -284,6 +297,7 @@ export function AdvancedWesternPanel({
             { id: "asteroids", label: "4 Asteroids", icon: "⚳" },
             { id: "lilith", label: "Lilith & Points", icon: "⚸" },
             { id: "arabian", label: "Arabian Parts", icon: "⊕" },
+            { id: "antiscia", label: "Antiscia", icon: "☯" },
             { id: "midpoints", label: "90° Midpoints", icon: "⚡" },
             { id: "harmonics", label: "Harmonics", icon: "〰" },
             { id: "declinations", label: "Declinations", icon: "||" },
@@ -482,6 +496,52 @@ export function AdvancedWesternPanel({
                 <p className="text-xs text-slate-300 leading-relaxed pt-1">{part.interpretation}</p>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* SUB-TAB: TRADITIONAL ANTISCIA & CONTRA-ANTISCIA */}
+      {activeSubTab === "antiscia" && (
+        <div className="space-y-4">
+          <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3 space-y-2">
+            <h4 className="text-xs font-semibold text-slate-100">Solstitial Antiscia & Contra-Antiscia</h4>
+            <p className="text-[11px] leading-relaxed text-slate-400">
+              Traditional zodiacal mirror points across the Cancer–Capricorn solstitial axis.
+              The antiscion is (180° − longitude) mod 360°; the contra-antiscion is exactly opposite it.
+              This is a longitude projection, not a declination parallel or a physical body.
+            </p>
+            <p className="text-[10px] text-amber-200/80">
+              Method source: William Lilly, Christian Astrology, Book I, pp. 90–92 (1659 edition).
+              Interpretive contact orbs and meanings are not inferred by this calculator.
+            </p>
+          </div>
+          <div className="overflow-x-auto rounded-xl border border-slate-800">
+            <table className="w-full text-left text-xs text-slate-300">
+              <thead className="bg-slate-950 text-[10px] uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th className="px-3 py-2">Point</th>
+                  <th className="px-3 py-2">Natal longitude</th>
+                  <th className="px-3 py-2">Antiscion</th>
+                  <th className="px-3 py-2">Contra-antiscion</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800">
+                {antisciaPositions.map((item) => (
+                  <tr key={item.sourceName}>
+                    <td className="px-3 py-2 font-semibold text-slate-200">{item.sourceName}</td>
+                    <td className="px-3 py-2 font-mono text-slate-400">{formatDegreeMinute(item.sourceLongitude)}</td>
+                    <td className="px-3 py-2">
+                      <span className="block font-mono text-emerald-300">{item.antiscion.degreeFormatted}</span>
+                      <span className="text-[10px] text-slate-500">{item.antiscion.sign}</span>
+                    </td>
+                    <td className="px-3 py-2">
+                      <span className="block font-mono text-cyan-300">{item.contraAntiscion.degreeFormatted}</span>
+                      <span className="text-[10px] text-slate-500">{item.contraAntiscion.sign}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
