@@ -314,8 +314,10 @@ export class KPSignificators {
   }
 
   /**
-   * Promote each selected node agent into the same house-grade slots occupied
-   * by its represented planet(s). Raw occupants and star-tenants stay intact.
+   * Promote a selected node agent into the same house-level Grade I/II/III/IV
+   * in which its represented planet occurs. These house grades are distinct
+   * from the agent planet's separate A/B/C/D house-signification grades.
+   * Raw source occupants/star tenants remain unchanged.
    */
   public applyNodeAgentsToHouseSignificators(
     baseHouseSignificators: Record<number, KPHouseSignificators>,
@@ -335,6 +337,7 @@ export class KPSignificators {
       };
     });
 
+    const gradeKeys: Array<keyof SignificatorLevels> = ["levelA", "levelB", "levelC", "levelD"];
     (["Rahu", "Ketu"] as const).forEach((nodeName) => {
       const representation = nodeRepresentations[nodeName];
       if (!representation) return;
@@ -343,15 +346,20 @@ export class KPSignificators {
       );
       if (!preferredTier) return;
 
-      (Object.keys(preferredTier.levels) as Array<keyof KPPlanetSignificationLevels>).forEach((grade) => {
-        preferredTier.levels[grade].forEach((houseNumber) => {
-          const house = result[houseNumber];
-          if (!house) {
-            throw new Error(`KP node agent ${nodeName} references missing house ${houseNumber}.`);
+      preferredTier.planets.forEach((agentPlanet) => {
+        Object.values(baseHouseSignificators).forEach((baseHouse) => {
+          const derivedHouse = result[baseHouse.house];
+          if (!derivedHouse) {
+            throw new Error(`KP node agent ${nodeName} references missing house ${baseHouse.house}.`);
           }
-          if (!house.levels[grade].includes(nodeName)) {
-            house.levels[grade].push(nodeName);
-          }
+          gradeKeys.forEach((grade) => {
+            // The node inherits the representative's *house-to-planet* grade,
+            // not the representative's independent planet-to-house A/B/C/D grade.
+            if (baseHouse.levels[grade].includes(agentPlanet) &&
+                !derivedHouse.levels[grade].includes(nodeName)) {
+              derivedHouse.levels[grade].push(nodeName);
+            }
+          });
         });
       });
     });
