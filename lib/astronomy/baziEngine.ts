@@ -796,7 +796,11 @@ export class FiveElementAnalysisEngine {
   }
 
   /**
-   * Evaluate Day Master strength based on Seasonal Support & Resource/Output balance
+   * Provisional Day Master strength estimate.
+   *
+   * This weighted heuristic considers the month-branch element and aggregate
+   * chart element counts. It is not a complete classical Yong Shen / pattern
+   * selection method; the UI must label its output as an estimate.
    */
   private evaluateDayMaster(
     stem: HeavenlyStem,
