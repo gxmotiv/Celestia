@@ -6,7 +6,7 @@
  */
 
 import { swissEphemeris, SwissPlanetPosition } from "./swissEphemeris";
-import { WesternChartData, PlanetPosition, HouseCusp, ZODIAC_SIGNS, normalizeDegrees, filterCalculationReadyPoints } from "./ephemeris";
+import { WesternChartData, PlanetPosition, HouseCusp, ZODIAC_SIGNS, normalizeDegrees, filterCalculationReadyPoints, getHouseNumber } from "./ephemeris";
 import { EclipseAnalyzer } from "./specializedWesternEngines";
 import { isAngularAspectApplying } from "./ephemeris";
 import * as Astronomy from "astronomy-engine";
@@ -230,22 +230,7 @@ export class TransitEngine {
       return ((transitSign - ascendantSign + 12) % 12) + 1;
     }
 
-    for (let i = 0; i < 12; i++) {
-      const currentCusp = cusps[i];
-      const nextCusp = cusps[(i + 1) % 12];
-
-      if (currentCusp < nextCusp) {
-        if (longitude >= currentCusp && longitude < nextCusp) {
-          return i + 1;
-        }
-      } else {
-        // Crossing 0° Aries boundary
-        if (longitude >= currentCusp || longitude < nextCusp) {
-          return i + 1;
-        }
-      }
-    }
-    return 1;
+    return getHouseNumber(longitude, cusps);
   }
 
   /**
