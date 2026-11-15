@@ -97,6 +97,14 @@ export class KPEngine {
     const planetSignifications: Record<string, KPPlanetSignification> =
       this.significatorsCalc.calculateAllPlanetSignifications(kpCusps, kpPlanets);
 
+    // 4a. Resolve nodes through the selected KSK Reader VI representative chain.
+    const nodeAgentRule = "reader-vi" as const;
+    const nodeRepresentations = this.significatorsCalc.calculateNodeRepresentations(
+      kpPlanets,
+      planetSignifications,
+      nodeAgentRule
+    );
+
     // 5. Calculate KP Ruling Planets (RP)
     const rulingPlanets: KPRulingPlanets = this.predictionEngine.calculateRulingPlanets(
       kpCusps,
@@ -107,6 +115,10 @@ export class KPEngine {
     return {
       bodySet: "extended-twelve",
       nodeConvention: "mean",
+      nodeAgentRule,
+      nodeConjunctionPolicy: "same-sidereal-sign-provisional",
+      nodeAspectPolicy: "parashari-full-sign-drishti-classical-seven",
+      nodeRepresentations,
       ayanamsa: kpAyanamsa,
       ayanamsaFormatted: SubLordCalculator.formatDMS(kpAyanamsa),
       cusps: kpCusps,
