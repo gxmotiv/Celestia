@@ -27,6 +27,7 @@ jobs:
           - testAstrologySuite.ts
           - testWesternIntegritySuite.ts
           - testWesternLotSectFormulaSuite.ts
+          - testWesternAntisciaSuite.ts
           - testWesternHouseSystemPolicySuite.ts
           - testKPSystemSuite.ts
           - testParashariVargaSuite.ts
