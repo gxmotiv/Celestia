@@ -582,7 +582,9 @@ export class SolarTermCalculator {
   public calculateMonthPillar(date: Date, yearStemIndex: number): Pillar {
     const sunLon = this.getSunLongitude(date);
 
-    // The 12 Solar Months start at the 12 Major Solar Nodes (Jie):
+    // The 12 BaZi solar months begin at the twelve Jie (節) month-start
+    // terms, 30° apart. The alternating Qi (氣) terms at 15° midpoints do
+    // not advance the Month Branch.
     // 1. Lichun (315°) = Yin (Tiger, index 2)
     // 2. Jingzhe (345°) = Mao (Rabbit, index 3)
     // 3. Qingming (15°) = Chen (Dragon, index 4)
