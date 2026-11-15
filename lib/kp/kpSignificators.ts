@@ -16,6 +16,10 @@ import {
   KPHouseSignificators,
   KPPlanetSignification,
   KPPlanetSignificationGrade,
+  KPNodeAgentRule,
+  KPNodeAgentSource,
+  KPNodeAgentTier,
+  KPNodeRepresentation,
   SignificatorLevels,
 } from "./kpTypes";
 import { normalizeDegrees } from "../astronomy/ephemeris";
@@ -160,6 +164,125 @@ export class KPSignificators {
       levels,
       allSignificators: Array.from(allSet),
     };
+  }
+
+  /**
+   * Resolve Rahu/Ketu as agents using an explicitly selected KSK Reader variant.
+   * Reader VI places the node's star lord before aspecting planets; Reader III/V
+   * places aspecting planets before the star lord. This method never treats the
+   * nodes as sign owners or as aspect-casting planets.
+   */
+  public calculateNodeRepresentations(
+    planets: KPPlanet[],
+    planetSignifications: Record<string, KPPlanetSignification>,
+    rule: KPNodeAgentRule = "reader-vi"
+  ): Partial<Record<"Rahu" | "Ketu", KPNodeRepresentation>> {
+    const result: Partial<Record<"Rahu" | "Ketu", KPNodeRepresentation>> = {};
+    const nodeNames = ["Rahu", "Ketu"] as const;
+    const classicalAspectors = new Set(["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"]);
+    const offsetsFor = (name: string): number[] => {
+      if (name === "Mars") return [4, 7, 8];
+      if (name === "Jupiter") return [5, 7, 9];
+      if (name === "Saturn") return [3, 7, 10];
+      return [7];
+    };
+
+    nodeNames.forEach((nodeName) => {
+      const node = planets.find((planet) => planet.name === nodeName);
+      if (!node) return;
+      if (!Number.isInteger(node.signIndex) || node.signIndex < 0 || node.signIndex > 11) {
+        throw new Error(`KP node representation requires a valid sidereal sign index for ${nodeName}.`);
+      }
+      if (!Number.isInteger(node.house) || node.house < 1 || node.house > 12) {
+        throw new Error(`KP node representation requires a valid occupied house for ${nodeName}.`);
+      }
+
+      const conjoined = planets
+        .filter((planet) =>
+          planet.name !== nodeName &&
+          planet.name !== "Rahu" &&
+          planet.name !== "Ketu" &&
+          planet.signIndex === node.signIndex
+        )
+        .map((planet) => planet.name);
+
+      const starAgent =
+        node.starLord && node.starLord !== nodeName &&
+        node.starLord !== "Rahu" && node.starLord !== "Ketu" &&
+        planets.some((planet) => planet.name === node.starLord)
+          ? [node.starLord]
+          : [];
+
+      const aspecting = planets
+        .filter((planet) => {
+          if (!classicalAspectors.has(planet.name)) return false;
+          const offset = ((node.signIndex - planet.signIndex + 12) % 12) + 1;
+          return offsetsFor(planet.name).includes(offset);
+        })
+        .map((planet) => planet.name);
+
+      const signAgent =
+        node.signLord && node.signLord !== nodeName &&
+        node.signLord !== "Rahu" && node.signLord !== "Ketu" &&
+        planets.some((planet) => planet.name === node.signLord)
+          ? [node.signLord]
+          : [];
+
+      const priorityOrder: KPNodeAgentSource[] = rule === "reader-vi"
+        ? ["conjunction", "star-lord", "aspect", "sign-lord"]
+        : ["conjunction", "aspect", "star-lord", "sign-lord"];
+      const agentPlanets: Record<KPNodeAgentSource, string[]> = {
+        conjunction: conjoined,
+        "star-lord": starAgent,
+        aspect: aspecting,
+        "sign-lord": signAgent,
+      };
+      const agentTiers: KPNodeAgentTier[] = priorityOrder.map((source, index) => {
+        const names = agentPlanets[source];
+        const houses = new Set<number>();
+        names.forEach((name) => {
+          planetSignifications[name]?.signifiedHouses.forEach((house) => houses.add(house));
+        });
+        return {
+          source,
+          priority: index + 1,
+          planets: names,
+          signifiedHouses: Array.from(houses).sort((a, b) => a - b),
+        };
+      });
+
+      // KSK material gives the node's occupied house as a direct signification,
+      // then the most prominent available representative as the practical agent.
+      const preferredTier = agentTiers.find((tier) => tier.planets.length > 0);
+      const preferredAgentHouses = preferredTier?.signifiedHouses ?? [];
+      const allAgentHouses = Array.from(new Set(
+        agentTiers.flatMap((tier) => tier.signifiedHouses)
+      )).sort((a, b) => a - b);
+      const representedHouses = Array.from(new Set([
+        node.house,
+        ...preferredAgentHouses,
+      ])).sort((a, b) => a - b);
+
+      result[nodeName] = {
+        node: nodeName,
+        occupiedHouse: node.house,
+        sign: node.sign,
+        signLord: node.signLord,
+        starLord: node.starLord,
+        rule,
+        conjunctionPolicy: "same-sidereal-sign-no-degree-orb",
+        aspectPolicy: "parashari-full-sign-drishti-classical-seven",
+        priorityOrder,
+        agentTiers,
+        preferredAgentSource: preferredTier?.source,
+        preferredAgentPlanets: preferredTier?.planets ?? [],
+        preferredAgentHouses,
+        allAgentHouses,
+        representedHouses,
+      };
+    });
+
+    return result;
   }
 
   /**
