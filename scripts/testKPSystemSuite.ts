@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { calculateWesternChart } from "../lib/astronomy/ephemeris";
-import { KPCuspsCalculator } from "../lib/kp/kpCusps";\nimport { SubLordCalculator } from "../lib/kp/subLordEngine";
+import { KPCuspsCalculator } from "../lib/kp/kpCusps";
+import { SubLordCalculator } from "../lib/kp/subLordEngine";
 
 
 const kp249 = SubLordCalculator.generate249Table();
@@ -22,7 +23,7 @@ assert.equal(kp2193[0].starLord, "Ketu");
 assert.equal(kp2193[0].subLord, "Ketu");
 assert.equal(kp2193[0].subSubLord, "Ketu");
 assert.ok(
-  Math.abs(arcSeconds(kp2193[0].endLongitude) - (7 / 120) * (7 / 120) * (360 / 27) * 3600 + 0) < 1e-7,
+  Math.abs(arcSeconds(kp2193[0].endLongitude) - (7 / 120) * (7 / 120) * (360 / 27) * 3600) < 1e-7,
   "First KP micro-division must be 7/120 of the Ketu sub, itself 7/120 of a nakshatra"
 );
 assert.ok(
@@ -59,6 +60,16 @@ assert.ok(Math.abs(afterSignBoundary.startLongitude - 30) < 1e-10);
 assert.equal(beforeSignBoundary.signName, "Aries");
 assert.equal(afterSignBoundary.signName, "Taurus");
 assert.ok(Math.abs(afterSignBoundary.endLongitude - (30 + 6.333333333333 / 60)) < 1e-8);
+
+// Every table midpoint must resolve to the same hierarchical lords through
+// the point-calculation path, so seed lookup and chart cusp assignment agree.
+const subLordCalculator = new SubLordCalculator();
+for (const entry of kp2193) {
+  const resolved = subLordCalculator.calculateSubLord(entry.centerLongitude);
+  assert.equal(resolved.starLord, entry.starLord, `KP 2193 row ${entry.seed} star lord`);
+  assert.equal(resolved.subLord, entry.subLord, `KP 2193 row ${entry.seed} sub lord`);
+  assert.equal(resolved.subSubLord, entry.subSubLord, `KP 2193 row ${entry.seed} sub-sub lord`);
+}
 
 // Every interval is ordered, contiguous, positive-width, and contained in one sign.
 assert.ok(Math.abs(kp2193[0].startLongitude) < 1e-12);
