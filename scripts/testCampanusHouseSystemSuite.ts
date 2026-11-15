@@ -108,8 +108,8 @@ const referenceFixtures: ReferenceFixture[] = [
     armc: 240,
     latitude: 80,
     obliquity: 23.439166666666665,
-    ascendant: 198.888572144668,
-    midheaven: 242.089427896560,
+    ascendant: 18.888572144668,
+    midheaven: 62.089427896560,
     polarShifted: true,
     cusps: [
       18.888572144668, 268.461537629661, 249.058733525119, 242.089427896560,
@@ -123,8 +123,8 @@ const referenceFixtures: ReferenceFixture[] = [
     armc: 60,
     latitude: -80,
     obliquity: 23.439166666666665,
-    ascendant: 18.888572144668,
-    midheaven: 62.089427896560,
+    ascendant: 198.888572144668,
+    midheaven: 242.089427896560,
     polarShifted: true,
     cusps: [
       198.888572144668, 88.461537629661, 69.058733525119, 62.089427896560,
