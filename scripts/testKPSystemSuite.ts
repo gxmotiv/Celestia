@@ -287,6 +287,45 @@ assert.throws(
   /requires complete sign, star, sub, and sub-sub lord data for cusp 1/
 );
 
+const strengthCusps = {
+  houseLords: [
+    "Mars", "Moon", "Jupiter", "Saturn", "Mercury", "Mercury",
+    "Sun", "Sun", "Mars", "Venus", "Venus", "Jupiter",
+  ],
+} as unknown as KPCusps;
+const strengthPlanet = (name: string, house: number, starLord: string, subLord = "Moon", signLord = "Mars") =>
+  ({ name, house, starLord, subLord, signLord, isRetrograde: false }) as unknown as KPPlanet;
+const strengthPlanets = [
+  strengthPlanet("Mercury", 1, "Mercury"),
+  strengthPlanet("Sun", 2, "Venus"),
+  strengthPlanet("Moon", 3, "Mars"),
+  strengthPlanet("Mars", 4, "Saturn"),
+  strengthPlanet("Venus", 9, "Sun"),
+  strengthPlanet("Saturn", 6, "Jupiter"),
+  strengthPlanet("Jupiter", 8, "Saturn"),
+  strengthPlanet("Rahu", 11, "Mercury"),
+];
+const strengthPS = fourStep.calculatePositionalStatus(strengthCusps, strengthPlanets);
+assert.equal(strengthPS.Mercury.hasPositionalStatus, true, "A planet in its own star retains PS even when a planet tenants its star");
+assert.equal(strengthPS.Venus.hasPositionalStatus, false, "A non-own-star planet with a tenant in its star has no PS");
+const mercuryFourStep = fourStep.evaluatePlanetFourStep("Mercury", strengthCusps, strengthPlanets, strengthPS);
+assert.ok(mercuryFourStep.step1.primaryHouses.includes(1), "Own-star planet must be primary for its occupied house");
+assert.ok(mercuryFourStep.step1.primaryHouses.includes(5), "PS planet must be primary for its empty owned house");
+assert.ok(mercuryFourStep.step1.secondaryHouses.includes(6), "PS planet's occupied owned house must be secondary");
+assert.deepEqual(
+  mercuryFourStep.step1.allHouses,
+  [...mercuryFourStep.step1.primaryHouses, ...mercuryFourStep.step1.secondaryHouses].sort((a, b) => a - b),
+  "The compatibility house union must equal primary plus secondary house sets"
+);
+const venusFourStep = fourStep.evaluatePlanetFourStep("Venus", strengthCusps, strengthPlanets, strengthPS);
+assert.ok(venusFourStep.step1.secondaryHouses.includes(9), "Planet without PS must be secondary for its occupied house");
+assert.ok(venusFourStep.step1.secondaryHouses.includes(10), "Planet without PS remains secondary for an empty owned house");
+assert.ok(venusFourStep.step2.primaryHouses.includes(2), "Step 2 star lord is primary for its occupied house");
+assert.ok(venusFourStep.step2.primaryHouses.includes(7), "Step 2 star lord is primary for an empty owned house");
+assert.ok(venusFourStep.step2.secondaryHouses.includes(8), "Step 2 star lord is secondary for its occupied owned house");
+assert.equal(venusFourStep.step2.strengthRule, "star-lord-principal");
+
+
 const predictionEngine = new KPPredictionEngine();
 assert.throws(
   () => predictionEngine.predictEvent(13, emptyCusps, [], "Jupiter", "Venus"),
