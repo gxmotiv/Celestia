@@ -4,6 +4,16 @@ Last reviewed: 2026-11-15
 Source of scope: `docs/audit/2026-10-31-master-audit-spec.md` and the current GitHub source tree.  
 Policy: keep changes on isolated branches; do not merge or deploy until the owner reviews the PR chain. Passing internal tests is not proof of astronomical correctness.
 
+## 2026-11-15 bottom-up audit update
+
+- New cross-system audit map: `docs/audit/2026-11-15-bottom-up-multi-system-coverage.md`. It defines L0 numeric primitives through L8 independent acceptance and applies the sequence separately to Western, Parashari, Jaimini, KP, BaZi, numerology, relationship charts and product/export.
+- Jaimini micro-layer correction: `lib/vedic/jaiminiKarakas.ts` now rejects fractional houses, out-of-range sidereal longitudes and sign labels inconsistent with the longitude; the Ascendant must be in [0°, 360°).
+- Jaimini Rashi Drishti correction: `getJaiminiAspectedSigns` rejects non-integer or out-of-zodiac sign indices.
+- New dedicated suite: `scripts/testJaiminiKarakasSuite.ts` covers the seven- and eight-karaka schemes, Rahu's reversed ranking degree, 0° Rahu, exact/sub-arcsecond ties, missing/duplicate/invalid inputs, Karakamsa calculation and all twelve Rashi Drishti maps. It has been added to `.github/workflows/verify.yml`.
+- **CI status:** the suite is newly added and must be judged only on the Actions run for the commit that contains both the test file and workflow matrix update. No pass is claimed here. Existing Jaimini integration coverage is not a substitute for direct 7/8-karaka tests.
+- **Important scope limit:** this update validates the calculation contract and selected 7/8-karaka and Rashi Drishti rules. It does not complete Jaimini Chara Dasha, Arudha, Upapada, Argala, special Lagnas or every commentarial lineage.
+
+
 ## Status vocabulary
 
 - **Implemented / CI-passed**: code exists on the current implementation branch and the recorded GitHub Actions run passed.
