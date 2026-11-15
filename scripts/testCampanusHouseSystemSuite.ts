@@ -226,7 +226,7 @@ check(natal.requestedHouseSystem === "Campanus" &&
 
 const polarNatal = calculateWesternChart(
   2000, 1, 1, 12, 0,
-  70, -90, 0,
+  70, -10.457072438026, 0,
   "Campanus"
 );
 check(polarNatal.houseSystem === "Campanus" &&
