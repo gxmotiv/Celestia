@@ -5,6 +5,8 @@ import { SubLordCalculator } from "../lib/kp/subLordEngine";
 import { KPFourStepEngine } from "../lib/kp/kpFourStepEngine";
 import { KPSignificators } from "../lib/kp/kpSignificators";
 import { KPPredictionEngine } from "../lib/kp/kpPredictionEngine";
+import { KPEngine } from "../lib/kp/kpEngine";
+import type { VedicChartData } from "../lib/astronomy/vedic";
 import type { KPCusps, KPPlanet } from "../lib/kp/kpTypes";
 
 
@@ -166,6 +168,23 @@ const kpFromWholeSign = calculator.calculateKPCuspsFromWestern(
 
 assert.equal(kpFromPlacidus.cusps.length, 12);
 assert.equal(kpFromWholeSign.cusps.length, 12);
+
+const kpIntegratedChart = new KPEngine().generateKPChart(
+  westernPlacidus,
+  {
+    currentMahadasha: "Jupiter",
+    currentAntardasha: "Venus",
+  } as VedicChartData,
+  new Date(Date.UTC(2000, 0, 1, 12))
+);
+assert.equal(kpIntegratedChart.nodeConvention, "mean", "KP chart must disclose the inherited mean-node convention");
+assert.ok(kpIntegratedChart.planets.some((planet) => planet.name === "Rahu"), "Western NorthNode must map to KP Rahu");
+assert.ok(kpIntegratedChart.planets.some((planet) => planet.name === "Ketu"), "Western SouthNode must map to KP Ketu");
+assert.ok(!kpIntegratedChart.planets.some((planet) => planet.name === "NorthNode" || planet.name === "SouthNode"), "KP must not expose Western point names in its planetary system");
+assert.ok(!kpIntegratedChart.planets.some((planet) => planet.name === "Chiron"), "KP must exclude the unvalidated illustrative Chiron point from calculation");
+assert.equal(kpIntegratedChart.currentDashaLord, "Jupiter");
+assert.equal(kpIntegratedChart.currentAntardashaLord, "Venus");
+
 assert.ok(kpFromPlacidus.cusps.every(Number.isFinite));
 assert.ok(kpFromWholeSign.cusps.every(Number.isFinite));
 
