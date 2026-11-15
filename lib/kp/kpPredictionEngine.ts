@@ -290,24 +290,25 @@ export class KPPredictionEngine {
   }
 
   /**
-   * Calculate KP Ruling Planets (RP)
-   * 1. Day Lord
-   * 2. Moon Sign Lord
+   * Calculate the five KP Ruling Planets in the Reader VI preference order:
+   * 1. Lagna Star Lord
+   * 2. Lagna Sign Lord
    * 3. Moon Star Lord
-   * 4. Lagna Sign Lord
-   * 5. Lagna Star Lord
+   * 4. Moon Sign Lord
+   * 5. Day Lord
+   *
+   * Limitation: weekday currently uses the UTC civil date, not local sunrise.
    */
   public calculateRulingPlanets(
     cusps: KPCusps,
     planets: KPPlanet[],
     birthDate: Date
   ): KPRulingPlanets {
-    const dayNames = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"];
-    const dayLord = dayNames[birthDate.getUTCDay()];
-
     if (!(birthDate instanceof Date) || !Number.isFinite(birthDate.getTime())) {
       throw new Error("KP ruling planets require a valid birth/judgment Date.");
     }
+    const dayNames = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"];
+    const dayLord = dayNames[birthDate.getUTCDay()];
     const moon = planets.find((p) => p.name === "Moon");
     if (!moon) throw new Error("KP ruling planets require Moon position data; no substitute is permitted.");
     if (!moon.signLord || !moon.starLord || !moon.subLord) {
