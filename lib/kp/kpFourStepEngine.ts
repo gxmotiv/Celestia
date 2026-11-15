@@ -120,6 +120,9 @@ export class KPFourStepEngine {
   ): KPStepDetail {
     const planetObj = planets.find((p) => p.name === planetName);
     if (!planetObj) throw new Error(`KP 4-Step requires planet data for ${planetName}; refusing to substitute a synthetic house.`);
+    if (!Array.isArray(cusps.houseLords) || cusps.houseLords.length !== 12) {
+      throw new Error("KP 4-Step requires twelve valid house lords.");
+    }
     if (!Number.isInteger(planetObj.house) || planetObj.house < 1 || planetObj.house > 12) {
       throw new Error(`KP 4-Step requires a valid occupied house (1–12) for ${planetName}.`);
     }
