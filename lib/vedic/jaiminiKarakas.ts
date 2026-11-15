@@ -1,8 +1,14 @@
 /**
- * Jaimini Chara Karakas Engine
- * Implements classical Jaimini Upadesha Sutras and Maharishi Parashara doctrines.
- * Computes both 7-Karaka and 8-Karaka schemes based on the decreasing order
- * of sidereal longitudes within their respective rasis (0° to 30°).
+ * Jaimini Chara Karaka engine.
+ *
+ * Explicitly named variants:
+ * - 7-Karaka: Sun through Saturn; seven roles, with no separate Pitrikaraka.
+ * - 8-Karaka: Sun through Rahu; eight roles including Pitrikaraka. Rahu's
+ *   in-sign degree is reversed (30° minus its actual degree).
+ *
+ * The variants are alternatives, not values to combine in one ranking.
+ * Tie values equal to the nearest arcsecond fail closed for manual review
+ * rather than being assigned by array order.
  */
 
 export interface JaiminiKaraka {
@@ -12,8 +18,12 @@ export interface JaiminiKaraka {
   sanskritName: string;
   planet: string;
   symbol: string;
-  rasiDegree: number; // 0 to 30
+  /** Actual longitude within the sign, in degrees. */
+  rasiDegree: number;
   rasiDegreeFormatted: string;
+  /** Value used for descending Chara-Karaka ranking; reversed for Rahu. */
+  rankingDegree: number;
+  rankingDegreeFormatted: string;
   sign: string;
   house: number;
   signification: string;
@@ -30,131 +40,282 @@ export interface JaiminiKarakasResult {
   summary: string;
 }
 
-const KARAKA_DEFINITIONS_7 = [
+export interface JaiminiPlanetPosition {
+  name: string;
+  siderealLongitude: number;
+  house: number;
+  rasiName: string;
+}
+
+type KarakaDefinition = Omit<JaiminiKaraka,
+  "planet" | "symbol" | "rasiDegree" | "rasiDegreeFormatted" |
+  "rankingDegree" | "rankingDegreeFormatted" | "sign" | "house"
+>;
+
+const KARAKA_DEFINITIONS_7: KarakaDefinition[] = [
   {
-    roleShort: "AK" as const,
+    roleShort: "AK",
     role: "Atmakaraka",
     roleName: "Soul Significator",
     sanskritName: "आत्मकारक",
-    signification: "The supreme director of the incarnating soul, spiritual destiny, and life purpose.",
-    lifeDomain: "Core self, dharma, enlightenment, major life transformation",
+    signification: "The principal movable significator of self and the chart's central life theme.",
+    lifeDomain: "Core self, dharma, major life transformation",
   },
   {
-    roleShort: "AmK" as const,
+    roleShort: "AmK",
     role: "Amatyakaraka",
     roleName: "Minister / Career Significator",
     sanskritName: "अमात्यकारक",
-    signification: "The minister of the soul, professional authority, intellectual capacity, and social status.",
-    lifeDomain: "Career, livelihood, public influence, intellectual achievements",
+    signification: "The minister of the Atmakaraka; profession, counsel and capacity to execute the soul's agenda.",
+    lifeDomain: "Career, livelihood, public influence, intellectual work",
   },
   {
-    roleShort: "BK" as const,
+    roleShort: "BK",
     role: "Bhratrikaraka",
-    roleName: "Sibling & Guru Significator",
+    roleName: "Sibling Significator",
     sanskritName: "भ्रातृकारक",
-    signification: "Siblings, companions, spiritual teachers (Gurus), courage, and noble advisors.",
-    lifeDomain: "Spiritual guidance, siblings, inner courage, mentors",
+    signification: "Siblings, courage, companions and teachers.",
+    lifeDomain: "Siblings, spiritual guidance, courage, mentors",
   },
   {
-    roleShort: "MK" as const,
+    roleShort: "MK",
     role: "Matrikaraka",
-    roleName: "Mother & Foundation Significator",
+    roleName: "Mother Significator",
     sanskritName: "मातृकारक",
-    signification: "Mother, nurturing foundations, emotional peace, ancestral shelter, and lands.",
-    lifeDomain: "Motherhood, domestic sanctuary, real estate, emotional security",
+    signification: "Mother, nurture, education and foundations.",
+    lifeDomain: "Mother, home, learning, emotional foundations",
   },
   {
-    roleShort: "PK" as const,
+    roleShort: "PK",
     role: "Putrakaraka",
-    roleName: "Progeny & Wisdom Significator",
+    roleName: "Children Significator",
     sanskritName: "पुत्रकारक",
-    signification: "Children, creative intelligence, speculative intuition, and purva punya (past-life merit).",
-    lifeDomain: "Progeny, creativity, higher learning, artistic creation",
+    signification: "Children, intelligence, creativity and merit.",
+    lifeDomain: "Children, creativity, learning, merit",
   },
   {
-    roleShort: "GK" as const,
+    roleShort: "GK",
     role: "Gnatikaraka",
     roleName: "Kinsmen & Obstacles Significator",
     sanskritName: "ज्ञातिकारक",
-    signification: "Rivals, disputes, debts, disease, collaterals, and karmic struggles that forge character.",
-    lifeDomain: "Overcoming adversaries, legal battles, health discipline, competitors",
+    signification: "Relatives, disputes, obstacles, debts and disease.",
+    lifeDomain: "Relatives, conflicts, obstacles, health discipline",
   },
   {
-    roleShort: "DK" as const,
+    roleShort: "DK",
     role: "Darakaraka",
-    roleName: "Spouse & Union Significator",
+    roleName: "Spouse Significator",
     sanskritName: "दाराकारक",
-    signification: "Spouse, intimate partners, trade relationships, and deep interpersonal connections.",
-    lifeDomain: "Marriage, life partner qualities, sacred unions, contracts",
+    signification: "Spouse, intimate partnerships and agreements.",
+    lifeDomain: "Marriage, partnerships, contracts",
   },
 ];
 
+const KARAKA_DEFINITIONS_8: KarakaDefinition[] = [
+  KARAKA_DEFINITIONS_7[0],
+  KARAKA_DEFINITIONS_7[1],
+  KARAKA_DEFINITIONS_7[2],
+  KARAKA_DEFINITIONS_7[3],
+  {
+    roleShort: "PiK",
+    role: "Pitrikaraka",
+    roleName: "Father Significator",
+    sanskritName: "पितृकारक",
+    signification: "Father, ancestry, authority and paternal foundations.",
+    lifeDomain: "Father, lineage, authority, paternal dharma",
+  },
+  KARAKA_DEFINITIONS_7[4],
+  KARAKA_DEFINITIONS_7[5],
+  KARAKA_DEFINITIONS_7[6],
+];
+
 const PLANET_SYMBOLS: Record<string, string> = {
-  Sun: "☉", Moon: "☽", Mars: "♂", Mercury: "☿", Jupiter: "♃", Venus: "♀", Saturn: "♄", Rahu: "☊"
+  Sun: "☉",
+  Moon: "☽",
+  Mars: "♂",
+  Mercury: "☿",
+  Jupiter: "♃",
+  Venus: "♀",
+  Saturn: "♄",
+  Rahu: "☊",
 };
 
+const RASI_NAMES = [
+  "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
+  "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces",
+] as const;
+
+const CLASSICAL_7 = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"] as const;
+const CLASSICAL_8 = [...CLASSICAL_7, "Rahu"] as const;
+
+function normalizeDegrees(value: number): number {
+  return ((value % 360) + 360) % 360;
+}
+
+function formatDms(degrees: number): string {
+  const totalArcSeconds = Math.round(degrees * 3600);
+  const wholeDegrees = Math.floor(totalArcSeconds / 3600);
+  const minutes = Math.floor((totalArcSeconds % 3600) / 60);
+  const seconds = totalArcSeconds % 60;
+  return `${wholeDegrees}°${minutes.toString().padStart(2, "0")}'${seconds.toString().padStart(2, "0")}"`;
+}
+
+function validatePositions(
+  planets: JaiminiPlanetPosition[],
+  requiredNames: readonly string[],
+  ascendantLongitude: number | undefined
+): { byName: Map<string, JaiminiPlanetPosition>; ascendant: number } {
+  if (!Array.isArray(planets)) {
+    throw new TypeError("Jaimini Chara Karakas require a planetary position array.");
+  }
+  const byName = new Map<string, JaiminiPlanetPosition>();
+  for (const planet of planets) {
+    if (!planet || typeof planet.name !== "string") {
+      throw new RangeError("Every Jaimini planetary position must have a name.");
+    }
+    if (!requiredNames.includes(planet.name)) continue;
+    if (byName.has(planet.name)) {
+      throw new RangeError("Duplicate Jaimini position supplied for " + planet.name + ".");
+    }
+    if (!Number.isFinite(planet.siderealLongitude) ||
+        !Number.isFinite(planet.house) ||
+        planet.house < 1 || planet.house > 12 ||
+        typeof planet.rasiName !== "string" || !planet.rasiName.trim()) {
+      throw new RangeError("Jaimini position for " + planet.name + " is incomplete or invalid.");
+    }
+    byName.set(planet.name, planet);
+  }
+
+  const missing = requiredNames.filter((name) => !byName.has(name));
+  if (missing.length) {
+    throw new RangeError(
+      "Jaimini " + requiredNames.length + "-Karaka scheme requires positions for: " +
+      missing.join(", ") + "."
+    );
+  }
+
+  const suppliedAscendant = ascendantLongitude ??
+    planets.find((planet) => planet.name === "Ascendant" || planet.name === "Lagna")?.siderealLongitude;
+  if (!Number.isFinite(suppliedAscendant)) {
+    throw new RangeError("Jaimini Karakamsa requires the sidereal Ascendant longitude.");
+  }
+
+  return { byName, ascendant: normalizeDegrees(suppliedAscendant as number) };
+}
+
 export class JaiminiKarakasEngine {
+  /**
+   * Seven-karaka variant: the seven classical grahas, without Rahu or a
+   * separate Pitrikaraka office. This preserves the existing Celestia default.
+   */
   public calculate7Karakas(
-    planets: { name: string; siderealLongitude: number; house: number; rasiName: string }[]
+    planets: JaiminiPlanetPosition[],
+    ascendantLongitude?: number
   ): JaiminiKarakasResult {
-    // 7 classical Grahas only: Sun, Moon, Mars, Mercury, Jupiter, Venus, Saturn
-    const classicalNames = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"];
-    const candidates = planets
-      .filter((p) => classicalNames.includes(p.name))
-      .map((p) => {
-        const rasiDeg = p.siderealLongitude % 30;
-        return {
-          ...p,
-          rasiDeg,
-        };
-      });
+    return this.calculateScheme("7-Karaka", planets, ascendantLongitude);
+  }
 
-    // Sort by descending degree within sign
-    candidates.sort((a, b) => b.rasiDeg - a.rasiDeg);
+  /**
+   * Eight-karaka variant: includes Rahu with a reversed in-sign degree and
+   * assigns Pitrikaraka between Matrikaraka and Putrakaraka.
+   */
+  public calculate8Karakas(
+    planets: JaiminiPlanetPosition[],
+    ascendantLongitude?: number
+  ): JaiminiKarakasResult {
+    return this.calculateScheme("8-Karaka", planets, ascendantLongitude);
+  }
 
-    const karakas: JaiminiKaraka[] = candidates.map((c, idx) => {
-      const def = KARAKA_DEFINITIONS_7[idx];
-      const deg = Math.floor(c.rasiDeg);
-      const min = Math.floor((c.rasiDeg % 1) * 60);
-      const sec = Math.floor(((c.rasiDeg * 60) % 1) * 60);
+  private calculateScheme(
+    scheme: "7-Karaka" | "8-Karaka",
+    planets: JaiminiPlanetPosition[],
+    ascendantLongitude?: number
+  ): JaiminiKarakasResult {
+    const isEight = scheme === "8-Karaka";
+    const requiredNames: readonly string[] = isEight ? CLASSICAL_8 : CLASSICAL_7;
+    const definitions = isEight ? KARAKA_DEFINITIONS_8 : KARAKA_DEFINITIONS_7;
+    const { byName, ascendant } = validatePositions(
+      planets,
+      requiredNames,
+      ascendantLongitude
+    );
 
+    const candidates = requiredNames.map((name) => {
+      const position = byName.get(name)!;
+      const absoluteLongitude = normalizeDegrees(position.siderealLongitude);
+      const actualDegree = absoluteLongitude % 30;
+      // Jaimini Sutra commentary convention: Rahu is ranked backwards.
+      const rankingDegree = isEight && name === "Rahu"
+        ? 30 - actualDegree
+        : actualDegree;
+      const rankingArcSeconds = Math.round(rankingDegree * 3600);
       return {
-        role: def.role,
-        roleShort: def.roleShort,
-        roleName: def.roleName,
-        sanskritName: def.sanskritName,
-        planet: c.name,
-        symbol: PLANET_SYMBOLS[c.name] || "",
-        rasiDegree: c.rasiDeg,
-        rasiDegreeFormatted: `${deg}°${min.toString().padStart(2, "0")}'${sec.toString().padStart(2, "0")}"`,
-        sign: c.rasiName,
-        house: c.house,
-        signification: def.signification,
-        lifeDomain: def.lifeDomain,
+        ...position,
+        absoluteLongitude,
+        actualDegree,
+        rankingDegree,
+        rankingArcSeconds,
       };
     });
 
-    const ak = karakas[0];
-    const akPlanet = candidates[0];
+    candidates.sort((a, b) => b.rankingArcSeconds - a.rankingArcSeconds);
 
-    // Karakamsa is the sign occupied by Atmakaraka in the D9 Navamsha chart
-    // Approximate Navamsha sign of AK from its sidereal longitude
-    const totalNavamsaUnits = Math.floor(akPlanet.siderealLongitude / (30 / 9));
-    const karakamsaSignIdx = totalNavamsaUnits % 12;
-    const rasiNames = [
-      "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
-      "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"
-    ];
-    const karakamsaSign = rasiNames[karakamsaSignIdx];
+    // Sutra 1.1.11 in the Rao/Raman edition directs comparison by minutes and
+    // seconds when whole degrees tie. If the arcseconds also tie, Celestia
+    // refuses to let input-array order decide the karaka.
+    for (let index = 1; index < candidates.length; index += 1) {
+      if (candidates[index - 1].rankingArcSeconds === candidates[index].rankingArcSeconds) {
+        throw new RangeError(
+          "Unresolved Jaimini Chara Karaka tie at arcsecond precision between " +
+          candidates[index - 1].name + " and " + candidates[index].name +
+          ". Review the selected lineage's tie-filling rule."
+        );
+      }
+    }
 
+    const karakas: JaiminiKaraka[] = candidates.map((candidate, index) => {
+      const definition = definitions[index];
+      if (!definition) {
+        throw new Error("No Jaimini karaka definition exists for rank " + (index + 1) + ".");
+      }
+      return {
+        ...definition,
+        planet: candidate.name,
+        symbol: PLANET_SYMBOLS[candidate.name] || "",
+        rasiDegree: candidate.actualDegree,
+        rasiDegreeFormatted: formatDms(candidate.actualDegree),
+        rankingDegree: candidate.rankingDegree,
+        rankingDegreeFormatted: formatDms(candidate.rankingDegree),
+        sign: candidate.rasiName,
+        house: candidate.house,
+      };
+    });
+
+    const atmakaraka = karakas[0];
+    const atmakarakaPosition = candidates[0];
+
+    // Each 3°20′ division is one Navamsa. The uninterrupted 108-part count
+    // produces the Parashari/Jaimini D9 sign sequence across the zodiac.
+    const karakamsaSignIndex =
+      Math.floor(atmakarakaPosition.absoluteLongitude / (30 / 9)) % 12;
+    const karakamsaSign = RASI_NAMES[karakamsaSignIndex];
+    const lagnaSignIndex = Math.floor(ascendant / 30);
+    const karakamsaHouseFromLagna =
+      ((karakamsaSignIndex - lagnaSignIndex + 12) % 12) + 1;
+
+    const rahuNote = isEight
+      ? " Rahu was ranked by 30° minus its actual in-sign degree."
+      : "";
     return {
-      scheme: "7-Karaka",
-      atmakaraka: ak,
+      scheme,
+      atmakaraka,
       karakas,
       karakamsaSign,
-      karakamsaSignIndex: karakamsaSignIdx,
-      karakamsaHouseFromLagna: ((karakamsaSignIdx - Math.floor(planets.find(p => p.name === "Ascendant" || p.name === "Lagna")?.siderealLongitude || 0) / 30 + 12) % 12) + 1,
-      summary: `Atmakaraka is ${ak.planet} at ${ak.rasiDegreeFormatted} in ${ak.sign} (House ${ak.house}). It signifies the soul's primary spiritual curriculum in this lifetime.`,
+      karakamsaSignIndex: karakamsaSignIndex,
+      karakamsaHouseFromLagna,
+      summary:
+        `${scheme}: Atmakaraka is ${atmakaraka.planet} at ${atmakaraka.rasiDegreeFormatted} in ${atmakaraka.sign} (House ${atmakaraka.house}).` +
+        rahuNote,
     };
   }
 }
