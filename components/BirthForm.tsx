@@ -759,6 +759,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
                 <option value="Campanus">Campanus (Prime Vertical Great Circles)</option>
                 <option value="Alcabitius">Alcabitius (Ascendant semi-arc thirds)</option>
                 <option value="Morinus">Morinus (Equatorial 30° divisions)</option>
+                <option value="Meridian">Meridian / Axial Rotation (30° right-ascension divisions)</option>
               </select>
             </div>
           </div>
