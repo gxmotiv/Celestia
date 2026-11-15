@@ -478,6 +478,22 @@ assert.ok(!expandedNodeHouseSignifications[9].levels.levelA.includes("Rahu"), "R
 assert.ok(expandedNodeHouseSignifications[9].levels.levelB.includes("Rahu"), "Rahu inherits Jupiter's actual Grade II occupant role in House 9");
 assert.ok(expandedNodeHouseSignifications[9].allSignificators.includes("Rahu"));
 assert.ok(expandedNodeHouseSignifications[10].levels.levelB.includes("Ketu"), "Ketu must inherit its preferred conjoined Sun's Level B house signification");
+
+assert.equal(
+  nodeCalculator.getStrongestHouseSignificatorGrade("Rahu", [6, 9], expandedNodeHouseSignifications),
+  "I",
+  "Grade I must outrank Grade II when a period lord matches multiple favorable houses"
+);
+assert.equal(
+  nodeCalculator.getStrongestHouseSignificatorGrade("Rahu", [9], expandedNodeHouseSignifications),
+  "II",
+  "Rahu's House 9 occupancy inherits the agent's actual Grade II"
+);
+assert.equal(
+  nodeCalculator.getStrongestHouseSignificatorGrade("Pluto", [6, 9], expandedNodeHouseSignifications),
+  undefined,
+  "A planet absent from favorable house grades must not be treated as a direct period significator"
+);
 assert.ok(baseNodeHouseSignifications[9].levels.levelB.includes("Jupiter"), "Raw source house significations remain unchanged");
 
 assert.throws(
