@@ -110,7 +110,8 @@ export interface KPNodeRepresentation {
   signLord: string;
   starLord: string;
   rule: KPNodeAgentRule;
-  conjunctionPolicy: "same-sidereal-sign-no-degree-orb";
+  /** Explicit software convention; not asserted to be a universal KSK orb rule. */
+  conjunctionPolicy: "same-sidereal-sign-provisional";
   aspectPolicy: "parashari-full-sign-drishti-classical-seven";
   priorityOrder: KPNodeAgentSource[];
   agentTiers: KPNodeAgentTier[];
@@ -187,7 +188,7 @@ export interface KPChartData {
   /** Selects which KSK reader-era node-agent priority is applied. */
   nodeAgentRule?: KPNodeAgentRule;
   /** Separate disclosed node-agent conjunction and aspect conventions. */
-  nodeConjunctionPolicy?: "same-sidereal-sign-no-degree-orb";
+  nodeConjunctionPolicy?: "same-sidereal-sign-provisional";
   nodeAspectPolicy?: "parashari-full-sign-drishti-classical-seven";
   nodeRepresentations?: Partial<Record<"Rahu" | "Ketu", KPNodeRepresentation>>;
   ayanamsa: number;
