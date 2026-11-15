@@ -556,10 +556,13 @@ assert.deepEqual(venusClassicalStrength.starTenants, ["Sun"]);
 const mercuryClassicalStrength = classicalPlanetSignifications.Mercury;
 assert.equal(mercuryClassicalStrength.hasSelfStrength, false, "A planet with another tenant in its stars remains standard-grade even when the modern own-star PS rule applies");
 assert.deepEqual(mercuryClassicalStrength.strengthOrder, ["A", "B", "C", "D"]);
+const moonClassicalStrength = classicalPlanetSignifications.Moon;
+assert.equal(moonClassicalStrength.hasSelfStrength, true, "Moon has no other planets in its stars in this controlled fixture and receives classical self-strength");
+assert.deepEqual(moonClassicalStrength.starTenants, []);
+assert.deepEqual(moonClassicalStrength.strengthOrder, ["B", "A", "D", "C"], "Tenantless planet must prefer own occupation, then stellar occupation, then own ownership, then stellar ownership");
 const sunClassicalStrength = classicalPlanetSignifications.Sun;
-assert.equal(sunClassicalStrength.hasSelfStrength, true, "A planet with no other planets in its stars receives self-strength");
-assert.deepEqual(sunClassicalStrength.starTenants, []);
-assert.deepEqual(sunClassicalStrength.strengthOrder, ["B", "A", "D", "C"], "Tenantless planet must prefer own occupation, then stellar occupation, then own ownership, then stellar ownership");
+assert.equal(sunClassicalStrength.hasSelfStrength, false, "Sun is tenant-mediated because Venus is in Sun's star");
+assert.deepEqual(sunClassicalStrength.starTenants, ["Venus"]);
 
 
 
