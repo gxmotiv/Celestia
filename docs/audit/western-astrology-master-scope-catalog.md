@@ -180,7 +180,7 @@ Swiss Ephemeris publishes a much broader house-method list than Celestia current
 | Alcabitius | Implemented; Ascendant semi-arc divisions, independently reference-tested |
 | Morinus | Implemented; equatorial 30° divisions projected to the ecliptic, latitude-independent and independently checked against published Swiss Ephemeris tables |
 | Meridian / Axial Rotation | Implemented and merged in commit `9e702d9f6281b5a8ace12a320c32caaf5e8f3324`; independent Swiss Ephemeris 2.10.03 `X` fixtures and CI passed; public deployment is a separate gate |
-| Topocentric / Polich-Page | Not implemented |
+| Topocentric / Polich-Page | Not implemented; formula and official Swiss Ephemeris reference tables identified; calculation and integration tests still required |
 | Horizontal / Azimuthal | Not implemented |
 | Krusinski-Pisa-Goelzer | Not implemented |
 | Vehlow Equal | Not implemented |
@@ -193,6 +193,13 @@ Swiss Ephemeris publishes a much broader house-method list than Celestia current
 | Pullen SD | Not implemented |
 | Pullen SR | Not implemented |
 | Sripati | Not implemented |
+
+
+### Topocentric / Polich–Page implementation gate
+
+The Topocentric *house* system (Swiss Ephemeris house code `T`) is the Polich–Page division. It is not the same feature as topocentric planetary coordinates (the `swe_set_topo` / `-topo` observer-position option). The published Swiss Ephemeris algorithm constructs the intermediate cusps from the geographic latitude's tangent, using polar heights \(f_1=\arctan(\tan\phi/3)\) and \(f_2=\arctan(2\tan\phi/3)\), then projects the corresponding great-circle intersections onto the ecliptic. The reference implementation also applies a documented 180° orientation correction for polar-circle cases. See the [Swiss Ephemeris house-system documentation](https://www.astro.com/swisseph/swisseph.htm) and the [Swiss Ephemeris `swehouse.c` implementation](https://github.com/astrotools/SwissEphemeris/blob/master/swisseph/swehouse.c), code `T`.
+
+Before exposing this method in natal, transit, print/PDF or Android controls, Celestia must reproduce the official [Swiss Ephemeris Topocentric tables](https://www.astro.com/swisseph/ae/hts_T_e.pdf) across both hemispheres and high latitudes, including orientation and cusp-order edge cases. A formula copied into a selector without those independent fixtures is not an implementation. The term “topocentric” must be labelled “Topocentric (Polich–Page houses)” in the UI to avoid implying that planetary positions have been switched to a topocentric observer frame.
 
 Swiss Ephemeris documents that Placidus and Koch are not defined within the polar circle, and other house methods have their own calculation limits. Celestia's Koch calculator is independently derived from the MC semi-diurnal-arc construction and tested against Swiss Ephemeris 2.10.03 reference values. Campanus is independently derived from prime-vertical great-circle geometry and tested against Swiss Ephemeris 2.10.03 fixtures in both hemispheres, including polar orientation shifts. Alcabitius is independently derived from the Ascendant declination and its diurnal/nocturnal semi-arcs, then checked against Swiss Ephemeris 2.10.03 fixtures across both hemispheres and high latitudes. Koch requests inside the polar circle resolve to Porphyry and disclose the actual system used; Campanus and Alcabitius requests at the exact geographic poles resolve to Porphyry because their local horizon/semi-arc construction is singular there. These are disclosed calculation fallbacks, not claims that Porphyry is the historically correct choice for every chart. Morinus is independently implemented by dividing the celestial equator into 30° right-ascension arcs from ARMC and converting each declination-zero point to ecliptic longitude; it is latitude-independent and was checked against Astrodienst's published Swiss Ephemeris Morinus tables at multiple ARMC values. Morinus cusp 1 is not the astronomical Ascendant, and Morinus cusp 10 is not assumed to be the standard MC. The Morinus transformation is intentionally different from Meridian / Axial Rotation. Meridian / Axial Rotation instead divides the ecliptic into points whose right ascensions are ARMC + n × 30° and applies the inverse RA-to-ecliptic-longitude transformation; its cusp geometry is latitude-independent, while the astronomical Ascendant remains latitude-dependent. Its source method identifier is `X`, distinct from Morinus `M`.
 
