@@ -1,9 +1,12 @@
+import { calculateDivisionalSignIndex } from "./divisionalCalc";
+
 /**
  * Partial Shadbala research estimator.
  *
- * This module exposes the six traditional categories, but several calculations
- * still use simplified or placeholder values. See SHADBALA_IMPLEMENTATION_STATUS
- * before presenting a result as classical or source-validated Shadbala.
+ * This module exposes the six traditional categories. Saptavargaja uses an
+ * explicit seven-varga method and named point scale; other components remain
+ * simplified or placeholder-based. See SHADBALA_IMPLEMENTATION_STATUS before
+ * presenting a result as complete or source-validated classical Shadbala.
  */
 
 export const SHADBALA_IMPLEMENTATION_STATUS = {
@@ -12,7 +15,7 @@ export const SHADBALA_IMPLEMENTATION_STATUS = {
   summary:
     "This is a provisional six-component estimate, not yet an independently verified classical Shadbala calculation.",
   limitations: [
-    "Saptavargaja currently repeats one Rashi relationship score across seven Vargas instead of evaluating the planet and each divisional sign lord separately.",
+    "Saptavargaja now evaluates D1, D2, D3, D7, D9, D12 and D30 separately. Its default score scale is the R. Santhanam BPHS translation (45/30/20/15/10/4/2); the alternative Raman halving scale can be selected explicitly. Five-fold friendship is derived from D1 relationships, and Moolatrikona is applied in D1 only."
     "Dig Bala uses a simplified ecliptic offset from the Ascendant instead of the exact relevant angle (IC, Descendant, MC or Ascendant).",
     "Kala Bala still contains fixed placeholder values for Tribhaga, year, month and Ayana components, and its Hora estimate is not a sunrise-based planetary-hour calculation.",
     "Cheshta Bala uses coarse motion bands; non-luminary scores require an actual daily-motion value. Sun and Moon still use provisional constants rather than their textually specified Ayana/Paksha derivations.",
@@ -99,8 +102,12 @@ export interface ShadbalaResult {
   };
 }
 
+export type SaptavargajaScale = "bphs-santhanam" | "raman-halving";
+
 export interface ShadbalaChartInput {
   ascendant: number;
+  /** Source-labelled point scale; defaults to the R. Santhanam BPHS translation. */
+  saptavargajaScale?: SaptavargajaScale;
   planets: {
     [name: string]: {
       longitude: number;
@@ -112,6 +119,155 @@ export interface ShadbalaChartInput {
   birthDate?: Date;
   latitude?: number;
   longitude?: number;
+}
+
+const SAPTAVARGA_CODES = ["D1", "D2", "D3", "D7", "D9", "D12", "D30"] as const;
+
+const VARGA_SIGN_LORDS = [
+  "Mars", "Venus", "Mercury", "Moon", "Sun", "Mercury",
+  "Venus", "Mars", "Jupiter", "Saturn", "Saturn", "Jupiter",
+] as const;
+
+const NATURAL_FRIENDS: Record<string, readonly string[]> = {
+  Sun: ["Moon", "Mars", "Jupiter"],
+  Moon: ["Sun", "Mercury"],
+  Mars: ["Sun", "Moon", "Jupiter"],
+  Mercury: ["Sun", "Venus"],
+  Jupiter: ["Sun", "Moon", "Mars"],
+  Venus: ["Mercury", "Saturn"],
+  Saturn: ["Mercury", "Venus"],
+};
+
+const NATURAL_ENEMIES: Record<string, readonly string[]> = {
+  Sun: ["Venus", "Saturn"],
+  Moon: [],
+  Mars: ["Mercury"],
+  Mercury: ["Moon"],
+  Jupiter: ["Mercury", "Venus"],
+  Venus: ["Sun", "Moon"],
+  Saturn: ["Sun", "Moon", "Mars"],
+};
+
+const SAPTAVARGAJA_POINTS: Record<SaptavargajaScale, {
+  greatFriend: number;
+  friend: number;
+  neutral: number;
+  enemy: number;
+  greatEnemy: number;
+}> = {
+  "bphs-santhanam": {
+    greatFriend: 20,
+    friend: 15,
+    neutral: 10,
+    enemy: 4,
+    greatEnemy: 2,
+  },
+  "raman-halving": {
+    greatFriend: 22.5,
+    friend: 15,
+    neutral: 7.5,
+    enemy: 3.75,
+    greatEnemy: 1.875,
+  },
+};
+
+type NaturalRelationship = "friend" | "neutral" | "enemy";
+type CompoundRelationship = "greatFriend" | "friend" | "neutral" | "enemy" | "greatEnemy";
+
+function isParashariMoolatrikonaD1(planet: string, longitude: number): boolean {
+  const normalized = ((longitude % 360) + 360) % 360;
+  const sign = Math.floor(normalized / 30);
+  const degree = normalized % 30;
+
+  switch (planet) {
+    case "Sun": return sign === 4 && degree <= 20;
+    case "Moon": return sign === 1 && degree > 3;
+    case "Mars": return sign === 0 && degree <= 12;
+    case "Mercury": return sign === 5 && degree > 15 && degree <= 20;
+    case "Jupiter": return sign === 8 && degree <= 10;
+    case "Venus": return sign === 6 && degree <= 15;
+    case "Saturn": return sign === 10 && degree <= 20;
+    default: return false;
+  }
+}
+
+function getNaturalRelationship(planet: string, other: string): NaturalRelationship {
+  if (planet === other) return "friend";
+  if (NATURAL_FRIENDS[planet]?.includes(other)) return "friend";
+  if (NATURAL_ENEMIES[planet]?.includes(other)) return "enemy";
+  return "neutral";
+}
+
+function getCompoundRelationship(
+  planet: string,
+  signLord: string,
+  input: ShadbalaChartInput
+): CompoundRelationship {
+  const natural = getNaturalRelationship(planet, signLord);
+  const planetPosition = input.planets[planet];
+  const lordPosition = input.planets[signLord];
+  if (!planetPosition || !lordPosition) {
+    throw new RangeError(
+      "Saptavargaja requires all seven classical planetary longitudes; missing " +
+      [!planetPosition ? planet : "", !lordPosition ? signLord : ""].filter(Boolean).join(" and ") +
+      "."
+    );
+  }
+
+  const planetSign = Math.floor((((planetPosition.longitude % 360) + 360) % 360) / 30);
+  const lordSign = Math.floor((((lordPosition.longitude % 360) + 360) % 360) / 30);
+  const relativeSignOffset = (lordSign - planetSign + 12) % 12;
+  // BPHS 3.56: the 2nd, 3rd, 4th, 10th, 11th and 12th are temporary friends.
+  const temporaryFriend = [1, 2, 3, 9, 10, 11].includes(relativeSignOffset);
+
+  if (natural === "friend") return temporaryFriend ? "greatFriend" : "neutral";
+  if (natural === "enemy") return temporaryFriend ? "neutral" : "greatEnemy";
+  return temporaryFriend ? "friend" : "enemy";
+}
+
+/**
+ * Saptavargaja Bala across the seven Parashari Vargas.
+ *
+ * Default weights follow R. Santhanam's BPHS translation, chapter 27 verses
+ * 2–4: Moolatrikona 45, own 30, great friend 20, friend 15, neutral 10,
+ * enemy 4, great enemy 2 Virupas. The alternate Raman halving table is exposed
+ * as a separate input option rather than blended into this source variant.
+ *
+ * Temporary and natural relationships are combined using BPHS 3.55–58 from
+ * the natal Rasi chart. Moolatrikona is evaluated only in D1 using BPHS 3.51–54.
+ */
+export function calculateSaptavargajaBala(
+  planet: string,
+  input: ShadbalaChartInput
+): number {
+  if (!ShadbalaEngine.PLANETS.includes(planet)) {
+    throw new RangeError("Saptavargaja is defined here only for the seven classical planets.");
+  }
+  const natalPosition = input.planets[planet];
+  if (!natalPosition || !Number.isFinite(natalPosition.longitude)) {
+    throw new RangeError("Saptavargaja requires a finite natal longitude for " + planet + ".");
+  }
+
+  const scale = input.saptavargajaScale ?? "bphs-santhanam";
+  const points = SAPTAVARGAJA_POINTS[scale];
+  if (!points) throw new RangeError("Unknown Saptavargaja scoring scale: " + String(scale));
+
+  let total = 0;
+  for (const divisionCode of SAPTAVARGA_CODES) {
+    const vargaSign = calculateDivisionalSignIndex(natalPosition.longitude, divisionCode);
+    const signLord = VARGA_SIGN_LORDS[vargaSign];
+
+    if (divisionCode === "D1" && isParashariMoolatrikonaD1(planet, natalPosition.longitude)) {
+      total += 45;
+    } else if (signLord === planet) {
+      total += 30;
+    } else {
+      const relationship = getCompoundRelationship(planet, signLord, input);
+      total += points[relationship];
+    }
+  }
+
+  return Math.round(total * 1000) / 1000;
 }
 
 export class ShadbalaEngine {
@@ -248,7 +404,7 @@ export class ShadbalaEngine {
     if (distFromDebil > 180) distFromDebil = 360 - distFromDebil;
     const ucchaBala = Math.round((distFromDebil / 180) * 60 * 100) / 100;
 
-    const saptavargajaBala = this.calculateSaptavargajaBala(planet, lon);
+    const saptavargajaBala = calculateSaptavargajaBala(planet, input);
 
     const isOddSign = sign % 2 === 0;
     const navPart = Math.floor(degInSign / (30 / 9));
@@ -289,15 +445,6 @@ export class ShadbalaEngine {
       total,
       description: `Positional strength from Exaltation (${ucchaBala}), 7 Vargas (${saptavargajaBala}), and Kendra placement (${kendradiBala}).`,
     };
-  }
-
-  private calculateSaptavargajaBala(planet: string, lon: number): number {
-    const sign = Math.floor(lon / 30);
-    let perVargaBase = 15;
-    if (this.isOwnSign(planet, sign)) perVargaBase = 30;
-    else if (this.isFriendSign(planet, sign)) perVargaBase = 22.5;
-
-    return Math.round(perVargaBase * 7 * 100) / 100;
   }
 
   public calculateDigBala(planet: string, input: ShadbalaChartInput): DigBalaResult {
