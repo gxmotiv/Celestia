@@ -227,22 +227,40 @@ export class KPPredictionEngine {
       }
     });
 
-    const isDashaSignificator = allFavorableSignificators.has(dashaLord);
-    const isAntardashaSignificator = allFavorableSignificators.has(antardashaLord);
+    const dashaSignificatorGrade = this.significatorsEngine.getStrongestHouseSignificatorGrade(
+      dashaLord,
+      rule.favorableHouses,
+      houseSignificators
+    );
+    const antardashaSignificatorGrade = this.significatorsEngine.getStrongestHouseSignificatorGrade(
+      antardashaLord,
+      rule.favorableHouses,
+      houseSignificators
+    );
+    const pratyantardashaSignificatorGrade = pratyantardashaLord
+      ? this.significatorsEngine.getStrongestHouseSignificatorGrade(
+          pratyantardashaLord,
+          rule.favorableHouses,
+          houseSignificators
+        )
+      : undefined;
+
+    const isDashaSignificator = dashaSignificatorGrade !== undefined;
+    const isAntardashaSignificator = antardashaSignificatorGrade !== undefined;
     const isPratyantarSignificator = pratyantardashaLord
-      ? allFavorableSignificators.has(pratyantardashaLord)
+      ? pratyantardashaSignificatorGrade !== undefined
       : undefined;
 
     // Timing analysis string
     let timing = "";
     if (isDashaSignificator && isAntardashaSignificator) {
-      timing = `Conjoint activation: Both Mahadasha lord (${dashaLord}) and Antardasha lord (${antardashaLord}) are potent significators of houses ${rule.favorableHouses.join(", ")}. Event fruition is primed in this period.`;
+      timing = "Conjoint activation: Mahadasha lord (" + dashaLord + ") reaches Grade " + dashaSignificatorGrade + "; Antardasha lord (" + antardashaLord + ") reaches Grade " + antardashaSignificatorGrade + ". Grade I is strongest, followed by II, III and IV. Both periods connect to favorable houses [" + rule.favorableHouses.join(", ") + "].";
     } else if (isAntardashaSignificator) {
-      timing = `Sub-period active: Antardasha lord (${antardashaLord}) signifies favorable houses ${rule.favorableHouses.join(", ")}, facilitating event fruition during favorable transit triggers.`;
+      timing = "Sub-period active: Antardasha lord (" + antardashaLord + ") reaches Grade " + antardashaSignificatorGrade + " among favorable houses [" + rule.favorableHouses.join(", ") + "]. Mahadasha lord (" + dashaLord + ") has no direct match in those house grades.";
     } else if (isDashaSignificator) {
-      timing = `Macro climate ready: Mahadasha lord (${dashaLord}) provides foundational support, awaiting supportive Antardasha or Pratyantardasha sub-lords.`;
+      timing = "Macro period active: Mahadasha lord (" + dashaLord + ") reaches Grade " + dashaSignificatorGrade + " among favorable houses [" + rule.favorableHouses.join(", ") + "], awaiting a matching Antardasha or Pratyantardasha.";
     } else {
-      timing = `Latent timing: Neither current Mahadasha (${dashaLord}) nor Antardasha (${antardashaLord}) directly activate houses ${rule.favorableHouses.join(", ")}. Event awaits periods of ${Array.from(allFavorableSignificators).slice(0, 3).join(", ")}.`;
+      timing = "Latent timing: neither Mahadasha (" + dashaLord + ") nor Antardasha (" + antardashaLord + ") appears in Grades I-IV for favorable houses [" + rule.favorableHouses.join(", ") + "]. Other house significators include " + Array.from(allFavorableSignificators).slice(0, 3).join(", ") + ".";
     }
 
     // Rule-weighted heuristic score; not calibrated against observed events.
@@ -269,7 +287,8 @@ export class KPPredictionEngine {
       `1. Primary Cuspal Sub Lord (CSL) of House ${house}: ${csl} (at ${cusp.degreeFormatted} ${cusp.signName}).`,
       `2. CSL's Star Lord: ${cslPlanet.starLord} (residing in House ${cslSignification.starLordOccupiesHouse}, owning ${cslSignification.starLordOwnsHouses.join(", ") || "none"}).`,
       `3. CSL Signification: Signifies houses [${cslSignifiedHouses.join(", ")}]. Favorable: [${favorableMatches.join(", ") || "none"}], Negation: [${negationMatches.join(", ") || "none"}].`,
-      `4. Current Dasha Concurrence: Dasha Lord ${dashaLord} (${isDashaSignificator ? "Significator ✓" : "Not direct"}) · Antardasha Lord ${antardashaLord} (${isAntardashaSignificator ? "Significator ✓" : "Not direct"}).`,
+      `4. Current Dasha Concurrence: Dasha Lord ${dashaLord} (${dashaSignificatorGrade ? "Grade " + dashaSignificatorGrade : "Not direct"}) · Antardasha Lord ${antardashaLord} (${antardashaSignificatorGrade ? "Grade " + antardashaSignificatorGrade : "Not direct"}).`,
+      `5. Pratyantardasha: ${pratyantardashaLord ?? "Not supplied"} (${pratyantardashaSignificatorGrade ? "Grade " + pratyantardashaSignificatorGrade : pratyantardashaLord ? "Not direct" : "not evaluated"}).`,
     ];
 
     const details = isPromiseFavorable
@@ -292,10 +311,13 @@ export class KPPredictionEngine {
       dashaAnalysis: {
         dashaLord,
         isDashaSignificator,
+        dashaSignificatorGrade,
         antardashaLord,
         isAntardashaSignificator,
+        antardashaSignificatorGrade,
         pratyantardashaLord,
         isPratyantarSignificator,
+        pratyantardashaSignificatorGrade,
         verdict: timing,
       },
       verdict,
