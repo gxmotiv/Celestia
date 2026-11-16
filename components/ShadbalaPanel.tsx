@@ -236,13 +236,11 @@ export function ShadbalaPanel({
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 flex items-center gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              Above modeled threshold: {shadbalaList.filter((p) => p.isStrong).length}
+            <span className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800/70 border border-slate-700 text-slate-300">
+              Complete: {shadbalaList.filter((p) => p.isComplete).length}
             </span>
-            <span className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 flex items-center gap-1.5">
-              <XCircle className="w-3.5 h-3.5" />
-              Below modeled threshold: {shadbalaList.filter((p) => !p.isStrong).length}
+            <span className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300">
+              Incomplete: {shadbalaList.filter((p) => !p.isComplete).length}
             </span>
           </div>
         </div>
@@ -482,7 +480,7 @@ export function ShadbalaPanel({
                         <div className="flex items-center gap-2">
                           <h4 className="text-base font-bold text-slate-100">{planet.planet}</h4>
                           <span className="text-xs font-mono px-1.5 py-0.5 rounded bg-slate-950 text-slate-400 border border-slate-800">
-                            Rank #{planet.rank}
+                            {planet.isComplete ? `Rank #${planet.rank}` : "Not ranked"}
                           </span>
                         </div>
                         <span className="text-xs text-slate-400">
@@ -494,12 +492,16 @@ export function ShadbalaPanel({
                     <div className="flex items-center gap-2">
                       <span
                         className={`text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${
-                          planet.isStrong
-                            ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-                            : "bg-rose-500/20 text-rose-300 border border-rose-500/40"
+                          !planet.isComplete
+                            ? "bg-amber-500/15 text-amber-300 border border-amber-500/30"
+                            : planet.isStrong
+                              ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                              : "bg-rose-500/20 text-rose-300 border border-rose-500/40"
                         }`}
                       >
-                        {planet.isStrong ? "Above estimate" : "Below estimate"} ({(planet.strengthRatio * 100).toFixed(0)}%)
+                        {planet.isComplete
+                          ? (planet.isStrong ? "Above threshold" : "Below threshold")
+                          : "Incomplete — no judgement"}
                       </span>
 
                       <button
@@ -514,7 +516,7 @@ export function ShadbalaPanel({
 
                   <div className="mt-3.5 space-y-1">
                     <div className="flex justify-between text-[11px] text-slate-400 font-mono">
-                      <span>Total Strength vs Requirement</span>
+                      <span>Available subtotal (not a final Shadbala total)</span>
                       <span>
                         {planet.totalVirupas} / {planet.requiredVirupas} Virupas
                       </span>
@@ -527,9 +529,11 @@ export function ShadbalaPanel({
                       />
                       <div
                         className={`h-full rounded-full transition-all ${
-                          planet.isStrong
-                            ? "bg-gradient-to-r from-emerald-500 to-teal-400"
-                            : "bg-gradient-to-r from-rose-500 to-amber-500"
+                          !planet.isComplete
+                            ? "bg-slate-500"
+                            : planet.isStrong
+                              ? "bg-gradient-to-r from-emerald-500 to-teal-400"
+                              : "bg-gradient-to-r from-rose-500 to-amber-500"
                         }`}
                         style={{ width: `${Math.min(100, (planet.totalVirupas / maxVirupas) * 100)}%` }}
                       />
@@ -587,19 +591,23 @@ export function ShadbalaPanel({
 
               <span
                 className={`text-xs font-bold px-3 py-1 rounded-full uppercase ${
-                  activeResult.isStrong
-                    ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-                    : "bg-rose-500/20 text-rose-300 border border-rose-500/40"
+                  !activeResult.isComplete
+                    ? "bg-amber-500/15 text-amber-300 border border-amber-500/30"
+                    : activeResult.isStrong
+                      ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                      : "bg-rose-500/20 text-rose-300 border border-rose-500/40"
                 }`}
               >
-                {activeResult.isStrong ? "Above estimate" : "Below estimate"}
+                {activeResult.isComplete
+                  ? (activeResult.isStrong ? "Above threshold" : "Below threshold")
+                  : "Incomplete — judgement withheld"}
               </span>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="p-3 bg-slate-950/70 rounded-xl border border-slate-800 space-y-0.5">
                 <span className="text-[10px] uppercase font-semibold text-slate-400 block">
-                  Total Rupas
+                  Available subtotal
                 </span>
                 <span className="text-xl font-black text-slate-100 font-mono">
                   {activeResult.totalRupas}
@@ -611,7 +619,7 @@ export function ShadbalaPanel({
 
               <div className="p-3 bg-slate-950/70 rounded-xl border border-slate-800 space-y-0.5">
                 <span className="text-[10px] uppercase font-semibold text-slate-400 block">
-                  Strength Ratio
+                  Subtotal / requirement (not final)
                 </span>
                 <span
                   className={`text-xl font-black font-mono ${
@@ -621,7 +629,7 @@ export function ShadbalaPanel({
                   {(activeResult.strengthRatio * 100).toFixed(0)}%
                 </span>
                 <span className="text-[10px] text-slate-500 block">
-                  Rank #{activeResult.rank} of 7
+                  {activeResult.isComplete ? `Rank #${activeResult.rank} of 7` : "Not ranked — incomplete inputs"}
                 </span>
               </div>
             </div>
@@ -853,17 +861,31 @@ export function ShadbalaPanel({
               <h5 className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">
                 Classical Significations
               </h5>
-              <div className="space-y-1.5">
-                {(activeResult.isStrong
-                  ? activeResult.predictions.strongEffects
-                  : activeResult.predictions.weakEffects
-                ).map((effect, idx) => (
-                  <div key={idx} className="flex items-start gap-2 text-slate-300 text-[11px]">
-                    <span className="text-purple-400 font-bold">•</span>
-                    <span>{effect}</span>
-                  </div>
-                ))}
-              </div>
+              {activeResult.isComplete ? (
+                <div className="space-y-1.5">
+                  {(activeResult.isStrong
+                    ? activeResult.predictions.strongEffects
+                    : activeResult.predictions.weakEffects
+                  ).map((effect, idx) => (
+                    <div key={idx} className="flex items-start gap-2 text-slate-300 text-[11px]">
+                      <span className="text-purple-400 font-bold">•</span>
+                      <span>{effect}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-1.5 text-[11px] text-amber-300">
+                  <p>Strength-based interpretations are withheld until a complete six-fold Shadbala is available.</p>
+                  <ul className="list-disc pl-4 space-y-1 text-slate-400">
+                    {activeResult.unavailableComponents.slice(0, 5).map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                  <p className="text-slate-500">
+                    {activeResult.estimatedComponents.length} method-level approximation or validation issue(s) also remain.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
