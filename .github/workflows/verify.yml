@@ -37,6 +37,7 @@ jobs:
           - testParashariDrishtiSuite.ts
           - testShadbalaStatusSuite.ts
           - testShadbalaNathonnathaSuite.ts
+          - testShadbalaPakshaBalaSuite.ts
           - testShadbalaDrikBalaSuite.ts
           - testShadbalaSaptavargajaSuite.ts
           - testShadbalaRamanReferenceSuite.ts
