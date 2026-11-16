@@ -24,6 +24,7 @@ import {
   FirdariaEngine,
   FirdariaReport,
 } from "@/lib/astronomy/predictiveHellenisticEngine";
+import { swissEphemeris } from "@/lib/astronomy/swissEphemeris";
 import {
   FixedStarsEngine,
   StarContact,
@@ -125,12 +126,34 @@ export function AdvancedWesternPanel({
     return declinationCalc.calculateAll(chartData.planets, chartData.obliquity);
   }, [declinationCalc, chartData.planets, chartData.obliquity]);
 
-  // Birth Date Object
+  // Birth inputs are local civil time. Normalize them to the true UTC instant
+  // before age-based and secondary-progressed calculations. The shared engine
+  // handles fractional offsets and date/month/year rollovers consistently.
   const birthDateObj = useMemo(() => {
-    const [y, m, d] = birthDateStr.split("-").map(Number);
-    const [h, min] = birthTimeStr.split(":").map(Number);
-    return new Date(Date.UTC(y || 1990, (m || 1) - 1, d || 1, h || 12, min || 0));
-  }, [birthDateStr, birthTimeStr]);
+    const [yearPart, monthPart, dayPart] = birthDateStr.split("-");
+    const [hourPart, minutePart] = birthTimeStr.split(":");
+    const parsePart = (value: string | undefined, fallback: number): number => {
+      if (value === undefined || value.trim() === "") return fallback;
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : fallback;
+    };
+
+    const year = parsePart(yearPart, 1990);
+    const month = parsePart(monthPart, 1);
+    const day = parsePart(dayPart, 1);
+    const hour = parsePart(hourPart, 12);
+    const minute = parsePart(minutePart, 0);
+
+    return swissEphemeris.createUTCDate(
+      year,
+      month,
+      day,
+      hour,
+      minute,
+      0,
+      timezoneOffset
+    );
+  }, [birthDateStr, birthTimeStr, timezoneOffset]);
 
   const nowObj = useMemo(() => new Date(), []);
   const currentAgeYears = useMemo(() => {
