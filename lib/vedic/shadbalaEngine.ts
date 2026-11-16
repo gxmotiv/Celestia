@@ -1429,20 +1429,19 @@ export class ShadbalaEngine {
       : null;
 
     const isOddSign = sign % 2 === 0;
-    const navPart = Math.floor(degInSign / (30 / 9));
-    const navSign = (sign * 9 + navPart) % 12;
+    // BPHS 27.5: Moon and Venus gain 15 Virupas in an even Rasi;
+    // every other graha (including neuter Mercury and Saturn) gains 15
+    // in an odd Rasi. The same rule is applied independently to Navamsa.
+    // Use the shared D9 mapper so exact 3°20' boundaries use its canonical
+    // half-open interval handling instead of a second floating-point formula.
+    const navSign = calculateDivisionalSignIndex(lon, "D9");
     const isOddNav = navSign % 2 === 0;
+    const isMoonOrVenus = planet === "Moon" || planet === "Venus";
+    const ojayugmaRasi = isMoonOrVenus ? !isOddSign : isOddSign;
+    const ojayugmaNavamsa = isMoonOrVenus ? !isOddNav : isOddNav;
+    const ojayugmaBala = (ojayugmaRasi ? 15 : 0) + (ojayugmaNavamsa ? 15 : 0);
 
     const isMalePlanet = ["Sun", "Mars", "Jupiter"].includes(planet);
-    let ojayugmaBala = 0;
-    if (isMalePlanet) {
-      if (isOddSign) ojayugmaBala += 15;
-      if (isOddNav) ojayugmaBala += 15;
-    } else {
-      if (!isOddSign) ojayugmaBala += 15;
-      if (!isOddNav) ojayugmaBala += 15;
-    }
-
     const house = ((Math.floor(lon / 30) - Math.floor(asc / 30) + 12) % 12) + 1;
     let kendradiBala = 15;
     if ([1, 4, 7, 10].includes(house)) kendradiBala = 60;
