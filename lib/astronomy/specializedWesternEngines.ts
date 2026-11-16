@@ -307,80 +307,194 @@ export class MedicalAstrologyEngine {
 // 4. ASTROCARTOGRAPHY POWER LINES
 // ---------------------------------------------------------------------------
 
+export interface AstrocartographyPathPoint {
+  latitude: number;
+  longitude: number;
+}
+
 export interface AstrocartographyLine {
   planet: string;
   symbol: string;
   lineType: "AC (Ascendant)" | "DC (Descendant)" | "MC (Midheaven)" | "IC (Imum Coeli)";
-  longitudeTarget: number; // Approximate terrestrial longitude where this angle aligns
+  /** MC/IC meridian longitude; AC/DC use their equator-crossing reference longitude. */
+  longitudeTarget: number;
   longitudeStr: string;
+  /** Sampled longitude-versus-latitude curve for AC/DC; MC/IC are meridians. */
+  pathPoints: AstrocartographyPathPoint[];
   theme: string;
   bestFor: string;
 }
 
 export interface AstrocartographyReport {
   powerLines: AstrocartographyLine[];
-  topDestinations: Array<{ purpose: string; suggestedRegion: string; planetaryLine: string }>;
+  lineGuidance: Array<{ purpose: string; planetaryLine: string; guidance: string }>;
+  method: string;
 }
 
+/**
+ * Computes astrocartography from a natal geocentric ecliptic position and the
+ * Greenwich sidereal angle at the birth instant. MC/IC are meridians; AC/DC
+ * are horizon-intersection curves and therefore vary with terrestrial latitude.
+ */
 export class AstrocartographyEngine {
-  public calculatePowerLines(chart: WesternChartData): AstrocartographyReport {
+  private formatLongitude(longitude: number): string {
+    const signed = longitude > 180 ? longitude - 360 : longitude;
+    const hemisphere = signed >= 0 ? "E" : "W";
+    return `${Math.abs(signed).toFixed(2)}° ${hemisphere}`;
+  }
+
+  private toEquatorial(
+    longitude: number,
+    latitude: number,
+    obliquity: number
+  ): { rightAscension: number; declination: number } {
+    const lambda = longitude * Math.PI / 180;
+    const beta = latitude * Math.PI / 180;
+    const epsilon = obliquity * Math.PI / 180;
+
+    const x = Math.cos(beta) * Math.cos(lambda);
+    const y = Math.cos(beta) * Math.sin(lambda) * Math.cos(epsilon)
+      - Math.sin(beta) * Math.sin(epsilon);
+    const z = Math.cos(beta) * Math.sin(lambda) * Math.sin(epsilon)
+      + Math.sin(beta) * Math.cos(epsilon);
+
+    const rightAscension = normalizeDegrees(Math.atan2(y, x) * 180 / Math.PI);
+    const declination = Math.asin(Math.max(-1, Math.min(1, z))) * 180 / Math.PI;
+    return { rightAscension, declination };
+  }
+
+  private calculateHorizonPath(
+    rightAscension: number,
+    declination: number,
+    greenwichSiderealDegrees: number,
+    rising: boolean
+  ): AstrocartographyPathPoint[] {
+    const points: AstrocartographyPathPoint[] = [];
+    const decRad = declination * Math.PI / 180;
+
+    for (let latitude = -85; latitude <= 85; latitude += 5) {
+      const latRad = latitude * Math.PI / 180;
+      const cosHourAngle = -Math.tan(latRad) * Math.tan(decRad);
+      if (cosHourAngle < -1 || cosHourAngle > 1) continue;
+
+      const absoluteHourAngle = Math.acos(cosHourAngle) * 180 / Math.PI;
+      // Rising bodies have a negative hour angle; setting bodies have a positive one.
+      const hourAngle = rising ? -absoluteHourAngle : absoluteHourAngle;
+      const longitude = normalizeDegrees(rightAscension + hourAngle - greenwichSiderealDegrees);
+      points.push({
+        latitude,
+        longitude: Math.round(longitude * 10000) / 10000,
+      });
+    }
+
+    return points;
+  }
+
+  public calculatePowerLines(
+    chart: WesternChartData,
+    birthLongitude: number
+  ): AstrocartographyReport {
     const lines: AstrocartographyLine[] = [];
+    // Chart siderealTime is the local RAMC (GST + natal longitude).
+    const greenwichSiderealDegrees = normalizeDegrees(chart.siderealTime - birthLongitude);
+    const classicalBodies = new Set([
+      "Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter",
+      "Saturn", "Uranus", "Neptune", "Pluto", "Chiron",
+    ]);
 
-    chart.planets.forEach((p) => {
-      // Calculate longitude on Earth where planetary right ascension aligns with Midheaven
-      // Simple approximate astrocartography mapping:
-      const mcLon = normalizeDegrees(p.longitude - 90);
-      const icLon = normalizeDegrees(mcLon + 180);
-      const acLon = normalizeDegrees(p.longitude);
-      const dcLon = normalizeDegrees(p.longitude + 180);
+    chart.planets.filter((planet) => classicalBodies.has(planet.name)).forEach((planet) => {
+      const equatorial = this.toEquatorial(
+        planet.longitude,
+        planet.latitude || 0,
+        chart.obliquity
+      );
+      const mcLongitude = normalizeDegrees(equatorial.rightAscension - greenwichSiderealDegrees);
+      const icLongitude = normalizeDegrees(mcLongitude + 180);
+      const risingPath = this.calculateHorizonPath(
+        equatorial.rightAscension,
+        equatorial.declination,
+        greenwichSiderealDegrees,
+        true
+      );
+      const settingPath = this.calculateHorizonPath(
+        equatorial.rightAscension,
+        equatorial.declination,
+        greenwichSiderealDegrees,
+        false
+      );
+      const risingEquator = risingPath.find((point) => point.latitude === 0);
+      const settingEquator = settingPath.find((point) => point.latitude === 0);
 
-      const formatCoord = (deg: number) => {
-        const lonRel = deg > 180 ? deg - 360 : deg;
-        const hemi = lonRel >= 0 ? "E" : "W";
-        return `${Math.abs(lonRel).toFixed(1)}° ${hemi}`;
+      const addLine = (
+        lineType: AstrocartographyLine["lineType"],
+        longitudeTarget: number,
+        pathPoints: AstrocartographyPathPoint[],
+        theme: string,
+        bestFor: string,
+        isCurve: boolean
+      ) => {
+        lines.push({
+          planet: planet.name,
+          symbol: planet.symbol,
+          lineType,
+          longitudeTarget,
+          longitudeStr: isCurve
+            ? `Equator reference ${this.formatLongitude(longitudeTarget)}`
+            : this.formatLongitude(longitudeTarget),
+          pathPoints,
+          theme,
+          bestFor,
+        });
       };
 
-      if (["Sun", "Moon", "Venus", "Jupiter", "Mars", "Saturn"].includes(p.name)) {
-        lines.push({
-          planet: p.name,
-          symbol: p.symbol,
-          lineType: "MC (Midheaven)",
-          longitudeTarget: mcLon,
-          longitudeStr: formatCoord(mcLon),
-          theme: `Peak public acclaim, career authority, and vocational purpose under ${p.name}.`,
-          bestFor: "Career advancement & public reputation",
-        });
+      addLine(
+        "MC (Midheaven)",
+        mcLongitude,
+        [],
+        `Culmination of ${planet.name} on the local meridian: public visibility, career and vocation.`,
+        "Career, visibility and public role",
+        false
+      );
+      addLine(
+        "IC (Imum Coeli)",
+        icLongitude,
+        [],
+        `Lower-meridian emphasis of ${planet.name}: home, roots, privacy and inner foundations.`,
+        "Home, roots and private life",
+        false
+      );
 
-        lines.push({
-          planet: p.name,
-          symbol: p.symbol,
-          lineType: "AC (Ascendant)",
-          longitudeTarget: acLon,
-          longitudeStr: formatCoord(acLon),
-          theme: `Direct physical embodiment, magnetic presence, and personal empowerment under ${p.name}.`,
-          bestFor: "Self-expression, confidence & vitality",
-        });
-
-        lines.push({
-          planet: p.name,
-          symbol: p.symbol,
-          lineType: "DC (Descendant)",
-          longitudeTarget: dcLon,
-          longitudeStr: formatCoord(dcLon),
-          theme: `Fated partnerships, meeting significant others, and magnetic social connection.`,
-          bestFor: "Love, romance & collaborative alliances",
-        });
+      if (risingEquator && risingPath.length > 1) {
+        addLine(
+          "AC (Ascendant)",
+          risingEquator.longitude,
+          risingPath,
+          `Rising horizon path for ${planet.name}; the curve shifts with latitude.`,
+          "Self-expression, embodiment and beginnings",
+          true
+        );
+      }
+      if (settingEquator && settingPath.length > 1) {
+        addLine(
+          "DC (Descendant)",
+          settingEquator.longitude,
+          settingPath,
+          `Setting horizon path for ${planet.name}; the curve shifts with latitude.`,
+          "Partnerships, encounters and collaboration",
+          true
+        );
       }
     });
 
     return {
       powerLines: lines,
-      topDestinations: [
-        { purpose: "Career & Executive Success", suggestedRegion: "Regions along your Sun-MC or Jupiter-MC line", planetaryLine: "Sun / Jupiter Midheaven" },
-        { purpose: "Romance & Marriage Magnetism", suggestedRegion: "Regions along your Venus-DC or Moon-DC line", planetaryLine: "Venus / Moon Descendant" },
-        { purpose: "Spiritual Peace & Domestic Healing", suggestedRegion: "Regions along your Moon-IC or Jupiter-IC line", planetaryLine: "Moon / Jupiter Imum Coeli" },
-        { purpose: "Courage, Sports & Athletic Mastery", suggestedRegion: "Regions along your Mars-AC line", planetaryLine: "Mars Ascendant" },
+      lineGuidance: [
+        { purpose: "Career & public profile", planetaryLine: "Sun-MC / Jupiter-MC", guidance: "Compare these meridians with actual cities; the line itself is a geometric track, not a destination recommendation." },
+        { purpose: "Relationships & collaboration", planetaryLine: "Venus-DC / Jupiter-DC", guidance: "Evaluate the latitude-dependent setting curves against the coordinates of places you are considering." },
+        { purpose: "Home & private foundations", planetaryLine: "Moon-IC / Venus-IC", guidance: "Use the calculated IC meridians as a starting point for location comparison." },
+        { purpose: "Personal reinvention", planetaryLine: "Sun-AC / Mars-AC", guidance: "Compare the rising curves by latitude; an AC line is not one fixed longitude." },
       ],
+      method: "MC/IC meridians are derived from right ascension and Greenwich sidereal angle. AC/DC are geometric horizon crossings sampled every 5° of latitude (geometric horizon; no atmospheric refraction).",
     };
   }
 }
