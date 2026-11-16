@@ -12,6 +12,8 @@ import {
 import type { DrishtiVirupaVariant } from "@/lib/vedic/drishtiEngine";
 import { WesternChartData } from "@/lib/astronomy/ephemeris";
 import { VedicChartData } from "@/lib/astronomy/vedic";
+import { createBaZiClock } from "@/lib/astronomy/timeEngine";
+import { parseBirthClockTime } from "@/lib/astronomy/timeInput";
 import {
   Shield,
   ChevronDown,
@@ -26,6 +28,9 @@ interface ShadbalaPanelProps {
   westernData?: WesternChartData;
   birthDate?: string;
   birthTime?: string;
+  birthUtcInstant?: string;
+  birthLongitude?: number;
+  birthTimeKnown?: boolean;
 }
 
 export function ShadbalaPanel({
@@ -33,6 +38,9 @@ export function ShadbalaPanel({
   westernData,
   birthDate = "1990-01-01",
   birthTime = "12:00",
+  birthUtcInstant,
+  birthLongitude,
+  birthTimeKnown = true,
 }: ShadbalaPanelProps) {
   const [selectedPlanet, setSelectedPlanet] = useState<string>("Sun");
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
@@ -61,17 +69,55 @@ export function ShadbalaPanel({
       };
     });
 
-    const [yStr, mStr, dStr] = birthDate.split("-");
-    const [hStr, minStr] = birthTime.split(":");
-    const bDateObj = new Date(
-      Date.UTC(
-        parseInt(yStr, 10) || 1990,
-        (parseInt(mStr, 10) || 1) - 1,
-        parseInt(dStr, 10) || 1,
-        parseInt(hStr, 10) || 12,
-        parseInt(minStr, 10) || 0
-      )
-    );
+    const [year, month, day] = birthDate.split("-").map(Number);
+    const dateCheck = new Date(Date.UTC(year, month - 1, day));
+    if (
+      ![year, month, day].every(Number.isInteger) ||
+      year < 1 || month < 1 || month > 12 || day < 1 || day > 31 ||
+      dateCheck.getUTCFullYear() !== year ||
+      dateCheck.getUTCMonth() !== month - 1 ||
+      dateCheck.getUTCDate() !== day
+    ) {
+      throw new RangeError("Shadbala requires a valid Gregorian birth date.");
+    }
+
+    // Preserve midnight exactly; an unknown birth time only supplies a
+    // display/calculation placeholder and is never used for Nathonnatha Bala.
+    const parsedClock = birthTimeKnown
+      ? parseBirthClockTime(birthTime)
+      : parseBirthClockTime("12:00");
+    if (parsedClock.usedFallback && birthTimeKnown) {
+      throw new RangeError("Shadbala requires a valid HH:mm birth time or an explicit unknown-time flag.");
+    }
+    const bDateObj = new Date(Date.UTC(
+      year,
+      month - 1,
+      day,
+      parsedClock.hour,
+      parsedClock.minute
+    ));
+
+    let localApparentTimeMinutes: number | undefined;
+    if (
+      birthTimeKnown &&
+      typeof birthUtcInstant === "string" &&
+      Number.isFinite(birthLongitude) &&
+      (birthLongitude as number) >= -180 &&
+      (birthLongitude as number) <= 180
+    ) {
+      const instant = new Date(birthUtcInstant);
+      if (Number.isFinite(instant.getTime())) {
+        const apparentClock = createBaZiClock(instant, {
+          timeBasis: "local-apparent-solar",
+          longitudeDegrees: birthLongitude as number,
+        }).clockDate;
+        localApparentTimeMinutes =
+          apparentClock.getUTCHours() * 60 +
+          apparentClock.getUTCMinutes() +
+          apparentClock.getUTCSeconds() / 60 +
+          apparentClock.getUTCMilliseconds() / 60_000;
+      }
+    }
 
     const tropicalMidheaven = westernData?.midheaven.longitude;
     const siderealMidheaven =
@@ -84,6 +130,10 @@ export function ShadbalaPanel({
       midheaven: siderealMidheaven,
       planets: planetsMap,
       birthDate: bDateObj,
+      birthTimeKnown,
+      ...(localApparentTimeMinutes !== undefined
+        ? { localApparentTimeMinutes }
+        : {}),
       saptavargajaScale,
       drishtiVirupaVariant,
       drikFullAspectReading,
@@ -97,6 +147,9 @@ export function ShadbalaPanel({
     westernData,
     birthDate,
     birthTime,
+    birthUtcInstant,
+    birthLongitude,
+    birthTimeKnown,
     saptavargajaScale,
     drishtiVirupaVariant,
     drikFullAspectReading,
@@ -506,6 +559,14 @@ export function ShadbalaPanel({
                 <p className="text-[11px] text-slate-400 leading-snug">
                   {activeResult.kalaBala.description}
                 </p>
+                <div className="text-[10px] text-slate-500">
+                  Nathonnatha (local apparent time):
+                  <span className="ml-1 font-mono text-slate-300">
+                    {activeResult.kalaBala.components.nathonnathaBala === null
+                      ? "Unavailable — known birth time and longitude required"
+                      : `${activeResult.kalaBala.components.nathonnathaBala.toFixed(2)} Virupas`}
+                  </span>
+                </div>
               </div>
 
               <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80 space-y-1.5">
