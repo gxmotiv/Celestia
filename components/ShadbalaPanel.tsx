@@ -11,6 +11,7 @@ import {
   PakshaMoonNatureRule,
   PakshaMoonAccountingRule,
   AyanaBalaMethod,
+  DrekkanaBalaMethod,
 } from "@/lib/vedic/shadbalaEngine";
 import type { DrishtiVirupaVariant } from "@/lib/vedic/drishtiEngine";
 import { WesternChartData } from "@/lib/astronomy/ephemeris";
@@ -71,6 +72,8 @@ export function ShadbalaPanel({
     useState<DrikMercuryAssociationRule>("same-sign");
   const [pakshaMercuryAssociationOrbInput, setPakshaMercuryAssociationOrbInput] = useState("2");
   const [ayanaMethod, setAyanaMethod] = useState<AyanaBalaMethod>("bphs-khanda");
+  const [drekkanaBalaMethod, setDrekkanaBalaMethod] =
+    useState<DrekkanaBalaMethod>("bphs-sanskrit-raman");
 
   const chartInput: ShadbalaChartInput = useMemo(() => {
     const planetsMap: ShadbalaChartInput["planets"] = {};
@@ -151,6 +154,7 @@ export function ShadbalaPanel({
       birthTimeKnown,
       ayanamsaDegrees: vedicData.ayanamsa,
       ayanaMethod,
+      drekkanaBalaMethod,
       latitude: birthLatitude,
       longitude: birthLongitude,
       ianaTimezone: birthIanaTimezone,
@@ -185,6 +189,7 @@ export function ShadbalaPanel({
     birthUtcOffsetSeconds,
     birthTimeKnown,
     ayanaMethod,
+    drekkanaBalaMethod,
     saptavargajaScale,
     drishtiVirupaVariant,
     drikFullAspectReading,
@@ -347,6 +352,17 @@ export function ShadbalaPanel({
               </div>
             )}
           </div>
+          <label className="flex flex-col gap-1.5 text-xs text-slate-400">
+            Drekkana Bala source
+            <select
+              value={drekkanaBalaMethod}
+              onChange={(event) => setDrekkanaBalaMethod(event.target.value as DrekkanaBalaMethod)}
+              className="rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-xs text-slate-200"
+            >
+              <option value="bphs-sanskrit-raman">BPHS Sanskrit / Raman: male · neuter · female</option>
+              <option value="santhanam-english-translation">Santhanam Vol. I English: male · female · eunuch</option>
+            </select>
+          </label>
           <label className="flex flex-col gap-1.5 text-xs text-slate-400">
             Ayana Bala method
             <select
