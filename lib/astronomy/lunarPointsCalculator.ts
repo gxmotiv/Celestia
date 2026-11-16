@@ -10,6 +10,7 @@
  * - Trans-Plutonian theoretical points (Proserpine, Hypnos)
  */
 
+import * as Astronomy from "astronomy-engine";
 import { PlanetPosition, formatDegreeMinute, normalizeDegrees, ZODIAC_SIGNS } from "./ephemeris";
 
 export interface LilithPositions {
@@ -33,42 +34,110 @@ const RAD2DEG = 180.0 / Math.PI;
 
 export class LunarPointsCalculator {
   /**
-   * Mean Lilith (Lunar Apogee):
-   * Longitude of lunar perigee at J2000.0 is ~83.353243°, apogee is perigee + 180° = 263.353243° or
-   * standard Mean Apogee formula = 142.19° + 40.664876° * T (in Julian centuries).
+   * Mean Lilith (mean lunar apogee).
+   *
+   * Meeus' polynomial gives the mean longitude of lunar perigee. Mean
+   * apogee is the opposite point, so add 180 degrees. The polynomial's
+   * independent variable is Julian centuries from J2000.0.
    */
   public calculateMeanLilithLon(jd: number): { lon: number; speed: number } {
     const T = (jd - 2451545.0) / 36525.0;
-    // Mean lunar apogee advances ~40.664876 degrees per Julian century
-    const lon = normalizeDegrees(142.1903 + 40.664876 * T - 0.00014 * T * T);
-    const speed = 40.664876 / 36525.0; // ~0.111° per day
-    return { lon, speed };
+    const perigee =
+      83.3532465
+      + 4069.0137287 * T
+      - 0.01032 * T * T
+      - (T * T * T) / 80053
+      + (T * T * T * T) / 18999000;
+    const perigeeRatePerCentury =
+      4069.0137287
+      - 0.02064 * T
+      - (3 * T * T) / 80053
+      + (4 * T * T * T) / 18999000;
+
+    return {
+      lon: normalizeDegrees(perigee + 180),
+      speed: perigeeRatePerCentury / 36525,
+    };
   }
 
   /**
-   * True (Osculating) Lilith:
-   * Incorporates solar perturbations, evection, and annual inequality on the lunar apogee.
+   * Calculate the osculating lunar apogee from the instantaneous geocentric
+   * Moon state vector. The eccentricity vector points toward perigee; apogee
+   * lies in the opposite direction. Astronomy Engine supplies the Moon's
+   * position (AU) and velocity (AU/day) in J2000 equatorial coordinates.
+   */
+  private calculateOsculatingApogeeLongitude(jd: number): number {
+    const time = new Astronomy.AstroTime(jd - 2451545.0);
+    const state = Astronomy.GeoMoonState(time);
+
+    const r = { x: state.x, y: state.y, z: state.z };
+    const v = { x: state.vx, y: state.vy, z: state.vz };
+    const rMagnitude = Math.hypot(r.x, r.y, r.z);
+    if (!Number.isFinite(rMagnitude) || rMagnitude <= 0) {
+      throw new Error("Invalid geocentric Moon position while calculating osculating apogee.");
+    }
+
+    // Earth + Moon gravitational parameter, converted to AU^3 / day^2.
+    const earthMoonMuKm3PerSec2 = 398600.435507 + 4902.800118;
+    const auKm = 149597870.7;
+    const secondsPerDay = 86400;
+    const mu = earthMoonMuKm3PerSec2 * secondsPerDay * secondsPerDay / (auKm * auKm * auKm);
+
+    const h = {
+      x: r.y * v.z - r.z * v.y,
+      y: r.z * v.x - r.x * v.z,
+      z: r.x * v.y - r.y * v.x,
+    };
+    const vCrossH = {
+      x: v.y * h.z - v.z * h.y,
+      y: v.z * h.x - v.x * h.z,
+      z: v.x * h.y - v.y * h.x,
+    };
+    const eccentricity = {
+      x: vCrossH.x / mu - r.x / rMagnitude,
+      y: vCrossH.y / mu - r.y / rMagnitude,
+      z: vCrossH.z / mu - r.z / rMagnitude,
+    };
+    const eccentricityMagnitude = Math.hypot(
+      eccentricity.x,
+      eccentricity.y,
+      eccentricity.z
+    );
+
+    if (!Number.isFinite(eccentricityMagnitude) || eccentricityMagnitude < 1e-6) {
+      throw new Error("The instantaneous lunar orbit is too close to circular to resolve an apogee direction.");
+    }
+
+    // The negative eccentricity vector points toward apogee.
+    const apogeeVector = new Astronomy.Vector(
+      -eccentricity.x,
+      -eccentricity.y,
+      -eccentricity.z,
+      time
+    );
+    const ecliptic = Astronomy.Ecliptic(apogeeVector);
+    return normalizeDegrees(ecliptic.elon);
+  }
+
+  /**
+   * True Lilith / osculating lunar apogee. Its instantaneous position is
+   * calculated from the geocentric position-velocity state. Daily motion is
+   * estimated from a centered finite difference to retain short-period motion.
    */
   public calculateTrueLilithLon(jd: number): { lon: number; speed: number } {
-    const T = (jd - 2451545.0) / 36525.0;
-    const mean = this.calculateMeanLilithLon(jd).lon;
+    const halfStepDays = 0.05;
+    const lon = this.calculateOsculatingApogeeLongitude(jd);
+    const before = this.calculateOsculatingApogeeLongitude(jd - halfStepDays);
+    const after = this.calculateOsculatingApogeeLongitude(jd + halfStepDays);
 
-    // Solar mean anomaly
-    const M_sun = normalizeDegrees(357.5291 + 35999.0503 * T) * DEG2RAD;
-    // Lunar mean anomaly
-    const M_moon = normalizeDegrees(134.9634 + 477198.8676 * T) * DEG2RAD;
-    // Mean elongation of Moon from Sun (D)
-    const D = normalizeDegrees(297.8502 + 445267.1115 * T) * DEG2RAD;
+    let delta = after - before;
+    if (delta > 180) delta -= 360;
+    if (delta < -180) delta += 360;
 
-    // Main periodic oscillations (evection perturbation on lunar apogee reaches ~11.5°)
-    const correction =
-      11.69 * Math.sin(2 * D - M_moon) +
-      2.05 * Math.sin(M_sun) +
-      1.25 * Math.sin(2 * D) -
-      0.68 * Math.sin(M_moon);
-
-    const trueLon = normalizeDegrees(mean + correction);
-    return { lon: trueLon, speed: 0.111 };
+    return {
+      lon,
+      speed: delta / (2 * halfStepDays),
+    };
   }
 
   /**

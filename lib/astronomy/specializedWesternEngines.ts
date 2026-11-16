@@ -1,6 +1,6 @@
 /**
  * Specialized Western Astrology Engines:
- * 1. Fixed Stars Engine (35+ Classical, Royal & Archangel stars with orb detection & Ptolemaic natures)
+ * 1. Fixed Stars Engine (20 classical, Royal & Archangel catalogue entries with epoch-aware contact checks)
  * 2. Eclipse Analyzer (Solar & Lunar eclipses affecting natal houses with 6-12 month impacts)
  * 3. Medical Astrology Indicators (Zodiac bodily rulerships, stress aspects, 6th/12th house vitality analysis)
  * 4. Astrocartography Power Lines (Planetary lines on AC, DC, MC, IC across geographic coordinates)
@@ -13,6 +13,7 @@ import {
   formatDegreeMinute,
   ZODIAC_SIGNS,
 } from "./ephemeris";
+import { swissEphemeris } from "./swissEphemeris";
 
 // ---------------------------------------------------------------------------
 // 1. FIXED STARS ENGINE
@@ -21,7 +22,7 @@ import {
 export interface FixedStar {
   name: string;
   constellation: string;
-  longitude: number; // J2000 longitude
+  longitude: number; // J2000 tropical ecliptic longitude (catalog epoch)
   magnitude: number;
   nature: "Royal" | "Benefic" | "Malefic" | "Mixed";
   planetaryNature: string; // e.g. "Jupiter / Mars"
@@ -35,7 +36,12 @@ export interface StarContact {
   nature: FixedStar["nature"];
   planetName: string;
   planetSymbol: string;
+  /** Approximate precession-adjusted tropical longitude for the chart epoch. */
   starLongitude: number;
+  /** Unadjusted catalogue longitude at J2000. */
+  j2000Longitude: number;
+  /** Applied longitude-only general-precession estimate in degrees. */
+  precessionCorrectionDegrees: number;
   planetLongitude: number;
   orb: number;
   interpretation: string;
@@ -70,6 +76,26 @@ export class FixedStarsEngine {
     { name: "Achernar", constellation: "Eridanus", longitude: 345.31, magnitude: 0.46, nature: "Benefic", planetaryNature: "Jupiter", color: "Bright Blue", meaning: "The End of the River. Religious devotion, high moral authority, philanthropic success, and spiritual benevolence." },
   ];
 
+  /**
+   * Approximate J2000-to-date shift using general precession in longitude.
+   * The catalogue stores only ecliptic longitude, not full 3D position or
+   * proper motion, so this is a transparent longitude-only correction rather
+   * than a full astrometric transformation. It is most suitable for modest
+   * epoch offsets and should not be presented as a precision star ephemeris.
+   */
+  public getStarLongitudeAtEpoch(star: FixedStar, julianDay: number): {
+    longitude: number;
+    correctionDegrees: number;
+  } {
+    const T = (julianDay - 2451545.0) / 36525.0;
+    const precessionArcSeconds = 5028.796195 * T + 1.11113 * T * T;
+    const correctionDegrees = precessionArcSeconds / 3600;
+    return {
+      longitude: normalizeDegrees(star.longitude + correctionDegrees),
+      correctionDegrees,
+    };
+  }
+
   public calculateStarContacts(chart: WesternChartData, maxOrb = 1.25): StarContact[] {
     const contacts: StarContact[] = [];
     const testPoints = [
@@ -79,8 +105,9 @@ export class FixedStarsEngine {
     ];
 
     FixedStarsEngine.FIXED_STARS.forEach((star) => {
+      const starPosition = this.getStarLongitudeAtEpoch(star, chart.julianDay);
       testPoints.forEach((point) => {
-        let diff = Math.abs(point.longitude - star.longitude);
+        let diff = Math.abs(point.longitude - starPosition.longitude);
         if (diff > 180) diff = 360 - diff;
 
         if (diff <= maxOrb) {
@@ -90,10 +117,12 @@ export class FixedStarsEngine {
             nature: star.nature,
             planetName: point.name,
             planetSymbol: point.symbol,
-            starLongitude: star.longitude,
+            starLongitude: starPosition.longitude,
+            j2000Longitude: star.longitude,
+            precessionCorrectionDegrees: starPosition.correctionDegrees,
             planetLongitude: point.longitude,
             orb: Math.round(diff * 100) / 100,
-            interpretation: `${point.name} (${point.signDegreeFormatted}) exactly conjuncts ${star.name} (${formatDegreeMinute(star.longitude)}, orb ${diff.toFixed(2)}°). Nature: ${star.nature} (${star.planetaryNature}). ${star.meaning}`,
+            interpretation: `${point.name} (${point.signDegreeFormatted}) is within ${diff.toFixed(2)}° of ${star.name} (${formatDegreeMinute(starPosition.longitude)}, approximate date-adjusted longitude). Nature: ${star.nature} (${star.planetaryNature}). ${star.meaning}`,
           });
         }
       });
@@ -109,7 +138,7 @@ export class FixedStarsEngine {
 
 export interface EclipseItem {
   date: string;
-  type: "Total Solar" | "Annular Solar" | "Total Lunar" | "Partial Lunar" | "Partial Solar";
+  type: "Total Solar" | "Annular Solar" | "Total Lunar" | "Partial Lunar" | "Partial Solar" | "Penumbral Lunar";
   zodiacSign: string;
   degree: number;
   degreeFormatted: string;
@@ -119,65 +148,109 @@ export interface EclipseItem {
   recommendations: string[];
 }
 
+type EclipseCatalogEvent = {
+  date: string;
+  time: string;
+  type: EclipseItem["type"];
+};
+
+/**
+ * Future eclipse greatest-eclipse dates and UT times are sourced from NASA
+ * GSFC's annual eclipse catalogues (Five Millennium Canon / Espenak & Meeus).
+ * Tropical longitudes are calculated at runtime from the geocentric Sun for
+ * solar eclipses and Moon for lunar eclipses using the shared ephemeris.
+ */
 export class EclipseAnalyzer {
-  private static readonly UPCOMING_ECLIPSES = [
-    { date: "March 14, 2025", type: "Total Lunar" as const, lon: 173.9 },    // ~23° Virgo
-    { date: "March 29, 2025", type: "Partial Solar" as const, lon: 9.0 },     // ~9° Aries
-    { date: "September 7, 2025", type: "Total Lunar" as const, lon: 345.3 }, // ~15° Pisces
-    { date: "September 21, 2025", type: "Partial Solar" as const, lon: 179.0 },// ~29° Virgo
-    { date: "February 17, 2026", type: "Annular Solar" as const, lon: 328.8 }, // ~28° Aquarius
-    { date: "March 3, 2026", type: "Total Lunar" as const, lon: 162.8 },      // ~12° Virgo
-    { date: "August 12, 2026", type: "Total Solar" as const, lon: 140.0 },     // ~20° Leo
-    { date: "August 28, 2026", type: "Partial Lunar" as const, lon: 334.8 },   // ~4° Pisces
+  private static readonly FUTURE_ECLIPSES: EclipseCatalogEvent[] = [
+    { date: "2027-02-06", time: "16:00", type: "Annular Solar" },
+    { date: "2027-02-20", time: "23:13", type: "Penumbral Lunar" },
+    { date: "2027-07-18", time: "16:03", type: "Penumbral Lunar" },
+    { date: "2027-08-02", time: "10:07", type: "Total Solar" },
+    { date: "2027-08-17", time: "07:14", type: "Penumbral Lunar" },
+    { date: "2028-01-12", time: "04:13", type: "Partial Lunar" },
+    { date: "2028-01-26", time: "15:08", type: "Annular Solar" },
+    { date: "2028-07-06", time: "18:20", type: "Partial Lunar" },
+    { date: "2028-07-22", time: "02:55", type: "Total Solar" },
+    { date: "2028-12-31", time: "16:52", type: "Total Lunar" },
+    { date: "2029-01-14", time: "17:13", type: "Partial Solar" },
+    { date: "2029-06-12", time: "04:05", type: "Partial Solar" },
+    { date: "2029-06-26", time: "03:22", type: "Total Lunar" },
+    { date: "2029-07-11", time: "15:36", type: "Partial Solar" },
+    { date: "2029-12-05", time: "15:03", type: "Partial Solar" },
+    { date: "2029-12-20", time: "22:42", type: "Total Lunar" },
+    { date: "2030-06-01", time: "06:28", type: "Annular Solar" },
+    { date: "2030-06-15", time: "18:33", type: "Partial Lunar" },
+    { date: "2030-11-25", time: "06:50", type: "Total Solar" },
+    { date: "2030-12-09", time: "22:28", type: "Penumbral Lunar" },
   ];
 
-  public analyzeEclipses(chart: WesternChartData): EclipseItem[] {
+  public analyzeEclipses(chart: WesternChartData, currentDate: Date = new Date()): EclipseItem[] {
     const getHouse = (lon: number) => {
       const cusps = chart.houses;
       for (let i = 0; i < cusps.length; i++) {
-        const c = cusps[i].longitude;
-        const n = cusps[(i + 1) % cusps.length].longitude;
-        if (n > c) {
-          if (lon >= c && lon < n) return i + 1;
-        } else {
-          if (lon >= c || lon < n) return i + 1;
+        const current = cusps[i].longitude;
+        const next = cusps[(i + 1) % cusps.length].longitude;
+        if (next > current) {
+          if (lon >= current && lon < next) return i + 1;
+        } else if (lon >= current || lon < next) {
+          return i + 1;
         }
       }
       return 1;
     };
 
     const HOUSE_THEMES: Record<number, { theme: string; recs: string[] }> = {
-      1: { theme: "Radical Identity & Body Rebirth", recs: ["Revitalize personal appearance", "Redefine life boundaries", "Step boldly into individual agency"] },
-      2: { theme: "Financial Re-orientation & Self-Worth", recs: ["Restructure income streams", "Release scarcity fears", "Invest in core personal values"] },
-      3: { theme: "Mental Breakthroughs & New Communications", recs: ["Begin a writing project", "Resolve neighborly or sibling ties", "Upgrade technical skills"] },
-      4: { theme: "Home Sanctuary & Ancestral Foundations", recs: ["Relocate or renovate sanctuary", "Address ancestral roots", "Create deeper emotional peace"] },
-      5: { theme: "Creative Culmination & Romantic Renewal", recs: ["Launch artistic passion projects", "Celebrate inner-child joy", "Embrace heart vulnerability"] },
-      6: { theme: "Wellness Overhaul & Daily Discipline", recs: ["Adopt holistic health rituals", "Reorganize work habits", "Prioritize restorative rest"] },
-      7: { theme: "Relationship Evolution & Partnership Contracts", recs: ["Re-evaluate contractual parity", "Commit or gracefully release", "Foster transparent honesty"] },
-      8: { theme: "Psychological Metamorphosis & Shared Capital", recs: ["Transform debts and investments", "Heal deep psychological taboos", "Release mortal anxieties"] },
-      9: { theme: "Philosophical Awakening & World Horizons", recs: ["Embark on a spiritual pilgrimage", "Publish or teach your wisdom", "Expand cross-cultural understanding"] },
-      10: { theme: "Career Destiny & Public Recognition", recs: ["Step into executive leadership", "Align profession with true calling", "Claim public reputation with dignity"] },
-      11: { theme: "Community Re-alignment & Future Hopes", recs: ["Prune toxic peer groups", "Join visionary collectives", "Cast bold intentions for the coming era"] },
-      12: { theme: "Subconscious Surrender & Spiritual Healing", recs: ["Enter sacred solitary retreat", "Engage dreamwork & meditation", "Forgive and release past burdens"] },
+      1: { theme: "Radical Identity & Body Rebirth", recs: ["Reconsider personal boundaries", "Review how you present yourself", "Set intentions for a new personal chapter"] },
+      2: { theme: "Financial Re-orientation & Self-Worth", recs: ["Review income and spending priorities", "Clarify personal values", "Reassess material commitments"] },
+      3: { theme: "Mental Breakthroughs & New Communications", recs: ["Begin a writing or learning project", "Revisit communication patterns", "Organize local commitments"] },
+      4: { theme: "Home Sanctuary & Ancestral Foundations", recs: ["Review home and family priorities", "Reassess domestic responsibilities", "Strengthen your private support system"] },
+      5: { theme: "Creative Culmination & Romantic Renewal", recs: ["Make room for creative work", "Review romantic expectations", "Reconnect with play and recreation"] },
+      6: { theme: "Work, Routines & Daily Responsibilities", recs: ["Review work systems", "Adjust daily routines", "Plan sustainable rest and workload boundaries"] },
+      7: { theme: "Relationship Evolution & Partnership Contracts", recs: ["Review relationship agreements", "Clarify shared expectations", "Revisit collaboration boundaries"] },
+      8: { theme: "Shared Resources & Psychological Change", recs: ["Review shared finances and obligations", "Clarify debt and risk exposure", "Make space for reflective work"] },
+      9: { theme: "Philosophical Awakening & World Horizons", recs: ["Plan study or travel goals", "Revisit beliefs and assumptions", "Explore teaching or publishing plans"] },
+      10: { theme: "Career Direction & Public Standing", recs: ["Review long-term career direction", "Reassess public responsibilities", "Clarify professional goals"] },
+      11: { theme: "Community Re-alignment & Future Hopes", recs: ["Review group commitments", "Reconnect with supportive networks", "Reassess long-term plans"] },
+      12: { theme: "Rest, Reflection & Closure", recs: ["Create space for reflection", "Review unresolved commitments", "Prioritize restorative downtime"] },
     };
 
-    return EclipseAnalyzer.UPCOMING_ECLIPSES.map((e) => {
-      const house = getHouse(e.lon);
-      const signIdx = Math.floor(e.lon / 30);
-      const sign = ZODIAC_SIGNS[signIdx]?.name || "Aries";
-      const info = HOUSE_THEMES[house];
+    return EclipseAnalyzer.FUTURE_ECLIPSES.flatMap((event) => {
+      const instant = new Date(`${event.date}T${event.time}:00.000Z`);
+      if (!Number.isFinite(instant.getTime()) || instant.getTime() < currentDate.getTime()) return [];
 
-      return {
-        date: e.date,
-        type: e.type,
+      const julianDay = swissEphemeris.calculateJulianDay(
+        instant.getUTCFullYear(),
+        instant.getUTCMonth() + 1,
+        instant.getUTCDate(),
+        instant.getUTCHours(),
+        instant.getUTCMinutes(),
+        instant.getUTCSeconds(),
+        0
+      );
+      const isSolar = event.type.includes("Solar");
+      const eventBody = isSolar ? swissEphemeris.SUN : swissEphemeris.MOON;
+      const longitude = swissEphemeris.calculatePlanetPosition(eventBody, julianDay).longitude;
+      const house = getHouse(longitude);
+      const signIndex = Math.floor(longitude / 30);
+      const sign = ZODIAC_SIGNS[signIndex]?.name || "Aries";
+      const houseInfo = HOUSE_THEMES[house];
+      const intensity: EclipseItem["intensity"] = event.type.includes("Total")
+        ? "Extreme"
+        : event.type.includes("Penumbral")
+          ? "Moderate"
+          : "High";
+
+      return [{
+        date: `${event.date} · ${event.time} UTC`,
+        type: event.type,
         zodiacSign: sign,
-        degree: e.lon,
-        degreeFormatted: formatDegreeMinute(e.lon),
+        degree: longitude,
+        degreeFormatted: formatDegreeMinute(longitude),
         affectedHouse: house,
-        intensity: e.type.includes("Total") ? "Extreme" : "High",
-        theme: info.theme,
-        recommendations: info.recs,
-      };
+        intensity,
+        theme: houseInfo.theme,
+        recommendations: houseInfo.recs,
+      }];
     });
   }
 }
@@ -190,73 +263,83 @@ export interface MedicalIndicator {
   systemName: string;
   signRuler: string;
   governedAnatomy: string;
-  stressLevel: "Low" | "Moderate" | "Elevated";
-  preventiveAdvice: string;
+  symbolicAssociation: string;
 }
 
 export interface MedicalAstrologyReport {
-  vitalityConstitution: string;
-  vulnerableSystems: MedicalIndicator[];
-  sixthHouseNote: string;
-  twelfthHouseNote: string;
-  preventivePractices: string[];
+  disclaimer: string;
+  constitutionSymbolism: string;
+  traditionalBodyCorrespondences: MedicalIndicator[];
+  sixthHouseSymbolism: string;
+  twelfthHouseSymbolism: string;
+  reflectionPrompts: string[];
 }
 
+/**
+ * Presents the historical sign/body correspondences found in medical astrology
+ * as symbolism only. It intentionally does not assess a person's health,
+ * infer vulnerability, predict illness, or recommend medical treatment.
+ */
 export class MedicalAstrologyEngine {
-  private static readonly BODY_RULERS: Record<string, { system: string; anatomy: string; advice: string }> = {
-    Aries: { system: "Cranio-Facial & Neural Vitality", anatomy: "Brain, skull, eyes, adrenal adrenaline surges", advice: "Maintain balanced hydration, avoid excessive caffeine, and practice active stress release." },
-    Taurus: { system: "Thyroid & Vocal/Cervical Spine", anatomy: "Neck, throat, thyroid gland, vocal cords", advice: "Support thyroid health with iodine/selenium, practice neck stretching, and soothe vocal strain." },
-    Gemini: { system: "Respiratory & Nervous Branching", anatomy: "Lungs, bronchial tubes, shoulders, arms, peripheral nerves", advice: "Practice deep pranayama breathing, protect against nervous burnout, and take digital detoxes." },
-    Cancer: { system: "Digestive Core & Epigastric Sanctuary", anatomy: "Stomach, epigastrium, breasts, lymphatic fluid", advice: "Nourish the gut microbiome, consume warm soothing broths, and avoid eating under emotional stress." },
-    Leo: { system: "Cardiovascular & Spinal Axis", anatomy: "Heart, thoracic spine, aorta, solar vitality", advice: "Prioritize heart-healthy cardio, support spinal alignment, and nurture emotional joy." },
-    Virgo: { system: "Enteric & Intestinal Assimilation", anatomy: "Small intestine, spleen, autonomic assimilation", advice: "Consume fiber-rich, unrefined whole foods; avoid hypochondriac worrying; prioritize calm digestion." },
-    Libra: { system: "Renal & Acid-Base Equilibrium", anatomy: "Kidneys, adrenal cortex, lumbar region, skin filtration", advice: "Drink abundant alkaline water, limit sodium spikes, and maintain peaceful aesthetic surroundings." },
-    Scorpio: { system: "Urogenital & Regenerative Excretion", anatomy: "Reproductive organs, prostate, colon, cellular detox", advice: "Support lymphatic and colon detoxification, honor emotional release, and drink clean herbal teas." },
-    Sagittarius: { system: "Hepatic & Locomotor Musculature", anatomy: "Liver, hips, thighs, sciatic nerve, arterial system", advice: "Cleanse liver with milk thistle/bitters, avoid over-indulgence in rich foods, and maintain athletic walking." },
-    Capricorn: { system: "Skeletal, Joint & Dermal Framework", anatomy: "Bones, knees, joints, teeth, connective tissue, skin", advice: "Ensure adequate calcium and magnesium intake, support joint mobility, and respect adequate rest." },
-    Aquarius: { system: "Circulatory & Bio-Electric Pathways", anatomy: "Circulation, calves, ankles, neurological synapses", advice: "Elevate legs, stimulate healthy venous circulation, and ground nervous electrical tension." },
-    Pisces: { system: "Lymphatic, Immune & Somatic Receptors", anatomy: "Feet, lymphatic drainage, pineal gland, autoimmune sensitivity", advice: "Practice Epsom salt foot soaks, strengthen mucosal immunity, and protect subtle energetic boundaries." },
+  private static readonly BODY_RULERS: Record<string, {
+    system: string;
+    anatomy: string;
+    symbolism: string;
+  }> = {
+    Aries: { system: "Cranio-facial symbolism", anatomy: "Head, face and skull", symbolism: "Traditional Aries symbolism emphasizes initiative, urgency and the head/face correspondence." },
+    Taurus: { system: "Throat and neck symbolism", anatomy: "Throat, neck and vocal region", symbolism: "Traditional Taurus symbolism emphasizes steadiness, voice and the throat/neck correspondence." },
+    Gemini: { system: "Respiratory and shoulder symbolism", anatomy: "Lungs, shoulders, arms and hands", symbolism: "Traditional Gemini symbolism emphasizes communication, movement and the respiratory/limb correspondence." },
+    Cancer: { system: "Chest and stomach symbolism", anatomy: "Chest, breasts and stomach", symbolism: "Traditional Cancer symbolism emphasizes nourishment, protection and the chest/stomach correspondence." },
+    Leo: { system: "Heart and back symbolism", anatomy: "Heart, upper back and spine", symbolism: "Traditional Leo symbolism emphasizes expression, warmth and the heart/back correspondence." },
+    Virgo: { system: "Digestive symbolism", anatomy: "Intestines and digestive region", symbolism: "Traditional Virgo symbolism emphasizes discernment, service and the digestive correspondence." },
+    Libra: { system: "Kidney and lumbar symbolism", anatomy: "Kidneys, lower back and lumbar region", symbolism: "Traditional Libra symbolism emphasizes balance, proportion and the kidney/lumbar correspondence." },
+    Scorpio: { system: "Reproductive and eliminative symbolism", anatomy: "Reproductive and eliminative organs", symbolism: "Traditional Scorpio symbolism emphasizes depth, transformation and reproductive/eliminative correspondences." },
+    Sagittarius: { system: "Hip and thigh symbolism", anatomy: "Hips, thighs and upper legs", symbolism: "Traditional Sagittarius symbolism emphasizes movement, exploration and the hip/thigh correspondence." },
+    Capricorn: { system: "Skeletal and joint symbolism", anatomy: "Bones, knees, joints and teeth", symbolism: "Traditional Capricorn symbolism emphasizes structure, endurance and skeletal/joint correspondences." },
+    Aquarius: { system: "Ankle and circulation symbolism", anatomy: "Calves, ankles and circulatory pathways", symbolism: "Traditional Aquarius symbolism emphasizes networks, circulation and the lower-leg correspondence." },
+    Pisces: { system: "Foot and lymphatic symbolism", anatomy: "Feet and lymphatic imagery", symbolism: "Traditional Pisces symbolism emphasizes sensitivity, permeability and the foot/lymphatic correspondence." },
   };
 
-  public analyzeHealth(chart: WesternChartData): MedicalAstrologyReport {
+  public analyzeTraditionalSymbolism(chart: WesternChartData): MedicalAstrologyReport {
     const sunSign = chart.planets.find((p) => p.name === "Sun")?.sign || "Aries";
     const moonSign = chart.planets.find((p) => p.name === "Moon")?.sign || "Taurus";
     const ascSign = chart.ascendant.sign;
+    const marsSign = chart.planets.find((p) => p.name === "Mars")?.sign;
+    const saturnSign = chart.planets.find((p) => p.name === "Saturn")?.sign;
 
-    const vulnerable: MedicalIndicator[] = [];
+    const keySigns = Array.from(new Set([
+      sunSign,
+      moonSign,
+      ascSign,
+      marsSign,
+      saturnSign,
+    ].filter((sign): sign is string => Boolean(sign))));
 
-    // Evaluate signs occupied by challenging aspects or Mars/Saturn
-    const mars = chart.planets.find((p) => p.name === "Mars");
-    const saturn = chart.planets.find((p) => p.name === "Saturn");
-
-    const keySigns = Array.from(new Set([sunSign, moonSign, ascSign, mars?.sign || "Aries", saturn?.sign || "Capricorn"]));
-
-    keySigns.forEach((sign) => {
+    const correspondences = keySigns.flatMap((sign) => {
       const data = MedicalAstrologyEngine.BODY_RULERS[sign];
-      if (data) {
-        const isStressed = sign === mars?.sign || sign === saturn?.sign;
-        vulnerable.push({
-          systemName: data.system,
-          signRuler: sign,
-          governedAnatomy: data.anatomy,
-          stressLevel: isStressed ? "Elevated" : "Moderate",
-          preventiveAdvice: data.advice,
-        });
-      }
+      return data
+        ? [{
+            systemName: data.system,
+            signRuler: sign,
+            governedAnatomy: data.anatomy,
+            symbolicAssociation: data.symbolism,
+          }]
+        : [];
     });
 
-    const house6 = chart.houses[5];
-    const house12 = chart.houses[11];
+    const sixthHouse = chart.houses[5]?.sign || "Unknown";
+    const twelfthHouse = chart.houses[11]?.sign || "Unknown";
 
     return {
-      vitalityConstitution: `Your somatic vitality combines ${ascSign} physical constitution with ${sunSign} solar recuperative force and ${moonSign} lunar emotional regulation.`,
-      vulnerableSystems: vulnerable,
-      sixthHouseNote: `House 6 starts in ${house6.sign}: Optimal daily healing routines flourish through disciplined ${house6.sign} wellness habits.`,
-      twelfthHouseNote: `House 12 starts in ${house12.sign}: Guard against hidden exhaustion; regenerative healing occurs through quiet retreat and sound sleep.`,
-      preventivePractices: [
-        "Align daily rhythm with constitutional somatic needs.",
-        "Emphasize targeted hydration and seasonal nutrient-dense foods.",
-        "Integrate grounding restorative movement to disperse planetary nervous tension.",
+      disclaimer: "Historical astrological symbolism only. This is not a medical assessment, diagnosis, health-risk prediction, or treatment advice. Do not use chart placements to assess symptoms, change medication, or delay professional care.",
+      constitutionSymbolism: `In this tradition, the Ascendant (${ascSign}), Sun (${sunSign}) and Moon (${moonSign}) are interpreted as symbolic themes of embodiment, vitality and emotional life—not as measurements of biological health.`,
+      traditionalBodyCorrespondences: correspondences,
+      sixthHouseSymbolism: `The 6th house is traditionally associated with work, routine, service and illness in astrological literature. Its sign here is ${sixthHouse}; this is a symbolic correspondence, not a health indicator.`,
+      twelfthHouseSymbolism: `The 12th house is traditionally associated with retreat, seclusion and hidden matters. Its sign here is ${twelfthHouse}; this is a symbolic correspondence, not a diagnosis or prediction.`,
+      reflectionPrompts: [
+        "Which everyday routines feel sustainable and supportive?",
+        "What boundaries help you balance service, work and rest?",
+        "Which traditional sign/body associations would you like to explore as cultural history?",
       ],
     };
   }
@@ -266,80 +349,194 @@ export class MedicalAstrologyEngine {
 // 4. ASTROCARTOGRAPHY POWER LINES
 // ---------------------------------------------------------------------------
 
+export interface AstrocartographyPathPoint {
+  latitude: number;
+  longitude: number;
+}
+
 export interface AstrocartographyLine {
   planet: string;
   symbol: string;
   lineType: "AC (Ascendant)" | "DC (Descendant)" | "MC (Midheaven)" | "IC (Imum Coeli)";
-  longitudeTarget: number; // Approximate terrestrial longitude where this angle aligns
+  /** MC/IC meridian longitude; AC/DC use their equator-crossing reference longitude. */
+  longitudeTarget: number;
   longitudeStr: string;
+  /** Sampled longitude-versus-latitude curve for AC/DC; MC/IC are meridians. */
+  pathPoints: AstrocartographyPathPoint[];
   theme: string;
   bestFor: string;
 }
 
 export interface AstrocartographyReport {
   powerLines: AstrocartographyLine[];
-  topDestinations: Array<{ purpose: string; suggestedRegion: string; planetaryLine: string }>;
+  lineGuidance: Array<{ purpose: string; planetaryLine: string; guidance: string }>;
+  method: string;
 }
 
+/**
+ * Computes astrocartography from a natal geocentric ecliptic position and the
+ * Greenwich sidereal angle at the birth instant. MC/IC are meridians; AC/DC
+ * are horizon-intersection curves and therefore vary with terrestrial latitude.
+ */
 export class AstrocartographyEngine {
-  public calculatePowerLines(chart: WesternChartData): AstrocartographyReport {
+  private formatLongitude(longitude: number): string {
+    const signed = longitude > 180 ? longitude - 360 : longitude;
+    const hemisphere = signed >= 0 ? "E" : "W";
+    return `${Math.abs(signed).toFixed(2)}° ${hemisphere}`;
+  }
+
+  private toEquatorial(
+    longitude: number,
+    latitude: number,
+    obliquity: number
+  ): { rightAscension: number; declination: number } {
+    const lambda = longitude * Math.PI / 180;
+    const beta = latitude * Math.PI / 180;
+    const epsilon = obliquity * Math.PI / 180;
+
+    const x = Math.cos(beta) * Math.cos(lambda);
+    const y = Math.cos(beta) * Math.sin(lambda) * Math.cos(epsilon)
+      - Math.sin(beta) * Math.sin(epsilon);
+    const z = Math.cos(beta) * Math.sin(lambda) * Math.sin(epsilon)
+      + Math.sin(beta) * Math.cos(epsilon);
+
+    const rightAscension = normalizeDegrees(Math.atan2(y, x) * 180 / Math.PI);
+    const declination = Math.asin(Math.max(-1, Math.min(1, z))) * 180 / Math.PI;
+    return { rightAscension, declination };
+  }
+
+  private calculateHorizonPath(
+    rightAscension: number,
+    declination: number,
+    greenwichSiderealDegrees: number,
+    rising: boolean
+  ): AstrocartographyPathPoint[] {
+    const points: AstrocartographyPathPoint[] = [];
+    const decRad = declination * Math.PI / 180;
+
+    for (let latitude = -85; latitude <= 85; latitude += 5) {
+      const latRad = latitude * Math.PI / 180;
+      const cosHourAngle = -Math.tan(latRad) * Math.tan(decRad);
+      if (cosHourAngle < -1 || cosHourAngle > 1) continue;
+
+      const absoluteHourAngle = Math.acos(cosHourAngle) * 180 / Math.PI;
+      // Rising bodies have a negative hour angle; setting bodies have a positive one.
+      const hourAngle = rising ? -absoluteHourAngle : absoluteHourAngle;
+      const longitude = normalizeDegrees(rightAscension + hourAngle - greenwichSiderealDegrees);
+      points.push({
+        latitude,
+        longitude: Math.round(longitude * 10000) / 10000,
+      });
+    }
+
+    return points;
+  }
+
+  public calculatePowerLines(
+    chart: WesternChartData,
+    birthLongitude: number
+  ): AstrocartographyReport {
     const lines: AstrocartographyLine[] = [];
+    // Chart siderealTime is the local RAMC (GST + natal longitude).
+    const greenwichSiderealDegrees = normalizeDegrees(chart.siderealTime - birthLongitude);
+    const classicalBodies = new Set([
+      "Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter",
+      "Saturn", "Uranus", "Neptune", "Pluto", "Chiron",
+    ]);
 
-    chart.planets.forEach((p) => {
-      // Calculate longitude on Earth where planetary right ascension aligns with Midheaven
-      // Simple approximate astrocartography mapping:
-      const mcLon = normalizeDegrees(p.longitude - 90);
-      const icLon = normalizeDegrees(mcLon + 180);
-      const acLon = normalizeDegrees(p.longitude);
-      const dcLon = normalizeDegrees(p.longitude + 180);
+    chart.planets.filter((planet) => classicalBodies.has(planet.name)).forEach((planet) => {
+      const equatorial = this.toEquatorial(
+        planet.longitude,
+        planet.latitude || 0,
+        chart.obliquity
+      );
+      const mcLongitude = normalizeDegrees(equatorial.rightAscension - greenwichSiderealDegrees);
+      const icLongitude = normalizeDegrees(mcLongitude + 180);
+      const risingPath = this.calculateHorizonPath(
+        equatorial.rightAscension,
+        equatorial.declination,
+        greenwichSiderealDegrees,
+        true
+      );
+      const settingPath = this.calculateHorizonPath(
+        equatorial.rightAscension,
+        equatorial.declination,
+        greenwichSiderealDegrees,
+        false
+      );
+      const risingEquator = risingPath.find((point) => point.latitude === 0);
+      const settingEquator = settingPath.find((point) => point.latitude === 0);
 
-      const formatCoord = (deg: number) => {
-        const lonRel = deg > 180 ? deg - 360 : deg;
-        const hemi = lonRel >= 0 ? "E" : "W";
-        return `${Math.abs(lonRel).toFixed(1)}° ${hemi}`;
+      const addLine = (
+        lineType: AstrocartographyLine["lineType"],
+        longitudeTarget: number,
+        pathPoints: AstrocartographyPathPoint[],
+        theme: string,
+        bestFor: string,
+        isCurve: boolean
+      ) => {
+        lines.push({
+          planet: planet.name,
+          symbol: planet.symbol,
+          lineType,
+          longitudeTarget,
+          longitudeStr: isCurve
+            ? `Equator reference ${this.formatLongitude(longitudeTarget)}`
+            : this.formatLongitude(longitudeTarget),
+          pathPoints,
+          theme,
+          bestFor,
+        });
       };
 
-      if (["Sun", "Moon", "Venus", "Jupiter", "Mars", "Saturn"].includes(p.name)) {
-        lines.push({
-          planet: p.name,
-          symbol: p.symbol,
-          lineType: "MC (Midheaven)",
-          longitudeTarget: mcLon,
-          longitudeStr: formatCoord(mcLon),
-          theme: `Peak public acclaim, career authority, and vocational purpose under ${p.name}.`,
-          bestFor: "Career advancement & public reputation",
-        });
+      addLine(
+        "MC (Midheaven)",
+        mcLongitude,
+        [],
+        `Culmination of ${planet.name} on the local meridian: public visibility, career and vocation.`,
+        "Career, visibility and public role",
+        false
+      );
+      addLine(
+        "IC (Imum Coeli)",
+        icLongitude,
+        [],
+        `Lower-meridian emphasis of ${planet.name}: home, roots, privacy and inner foundations.`,
+        "Home, roots and private life",
+        false
+      );
 
-        lines.push({
-          planet: p.name,
-          symbol: p.symbol,
-          lineType: "AC (Ascendant)",
-          longitudeTarget: acLon,
-          longitudeStr: formatCoord(acLon),
-          theme: `Direct physical embodiment, magnetic presence, and personal empowerment under ${p.name}.`,
-          bestFor: "Self-expression, confidence & vitality",
-        });
-
-        lines.push({
-          planet: p.name,
-          symbol: p.symbol,
-          lineType: "DC (Descendant)",
-          longitudeTarget: dcLon,
-          longitudeStr: formatCoord(dcLon),
-          theme: `Fated partnerships, meeting significant others, and magnetic social connection.`,
-          bestFor: "Love, romance & collaborative alliances",
-        });
+      if (risingEquator && risingPath.length > 1) {
+        addLine(
+          "AC (Ascendant)",
+          risingEquator.longitude,
+          risingPath,
+          `Rising horizon path for ${planet.name}; the curve shifts with latitude.`,
+          "Self-expression, embodiment and beginnings",
+          true
+        );
+      }
+      if (settingEquator && settingPath.length > 1) {
+        addLine(
+          "DC (Descendant)",
+          settingEquator.longitude,
+          settingPath,
+          `Setting horizon path for ${planet.name}; the curve shifts with latitude.`,
+          "Partnerships, encounters and collaboration",
+          true
+        );
       }
     });
 
     return {
       powerLines: lines,
-      topDestinations: [
-        { purpose: "Career & Executive Success", suggestedRegion: "Regions along your Sun-MC or Jupiter-MC line", planetaryLine: "Sun / Jupiter Midheaven" },
-        { purpose: "Romance & Marriage Magnetism", suggestedRegion: "Regions along your Venus-DC or Moon-DC line", planetaryLine: "Venus / Moon Descendant" },
-        { purpose: "Spiritual Peace & Domestic Healing", suggestedRegion: "Regions along your Moon-IC or Jupiter-IC line", planetaryLine: "Moon / Jupiter Imum Coeli" },
-        { purpose: "Courage, Sports & Athletic Mastery", suggestedRegion: "Regions along your Mars-AC line", planetaryLine: "Mars Ascendant" },
+      lineGuidance: [
+        { purpose: "Career & public profile", planetaryLine: "Sun-MC / Jupiter-MC", guidance: "Compare these meridians with actual cities; the line itself is a geometric track, not a destination recommendation." },
+        { purpose: "Relationships & collaboration", planetaryLine: "Venus-DC / Jupiter-DC", guidance: "Evaluate the latitude-dependent setting curves against the coordinates of places you are considering." },
+        { purpose: "Home & private foundations", planetaryLine: "Moon-IC / Venus-IC", guidance: "Use the calculated IC meridians as a starting point for location comparison." },
+        { purpose: "Personal reinvention", planetaryLine: "Sun-AC / Mars-AC", guidance: "Compare the rising curves by latitude; an AC line is not one fixed longitude." },
       ],
+      method: "MC/IC meridians are derived from right ascension and Greenwich sidereal angle. AC/DC are geometric horizon crossings sampled every 5° of latitude (geometric horizon; no atmospheric refraction).",
     };
   }
 }

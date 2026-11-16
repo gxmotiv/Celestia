@@ -18,6 +18,32 @@ import {
 } from "./ephemeris";
 import { swissEphemeris } from "./swissEphemeris";
 
+/**
+ * Returns completed Gregorian birth anniversaries for a UTC birth instant.
+ * The caller should first normalize the recorded civil birth date/time and
+ * applicable fixed UTC offset to UTC. With an offset-only birth record, this
+ * uses that same offset for the anniversary; historical DST transitions
+ * cannot be reconstructed without an IANA timezone identifier. Feb 29
+ * anniversaries follow JavaScript's March 1 normalization in non-leap years.
+ */
+export function calculateCompletedAge(birthDate: Date, currentDate: Date): number {
+  const birthMs = birthDate.getTime();
+  const currentMs = currentDate.getTime();
+  if (!Number.isFinite(birthMs) || !Number.isFinite(currentMs) || currentMs < birthMs) {
+    return 0;
+  }
+
+  let age = currentDate.getUTCFullYear() - birthDate.getUTCFullYear();
+  const anniversary = new Date(birthMs);
+  anniversary.setUTCFullYear(birthDate.getUTCFullYear() + age);
+
+  if (anniversary.getTime() > currentMs) {
+    age -= 1;
+  }
+
+  return Math.max(0, age);
+}
+
 // ---------------------------------------------------------------------------
 // 1. SECONDARY PROGRESSIONS
 // ---------------------------------------------------------------------------
@@ -56,7 +82,7 @@ export class ProgressionsEngine {
   ): ProgressedChartResult {
     const diffMs = currentDate.getTime() - birthDate.getTime();
     const ageYears = diffMs / (365.2422 * 86400000);
-    const age = Math.max(0, Math.floor(ageYears));
+    const age = calculateCompletedAge(birthDate, currentDate);
 
     // Secondary progression: 1 day after birth = 1 year of life
     const progressedTimeMs = birthDate.getTime() + ageYears * 86400000;
@@ -107,10 +133,11 @@ export class ProgressionsEngine {
 
     // Moon changes signs roughly every 2.3 to 2.5 years
     const moonSignChanges: MoonSignChangeEvent[] = [];
-    const currentYear = currentDate.getFullYear();
+    const currentYear = currentDate.getUTCFullYear();
 
     for (let delta = -2; delta <= 10; delta++) {
       const checkAge = age + delta;
+      if (checkAge < 0) continue;
       const checkTimeMs = birthDate.getTime() + checkAge * 86400000;
       const nextTimeMs = birthDate.getTime() + (checkAge + 1) * 86400000;
 
@@ -157,7 +184,468 @@ export class ProgressionsEngine {
 }
 
 // ---------------------------------------------------------------------------
-// 2. HELLENISTIC ANNUAL PROFECTIONS
+// 2. SOLAR ARC DIRECTIONS
+// ---------------------------------------------------------------------------
+
+export type SolarArcAspectName =
+  | "Conjunction"
+  | "Semisquare"
+  | "Sextile"
+  | "Square"
+  | "Trine"
+  | "Sesquiquadrate"
+  | "Quincunx"
+  | "Opposition";
+
+export interface SolarArcDirectedPoint {
+  name: string;
+  symbol: string;
+  natalLongitude: number;
+  directedLongitude: number;
+  sign: string;
+  signDegreeFormatted: string;
+}
+
+export interface SolarArcDirectionContact {
+  directedPoint: string;
+  natalPoint: string;
+  aspect: SolarArcAspectName;
+  exactAngle: number;
+  orb: number;
+  directedLongitude: number;
+  natalLongitude: number;
+}
+
+export interface SolarArcDirectionsReport {
+  age: number;
+  progressedDate: string;
+  solarArcDegrees: number;
+  maxOrb: number;
+  directedPoints: SolarArcDirectedPoint[];
+  contacts: SolarArcDirectionContact[];
+  method: string;
+}
+
+/**
+ * Solar Arc Directions applies the exact secondary-progressed solar arc
+ * (progressed Sun longitude minus natal Sun longitude) to all natal planets
+ * and angles. Contacts are directed-point to natal-point aspects. This
+ * implementation uses the tropical zodiac and reports an explicit orb.
+ */
+export class SolarArcDirectionsEngine {
+  private static readonly ASPECTS: Array<{
+    name: SolarArcAspectName;
+    angle: number;
+  }> = [
+    { name: "Conjunction", angle: 0 },
+    { name: "Semisquare", angle: 45 },
+    { name: "Sextile", angle: 60 },
+    { name: "Square", angle: 90 },
+    { name: "Trine", angle: 120 },
+    { name: "Sesquiquadrate", angle: 135 },
+    { name: "Quincunx", angle: 150 },
+    { name: "Opposition", angle: 180 },
+  ];
+
+  private readonly progressionsEngine = new ProgressionsEngine();
+
+  public calculateSolarArc(
+    natalChart: WesternChartData,
+    birthDate: Date,
+    currentDate: Date,
+    latitude: number,
+    longitude: number,
+    timezoneOffset: number,
+    maxOrb = 1.0
+  ): SolarArcDirectionsReport {
+    const natalSun = natalChart.planets.find((planet) => planet.name === "Sun");
+    if (!natalSun) {
+      throw new Error("Solar Arc Directions requires a natal Sun position.");
+    }
+
+    const progressed = this.progressionsEngine.calculateProgressions(
+      birthDate,
+      currentDate,
+      latitude,
+      longitude,
+      timezoneOffset
+    );
+    const solarArcDegrees = normalizeDegrees(
+      progressed.progressedSun.longitude - natalSun.longitude
+    );
+
+    const natalPoints = [
+      ...natalChart.planets,
+      natalChart.ascendant,
+      natalChart.midheaven,
+    ];
+    const directedPoints = natalPoints.map((point) => {
+      const directedLongitude = normalizeDegrees(point.longitude + solarArcDegrees);
+      return {
+        name: point.name,
+        symbol: point.symbol,
+        natalLongitude: point.longitude,
+        directedLongitude,
+        sign: ZODIAC_SIGNS[Math.floor(directedLongitude / 30)]?.name || "Aries",
+        signDegreeFormatted: formatDegreeMinute(directedLongitude),
+      };
+    });
+
+    const contacts: SolarArcDirectionContact[] = [];
+    directedPoints.forEach((directedPoint) => {
+      natalPoints.forEach((natalPoint) => {
+        // A directed point contacting its own natal position is a valid
+        // direction, so self-pairs are retained (including solar arc Sun-Sun).
+        const difference = Math.abs(
+          directedPoint.directedLongitude - natalPoint.longitude
+        );
+        const separation = difference > 180 ? 360 - difference : difference;
+
+        SolarArcDirectionsEngine.ASPECTS.forEach((aspect) => {
+          const orb = Math.abs(separation - aspect.angle);
+          if (orb <= maxOrb) {
+            contacts.push({
+              directedPoint: directedPoint.name,
+              natalPoint: natalPoint.name,
+              aspect: aspect.name,
+              exactAngle: aspect.angle,
+              orb: Math.round(orb * 1000) / 1000,
+              directedLongitude: directedPoint.directedLongitude,
+              natalLongitude: natalPoint.longitude,
+            });
+          }
+        });
+      });
+    });
+
+    contacts.sort((a, b) => a.orb - b.orb);
+
+    return {
+      age: progressed.age,
+      progressedDate: progressed.progressedDate,
+      solarArcDegrees: Math.round(solarArcDegrees * 10000) / 10000,
+      maxOrb,
+      directedPoints,
+      contacts,
+      method: "Exact secondary-progressed Sun longitude minus natal Sun longitude; the same tropical arc is added to natal planets, Ascendant and Midheaven. Contacts are directed-to-natal aspects.",
+    };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 3. SOLAR RETURN CHARTS
+// ---------------------------------------------------------------------------
+
+export interface SolarReturnReport {
+  targetYear: number;
+  returnInstantUTC: string;
+  natalSunLongitude: number;
+  returnSunLongitude: number;
+  latitude: number;
+  longitude: number;
+  houseSystem: WesternChartData["houseSystem"];
+  returnChart: WesternChartData;
+  method: string;
+}
+
+/**
+ * Finds the exact annual tropical solar return by solving the instant at which
+ * the transiting geocentric Sun reaches the natal Sun's longitude. A short
+ * mean-motion estimate supplies the initial bracket; bisection refines the
+ * crossing using the same SwissEphemeris facade as the natal chart.
+ */
+export class SolarReturnEngine {
+  private static readonly DAY_MS = 86400000;
+  private static readonly MEAN_SOLAR_MOTION = 360 / 365.2422;
+
+  private calculateSunLongitude(instantMs: number): number {
+    const date = new Date(instantMs);
+    const julianDay = swissEphemeris.calculateJulianDay(
+      date.getUTCFullYear(),
+      date.getUTCMonth() + 1,
+      date.getUTCDate(),
+      date.getUTCHours(),
+      date.getUTCMinutes(),
+      date.getUTCSeconds(),
+      0
+    );
+    return swissEphemeris.calculatePlanetPosition(
+      swissEphemeris.SUN,
+      julianDay
+    ).longitude;
+  }
+
+  private signedAngularDifference(longitude: number, targetLongitude: number): number {
+    let difference = normalizeDegrees(longitude - targetLongitude);
+    if (difference > 180) difference -= 360;
+    return difference;
+  }
+
+  public calculateSolarReturn(
+    natalChart: WesternChartData,
+    targetYear: number,
+    latitude: number,
+    longitude: number,
+    houseSystem: WesternChartData["houseSystem"] = natalChart.houseSystem
+  ): SolarReturnReport {
+    if (!Number.isInteger(targetYear) || targetYear < 100 || targetYear > 9998) {
+      throw new Error("Solar Return year must be a whole-number year between 100 and 9998.");
+    }
+    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
+      throw new Error("Solar Return latitude must be between -90 and 90 degrees.");
+    }
+    if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+      throw new Error("Solar Return longitude must be between -180 and 180 degrees.");
+    }
+
+    const natalSun = natalChart.planets.find((planet) => planet.name === "Sun");
+    if (!natalSun) {
+      throw new Error("Solar Return requires a natal Sun longitude.");
+    }
+
+    const yearStart = new Date(0);
+    yearStart.setUTCFullYear(targetYear, 0, 1);
+    yearStart.setUTCHours(0, 0, 0, 0);
+    const yearStartMs = yearStart.getTime();
+    const yearStartLongitude = this.calculateSunLongitude(yearStartMs);
+    const forwardArc = normalizeDegrees(natalSun.longitude - yearStartLongitude);
+    const approximateReturnMs = yearStartMs
+      + (forwardArc / SolarReturnEngine.MEAN_SOLAR_MOTION) * SolarReturnEngine.DAY_MS;
+
+    let lowMs = 0;
+    let highMs = 0;
+    let bracketed = false;
+
+    // The equation of center can move the actual crossing by around two days
+    // from the mean-motion estimate. Expand defensively and require a signed
+    // longitude crossing before starting bisection.
+    for (const halfWidthDays of [2, 4, 8, 12]) {
+      lowMs = approximateReturnMs - halfWidthDays * SolarReturnEngine.DAY_MS;
+      highMs = approximateReturnMs + halfWidthDays * SolarReturnEngine.DAY_MS;
+      const lowDifference = this.signedAngularDifference(
+        this.calculateSunLongitude(lowMs),
+        natalSun.longitude
+      );
+      const highDifference = this.signedAngularDifference(
+        this.calculateSunLongitude(highMs),
+        natalSun.longitude
+      );
+
+      if (lowDifference <= 0 && highDifference >= 0) {
+        bracketed = true;
+        break;
+      }
+    }
+
+    if (!bracketed) {
+      throw new Error(`Could not bracket the ${targetYear} Solar Return crossing.`);
+    }
+
+    for (let iteration = 0; iteration < 48; iteration++) {
+      const midMs = (lowMs + highMs) / 2;
+      const midDifference = this.signedAngularDifference(
+        this.calculateSunLongitude(midMs),
+        natalSun.longitude
+      );
+      if (midDifference < 0) {
+        lowMs = midMs;
+      } else {
+        highMs = midMs;
+      }
+      if (highMs - lowMs < 250) break;
+    }
+
+    const returnDate = new Date((lowMs + highMs) / 2);
+    const returnChart = calculateWesternChart(
+      returnDate.getUTCFullYear(),
+      returnDate.getUTCMonth() + 1,
+      returnDate.getUTCDate(),
+      returnDate.getUTCHours(),
+      returnDate.getUTCMinutes(),
+      latitude,
+      longitude,
+      0,
+      houseSystem,
+      returnDate.getUTCSeconds()
+    );
+    const returnSun = returnChart.planets.find((planet) => planet.name === "Sun");
+    if (!returnSun) {
+      throw new Error("Solar Return chart did not contain a calculated Sun position.");
+    }
+
+    return {
+      targetYear,
+      returnInstantUTC: returnDate.toISOString(),
+      natalSunLongitude: natalSun.longitude,
+      returnSunLongitude: returnSun.longitude,
+      latitude,
+      longitude,
+      houseSystem,
+      returnChart,
+      method: "Exact tropical return of the natal geocentric Sun longitude, solved with the shared SwissEphemeris facade and refined by bisection. Houses and angles use the supplied return-place coordinates; this panel defaults to the natal chart location.",
+    };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 4. LUNAR RETURN CHARTS
+// ---------------------------------------------------------------------------
+
+export interface LunarReturnReport {
+  anchorDateUTC: string;
+  returnInstantUTC: string;
+  natalMoonLongitude: number;
+  returnMoonLongitude: number;
+  daysFromAnchor: number;
+  latitude: number;
+  longitude: number;
+  houseSystem: WesternChartData["houseSystem"];
+  returnChart: WesternChartData;
+  method: string;
+}
+
+/**
+ * Finds the nearest lunar return to a selected UTC anchor date. The root is
+ * solved from the transiting geocentric Moon's tropical longitude returning
+ * to its natal longitude; the return chart is then cast for the supplied
+ * location. Its exact instant is global, while its angles/houses are local.
+ */
+export class LunarReturnEngine {
+  private static readonly DAY_MS = 86400000;
+  private static readonly MEAN_MOON_MOTION = 360 / 27.321661;
+
+  private calculateMoonLongitude(instantMs: number): number {
+    const date = new Date(instantMs);
+    const julianDay = swissEphemeris.calculateJulianDay(
+      date.getUTCFullYear(),
+      date.getUTCMonth() + 1,
+      date.getUTCDate(),
+      date.getUTCHours(),
+      date.getUTCMinutes(),
+      date.getUTCSeconds(),
+      0
+    );
+    return swissEphemeris.calculatePlanetPosition(
+      swissEphemeris.MOON,
+      julianDay
+    ).longitude;
+  }
+
+  private signedAngularDifference(longitude: number, targetLongitude: number): number {
+    let difference = normalizeDegrees(longitude - targetLongitude);
+    if (difference > 180) difference -= 360;
+    return difference;
+  }
+
+  public calculateLunarReturn(
+    natalChart: WesternChartData,
+    anchorDate: Date,
+    latitude: number,
+    longitude: number,
+    houseSystem: WesternChartData["houseSystem"] = natalChart.houseSystem
+  ): LunarReturnReport {
+    if (!Number.isFinite(anchorDate.getTime())) {
+      throw new Error("Lunar Return requires a valid anchor date.");
+    }
+    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
+      throw new Error("Lunar Return latitude must be between -90 and 90 degrees.");
+    }
+    if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+      throw new Error("Lunar Return longitude must be between -180 and 180 degrees.");
+    }
+
+    const natalMoon = natalChart.planets.find((planet) => planet.name === "Moon");
+    if (!natalMoon) {
+      throw new Error("Lunar Return requires a natal Moon longitude.");
+    }
+
+    const anchorMs = anchorDate.getTime();
+    const anchorMoonLongitude = this.calculateMoonLongitude(anchorMs);
+    const differenceAtAnchor = this.signedAngularDifference(
+      anchorMoonLongitude,
+      natalMoon.longitude
+    );
+    const approximateReturnMs = anchorMs
+      - (differenceAtAnchor / LunarReturnEngine.MEAN_MOON_MOTION)
+        * LunarReturnEngine.DAY_MS;
+
+    let lowMs = 0;
+    let highMs = 0;
+    let bracketed = false;
+
+    // The Moon's variable speed makes the mean-motion estimate approximate.
+    // Expand the local bracket until it encloses the nearest longitude crossing.
+    for (const halfWidthDays of [2, 4, 8]) {
+      lowMs = approximateReturnMs - halfWidthDays * LunarReturnEngine.DAY_MS;
+      highMs = approximateReturnMs + halfWidthDays * LunarReturnEngine.DAY_MS;
+      const lowDifference = this.signedAngularDifference(
+        this.calculateMoonLongitude(lowMs),
+        natalMoon.longitude
+      );
+      const highDifference = this.signedAngularDifference(
+        this.calculateMoonLongitude(highMs),
+        natalMoon.longitude
+      );
+
+      if (lowDifference <= 0 && highDifference >= 0) {
+        bracketed = true;
+        break;
+      }
+    }
+
+    if (!bracketed) {
+      throw new Error("Could not bracket the nearest Lunar Return crossing.");
+    }
+
+    for (let iteration = 0; iteration < 48; iteration++) {
+      const midMs = (lowMs + highMs) / 2;
+      const midDifference = this.signedAngularDifference(
+        this.calculateMoonLongitude(midMs),
+        natalMoon.longitude
+      );
+      if (midDifference < 0) {
+        lowMs = midMs;
+      } else {
+        highMs = midMs;
+      }
+      if (highMs - lowMs < 250) break;
+    }
+
+    const returnDate = new Date((lowMs + highMs) / 2);
+    const returnChart = calculateWesternChart(
+      returnDate.getUTCFullYear(),
+      returnDate.getUTCMonth() + 1,
+      returnDate.getUTCDate(),
+      returnDate.getUTCHours(),
+      returnDate.getUTCMinutes(),
+      latitude,
+      longitude,
+      0,
+      houseSystem,
+      returnDate.getUTCSeconds()
+    );
+    const returnMoon = returnChart.planets.find((planet) => planet.name === "Moon");
+    if (!returnMoon) {
+      throw new Error("Lunar Return chart did not contain a calculated Moon position.");
+    }
+
+    return {
+      anchorDateUTC: anchorDate.toISOString(),
+      returnInstantUTC: returnDate.toISOString(),
+      natalMoonLongitude: natalMoon.longitude,
+      returnMoonLongitude: returnMoon.longitude,
+      daysFromAnchor: (returnDate.getTime() - anchorMs) / LunarReturnEngine.DAY_MS,
+      latitude,
+      longitude,
+      houseSystem,
+      returnChart,
+      method: "Nearest return of the geocentric tropical Moon to its natal longitude, estimated with mean lunar motion and refined by bisection. Houses and angles use the supplied return-place coordinates; this panel defaults to the natal chart location.",
+    };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 5. HELLENISTIC ANNUAL PROFECTIONS
 // ---------------------------------------------------------------------------
 
 export interface ProfectionResult {
@@ -232,117 +720,307 @@ export class ProfectionsEngine {
 }
 
 // ---------------------------------------------------------------------------
-// 3. ZODIACAL RELEASING (Spirit & Fortune)
+// 6. ZODIACAL RELEASING (Spirit & Fortune)
 // ---------------------------------------------------------------------------
 
+export type ReleasingLevel = "L1" | "L2" | "L3" | "L4";
+
 export interface ReleasingPeriod {
-  level: "L1" | "L2";
+  level: ReleasingLevel;
   sign: string;
+  /** Duration expressed as 360-day ideal years (fractional for L2-L4). */
   durationYears: number;
+  /** Exact period length in days under the selected 360-day-year convention. */
+  durationDays: number;
   startDate: string;
   endDate: string;
+  isAngular: boolean;
+  /** 1st, 4th, 7th, 10th from the Lot of Fortune; null if unavailable. */
+  angleFromFortune: number | null;
+  /** The 10th sign from Fortune is the traditional major peak. */
   isPeak: boolean;
+  /** Marks the period immediately following a completed 12-sign circuit. */
+  isLoosingBond: boolean;
   ruler: string;
 }
 
 export interface ZodiacalReleasingReport {
   lotName: string;
   lotSign: string;
+  fortuneSign: string;
+  releasingStartSign: string;
   currentL1Period: ReleasingPeriod;
   currentL2Period: ReleasingPeriod;
+  currentL3Period: ReleasingPeriod;
+  currentL4Period: ReleasingPeriod;
   allL1Periods: ReleasingPeriod[];
+  currentL2Periods: ReleasingPeriod[];
+  currentL3Periods: ReleasingPeriod[];
+  currentL4Periods: ReleasingPeriod[];
   peakPeriodsCount: number;
+  calculationStandard: string;
   interpretation: string;
 }
 
+type ReleasingPeriodInternal = ReleasingPeriod & {
+  startMs: number;
+  endMs: number;
+};
+
 export class ZodiacalReleasingEngine {
-  // Planetary period allotments in years for each zodiac sign
+  /**
+   * Valens/Brennan-style minor-year allotments used by the common 360-day
+   * Zodiacal Releasing convention. Capricorn is 27; Aquarius remains 30.
+   * Other historical variants exist, so the selected convention is reported.
+   */
   public static readonly SIGN_PERIODS: Record<string, number> = {
-    Aries: 15,       // Mars
-    Taurus: 8,       // Venus
-    Gemini: 20,      // Mercury
-    Cancer: 25,      // Moon
-    Leo: 19,         // Sun
-    Virgo: 20,       // Mercury
-    Libra: 8,        // Venus
-    Scorpio: 15,     // Mars
-    Sagittarius: 12, // Jupiter
-    Capricorn: 27,   // Saturn
-    Aquarius: 30,    // Saturn
-    Pisces: 12,      // Jupiter
+    Aries: 15,
+    Taurus: 8,
+    Gemini: 20,
+    Cancer: 25,
+    Leo: 19,
+    Virgo: 20,
+    Libra: 8,
+    Scorpio: 15,
+    Sagittarius: 12,
+    Capricorn: 27,
+    Aquarius: 30,
+    Pisces: 12,
   };
+
+  public static readonly YEAR_LENGTH_DAYS = 360;
+  private static readonly DAY_MS = 86400000;
+  private static readonly SIGN_NAMES = ZODIAC_SIGNS.map((sign) => sign.name);
+
+  private getAngleFromFortune(signIndex: number, fortuneIndex: number | null): number | null {
+    if (fortuneIndex === null) return null;
+    return ((signIndex - fortuneIndex + 12) % 12) + 1;
+  }
+
+  private buildPeriod(
+    level: ReleasingLevel,
+    signIndex: number,
+    startMs: number,
+    durationDays: number,
+    fortuneIndex: number | null,
+    isLoosingBond: boolean
+  ): ReleasingPeriodInternal {
+    const signName = ZodiacalReleasingEngine.SIGN_NAMES[signIndex] || "Aries";
+    const angle = this.getAngleFromFortune(signIndex, fortuneIndex);
+    const endMs = startMs + durationDays * ZodiacalReleasingEngine.DAY_MS;
+    const startDate = new Date(startMs);
+    const endDate = new Date(endMs);
+
+    return {
+      level,
+      sign: signName,
+      durationDays,
+      durationYears: durationDays / ZodiacalReleasingEngine.YEAR_LENGTH_DAYS,
+      startDate: startDate.toISOString().slice(0, 10),
+      endDate: endDate.toISOString().slice(0, 10),
+      isAngular: angle !== null && (angle === 1 || angle === 4 || angle === 7 || angle === 10),
+      angleFromFortune: angle !== null && (angle === 1 || angle === 4 || angle === 7 || angle === 10) ? angle : null,
+      isPeak: angle === 10,
+      isLoosingBond,
+      ruler: ProfectionsEngine.SIGN_RULERS[signName]?.ruler || "Sun",
+      startMs,
+      endMs,
+    };
+  }
+
+  private getNextSignIndex(signIndex: number, loosenBond: boolean): number {
+    // After a complete 12-sign circuit, the sequence resumes at the sign
+    // opposite the sign that would otherwise have followed the parent sign.
+    return (signIndex + 1 + (loosenBond ? 6 : 0)) % 12;
+  }
+
+  private generateL1Periods(
+    startSignIndex: number,
+    startMs: number,
+    cutoffMs: number,
+    fortuneIndex: number | null
+  ): ReleasingPeriodInternal[] {
+    const periods: ReleasingPeriodInternal[] = [];
+    let signIndex = startSignIndex;
+    let periodStart = startMs;
+    let signsProcessed = 0;
+
+    // Always retain one complete 12-sign L1 circuit for compatibility and context.
+    while ((periodStart < cutoffMs || periods.length < 12) && periods.length < 10000) {
+      const signName = ZodiacalReleasingEngine.SIGN_NAMES[signIndex] || "Aries";
+      const durationDays = ZodiacalReleasingEngine.SIGN_PERIODS[signName] * ZodiacalReleasingEngine.YEAR_LENGTH_DAYS;
+      periods.push(
+        this.buildPeriod("L1", signIndex, periodStart, durationDays, fortuneIndex, signsProcessed === 12)
+      );
+
+      const loosenBond = signsProcessed === 11;
+      signsProcessed += 1;
+      signIndex = this.getNextSignIndex(signIndex, loosenBond);
+      periodStart += durationDays * ZodiacalReleasingEngine.DAY_MS;
+    }
+
+    return periods;
+  }
+
+  private generateSubperiods(
+    parent: ReleasingPeriodInternal,
+    level: Exclude<ReleasingLevel, "L1">,
+    fortuneIndex: number | null
+  ): ReleasingPeriodInternal[] {
+    if (!parent) {
+      throw new Error(`Cannot generate ${level}: the active parent period was not found.`);
+    }
+    if (
+      !Number.isFinite(parent.startMs)
+      || !Number.isFinite(parent.endMs)
+      || parent.endMs <= parent.startMs
+    ) {
+      throw new Error(
+        `Cannot generate ${level}: invalid parent interval for ${parent.level} ${parent.sign} (${parent.startMs}–${parent.endMs}).`
+      );
+    }
+
+    const periods: ReleasingPeriodInternal[] = [];
+    const levelNumber = Number(level.slice(1));
+    const unitDays = ZodiacalReleasingEngine.YEAR_LENGTH_DAYS / (12 ** (levelNumber - 1));
+    const parentDurationMs = parent.endMs - parent.startMs;
+
+    let signIndex = ZodiacalReleasingEngine.SIGN_NAMES.findIndex((sign) => sign === parent.sign);
+    if (signIndex < 0) signIndex = 0;
+
+    let elapsedMs = 0;
+    let signsProcessed = 0;
+
+    while (elapsedMs < parentDurationMs - 0.001 && periods.length < 10000) {
+      const signName = ZodiacalReleasingEngine.SIGN_NAMES[signIndex] || "Aries";
+      const idealDurationDays = ZodiacalReleasingEngine.SIGN_PERIODS[signName] * unitDays;
+      const idealDurationMs = idealDurationDays * ZodiacalReleasingEngine.DAY_MS;
+      const remainingMs = parentDurationMs - elapsedMs;
+      const actualDurationMs = Math.min(idealDurationMs, remainingMs);
+      const actualDurationDays = actualDurationMs / ZodiacalReleasingEngine.DAY_MS;
+      const wasTruncated = actualDurationMs < idealDurationMs - 0.001;
+
+      periods.push(
+        this.buildPeriod(
+          level,
+          signIndex,
+          parent.startMs + elapsedMs,
+          actualDurationDays,
+          fortuneIndex,
+          signsProcessed === 12
+        )
+      );
+
+      elapsedMs += actualDurationMs;
+      if (wasTruncated) break;
+
+      const loosenBond = signsProcessed === 11;
+      signsProcessed += 1;
+      signIndex = this.getNextSignIndex(signIndex, loosenBond);
+    }
+
+    return periods;
+  }
+
+  private findActivePeriod(periods: ReleasingPeriodInternal[], instantMs: number): ReleasingPeriodInternal {
+    if (periods.length === 0) {
+      throw new Error("Cannot resolve an active Zodiacal Releasing period: the generated level contains no periods.");
+    }
+    return periods.find((period) => instantMs >= period.startMs && instantMs < period.endMs)
+      || periods[periods.length - 1];
+  }
+
+  private toPublicPeriod(period: ReleasingPeriodInternal): ReleasingPeriod {
+    const { startMs: _startMs, endMs: _endMs, ...publicPeriod } = period;
+    return publicPeriod;
+  }
 
   public calculateReleasing(
     birthDate: Date,
     lotLongitude: number,
-    lotName: "Spirit (Career & Purpose)" | "Fortune (Physical Health & Material Fortune)"
+    lotName: "Spirit (Career & Purpose)" | "Fortune (Physical Health & Material Fortune)",
+    fortuneLongitude?: number,
+    currentDate: Date = new Date()
   ): ZodiacalReleasingReport {
-    const startSignIdx = Math.floor(lotLongitude / 30);
-    const lotSign = ZODIAC_SIGNS[startSignIdx]?.name || "Aries";
+    const lotSignIndex = Math.floor(((lotLongitude % 360) + 360) % 360 / 30);
+    const hasFortune = typeof fortuneLongitude === "number" && Number.isFinite(fortuneLongitude);
+    const fortuneSignIndex: number | null = hasFortune
+      ? Math.floor(((fortuneLongitude % 360) + 360) % 360 / 30)
+      : null;
+    const lotSign = ZodiacalReleasingEngine.SIGN_NAMES[lotSignIndex] || "Aries";
+    const fortuneSign = hasFortune && fortuneSignIndex !== null
+      ? ZodiacalReleasingEngine.SIGN_NAMES[fortuneSignIndex] || "Aries"
+      : "Not supplied";
 
-    const l1Periods: ReleasingPeriod[] = [];
-    let curDate = new Date(birthDate);
+    // Valens' same-sign Spirit adjustment: apply only when Fortune was
+    // explicitly supplied and both lots occupy the same sign. Legacy callers
+    // without Fortune retain the unadjusted releasing start sign.
+    const applySpiritAdjustment = hasFortune
+      && lotName.startsWith("Spirit")
+      && lotSignIndex === fortuneSignIndex;
+    const releasingStartIndex = applySpiritAdjustment ? (lotSignIndex + 1) % 12 : lotSignIndex;
+    const releasingStartSign = ZodiacalReleasingEngine.SIGN_NAMES[releasingStartIndex] || "Aries";
 
-    for (let i = 0; i < 12; i++) {
-      const signIdx = (startSignIdx + i) % 12;
-      const signName = ZODIAC_SIGNS[signIdx]?.name || "Aries";
-      const duration = ZodiacalReleasingEngine.SIGN_PERIODS[signName] || 15;
+    const birthMs = birthDate.getTime();
+    const nowMs = Math.max(currentDate.getTime(), birthMs);
+    const ageInYears = Math.max(0, (nowMs - birthMs) / (365.2425 * ZodiacalReleasingEngine.DAY_MS));
+    const horizonYears = Math.max(120, Math.ceil(ageInYears) + 10);
+    const cutoffMs = birthMs + horizonYears * 365.2425 * ZodiacalReleasingEngine.DAY_MS;
 
-      const startDateStr = curDate.toLocaleDateString();
-      const nextDate = new Date(curDate);
-      nextDate.setFullYear(nextDate.getFullYear() + duration);
-      const endDateStr = nextDate.toLocaleDateString();
+    // L1 periods use the 360-day ideal year and continue far enough to include
+    // the current period plus a useful forward horizon for older birth dates.
+    const l1Internal = this.generateL1Periods(releasingStartIndex, birthMs, cutoffMs, fortuneSignIndex);
+    const currentL1Internal = this.findActivePeriod(l1Internal, nowMs);
+    // L2, L3 and L4 are generated recursively from the active parent period.
+    // Each level subdivides by the same 12 sign-period allotments, with the
+    // final child truncated exactly at its parent's end.
+    const l2Internal = this.generateSubperiods(currentL1Internal, "L2", fortuneSignIndex);
+    const currentL2Internal = this.findActivePeriod(l2Internal, nowMs);
+    const l3Internal = this.generateSubperiods(currentL2Internal, "L3", fortuneSignIndex);
+    const currentL3Internal = this.findActivePeriod(l3Internal, nowMs);
 
-      // Peak period: if sign is angular (1st, 4th, 7th, 10th from Lot)
-      const isPeak = i === 0 || i === 3 || i === 6 || i === 9;
-      const ruler = ProfectionsEngine.SIGN_RULERS[signName]?.ruler || "Sun";
+    const l4Internal = this.generateSubperiods(currentL3Internal, "L4", fortuneSignIndex);
+    const currentL4Internal = this.findActivePeriod(l4Internal, nowMs);
 
-      l1Periods.push({
-        level: "L1",
-        sign: signName,
-        durationYears: duration,
-        startDate: startDateStr,
-        endDate: endDateStr,
-        isPeak,
-        ruler,
-      });
-
-      curDate = nextDate;
-    }
-
-    const currentL1 = l1Periods[0];
-    const currentL2: ReleasingPeriod = {
-      level: "L2",
-      sign: lotSign,
-      durationYears: Math.round((currentL1.durationYears / 12) * 10) / 10,
-      startDate: birthDate.toLocaleDateString(),
-      endDate: "Active Sub-phase",
-      isPeak: true,
-      ruler: currentL1.ruler,
-    };
+    const currentL1 = this.toPublicPeriod(currentL1Internal);
+    const currentL2 = this.toPublicPeriod(currentL2Internal);
+    const currentL3 = this.toPublicPeriod(currentL3Internal);
+    const currentL4 = this.toPublicPeriod(currentL4Internal);
+    const allL1Periods = l1Internal.map((period) => this.toPublicPeriod(period));
 
     return {
       lotName,
       lotSign,
+      fortuneSign,
+      releasingStartSign,
       currentL1Period: currentL1,
       currentL2Period: currentL2,
-      allL1Periods: l1Periods,
-      peakPeriodsCount: l1Periods.filter((p) => p.isPeak).length,
-      interpretation: `Zodiacal Releasing unfolds the chapters of your life from the sign of the Part of ${lotName} (${lotSign}). The current L1 chapter spans ${currentL1.durationYears} years under ${currentL1.sign} (ruled by ${currentL1.ruler})${currentL1.isPeak ? " [PEAK CHAPTER: Angular manifestation of major destiny milestones]" : ""}.`,
+      currentL3Period: currentL3,
+      currentL4Period: currentL4,
+      allL1Periods,
+      currentL2Periods: l2Internal.map((period) => this.toPublicPeriod(period)),
+      currentL3Periods: l3Internal.map((period) => this.toPublicPeriod(period)),
+      currentL4Periods: l4Internal.map((period) => this.toPublicPeriod(period)),
+      peakPeriodsCount: allL1Periods.filter((period) => period.isPeak).length,
+      calculationStandard: "Valens/Brennan-style releasing: 360-day ideal years, Capricorn 27 / Aquarius 30, opposite-sign Loosing of the Bond, and truncated child periods.",
+      interpretation: `Zodiacal Releasing from ${lotName} begins in ${releasingStartSign} (the Lot itself is in ${lotSign}; Fortune is in ${fortuneSign}). The active L1 chapter is ${currentL1.sign}, ruled by ${currentL1.ruler}, from ${currentL1.startDate} to ${currentL1.endDate}.${currentL1.isPeak ? " This is a 10th-from-Fortune peak period." : ""} The active L2 period is ${currentL2.sign}, with L3 in ${currentL3.sign} and L4 in ${currentL4.sign}.`,
     };
   }
 }
 
 // ---------------------------------------------------------------------------
-// 4. MEDIEVAL FIRDARIA
+// 7. MEDIEVAL FIRDARIA
 // ---------------------------------------------------------------------------
 
 export interface FirdariaPeriod {
   planet: string;
   symbol: string;
   years: number;
+  /** One-based 75-year Firdaria cycle number. */
+  cycleNumber: number;
   startAge: number;
   endAge: number;
+  /** Lunar-node major periods have no sub-periods in the standard 75-year sequence. */
   subPeriods: Array<{ subLord: string; startAge: number; endAge: number }>;
 }
 
@@ -383,50 +1061,75 @@ export class FirdariaEngine {
   ];
 
   public calculateFirdaria(chart: WesternChartData, currentAge: number): FirdariaReport {
-    // Diurnal if Sun is in Houses 7 through 12
+    // Diurnal if Sun is in Houses 7 through 12.
     const sunHouse = chart.planets.find((p) => p.name === "Sun")?.house || 1;
     const isDiurnal = sunHouse >= 7 && sunHouse <= 12;
-
     const sequence = isDiurnal ? FirdariaEngine.DIURNAL_LORDS : FirdariaEngine.NOCTURNAL_LORDS;
+    const planetarySubperiodOrder = sequence.slice(0, 7);
+    const cycleLengthYears = sequence.reduce((sum, item) => sum + item.years, 0); // 75 years
+    const safeAge = Math.max(0, Number.isFinite(currentAge) ? currentAge : 0);
+    const cycleIndex = Math.floor(safeAge / cycleLengthYears);
+    const cycleStartAge = cycleIndex * cycleLengthYears;
     const periods: FirdariaPeriod[] = [];
 
-    let cumAge = 0;
-    let activeMajor = sequence[0].planet;
-    let activeSub = sequence[0].planet;
+    let cumulativeAge = cycleStartAge;
+    let activeMajor = "No active Firdaria period";
+    let activeSub = "No active sub-period";
     let activeRange = "";
 
     sequence.forEach((item) => {
-      const start = cumAge;
-      const end = cumAge + item.years;
-      const subYears = item.years / 7;
-
+      const start = cumulativeAge;
+      const end = start + item.years;
       const subPeriods: FirdariaPeriod["subPeriods"] = [];
-      for (let s = 0; s < 7; s++) {
-        const subStart = Math.round((start + s * subYears) * 10) / 10;
-        const subEnd = Math.round((start + (s + 1) * subYears) * 10) / 10;
-        const subLord = sequence[s % 7].planet;
-        subPeriods.push({ subLord, startAge: subStart, endAge: subEnd });
 
-        if (currentAge >= subStart && currentAge < subEnd) {
-          activeSub = subLord;
+      const majorSubperiodStartIndex = planetarySubperiodOrder.findIndex(
+        (planet) => planet.planet === item.planet
+      );
+
+      // The seven classical planets receive seven equal subdivisions. Each
+      // major's sub-period sequence starts with that major lord and continues
+      // through the sect-specific Chaldean order. The lunar-node majors stand
+      // alone and are not split into planetary sub-periods in this variant.
+      if (majorSubperiodStartIndex >= 0) {
+        const subYears = item.years / 7;
+        for (let subIndex = 0; subIndex < 7; subIndex++) {
+          const subLord = planetarySubperiodOrder[
+            (majorSubperiodStartIndex + subIndex) % planetarySubperiodOrder.length
+          ].planet;
+          const subStart = start + subIndex * subYears;
+          const subEnd = subIndex === 6 ? end : start + (subIndex + 1) * subYears;
+
+          subPeriods.push({
+            subLord,
+            startAge: subStart,
+            endAge: subEnd,
+          });
+
+          if (safeAge >= subStart && safeAge < subEnd) {
+            activeSub = subLord;
+          }
         }
       }
 
-      if (currentAge >= start && currentAge < end) {
+      if (safeAge >= start && safeAge < end) {
         activeMajor = item.planet;
-        activeRange = `Age ${start} to ${end}`;
+        activeRange = `Age ${start.toFixed(2)} to ${end.toFixed(2)}`;
+        if (subPeriods.length === 0) {
+          activeSub = "No traditional sub-period (lunar-node major)";
+        }
       }
 
       periods.push({
         planet: item.planet,
         symbol: item.symbol,
         years: item.years,
+        cycleNumber: cycleIndex + 1,
         startAge: start,
         endAge: end,
         subPeriods,
       });
 
-      cumAge = end;
+      cumulativeAge = end;
     });
 
     return {
@@ -435,7 +1138,6 @@ export class FirdariaEngine {
       activeSubLord: activeSub,
       activeYearsRange: activeRange,
       allPeriods: periods,
-      interpretation: `Under the medieval ${isDiurnal ? "Day (Diurnal)" : "Night (Nocturnal)"} Firdaria cycle, your current life master is ${activeMajor} (${activeRange}), with the active sub-ruler ${activeSub} shaping daily events and opportunities.`,
+      interpretation: `Under the medieval ${isDiurnal ? "Day (Diurnal)" : "Night (Nocturnal)"} Firdaria cycle, your current cycle is number ${cycleIndex + 1} (ages ${cycleStartAge}–${cycleStartAge + cycleLengthYears}). The active major lord is ${activeMajor} (${activeRange}), with ${activeSub.toLowerCase()} shaping the current sub-period where the traditional system assigns one.`,
     };
-  }
-}
+  }}

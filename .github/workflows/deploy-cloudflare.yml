@@ -6,12 +6,14 @@ on:
       - "app/**"
       - "components/**"
       - "lib/**"
+      - "scripts/**"
       - "public/**"
       - "next.config.ts"
       - "open-next.config.ts"
       - "wrangler.jsonc"
       - "package.json"
       - "package-lock.json"
+      - "tsconfig.json"
       - ".github/workflows/deploy-cloudflare.yml"
   workflow_dispatch:
     inputs:
@@ -42,6 +44,24 @@ jobs:
         run: npm install --global npm@10.9.9
       - name: Install locked app dependencies
         run: npm ci --no-audit --no-fund
+      - name: Set up Bun for TypeScript regression suites
+        uses: oven-sh/setup-bun@v2
+      - name: Run Western Astrology regression suites
+        run: |
+          bun run scripts/testAdvancedWesternBirthTimeSuite.ts
+          bun run scripts/testAdvancedWesternAgeSuite.ts
+          bun run scripts/testAdvancedWesternDeclinationSuite.ts
+          bun run scripts/testAdvancedWesternTimingSuite.ts
+          bun run scripts/testAdvancedWesternEclipseSuite.ts
+          bun run scripts/testAdvancedWesternAstrocartographySuite.ts
+          bun run scripts/testAdvancedWesternFirdariaSuite.ts
+          bun run scripts/testAdvancedWesternFixedStarSuite.ts
+          bun run scripts/testAdvancedWesternLilithSuite.ts
+          bun run scripts/testAdvancedWesternMidpointSuite.ts
+          bun run scripts/testAdvancedWesternSolarArcSuite.ts
+          bun run scripts/testAdvancedWesternSolarReturnSuite.ts
+          bun run scripts/testAdvancedWesternAntisciaSuite.ts
+          bun run scripts/testWesternBenchmarkSuite.ts
       - name: Install temporary Cloudflare build tools
         run: npm install --no-save --package-lock=false --no-audit --no-fund @opennextjs/cloudflare@latest wrangler@latest
       - name: Build the Next.js application
