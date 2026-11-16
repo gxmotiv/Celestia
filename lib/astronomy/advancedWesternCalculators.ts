@@ -112,10 +112,17 @@ export class MidpointCalculator {
   /**
    * Calculate all major midpoints
    */
-  public calculateAllMidpoints(planets: PlanetPosition[]): MidpointItem[] {
+  public calculateAllMidpoints(
+    planets: PlanetPosition[],
+    angles: PlanetPosition[] = []
+  ): MidpointItem[] {
     const items: MidpointItem[] = [];
-    const corePlanets = planets.filter((p) =>
-      ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto", "Chiron", "NorthNode"].includes(p.name)
+    const corePlanets = [...planets, ...angles].filter((p) =>
+      [
+        "Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter",
+        "Saturn", "Uranus", "Neptune", "Pluto", "Chiron",
+        "NorthNode", "SouthNode", "ASC", "MC",
+      ].includes(p.name)
     );
 
     for (let i = 0; i < corePlanets.length; i++) {
