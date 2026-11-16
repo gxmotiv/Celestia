@@ -92,6 +92,47 @@ for (const [planet, expected] of ramanOjayugma) {
     `Raman Standard Horoscope Ojayugma for ${planet} must match the independently transcribed worked-chart table`);
 }
 
+// End-to-end Sthana Bala reconciliation against Raman's Example 13
+// (printed pp. 23–24). The source prints Uchcha to two decimal/one decimal
+// precision and truncates some figures; allow 0.15 Virupa for Uchcha and
+// the resulting total, while the other four components must match exactly.
+const ramanSthanaExpected: Array<{
+  planet: string;
+  uccha: number;
+  saptavargaja: number;
+  ojayugma: number;
+  kendradi: number;
+  drekkana: number;
+  total: number;
+}> = [
+  { planet: "Sun",     uccha: 3.00,  saptavargaja: 90,     ojayugma: 30, kendradi: 60, drekkana: 15, total: 198.00 },
+  { planet: "Moon",    uccha: 32.75, saptavargaja: 48.75,  ojayugma: 15, kendradi: 30, drekkana: 0,  total: 126.50 },
+  { planet: "Mars",    uccha: 37.06, saptavargaja: 90,     ojayugma: 15, kendradi: 30, drekkana: 0,  total: 172.06 },
+  { planet: "Mercury", uccha: 54.50, saptavargaja: 135,    ojayugma: 30, kendradi: 60, drekkana: 0,  total: 279.50 },
+  { planet: "Jupiter", uccha: 56.33, saptavargaja: 71.25,  ojayugma: 15, kendradi: 15, drekkana: 0,  total: 157.58 },
+  { planet: "Venus",   uccha: 1.95,  saptavargaja: 116.25, ojayugma: 30, kendradi: 15, drekkana: 15, total: 178.20 },
+  { planet: "Saturn",  uccha: 34.80, saptavargaja: 97.50,  ojayugma: 15, kendradi: 30, drekkana: 0,  total: 177.30 },
+];
+for (const expected of ramanSthanaExpected) {
+  const result = engine.calculateSthanaBala(expected.planet, {
+    ...ramanStandardHoroscope,
+    saptavargajaScale: "raman-halving",
+    drekkanaBalaMethod: "bphs-sanskrit-raman",
+  });
+  assert.equal(result.saptavargajaBala, expected.saptavargaja,
+    `Raman Example 13 ${expected.planet} Saptavargaja component`);
+  assert.equal(result.ojayugmaBala, expected.ojayugma,
+    `Raman Example 13 ${expected.planet} Ojayugma component`);
+  assert.equal(result.kendradiBala, expected.kendradi,
+    `Raman Example 13 ${expected.planet} Kendradi component`);
+  assert.equal(result.drekkanaBala, expected.drekkana,
+    `Raman Example 13 ${expected.planet} Drekkana component`);
+  assert.ok(Math.abs(result.ucchaBala - expected.uccha) <= 0.15,
+    `Raman Example 13 ${expected.planet} Uchcha: expected about ${expected.uccha}, got ${result.ucchaBala}`);
+  assert.ok(Math.abs(result.total - expected.total) <= 0.15,
+    `Raman Example 13 ${expected.planet} Sthana total: expected about ${expected.total}, got ${result.total}`);
+}
+
 // Raman's own Standard Horoscope, Example 12, p. 28, yields 15 for
 // Sun in first and Venus in last Drekkana; every other planet gets zero.
 // This agrees with the BPHS Sanskrit order (male / neuter / female).
@@ -152,4 +193,4 @@ for (const [planet, longitude] of drekkanaMismatches) {
     `${planet} must not receive Drekkana Bala in a non-matching decanate`);
 }
 
-console.log("Shadbala Sthana Bala suite passed: BPHS Ojayugma Rasi/Navamsa grouping, D9 boundaries, Raman's primary worked example, and both Drekkana source orders.");
+console.log("Shadbala Sthana Bala suite passed: BPHS Ojayugma Rasi/Navamsa grouping, D9 boundaries, Raman's primary worked example, both Drekkana source orders, and Raman Example 13's five-part Sthana totals.");
