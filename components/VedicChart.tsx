@@ -352,9 +352,6 @@ export function VedicChart({
           vedicData={vedicData}
           birthDate={birthDate}
           birthTime={birthTime}
-          birthUtcInstant={birthUtcInstant}
-          birthLongitude={birthLongitude}
-          birthTimeKnown={!isBirthTimeUnknown}
         />
       )}
 
@@ -375,6 +372,9 @@ export function VedicChart({
           westernData={westernData}
           birthDate={birthDate}
           birthTime={birthTime}
+          birthUtcInstant={birthUtcInstant}
+          birthLongitude={birthLongitude}
+          birthTimeKnown={!isBirthTimeUnknown}
         />
       )}
 
