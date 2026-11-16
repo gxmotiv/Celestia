@@ -173,12 +173,21 @@ export function AdvancedWesternPanel({
     return profEngine.calculateAnnualProfection(chartData, currentAgeYears);
   }, [profEngine, chartData, currentAgeYears]);
 
-  // Zodiacal Releasing (from Spirit)
+  // Zodiacal Releasing (from Spirit): Fortune defines angular/peak periods.
   const zrEngine = useMemo(() => new ZodiacalReleasingEngine(), []);
-  const spiritReleasing: ZodiacalReleasingReport = useMemo(() => {
-    const spiritLon = chartData.arabianParts?.partOfSpirit.longitude || 0;
-    return zrEngine.calculateReleasing(birthDateObj, spiritLon, "Spirit (Career & Purpose)");
-  }, [zrEngine, birthDateObj, chartData.arabianParts]);
+  const spiritReleasing: ZodiacalReleasingReport | null = useMemo(() => {
+    const spiritLon = chartData.arabianParts?.partOfSpirit.longitude;
+    const fortuneLon = chartData.arabianParts?.partOfFortune.longitude;
+    if (spiritLon === undefined || fortuneLon === undefined) return null;
+
+    return zrEngine.calculateReleasing(
+      birthDateObj,
+      spiritLon,
+      "Spirit (Career & Purpose)",
+      fortuneLon,
+      nowObj
+    );
+  }, [zrEngine, birthDateObj, nowObj, chartData.arabianParts]);
 
   // Firdaria
   const firdariaEngine = useMemo(() => new FirdariaEngine(), []);
@@ -780,7 +789,7 @@ export function AdvancedWesternPanel({
       )}
 
       {/* SUB-TAB 9: ZODIACAL RELEASING */}
-      {activeSubTab === "releasing" && (
+      {activeSubTab === "releasing" && spiritReleasing && (
         <div className="space-y-4">
           <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
             <h4 className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
@@ -790,14 +799,35 @@ export function AdvancedWesternPanel({
             <p className="text-xs text-slate-300 leading-relaxed">
               {spiritReleasing.interpretation}
             </p>
+            <p className="text-[10px] text-slate-500">
+              {spiritReleasing.calculationStandard} Dates are UTC calendar dates; traditional variations may differ.
+            </p>
           </div>
 
-          {/* L1 Major Chapters Table */}
+          {/* The active hierarchy is resolved from the current instant, not assumed to be the birth period. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2">
+            {[
+              { label: "L1 · Major", period: spiritReleasing.currentL1Period },
+              { label: "L2 · Subperiod", period: spiritReleasing.currentL2Period },
+              { label: "L3 · Sub-subperiod", period: spiritReleasing.currentL3Period },
+              { label: "L4 · Fine timing", period: spiritReleasing.currentL4Period },
+            ].map(({ label, period }) => (
+              <div key={label} className="p-3 bg-slate-950/70 border border-amber-500/20 rounded-xl space-y-1">
+                <span className="text-[10px] text-slate-400">{label}</span>
+                <div className="text-sm font-bold text-amber-300">{period.sign}</div>
+                <div className="text-[11px] text-slate-300">{period.ruler} · {period.startDate} – {period.endDate}</div>
+                <div className="text-[10px] text-slate-500">{period.durationDays.toFixed(2)} days{period.isPeak ? " · 10th from Fortune peak" : ""}</div>
+                {period.isLoosingBond && <span className="text-[10px] text-cyan-300">Loosing of the Bond</span>}
+              </div>
+            ))}
+          </div>
+
+          {/* L2 sequence inside the currently active L1 period */}
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs text-slate-300">
               <thead className="bg-slate-950/80 text-slate-400 border-b border-slate-800 text-[11px]">
                 <tr>
-                  <th className="py-2.5 px-3">Zodiac Sign</th>
+                  <th className="py-2.5 px-3">L2 Sign</th>
                   <th className="py-2.5 px-3">Ruler</th>
                   <th className="py-2.5 px-3">Duration</th>
                   <th className="py-2.5 px-3">Date Range</th>
@@ -805,28 +835,53 @@ export function AdvancedWesternPanel({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 font-mono">
-                {spiritReleasing.allL1Periods.map((p, i) => (
+                {spiritReleasing.currentL2Periods.map((p, i) => (
                   <tr key={i} className="hover:bg-slate-800/40 transition-colors">
-                    <td className="py-2 px-3 font-sans font-semibold text-slate-200">
-                      {p.sign}
-                    </td>
+                    <td className="py-2 px-3 font-sans font-semibold text-slate-200">{p.sign}</td>
                     <td className="py-2 px-3 font-sans text-amber-400">{p.ruler}</td>
-                    <td className="py-2 px-3">{p.durationYears} Years</td>
+                    <td className="py-2 px-3">{p.durationDays.toFixed(1)} days</td>
                     <td className="py-2 px-3">{p.startDate} — {p.endDate}</td>
                     <td className="py-2 px-3 font-sans">
-                      {p.isPeak ? (
-                        <span className="text-[10px] font-bold text-rose-300 bg-rose-500/20 px-2 py-0.5 rounded border border-rose-500/30">
-                          ★ Peak Chapter
-                        </span>
-                      ) : (
-                        <span className="text-slate-500">Standard</span>
-                      )}
+                      {p.isPeak ? "10th from Fortune · Peak" : p.isLoosingBond ? "Loosing of the Bond" : "Standard"}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+
+          {/* L1 Major Chapters Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs text-slate-300">
+              <thead className="bg-slate-950/80 text-slate-400 border-b border-slate-800 text-[11px]">
+                <tr>
+                  <th className="py-2.5 px-3">L1 Zodiac Sign</th>
+                  <th className="py-2.5 px-3">Ruler</th>
+                  <th className="py-2.5 px-3">Ideal Years</th>
+                  <th className="py-2.5 px-3">UTC Date Range</th>
+                  <th className="py-2.5 px-3">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60 font-mono">
+                {spiritReleasing.allL1Periods.map((p, i) => (
+                  <tr key={i} className={p.startDate === spiritReleasing.currentL1Period.startDate ? "bg-amber-500/10" : "hover:bg-slate-800/40 transition-colors"}>
+                    <td className="py-2 px-3 font-sans font-semibold text-slate-200">{p.sign}</td>
+                    <td className="py-2 px-3 font-sans text-amber-400">{p.ruler}</td>
+                    <td className="py-2 px-3">{p.durationYears.toFixed(0)}</td>
+                    <td className="py-2 px-3">{p.startDate} — {p.endDate}</td>
+                    <td className="py-2 px-3 font-sans">
+                      {p.isPeak ? "10th from Fortune · Peak" : p.isLoosingBond ? "Loosing of the Bond" : "Standard"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+      {activeSubTab === "releasing" && !spiritReleasing && (
+        <div className="p-6 text-center text-xs text-slate-400 bg-slate-950/50 border border-slate-800 rounded-xl">
+          Zodiacal Releasing requires both the calculated Lot of Spirit and Lot of Fortune. This chart does not currently contain those positions.
         </div>
       )}
 
