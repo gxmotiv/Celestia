@@ -100,7 +100,10 @@ export function AdvancedWesternPanel({
   const allMidpoints = useMemo(() => {
     // Avoid calculating the full midpoint matrix until its tab is opened.
     return activeSubTab === "midpoints"
-      ? midpointCalc.calculateAllMidpoints(chartData.planets)
+      ? midpointCalc.calculateAllMidpoints(chartData.planets, [
+          { ...chartData.ascendant, name: "ASC" },
+          { ...chartData.midheaven, name: "MC" },
+        ])
       : [];
   }, [activeSubTab, midpointCalc, chartData.planets]);
 
