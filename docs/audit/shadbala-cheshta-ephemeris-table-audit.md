@@ -143,3 +143,45 @@ A genuine Bhava-based Kendradi alternative requires an explicit, validated set o
 - B. V. Raman, *Graha and Bhava Balas*, Chapter III, Articles 30–40 (Saptavargaja scope/scale, Ojayugma, Kendradi sign-versus-Bhava discussion, Drekkana and worked examples): [scanned edition](https://dn790000.ca.archive.org/0/items/1050-jyotish-books-with-siderial-zodiac/Bhava%20and%20Graha%20Balas_B.V.Raman%201996.pdf).
 
 The current Shadbala feature remains partial overall. This Sthana Bala work improves source traceability and input integrity; it does not complete the six-fold Shadbala or resolve Yuddha Bala, Cheshta source tables, and independent full-chart reconciliation.
+
+
+## 8. Dig Bala source audit and directional-input integrity
+
+### 8.1 BPHS rule and Raman's geometric explanation
+
+BPHS Chapter 27, verses 7–8, defines Dig Bala from the powerless cardinal point. The stated subtraction pairs are: the 4th/Nadir for Sun and Mars; the 7th/Descendant for Jupiter and Mercury; the 10th/Meridian for Moon and Venus; and the Ascendant for Saturn. If the directed difference exceeds 180°, it is folded back from 360°, then divided by 3 to obtain Virupas.
+
+Raman, *Graha and Bhava Balas*, Chapter IV, Articles 41–45, spells out the directions and interpolation: Ascendant = east; 10th/Meridian = south; Descendant/7th = west; Nadir/4th = north. Peak assignments are Jupiter/Mercury at the Ascendant, Sun/Mars at the 10th/Meridian, Saturn at the Descendant, and Moon/Venus at the 4th/Nadir. The opposite point is powerless; the adjusted ecliptic arc from that powerless point divided by 3 gives Dig Bala, with a maximum 60 and minimum 0.
+
+The present code computes distance to the *powerful* point and uses `(180° − distanceToPeak) / 3`. This is algebraically equivalent because Raman describes the powerless point as exactly 180° from the peak. It is not a different scoring formula.
+
+### 8.2 Chart angle versus approximation
+
+- Sun and Mars require the chart-derived sidereal meridian (MC) for the exact south/10th peak; Moon and Venus require its exact opposite (IC/Nadir) for the north/4th peak.
+- Jupiter and Mercury need only the sidereal Ascendant for the east/1st peak. Saturn needs only its exact opposite, the Descendant/west/7th peak. These three do **not** depend on the MC.
+- If MC is genuinely absent, the compatibility fallback remains `Ascendant + 270°` for Sun/Mars and `Ascendant + 90°` for Moon/Venus. Neither is guaranteed to equal the actual MC/IC; the component is now marked estimated and its description says so. Jupiter, Mercury and Saturn remain exact from the Ascendant even when MC is absent.
+- An explicitly supplied but invalid MC is not treated as “missing”; the affected MC/IC-dependent component is unavailable. A missing/invalid target longitude is unavailable, and a non-classical target is rejected. Jupiter/Mercury/Saturn also require a normalized Ascendant. A valid MC can still determine Sun/Mars/Moon/Venus Dig Bala if Ascendant metadata is unavailable; in that case the diagnostic whole-sign `actualHouse` is null, not fabricated.
+- `calculateShadbala` treats an unavailable Dig Bala as a missing component, excludes it from the available subtotal, and adds a method-estimate note only when the four MC/IC-dependent planets actually use the fallback. The panel differentiates “Unavailable” from “approximate”.
+
+### 8.3 Raman Standard Horoscope benchmark and printed arithmetic
+
+Raman's Standard Horoscope gives the sidereal Ascendant 298°27′ and angular midpoints around the chart. Example 14 (printed p. 32) lists the powerless-point arcs: Sun 144°18′, Moon 94°41′, Mars 167°05′, Mercury 63°05′, Jupiter 34°26′, Venus 45°26′, Saturn 174°04′. Example 15 (printed p. 33) divides these by three.
+
+The new independent regression rebuilds the chart from Raman's printed planetary longitudes and the 1st/4th/7th/10th angular midpoints. It checks the resulting values (rounded to two decimals) as Sun 48.10, Moon 31.56, Mars 55.70, Mercury 21.03, Jupiter 11.48, Venus 15.14, Saturn 58.02. This deliberately follows the printed arcs and the printed divide-by-three rule: the Example 15 final-value column contains small arithmetic/rounding discrepancies for Mercury and Jupiter (63°05′ / 3 = 21.03, not the printed 21.09; 34°26′ / 3 = 11.48, not the printed 11.50). The engine does not hard-code the inconsistent final-value cells.
+
+### 8.4 Regression coverage added
+
+- All seven grahas receive 60 Virupas at their source-defined directional peaks.
+- The Raman Standard Horoscope is recomputed independently from the source chart positions and angle midpoints.
+- No-MC cases prove that only Sun/Mars/Moon/Venus are estimated; Jupiter/Mercury/Saturn remain exact.
+- Invalid explicit MC values, invalid Ascendants for Ascendant-dependent peaks, missing/non-normalized target longitudes, and non-classical targets cannot produce a numeric Dig Bala.
+- The suite checks linear interpolation at 90° and 180° and wraparound across 0°/360°.
+- The UI now shows unavailable and estimated components distinctly, rather than exposing an invalid numeric score.
+
+### 8.5 References
+
+- BPHS Chapter 27, verse 7 (Sanskrit, transliteration and English Dig Bala rule): [Siva.sh](https://www.siva.sh/brihat-parashara-hora-shastra/27/7).
+- BPHS Chapter 27, verses 7–8 (text and translation context): [Jyotish Vidya, Chapter 27](https://jyotishvidya.com/ch27.htm).
+- B. V. Raman, *Graha and Bhava Balas*, 13th edition (1992), Chapter IV, Articles 41–45 and Examples 14–15, printed pp. 30–33: [scanned edition](https://dn790000.ca.archive.org/0/items/1050-jyotish-books-with-siderial-zodiac/Bhava%20and%20Graha%20Balas_B.V.Raman%201996.pdf). The directional assignments and arc rule appear on PDF pages 34–35; the worked arcs and values appear on PDF pages 36–37.
+
+This audit verifies the direction/arc formula and hardens input integrity. It does not make the overall Shadbala complete: the six-fold status stays partial, and remaining Kala/Cheshta/Yuddha and full-chart independent reconciliation gaps remain open.
