@@ -21,7 +21,7 @@ export const SHADBALA_IMPLEMENTATION_STATUS = {
   limitations: [
     "Saptavargaja now evaluates D1, D2, D3, D7, D9, D12 and D30 separately. Its default score scale is the R. Santhanam BPHS translation (45/30/20/15/10/4/2); the alternative Raman halving scale can be selected explicitly. Five-fold friendship is derived from D1 relationships, and Moolatrikona is applied in D1 only.",
     "Dig Bala uses the actual sidereal Midheaven when supplied by the chart; callers without a Midheaven retain the disclosed 90° ecliptic fallback.",
-    "Kala Bala still contains fixed placeholder values for Tribhaga, year, month and Ayana components, and its Hora estimate is not a sunrise-based planetary-hour calculation.",
+    "Nathonnatha Bala now uses exact local apparent solar time derived from the UTC instant, longitude and the Meeus equation of time. Tribhaga, year, month and Ayana components still contain fixed placeholders, and Hora is not yet derived from the sunrise-based planetary-hour engine.",
     "Cheshta Bala uses coarse motion bands; non-luminary scores require an actual daily-motion value. Sun and Moon still use provisional constants rather than their textually specified Ayana/Paksha derivations.",
     "Drik Bala now uses directed longitude-based Drishti Pinda for the seven classical grahas, with source-labelled BPHS verse and Raman/translator aspect curves and explicit Mercury/Jupiter full-aspect readings. It still requires validation against a complete independent Shadbala worked chart before the Shadbala module can be promoted beyond partial."
   ]
@@ -46,7 +46,8 @@ export interface DigBalaResult {
 }
 
 export interface KalaBalaComponents {
-  nathonnathaBala: number;
+  /** Null when exact local apparent birth time is unavailable (except Mercury, always 60). */
+  nathonnathaBala: number | null;
   pakshaBala: number;
   tribhagaBala: number;
   abdaBala: number;
@@ -60,6 +61,7 @@ export interface KalaBalaComponents {
 export interface KalaBalaResult {
   components: KalaBalaComponents;
   total: number;
+  unavailableComponents: string[];
   description: string;
 }
 
@@ -156,6 +158,10 @@ export interface ShadbalaChartInput {
   drikMercuryAssociationRule?: DrikMercuryAssociationRule;
   /** Required only by the explicitly chosen degree-orb Mercury association rule. */
   drikMercuryAssociationOrbDeg?: number;
+  /** Local apparent solar time since local apparent midnight, in minutes [0, 1440). */
+  localApparentTimeMinutes?: number;
+  /** Explicitly false for an unknown placeholder birth time. */
+  birthTimeKnown?: boolean;
   planets: {
     [name: string]: {
       longitude: number;
@@ -218,6 +224,41 @@ const SAPTAVARGAJA_POINTS: Record<SaptavargajaScale, {
     greatEnemy: 1.875,
   },
 };
+
+/**
+ * Nathonnatha Bala (also called Divaratri Bala) using Raman, Graha and Bhava
+ * Balas, Chapter V, articles 47-51, Method B; equivalent to Method A's
+ * apparent-time Natha/Unnatha ghati calculation.
+ *
+ * The local apparent clock is measured from local apparent midnight. Diurnal
+ * planets peak at apparent noon; nocturnal planets peak at apparent midnight.
+ * Mercury always receives 60 Virupas. No civil-clock 06:00/18:00 approximation
+ * or unknown-time noon placeholder is substituted.
+ */
+export function calculateNathonnathaBala(
+  planet: string,
+  localApparentTimeMinutes?: number,
+  birthTimeKnown = true
+): number | null {
+  if (planet === "Mercury") return 60;
+  if (!["Sun", "Jupiter", "Venus", "Moon", "Mars", "Saturn"].includes(planet)) {
+    throw new RangeError(`Nathonnatha Bala is defined here only for the seven classical planets; received ${planet}.`);
+  }
+  if (!birthTimeKnown || !Number.isFinite(localApparentTimeMinutes)) return null;
+  if ((localApparentTimeMinutes as number) < 0 || (localApparentTimeMinutes as number) >= 1440) {
+    throw new RangeError("Local apparent time must be between 0 and 1440 minutes after apparent midnight.");
+  }
+
+  const degreesFromApparentMidnight = (localApparentTimeMinutes as number) / 4;
+  const foldedDegrees = degreesFromApparentMidnight > 180
+    ? 360 - degreesFromApparentMidnight
+    : degreesFromApparentMidnight;
+
+  if (["Sun", "Jupiter", "Venus"].includes(planet)) {
+    return Math.max(0, Math.min(60, foldedDegrees / 3));
+  }
+  return Math.max(0, Math.min(60, (180 - foldedDegrees) / 3));
+}
 
 type NaturalRelationship = "friend" | "neutral" | "enemy";
 type CompoundRelationship = "greatFriend" | "friend" | "neutral" | "enemy" | "greatEnemy";
@@ -549,17 +590,14 @@ export class ShadbalaEngine {
   }
 
   public calculateKalaBala(planet: string, input: ShadbalaChartInput): KalaBalaResult {
-    const bDate = input.birthDate || new Date();
-    const hours = bDate.getUTCHours();
-    const isDayBirth = hours >= 6 && hours < 18;
+    const bDate = input.birthDate;
+    const nathonnathaBala = calculateNathonnathaBala(
+      planet,
+      input.localApparentTimeMinutes,
+      input.birthTimeKnown ?? true
+    );
 
-    let nathonnathaBala = 30;
-    if (planet === "Mercury") nathonnathaBala = 60;
-    else if (isDayBirth && ["Sun", "Jupiter", "Venus"].includes(planet)) nathonnathaBala = 60;
-    else if (!isDayBirth && ["Moon", "Mars", "Saturn"].includes(planet)) nathonnathaBala = 60;
-    else nathonnathaBala = 15;
-
-    const sunLon = input.planets["Sun"]?.longitude || 0;
+    const sunLon = input.planets["Sun"]?.longitude ?? 0;
     const moonLon = input.planets["Moon"]?.longitude || 0;
     let elongation = (moonLon - sunLon + 360) % 360;
     const pakshaFraction = elongation <= 180 ? elongation / 180 : (360 - elongation) / 180;
@@ -573,16 +611,26 @@ export class ShadbalaEngine {
     const abdaBala = 15;
     const maasaBala = 30;
 
-    const dayOfWeek = bDate.getUTCDay();
+    const dayOfWeek = bDate instanceof Date && Number.isFinite(bDate.getTime())
+      ? bDate.getUTCDay()
+      : null;
+    const localCivilHour = bDate instanceof Date && Number.isFinite(bDate.getTime())
+      ? bDate.getUTCHours()
+      : null;
     const weekdayLords = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"];
-    const varaBala = weekdayLords[dayOfWeek] === planet ? 45 : 0;
-    const horaBala = Math.floor(hours % 7) === weekdayLords.indexOf(planet) ? 60 : 0;
+    const varaBala = dayOfWeek !== null && weekdayLords[dayOfWeek] === planet ? 45 : 0;
+    // This legacy Hora estimate remains explicitly provisional and is not
+    // confused with the sunrise-based hora clock used by the planetary-hours engine.
+    const horaBala = localCivilHour !== null && Math.floor(localCivilHour % 7) === weekdayLords.indexOf(planet) ? 60 : 0;
     const ayanaBala = 35.5;
     const yuddhaBala = 0;
 
+    const unavailableComponents = nathonnathaBala === null
+      ? ["Nathonnatha Bala (requires a known local apparent birth time)"]
+      : [];
     const total =
       Math.round(
-        (nathonnathaBala +
+        ((nathonnathaBala ?? 0) +
           pakshaBala +
           tribhagaBala +
           abdaBala +
@@ -607,7 +655,10 @@ export class ShadbalaEngine {
         yuddhaBala,
       },
       total,
-      description: `Temporal strength total of ${total} Virupas including Diurnal/Nocturnal (${nathonnathaBala}) and Paksha (${pakshaBala}).`,
+      unavailableComponents,
+      description: nathonnathaBala === null
+        ? `Partial temporal estimate of ${total} Virupas. Nathonnatha Bala is unavailable because a known local apparent birth time was not supplied; remaining Kala components still include provisional values.`
+        : `Partial temporal estimate of ${total} Virupas. Nathonnatha Bala uses Meeus-corrected local apparent time (${nathonnathaBala.toFixed(2)}) and Paksha (${pakshaBala}); other Kala components remain partly provisional.`,
     };
   }
 
