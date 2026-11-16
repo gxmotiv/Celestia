@@ -108,7 +108,7 @@ for (const [planet, expected] of ramanDrekkanaExpected) {
 // to the middle Drekkana and eunuch planets to the last. Expose that as a
 // separate translation/edition profile, not as the Sanskrit/Raman default.
 const santhanamExpected: Array<[string, number, number]> = [
-  ["Sun", 5, 15], ["Mars", 5, 0], ["Jupiter", 25, 0],
+  ["Sun", 5, 15], ["Mars", 5, 15], ["Jupiter", 25, 0],
   ["Moon", 15, 15], ["Venus", 25, 0],
   ["Mercury", 25, 15], ["Saturn", 25, 15],
 ];
