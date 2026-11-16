@@ -196,6 +196,21 @@ assert.throws(() => isPakshaMoonBenefic(360, "bphs-waxing-waning"), /normalized/
   assert.equal(kala.components.pakshaBala, null);
   assert.ok(kala.unavailableComponents.includes("Paksha Bala (requires valid Sun and Moon longitudes)"));
   assert.match(kala.description, /Paksha is unavailable/);
+
+  const unknownTime = calculatePakshaBala("Moon", {
+    ...standard,
+    birthTimeKnown: false,
+  });
+  assert.equal(unknownTime.available, false,
+    "A valid-looking noon placeholder must not be used when the actual birth time is unknown");
+  assert.equal(unknownTime.nature, null);
+  assert.match(unknownTime.description, /birth time is explicitly unknown/);
+  const unknownKala = engine.calculateKalaBala("Moon", {
+    ...standard,
+    birthTimeKnown: false,
+  });
+  assert.equal(unknownKala.components.pakshaBala, null);
+  assert.ok(unknownKala.unavailableComponents.includes("Paksha Bala (requires valid Sun and Moon longitudes)"));
 }
 
 console.log(
