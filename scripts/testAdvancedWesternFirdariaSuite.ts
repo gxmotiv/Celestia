@@ -21,7 +21,7 @@ const nocturnalChart = {
 };
 
 const engine = new FirdariaEngine();
-const diurnal = engine.calculateFirdaria(diurnalChart, 78);
+const diurnal = engine.calculateFirdaria(diurnalChart, 76);
 assert(diurnal.isDiurnal, "Sun above horizon selects the diurnal sequence");
 assert(diurnal.allPeriods.length === 9, "One complete 75-year cycle contains nine major periods");
 assert(diurnal.allPeriods[0].planet === "Sun" && diurnal.allPeriods[1].planet === "Venus", "Diurnal sequence starts Sun then Venus");
