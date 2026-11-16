@@ -14,8 +14,8 @@ function angularDifference(a: number, b: number): number {
   return Math.min(difference, 360 - difference);
 }
 
-const birthDate = new Date("2000-01-01T12:00:00.000Z");
-const currentDate = new Date("2026-11-16T12:00:00.000Z");
+const birthDate = new Date("2000-01-01T17:00:00.000Z");
+const currentDate = new Date("2026-11-16T17:00:00.000Z");
 const chart = calculateWesternChart(2000, 1, 1, 12, 0, 40.7128, -74.006, -5, "Placidus");
 const engine = new SolarArcDirectionsEngine();
 const report = engine.calculateSolarArc(
