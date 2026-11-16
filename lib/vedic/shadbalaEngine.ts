@@ -507,6 +507,16 @@ export function calculatePakshaBala(
   if (!ShadbalaEngine.PLANETS.includes(planet)) {
     throw new RangeError(`Paksha Bala is defined here only for the seven classical planets; received ${planet}.`);
   }
+  if (input.birthTimeKnown === false) {
+    return {
+      planet,
+      points: 0,
+      rawShareVirupas: 0,
+      nature: null,
+      available: false,
+      description: "Paksha Bala unavailable: birth time is explicitly unknown, so the Moon longitude may be only a placeholder.",
+    };
+  }
   const sunLongitude = input.planets.Sun?.longitude;
   const moonLongitude = input.planets.Moon?.longitude;
   if (sunLongitude === undefined || moonLongitude === undefined ||
