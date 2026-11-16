@@ -13,6 +13,7 @@ import {
   formatDegreeMinute,
   ZODIAC_SIGNS,
 } from "./ephemeris";
+import { swissEphemeris } from "./swissEphemeris";
 
 // ---------------------------------------------------------------------------
 // 1. FIXED STARS ENGINE
@@ -109,7 +110,7 @@ export class FixedStarsEngine {
 
 export interface EclipseItem {
   date: string;
-  type: "Total Solar" | "Annular Solar" | "Total Lunar" | "Partial Lunar" | "Partial Solar";
+  type: "Total Solar" | "Annular Solar" | "Total Lunar" | "Partial Lunar" | "Partial Solar" | "Penumbral Lunar";
   zodiacSign: string;
   degree: number;
   degreeFormatted: string;
@@ -119,65 +120,105 @@ export interface EclipseItem {
   recommendations: string[];
 }
 
+type EclipseCatalogEvent = {
+  date: string;
+  time: string;
+  type: EclipseItem["type"];
+};
+
+/**
+ * Future eclipse greatest-eclipse dates and UT times are sourced from NASA
+ * GSFC's annual eclipse catalogues (Five Millennium Canon / Espenak & Meeus).
+ * Tropical longitudes are calculated at runtime from the geocentric Sun for
+ * solar eclipses and Moon for lunar eclipses using the shared ephemeris.
+ */
 export class EclipseAnalyzer {
-  private static readonly UPCOMING_ECLIPSES = [
-    { date: "March 14, 2025", type: "Total Lunar" as const, lon: 173.9 },    // ~23° Virgo
-    { date: "March 29, 2025", type: "Partial Solar" as const, lon: 9.0 },     // ~9° Aries
-    { date: "September 7, 2025", type: "Total Lunar" as const, lon: 345.3 }, // ~15° Pisces
-    { date: "September 21, 2025", type: "Partial Solar" as const, lon: 179.0 },// ~29° Virgo
-    { date: "February 17, 2026", type: "Annular Solar" as const, lon: 328.8 }, // ~28° Aquarius
-    { date: "March 3, 2026", type: "Total Lunar" as const, lon: 162.8 },      // ~12° Virgo
-    { date: "August 12, 2026", type: "Total Solar" as const, lon: 140.0 },     // ~20° Leo
-    { date: "August 28, 2026", type: "Partial Lunar" as const, lon: 334.8 },   // ~4° Pisces
+  private static readonly FUTURE_ECLIPSES: EclipseCatalogEvent[] = [
+    { date: "2027-02-06", time: "16:00", type: "Annular Solar" },
+    { date: "2027-02-20", time: "23:13", type: "Penumbral Lunar" },
+    { date: "2027-07-18", time: "16:03", type: "Penumbral Lunar" },
+    { date: "2027-08-02", time: "10:07", type: "Total Solar" },
+    { date: "2027-08-17", time: "07:14", type: "Penumbral Lunar" },
+    { date: "2028-01-12", time: "04:13", type: "Partial Lunar" },
+    { date: "2028-01-26", time: "15:08", type: "Annular Solar" },
+    { date: "2028-07-06", time: "18:20", type: "Partial Lunar" },
+    { date: "2028-07-22", time: "02:55", type: "Total Solar" },
+    { date: "2028-12-31", time: "16:52", type: "Total Lunar" },
+    { date: "2029-01-14", time: "17:13", type: "Partial Solar" },
+    { date: "2029-06-12", time: "04:05", type: "Partial Solar" },
+    { date: "2029-06-26", time: "03:22", type: "Total Lunar" },
+    { date: "2029-07-11", time: "15:36", type: "Partial Solar" },
+    { date: "2029-12-05", time: "15:03", type: "Partial Solar" },
+    { date: "2029-12-20", time: "22:42", type: "Total Lunar" },
   ];
 
-  public analyzeEclipses(chart: WesternChartData): EclipseItem[] {
+  public analyzeEclipses(chart: WesternChartData, currentDate: Date = new Date()): EclipseItem[] {
     const getHouse = (lon: number) => {
       const cusps = chart.houses;
       for (let i = 0; i < cusps.length; i++) {
-        const c = cusps[i].longitude;
-        const n = cusps[(i + 1) % cusps.length].longitude;
-        if (n > c) {
-          if (lon >= c && lon < n) return i + 1;
-        } else {
-          if (lon >= c || lon < n) return i + 1;
+        const current = cusps[i].longitude;
+        const next = cusps[(i + 1) % cusps.length].longitude;
+        if (next > current) {
+          if (lon >= current && lon < next) return i + 1;
+        } else if (lon >= current || lon < next) {
+          return i + 1;
         }
       }
       return 1;
     };
 
     const HOUSE_THEMES: Record<number, { theme: string; recs: string[] }> = {
-      1: { theme: "Radical Identity & Body Rebirth", recs: ["Revitalize personal appearance", "Redefine life boundaries", "Step boldly into individual agency"] },
-      2: { theme: "Financial Re-orientation & Self-Worth", recs: ["Restructure income streams", "Release scarcity fears", "Invest in core personal values"] },
-      3: { theme: "Mental Breakthroughs & New Communications", recs: ["Begin a writing project", "Resolve neighborly or sibling ties", "Upgrade technical skills"] },
-      4: { theme: "Home Sanctuary & Ancestral Foundations", recs: ["Relocate or renovate sanctuary", "Address ancestral roots", "Create deeper emotional peace"] },
-      5: { theme: "Creative Culmination & Romantic Renewal", recs: ["Launch artistic passion projects", "Celebrate inner-child joy", "Embrace heart vulnerability"] },
-      6: { theme: "Wellness Overhaul & Daily Discipline", recs: ["Adopt holistic health rituals", "Reorganize work habits", "Prioritize restorative rest"] },
-      7: { theme: "Relationship Evolution & Partnership Contracts", recs: ["Re-evaluate contractual parity", "Commit or gracefully release", "Foster transparent honesty"] },
-      8: { theme: "Psychological Metamorphosis & Shared Capital", recs: ["Transform debts and investments", "Heal deep psychological taboos", "Release mortal anxieties"] },
-      9: { theme: "Philosophical Awakening & World Horizons", recs: ["Embark on a spiritual pilgrimage", "Publish or teach your wisdom", "Expand cross-cultural understanding"] },
-      10: { theme: "Career Destiny & Public Recognition", recs: ["Step into executive leadership", "Align profession with true calling", "Claim public reputation with dignity"] },
-      11: { theme: "Community Re-alignment & Future Hopes", recs: ["Prune toxic peer groups", "Join visionary collectives", "Cast bold intentions for the coming era"] },
-      12: { theme: "Subconscious Surrender & Spiritual Healing", recs: ["Enter sacred solitary retreat", "Engage dreamwork & meditation", "Forgive and release past burdens"] },
+      1: { theme: "Radical Identity & Body Rebirth", recs: ["Reconsider personal boundaries", "Review how you present yourself", "Set intentions for a new personal chapter"] },
+      2: { theme: "Financial Re-orientation & Self-Worth", recs: ["Review income and spending priorities", "Clarify personal values", "Reassess material commitments"] },
+      3: { theme: "Mental Breakthroughs & New Communications", recs: ["Begin a writing or learning project", "Revisit communication patterns", "Organize local commitments"] },
+      4: { theme: "Home Sanctuary & Ancestral Foundations", recs: ["Review home and family priorities", "Reassess domestic responsibilities", "Strengthen your private support system"] },
+      5: { theme: "Creative Culmination & Romantic Renewal", recs: ["Make room for creative work", "Review romantic expectations", "Reconnect with play and recreation"] },
+      6: { theme: "Work, Routines & Daily Responsibilities", recs: ["Review work systems", "Adjust daily routines", "Plan sustainable rest and workload boundaries"] },
+      7: { theme: "Relationship Evolution & Partnership Contracts", recs: ["Review relationship agreements", "Clarify shared expectations", "Revisit collaboration boundaries"] },
+      8: { theme: "Shared Resources & Psychological Change", recs: ["Review shared finances and obligations", "Clarify debt and risk exposure", "Make space for reflective work"] },
+      9: { theme: "Philosophical Awakening & World Horizons", recs: ["Plan study or travel goals", "Revisit beliefs and assumptions", "Explore teaching or publishing plans"] },
+      10: { theme: "Career Direction & Public Standing", recs: ["Review long-term career direction", "Reassess public responsibilities", "Clarify professional goals"] },
+      11: { theme: "Community Re-alignment & Future Hopes", recs: ["Review group commitments", "Reconnect with supportive networks", "Reassess long-term plans"] },
+      12: { theme: "Rest, Reflection & Closure", recs: ["Create space for reflection", "Review unresolved commitments", "Prioritize restorative downtime"] },
     };
 
-    return EclipseAnalyzer.UPCOMING_ECLIPSES.map((e) => {
-      const house = getHouse(e.lon);
-      const signIdx = Math.floor(e.lon / 30);
-      const sign = ZODIAC_SIGNS[signIdx]?.name || "Aries";
-      const info = HOUSE_THEMES[house];
+    return EclipseAnalyzer.FUTURE_ECLIPSES.flatMap((event) => {
+      const instant = new Date(`${event.date}T${event.time}:00.000Z`);
+      if (!Number.isFinite(instant.getTime()) || instant.getTime() < currentDate.getTime()) return [];
 
-      return {
-        date: e.date,
-        type: e.type,
+      const julianDay = swissEphemeris.calculateJulianDay(
+        instant.getUTCFullYear(),
+        instant.getUTCMonth() + 1,
+        instant.getUTCDate(),
+        instant.getUTCHours(),
+        instant.getUTCMinutes(),
+        instant.getUTCSeconds(),
+        0
+      );
+      const isSolar = event.type.includes("Solar");
+      const eventBody = isSolar ? swissEphemeris.SUN : swissEphemeris.MOON;
+      const longitude = swissEphemeris.calculatePlanetPosition(eventBody, julianDay).longitude;
+      const house = getHouse(longitude);
+      const signIndex = Math.floor(longitude / 30);
+      const sign = ZODIAC_SIGNS[signIndex]?.name || "Aries";
+      const houseInfo = HOUSE_THEMES[house];
+      const intensity: EclipseItem["intensity"] = event.type.includes("Total")
+        ? "Extreme"
+        : event.type.includes("Penumbral")
+          ? "Moderate"
+          : "High";
+
+      return [{
+        date: `${event.date} · ${event.time} UTC`,
+        type: event.type,
         zodiacSign: sign,
-        degree: e.lon,
-        degreeFormatted: formatDegreeMinute(e.lon),
+        degree: longitude,
+        degreeFormatted: formatDegreeMinute(longitude),
         affectedHouse: house,
-        intensity: e.type.includes("Total") ? "Extreme" : "High",
-        theme: info.theme,
-        recommendations: info.recs,
-      };
+        intensity,
+        theme: houseInfo.theme,
+        recommendations: houseInfo.recs,
+      }];
     });
   }
 }
