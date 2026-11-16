@@ -21,7 +21,7 @@ export const SHADBALA_IMPLEMENTATION_STATUS = {
     "This is a partial six-component estimate. Missing Balas are listed as unavailable; the displayed points are an available subtotal, not a final Shadbala total. Strong/weak classifications, rankings and strength-based interpretations are withheld until the complete method is available and independently verified.",
   limitations: [
     "Saptavargaja now evaluates D1, D2, D3, D7, D9, D12 and D30 separately. Its default score scale is the R. Santhanam BPHS translation (45/30/20/15/10/4/2); the alternative Raman halving scale can be selected explicitly. Five-fold friendship is derived from D1 relationships, and Moolatrikona is applied in D1 only.",
-    "Ojayugma Bala follows BPHS 27.5: Moon/Venus gain 15 Virupas in even Rasi and Navamsa signs; all other classical grahas, including Mercury and Saturn, gain 15 in odd signs. BPHS 27.6 Sanskrit maps masculine/neuter/feminine to first/middle/last Drekkana; the chosen order is regression-tested.",
+    "Ojayugma Bala follows BPHS 27.5: Moon/Venus gain 15 Virupas in even Rasi and Navamsa signs; all other classical grahas, including Mercury and Saturn, gain 15 in odd signs. Drekkana Bala exposes the BPHS Sanskrit/Raman masculine-neuter-feminine order and the distinct R. Santhanam Vol. I English masculine-feminine-eunuch order as selectable methods.",
     "Dig Bala uses the actual sidereal Midheaven when supplied by the chart; callers without a Midheaven retain the disclosed 90° ecliptic fallback.",
     "Nathonnatha Bala uses Meeus-corrected local apparent time. Paksha Bala supports separate BPHS/Raman Moon-nature and Moon-accounting profiles. Tribhaga uses location-specific NOAA-model sunrise/sunset unequal thirds. Abda, Masa, Vara and Hora use Raman Chapter V's 1827-epoch 360/30-day year/month lords and equal 24-hour sunrise-to-sunrise Hora cycle; the original tabulated epoch range is proleptically extended to 2100 and remains a named lineage.",
     "Ayana Bala supports BPHS 27.15–17's 45°/33°/12° Khanda method and Raman Chapter V's six-step 24° Kranti table as separate profiles. BPHS Sun Cheshta reuses undoubled Ayana per 27.18; Raman doubles Sun Ayana inside Kala and adds no separate Sun Cheshta row. Non-luminary Cheshta now uses Raman/Sripati's mean-true-seeghrocha Kendra formula and is unavailable until the source-required mean longitude and apogee inputs are explicitly provided; apparent daily speed is never substituted.",
@@ -36,6 +36,7 @@ export interface SthanaBalaBreakdown {
   ojayugmaBala: number;
   kendradiBala: number;
   drekkanaBala: number;
+  drekkanaBalaMethod: DrekkanaBalaMethod;
   total: number;
   available: boolean;
   unavailableComponents: string[];
@@ -138,6 +139,17 @@ export type PakshaMoonAccountingRule =
 
 export type AyanaBalaMethod = "bphs-khanda" | "raman-kranti";
 
+/**
+ * Drekkana Bala ordering is edition-sensitive:
+ * - BPHS Sanskrit wording and B. V. Raman: masculine / neuter / feminine
+ *   in the first / middle / last Drekkana.
+ * - R. Santhanam Vol. I English translation and notes: masculine / feminine /
+ *   eunuch in the first / second / third Drekkana.
+ */
+export type DrekkanaBalaMethod =
+  | "bphs-sanskrit-raman"
+  | "santhanam-english-translation";
+
 export interface AyanaBalaDetails {
   method: AyanaBalaMethod;
   sayanaLongitude: number;
@@ -239,6 +251,8 @@ export interface ShadbalaChartInput {
   midheaven?: number;
   /** Source-labelled point scale; defaults to the R. Santhanam BPHS translation. */
   saptavargajaScale?: SaptavargajaScale;
+  /** BPHS Sanskrit/Raman or the distinct Santhanam Vol. I English order for Drekkana Bala. */
+  drekkanaBalaMethod?: DrekkanaBalaMethod;
   /** Exact-longitude Sputa Drishti source profile; defaults to BPHS 26.9-12. */
   drishtiVirupaVariant?: DrishtiVirupaVariant;
   /**
@@ -1386,6 +1400,11 @@ export class ShadbalaEngine {
 
   public calculateSthanaBala(planet: string, input: ShadbalaChartInput): SthanaBalaBreakdown {
     const pPos = input.planets[planet];
+    const drekkanaBalaMethod = input.drekkanaBalaMethod ?? "bphs-sanskrit-raman";
+    if (drekkanaBalaMethod !== "bphs-sanskrit-raman" &&
+        drekkanaBalaMethod !== "santhanam-english-translation") {
+      throw new RangeError("Unknown Drekkana Bala source method: " + String(drekkanaBalaMethod));
+    }
     const validPlanetLongitude = (position: ShadbalaChartInput["planets"][string] | undefined) =>
       Boolean(position && Number.isFinite(position.longitude) &&
         position.longitude >= 0 && position.longitude < 360);
@@ -1399,6 +1418,7 @@ export class ShadbalaEngine {
         ojayugmaBala: 0,
         kendradiBala: 0,
         drekkanaBala: 0,
+        drekkanaBalaMethod,
         total: 0,
         available: false,
         unavailableComponents: [
@@ -1449,10 +1469,24 @@ export class ShadbalaEngine {
     else if ([2, 5, 8, 11].includes(house)) kendradiBala = 30;
 
     const drekkanaIdx = Math.floor(degInSign / 10);
+    const isFemalePlanet = ["Moon", "Venus"].includes(planet);
+    const isNeuterPlanet = ["Mercury", "Saturn"].includes(planet);
     let drekkanaBala = 0;
-    if (drekkanaIdx === 0 && isMalePlanet) drekkanaBala = 15;
-    else if (drekkanaIdx === 1 && ["Mercury", "Saturn"].includes(planet)) drekkanaBala = 15;
-    else if (drekkanaIdx === 2 && ["Moon", "Venus"].includes(planet)) drekkanaBala = 15;
+    if (drekkanaIdx === 0 && isMalePlanet) {
+      drekkanaBala = 15;
+    } else if (
+      drekkanaBalaMethod === "bphs-sanskrit-raman"
+        ? drekkanaIdx === 1 && isNeuterPlanet
+        : drekkanaIdx === 1 && isFemalePlanet
+    ) {
+      drekkanaBala = 15;
+    } else if (
+      drekkanaBalaMethod === "bphs-sanskrit-raman"
+        ? drekkanaIdx === 2 && isFemalePlanet
+        : drekkanaIdx === 2 && isNeuterPlanet
+    ) {
+      drekkanaBala = 15;
+    }
 
     const total = Math.round(
       (ucchaBala + (saptavargajaBala ?? 0) + ojayugmaBala + kendradiBala + drekkanaBala) * 100
@@ -1468,6 +1502,7 @@ export class ShadbalaEngine {
       ojayugmaBala,
       kendradiBala,
       drekkanaBala,
+      drekkanaBalaMethod,
       total,
       available: unavailableComponents.length === 0,
       unavailableComponents,
