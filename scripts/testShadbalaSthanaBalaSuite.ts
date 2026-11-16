@@ -133,6 +133,28 @@ for (const expected of ramanSthanaExpected) {
     `Raman Example 13 ${expected.planet} Sthana total: expected about ${expected.total}, got ${result.total}`);
 }
 
+// Kendradi Bala depends on the Ascendant. Invalid or missing input must
+// not silently fall through to the 15-Virupa Apoklima value.
+for (const invalidAscendant of [Number.NaN, Number.POSITIVE_INFINITY, -0.01, 360]) {
+  const result = engine.calculateSthanaBala("Sun", {
+    ...ramanStandardHoroscope,
+    ascendant: invalidAscendant,
+  });
+  assert.equal(result.kendradiBala, null,
+    `Invalid Ascendant ${String(invalidAscendant)} must make Kendradi Bala unavailable`);
+  assert.equal(result.available, false);
+  assert.ok(result.unavailableComponents.some((item) => item.includes("Kendradi Bala")));
+  assert.match(result.description, /Partial Sthana Bala subtotal/);
+  assert.equal(result.total,
+    Math.round((result.ucchaBala + (result.saptavargajaBala ?? 0) + result.ojayugmaBala + result.drekkanaBala) * 100) / 100,
+    "The displayed partial subtotal must not include a fabricated Kendradi score");
+}
+assert.throws(
+  () => engine.calculateSthanaBala("Rahu", ramanStandardHoroscope),
+  /seven classical planets/,
+  "Sthana Bala must reject non-classical targets instead of treating them as an exaltation-point-zero planet"
+);
+
 // Raman's own Standard Horoscope, Example 12, p. 28, yields 15 for
 // Sun in first and Venus in last Drekkana; every other planet gets zero.
 // This agrees with the BPHS Sanskrit order (male / neuter / female).
