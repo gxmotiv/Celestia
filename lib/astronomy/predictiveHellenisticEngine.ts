@@ -388,8 +388,8 @@ export class SolarReturnEngine {
     longitude: number,
     houseSystem: WesternChartData["houseSystem"] = natalChart.houseSystem
   ): SolarReturnReport {
-    if (!Number.isInteger(targetYear) || targetYear < 1 || targetYear > 9998) {
-      throw new Error("Solar Return year must be a whole-number year between 1 and 9998.");
+    if (!Number.isInteger(targetYear) || targetYear < 100 || targetYear > 9998) {
+      throw new Error("Solar Return year must be a whole-number year between 100 and 9998.");
     }
     if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
       throw new Error("Solar Return latitude must be between -90 and 90 degrees.");
@@ -403,7 +403,10 @@ export class SolarReturnEngine {
       throw new Error("Solar Return requires a natal Sun longitude.");
     }
 
-    const yearStartMs = Date.UTC(targetYear, 0, 1, 0, 0, 0);
+    const yearStart = new Date(0);
+    yearStart.setUTCFullYear(targetYear, 0, 1);
+    yearStart.setUTCHours(0, 0, 0, 0);
+    const yearStartMs = yearStart.getTime();
     const yearStartLongitude = this.calculateSunLongitude(yearStartMs);
     const forwardArc = normalizeDegrees(natalSun.longitude - yearStartLongitude);
     const approximateReturnMs = yearStartMs
@@ -438,10 +441,6 @@ export class SolarReturnEngine {
       throw new Error(`Could not bracket the ${targetYear} Solar Return crossing.`);
     }
 
-    let lowDifference = this.signedAngularDifference(
-      this.calculateSunLongitude(lowMs),
-      natalSun.longitude
-    );
     for (let iteration = 0; iteration < 48; iteration++) {
       const midMs = (lowMs + highMs) / 2;
       const midDifference = this.signedAngularDifference(
@@ -450,7 +449,6 @@ export class SolarReturnEngine {
       );
       if (midDifference < 0) {
         lowMs = midMs;
-        lowDifference = midDifference;
       } else {
         highMs = midMs;
       }
