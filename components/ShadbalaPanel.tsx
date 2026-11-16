@@ -111,18 +111,21 @@ export function ShadbalaPanel({
       parsedClock.hour,
       parsedClock.minute
     ));
+    const resolvedBirthUtcDate =
+      typeof birthUtcInstant === "string" && Number.isFinite(new Date(birthUtcInstant).getTime())
+        ? new Date(birthUtcInstant)
+        : undefined;
 
     let localApparentTimeMinutes: number | undefined;
     if (
       birthTimeKnown &&
-      typeof birthUtcInstant === "string" &&
+      resolvedBirthUtcDate &&
       Number.isFinite(birthLongitude) &&
       (birthLongitude as number) >= -180 &&
       (birthLongitude as number) <= 180
     ) {
-      const instant = new Date(birthUtcInstant);
-      if (Number.isFinite(instant.getTime())) {
-        const apparentClock = createBaZiClock(instant, {
+      if (resolvedBirthUtcDate) {
+        const apparentClock = createBaZiClock(resolvedBirthUtcDate, {
           timeBasis: "local-apparent-solar",
           longitudeDegrees: birthLongitude as number,
         }).clockDate;
@@ -150,6 +153,7 @@ export function ShadbalaPanel({
       longitude: birthLongitude,
       ianaTimezone: birthIanaTimezone,
       timezoneOffsetSeconds: birthUtcOffsetSeconds,
+      ...(resolvedBirthUtcDate ? { birthUtcInstant: resolvedBirthUtcDate } : {}),
       ...(localApparentTimeMinutes !== undefined
         ? { localApparentTimeMinutes }
         : {}),
