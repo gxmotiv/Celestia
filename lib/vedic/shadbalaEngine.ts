@@ -1391,7 +1391,8 @@ export class ShadbalaEngine {
     const maasaBala = timeLordResult ? (timeLordResult.monthLord === planet ? 30 : 0) : null;
     const varaBala = timeLordResult ? (timeLordResult.varaLord === planet ? 45 : 0) : null;
     const horaBala = timeLordResult ? (timeLordResult.horaLord === planet ? 60 : 0) : null;
-    const ayanaBala = 35.5;
+    const ayanaResult = calculateAyanaBala(planet, input);
+    const ayanaBala = ayanaResult.available ? ayanaResult.points : null;
     const yuddhaBala = 0;
 
     const unavailableComponents = [
@@ -1407,6 +1408,9 @@ export class ShadbalaEngine {
       ...(!timeLordResult
         ? ["Abda/Masa/Vara/Hora Bala (requires a known local sunrise-to-sunrise interval and supported Raman epoch date)"]
         : []),
+      ...(!ayanaResult.available
+        ? ["Ayana Bala (requires a normalized sidereal graha longitude and birth-date ayanamsa)"]
+        : []),
     ];
     const total =
       Math.round(
@@ -1417,7 +1421,7 @@ export class ShadbalaEngine {
           (maasaBala ?? 0) +
           (varaBala ?? 0) +
           (horaBala ?? 0) +
-          ayanaBala +
+          (ayanaBala ?? 0) +
           yuddhaBala) *
           100
       ) / 100;
@@ -1439,8 +1443,9 @@ export class ShadbalaEngine {
       ...(pakshaResult.details ? { pakshaDetails: pakshaResult.details } : {}),
       tribhagaDetails: tribhagaResult,
       ...(timeLordResult ? { timeLordDetails: timeLordResult } : {}),
+      ...(ayanaResult.details ? { ayanaDetails: ayanaResult.details } : {}),
       description:
-        `Partial temporal estimate of ${total} Virupas. Nathonnatha ${nathonnathaBala === null ? "is unavailable" : `uses Meeus-corrected local apparent time (${nathonnathaBala.toFixed(2)})`}; Paksha ${pakshaBala === null ? "is unavailable" : `uses the ${pakshaResult.details?.moonNatureRule} / ${pakshaResult.details?.moonAccountingRule} profile (${pakshaBala.toFixed(2)} Virupas)`}; Tribhaga ${tribhagaBala === null ? "is unavailable" : `uses the BPHS 27.12 local unequal-third method (${tribhagaBala.toFixed(2)} Virupas)`}; Abda/Masa/Vara/Hora ${timeLordResult ? `use Raman's 1827-epoch sunrise-to-sunrise time-lord method (year ${timeLordResult.yearLord}, month ${timeLordResult.monthLord}, weekday ${timeLordResult.varaLord}, hora ${timeLordResult.horaLord})` : "are unavailable without a normal local sunrise-to-sunrise interval and supported epoch date"}. Ayana remains provisional and Yuddha requires a separate planetary-war calculation.`,
+        `Partial temporal estimate of ${total} Virupas. Nathonnatha ${nathonnathaBala === null ? "is unavailable" : `uses Meeus-corrected local apparent time (${nathonnathaBala.toFixed(2)})`}; Paksha ${pakshaBala === null ? "is unavailable" : `uses the ${pakshaResult.details?.moonNatureRule} / ${pakshaResult.details?.moonAccountingRule} profile (${pakshaBala.toFixed(2)} Virupas)`}; Tribhaga ${tribhagaBala === null ? "is unavailable" : `uses the BPHS 27.12 local unequal-third method (${tribhagaBala.toFixed(2)} Virupas)`}; Abda/Masa/Vara/Hora ${timeLordResult ? `use Raman's 1827-epoch sunrise-to-sunrise time-lord method (year ${timeLordResult.yearLord}, month ${timeLordResult.monthLord}, weekday ${timeLordResult.varaLord}, hora ${timeLordResult.horaLord})` : "are unavailable without a normal local sunrise-to-sunrise interval and supported epoch date"}. Ayana ${ayanaBala === null ? "is unavailable without a Sayana longitude" : "uses " + ayanaResult.details?.method + " (" + ayanaBala.toFixed(2) + " Virupas in Kala)"}. Yuddha requires a separate planetary-war calculation.`,
     };
   }
 
@@ -1475,13 +1480,26 @@ export class ShadbalaEngine {
     }
 
     if (planet === "Sun") {
+      const ayana = calculateAyanaBala("Sun", input);
+      if (!ayana.available) {
+        return {
+          points: 0,
+          motion: 0,
+          isRetrograde: false,
+          state: "Unavailable (motion not supplied)",
+          available: false,
+          description: "Sun Cheshta Bala unavailable: Ayana Bala requires a valid Sayana longitude. BPHS 27.18 identifies Sun Cheshta with Ayana; Raman Ch. V art. 75 doubles Sun Ayana within Kala instead.",
+        };
+      }
       return {
-        points: 45.0,
-        motion: 1.0,
+        points: ayana.cheshtaPoints ?? 0,
+        motion: 0,
         isRetrograde: false,
         state: "Samanya (Direct)",
         available: true,
-        description: "Sun uses a provisional motional-strength constant; the source-specific Ayana Bala equivalence and accounting profile remain to be implemented.",
+        description: ayana.details?.method === "raman-kranti"
+          ? "Raman Ch. V art. 75: Sun Ayana is doubled inside Kala; no separate Sun Cheshta row is added."
+          : "BPHS 27.18: Sun Cheshta Bala equals the undoubled Sun Ayana Bala already shown in Kala.",
       };
     }
 
