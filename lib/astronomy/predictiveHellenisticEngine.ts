@@ -346,7 +346,7 @@ export class ZodiacalReleasingEngine {
   ): ReleasingPeriodInternal {
     const signName = ZodiacalReleasingEngine.SIGN_NAMES[signIndex] || "Aries";
     const angle = this.getAngleFromFortune(signIndex, fortuneIndex);
-    const endMs = startMs + durationDays;
+    const endMs = startMs + durationDays * ZodiacalReleasingEngine.DAY_MS;
     const startDate = new Date(startMs);
     const endDate = new Date(endMs);
 
@@ -510,27 +510,11 @@ export class ZodiacalReleasingEngine {
     // the current period plus a useful forward horizon for older birth dates.
     const l1Internal = this.generateL1Periods(releasingStartIndex, birthMs, cutoffMs, fortuneSignIndex);
     const currentL1Internal = this.findActivePeriod(l1Internal, nowMs);
-    console.log("[ZR DEBUG L1]", {
-      birthMs,
-      nowMs,
-      l1Count: l1Internal.length,
-      first: l1Internal[0] && { sign: l1Internal[0].sign, startMs: l1Internal[0].startMs, endMs: l1Internal[0].endMs },
-      last: l1Internal[l1Internal.length - 1] && { sign: l1Internal[l1Internal.length - 1].sign, startMs: l1Internal[l1Internal.length - 1].startMs, endMs: l1Internal[l1Internal.length - 1].endMs },
-      active: currentL1Internal && { sign: currentL1Internal.sign, startMs: currentL1Internal.startMs, endMs: currentL1Internal.endMs },
-    });
-
     // L2, L3 and L4 are generated recursively from the active parent period.
     // Each level subdivides by the same 12 sign-period allotments, with the
     // final child truncated exactly at its parent's end.
     const l2Internal = this.generateSubperiods(currentL1Internal, "L2", fortuneSignIndex);
     const currentL2Internal = this.findActivePeriod(l2Internal, nowMs);
-    console.log("[ZR DEBUG L2]", {
-      l2Count: l2Internal.length,
-      first: l2Internal[0] && { sign: l2Internal[0].sign, startMs: l2Internal[0].startMs, endMs: l2Internal[0].endMs },
-      last: l2Internal[l2Internal.length - 1] && { sign: l2Internal[l2Internal.length - 1].sign, startMs: l2Internal[l2Internal.length - 1].startMs, endMs: l2Internal[l2Internal.length - 1].endMs },
-      active: currentL2Internal && { sign: currentL2Internal.sign, startMs: currentL2Internal.startMs, endMs: currentL2Internal.endMs },
-    });
-
     const l3Internal = this.generateSubperiods(currentL2Internal, "L3", fortuneSignIndex);
     const currentL3Internal = this.findActivePeriod(l3Internal, nowMs);
 
