@@ -53,6 +53,26 @@ Celestia now exposes both choices:
 
 The regression suite tests both profiles on individual decanates and uses the exact planetary longitudes from Raman's primary Standard Horoscope to reproduce Example 12: Sun and Venus receive 15 Virupas under the Sanskrit/Raman profile, while the other five receive zero. It separately checks the Santhanam ordering, where the Moon in the second decanate and Mercury/Saturn in the third qualify. This keeps a real edition discrepancy visible rather than choosing one silently.
 
+## 4. Raman Standard Horoscope: primary Saptavargaja reconciliation
+
+The prior regression fixture had used a secondary web article's altered chart transcription and recalculated varga cells. Direct inspection of Raman's book scan shows that those values do not faithfully reproduce his printed Standard Horoscope. Celestia's test now uses the actual nirayana longitudes printed on p. 2 and the D1/D2/D3/D7/D9/D12/D30 dignity grid in Example 6 (printed p. 20).
+
+Recomputing the values from the primary dignity cells gives the following expected seven-varga totals:
+
+| Graha | Raman halving scale | BPHS / Santhanam scale |
+| --- | ---: | ---: |
+| Sun | 90.00 | 100 |
+| Moon | 48.75 | 57 |
+| Mars | 90.00 | 100 |
+| Mercury | 135.00 | 125 |
+| Jupiter | 71.25 | 79 |
+| Venus | 116.25 | 114 |
+| Saturn | 97.50 | 100 |
+
+This table is independently supported by Raman's Example 6 dignity grid (printed p. 20) and Example 9 worked score table (printed pp. 23–24). There is one source arithmetic discrepancy: Example 9 prints the Moon total as 49.750, while its seven visible cells (3.750 + 7.500 + 7.500 + 15.000 + 3.750 + 7.500 + 3.750) sum to **48.750**. Celestia's regression uses the itemized cell sum and documents the printed mismatch; it does not hard-code a result that contradicts the source's own addends.
+
+The code's D2, D3, D7, D9, D12 and D30 mappings reproduce the individual dignity placements in Raman's table for these longitudes. This is a narrow but meaningful worked-chart verification; it does not validate every possible varga boundary, alternate D30 tradition or every edition of BPHS. The source-specific regression lives in `scripts/testShadbalaRamanReferenceSuite.ts`.
+
 ## 4. Other Sthana Bala choices that remain source-labelled
 
 - **Saptavargaja:** D1, D2, D3, D7, D9, D12 and D30 are calculated separately. The BPHS/Santhanam point scale and Raman's halving scale remain selectable; the natural/temporary relationship derivation and Moolatrikona policy are documented in the engine status and the dedicated Saptavargaja test suite.
@@ -63,7 +83,7 @@ The regression suite tests both profiles on individual decanates and uses the ex
 
 - [BPHS Chapter 27, verse 6 — Sanskrit, IAST and grammatical word meanings](https://enjoylearningsanskrit.com/scriptures/parashara/chapter-27/verse-6/), supporting the masculine / neuter / feminine wording.
 - [R. Santhanam, Brihat Parasara Hora Sastra, Vol. I](https://storage.yandexcloud.net/j108/library/hr6fkynz/Maharishi_Parashara_-_Brihat_Parasara_Hora_Sastra_%28Vol._1%29.pdf), Chapter 27, printed pp. 266–267: its English translation and explanatory notes specify masculine / feminine / eunuch in the first / second / third decanates.
-- [B. V. Raman, Graha and Bhava Balas, 13th ed. scan](https://dn790000.ca.archive.org/0/items/1050-jyotish-books-with-siderial-zodiac/Bhava%20and%20Graha%20Balas_B.V.Raman%201996.pdf), Article 36 and Example 12, printed pp. 27–28: masculine / hermaphrodite / feminine and the Sun/Venus worked results. PDF pages 31–32 were inspected directly.
+- [B. V. Raman, Graha and Bhava Balas, 13th ed. scan](https://dn790000.ca.archive.org/0/items/1050-jyotish-books-with-siderial-zodiac/Bhava%20and%20Graha%20Balas_B.V.Raman%201996.pdf), Example 6 / Example 9 for Saptavargaja (printed pp. 20, 23–24; PDF pages 23, 26–28), and Article 36 / Example 12 for Drekkana (printed pp. 27–28; PDF pages 31–32).
 - [BPHS Chapter 27, verses 1–5](https://www.siva.sh/brihat-parashara-hora-shastra/27/1-5), showing an alternative presentation/numbering of positional-strength rules.
 - [Sthana Bala worked comparison of BPHS and B. V. Raman](https://www.livepanditji.com/blog/sthana-bala-saptavargaja-ojayugma-kendradi-drekkana/), a secondary audit aid only; its Drekkana labels misattribute the Raman order and its Standard Horoscope longitudes differ from Raman's primary scan. Celestia's regression fixture now uses Raman's printed source positions.
 
