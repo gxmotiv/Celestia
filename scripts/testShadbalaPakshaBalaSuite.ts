@@ -189,6 +189,7 @@ assert.throws(() => isPakshaMoonBenefic(360, "bphs-waxing-waning"), /normalized/
   const paksha = calculatePakshaBala("Venus", incomplete);
   assert.equal(paksha.available, false);
   assert.equal(paksha.points, 0);
+  assert.equal(paksha.nature, null, "Missing longitudes do not fabricate a malefic classification");
   assert.match(paksha.description, /valid Sun and Moon longitudes are required/);
 
   const kala = engine.calculateKalaBala("Venus", incomplete);
