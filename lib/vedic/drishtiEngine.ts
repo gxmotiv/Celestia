@@ -151,8 +151,8 @@ export function calculateLongitudeDrishtiVirupas(
       else if (wholeSigns === 2) special = 1.5 * degreesPastSign + 15;
       else if (wholeSigns === 6) special = 60;
     } else if (planetName === "Jupiter") {
-      if (wholeSigns === 3 || wholeSigns === 7) special = 45 + degreesPastSign / 2;
-      else if (wholeSigns === 4 || wholeSigns === 8) special = 60 - 2 * degreesPastSign;
+      if (wholeSigns === 3 || wholeSigns === 7) special = 15 + degreesPastSign / 2;
+      else if (wholeSigns === 4 || wholeSigns === 8) special = 60 - degreesPastSign;
     }
     if (special !== undefined) value = special;
   } else if (variant === "bphs-translator-special-adjustments") {
