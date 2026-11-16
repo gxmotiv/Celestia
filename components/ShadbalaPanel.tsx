@@ -50,7 +50,7 @@ export function ShadbalaPanel({
   birthLatitude,
   birthIanaTimezone,
   birthUtcOffsetSeconds,
-  birthTimeKnown = true,
+  birthTimeKnown = false,
 }: ShadbalaPanelProps) {
   const [selectedPlanet, setSelectedPlanet] = useState<string>("Sun");
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
