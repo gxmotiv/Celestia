@@ -828,8 +828,6 @@ function calculateRamanTimeLords(input: ShadbalaChartInput): RamanTimeLordsResul
   const year = birth.getUTCFullYear();
   const month = birth.getUTCMonth() + 1;
   const day = birth.getUTCDate();
-  const birthLocalMinutes = birth.getUTCHours() * 60 + birth.getUTCMinutes() +
-    birth.getUTCSeconds() / 60 + birth.getUTCMilliseconds() / 60_000;
   const birthOffsetSeconds = input.timezoneOffsetSeconds as number;
   const solar = new PlanetaryHoursCalculator();
   const shiftedDate = (days: number) => {
