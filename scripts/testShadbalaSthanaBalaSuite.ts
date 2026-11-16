@@ -68,7 +68,7 @@ assert.equal(sthana("Sun", exactNavamsaBoundary).ojayugmaBala, 15,
   "At 3°20', the next (even) Navamsa begins under the half-open boundary rule");
 
 // Cross-check Ojayugma against the longitudes in Raman's Standard Horoscope
-// (published worked-chart table). Expected values are 0/15/15/30/15/30/15.
+// (primary scan, pp. 2, 26). Expected values are 30/15/15/30/15/30/15.
 const ramanStandardHoroscope: ShadbalaChartInput = {
   ascendant: 298 + 27 / 60, // 298°27' from Raman, p. 3
   // Primary-source positions: Raman, Graha and Bhava Balas, p. 2.
@@ -83,7 +83,7 @@ const ramanStandardHoroscope: ShadbalaChartInput = {
   },
 };
 const ramanOjayugma: Array<[string, number]> = [
-  ["Sun", 0], ["Moon", 15], ["Mars", 15], ["Mercury", 30],
+  ["Sun", 30], ["Moon", 15], ["Mars", 15], ["Mercury", 30],
   ["Jupiter", 15], ["Venus", 30], ["Saturn", 15],
 ];
 for (const [planet, expected] of ramanOjayugma) {
