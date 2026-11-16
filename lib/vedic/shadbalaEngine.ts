@@ -58,7 +58,8 @@ export interface KalaBalaComponents {
   maasaBala: number | null;
   varaBala: number | null;
   horaBala: number | null;
-  ayanaBala: number;
+  /** Null when no valid sidereal longitude and ayanamsa are available. */
+  ayanaBala: number | null;
   yuddhaBala: number;
 }
 
@@ -69,6 +70,7 @@ export interface KalaBalaResult {
   pakshaDetails?: PakshaBalaDetails;
   tribhagaDetails?: TribhagaBalaResult;
   timeLordDetails?: RamanTimeLordsResult;
+  ayanaDetails?: AyanaBalaDetails;
   description: string;
 }
 
@@ -107,6 +109,31 @@ export type PakshaMoonNatureRule =
 export type PakshaMoonAccountingRule =
   | "bphs-kala-plus-cheshta"
   | "raman-double-in-kala";
+
+export type AyanaBalaMethod = "bphs-khanda" | "raman-kranti";
+
+export interface AyanaBalaDetails {
+  method: AyanaBalaMethod;
+  sayanaLongitude: number;
+  bhujaDegrees: number;
+  khandaDegrees: number;
+  hemisphere: "North" | "South";
+  krantiDegrees: number;
+  signedKrantiDegrees: number;
+  basePoints: number;
+  pointsInKala: number;
+  pointsInCheshta: number;
+  note: string;
+}
+
+export interface AyanaBalaResult {
+  planet: string;
+  available: boolean;
+  points: number | null;
+  cheshtaPoints: number | null;
+  details?: AyanaBalaDetails;
+  description: string;
+}
 
 export interface PakshaBalaDetails {
   elongationDegrees: number;
@@ -194,6 +221,10 @@ export interface ShadbalaChartInput {
   drikMercuryAssociationOrbDeg?: number;
   /** Local apparent solar time since local apparent midnight, in minutes [0, 1440). */
   localApparentTimeMinutes?: number;
+  /** Selects the source-specific Ayana Bala calculation. */
+  ayanaMethod?: AyanaBalaMethod;
+  /** Required to convert sidereal graha longitude into Sayana longitude. */
+  ayanamsaDegrees?: number;
   /** Explicitly false for an unknown placeholder birth time. */
   birthTimeKnown?: boolean;
   /** BPHS waxing/waning Moon or B. V. Raman's wider Ashtami-window reading. */
@@ -735,6 +766,177 @@ function offsetSecondsAtWallClock(
  * sunset. This is an approximation, not a precision topocentric rise/set
  * ephemeris. Adjacent-date offsets are resolved through the IANA time zone.
  */
+const RAMAN_KRANTI_SEGMENT_MINUTES = [362, 341, 299, 236, 150, 52] as const;
+
+/** Distance from the nearest equinoctial point, restricted to [0°, 90°]. */
+export function calculateAyanaBhujaDegrees(sayanaLongitude: number): number {
+  if (!Number.isFinite(sayanaLongitude) || sayanaLongitude < 0 || sayanaLongitude >= 360) {
+    throw new RangeError("Sayana longitude must be normalized to [0°, 360°).");
+  }
+  if (sayanaLongitude <= 90) return sayanaLongitude;
+  if (sayanaLongitude <= 180) return 180 - sayanaLongitude;
+  if (sayanaLongitude <= 270) return sayanaLongitude - 180;
+  return 360 - sayanaLongitude;
+}
+
+/**
+ * Raman, Graha and Bhava Balas, Ch. V, arts. 72-74:
+ * 15-degree Bhuja increments correspond to 362, 341, 299, 236, 150 and
+ * 52 arcminutes, summing to the traditional 24-degree maximum Kranti.
+ */
+export function calculateRamanKrantiDegrees(sayanaLongitude: number): {
+  bhujaDegrees: number;
+  krantiDegrees: number;
+  hemisphere: "North" | "South";
+} {
+  const bhujaDegrees = calculateAyanaBhujaDegrees(sayanaLongitude);
+  const completedSegments = Math.min(6, Math.floor(bhujaDegrees / 15));
+  const remainderDegrees = bhujaDegrees - completedSegments * 15;
+  let krantiArcMinutes = 0;
+  for (let index = 0; index < completedSegments; index += 1) {
+    krantiArcMinutes += RAMAN_KRANTI_SEGMENT_MINUTES[index];
+  }
+  if (completedSegments < 6) {
+    krantiArcMinutes += remainderDegrees / 15 * RAMAN_KRANTI_SEGMENT_MINUTES[completedSegments];
+  }
+  return {
+    bhujaDegrees,
+    krantiDegrees: krantiArcMinutes / 60,
+    hemisphere: sayanaLongitude < 180 ? "North" : "South",
+  };
+}
+
+/**
+ * BPHS 27.15-17 Khanda method:
+ * three 30-degree Khanda segments are 45°, 33° and 12°. Their proportional
+ * sum is added to or subtracted from 90° by planet and Sayana hemisphere,
+ * then divided by three for Virupas.
+ */
+export function calculateBphsAyanaKhandaDegrees(sayanaLongitude: number): {
+  bhujaDegrees: number;
+  khandaDegrees: number;
+  hemisphere: "North" | "South";
+} {
+  const bhujaDegrees = calculateAyanaBhujaDegrees(sayanaLongitude);
+  const first = Math.min(30, bhujaDegrees) / 30 * 45;
+  const second = Math.max(0, Math.min(30, bhujaDegrees - 30)) / 30 * 33;
+  const third = Math.max(0, Math.min(30, bhujaDegrees - 60)) / 30 * 12;
+  return {
+    bhujaDegrees,
+    khandaDegrees: first + second + third,
+    hemisphere: sayanaLongitude < 180 ? "North" : "South",
+  };
+}
+
+function ayanaDirectionIsAdditive(planet: string, hemisphere: "North" | "South"): boolean {
+  if (planet === "Mercury") return true;
+  if (planet === "Moon" || planet === "Saturn") return hemisphere === "South";
+  return hemisphere === "North";
+}
+
+/**
+ * Source-labelled Ayana Bala from an explicit Sayana longitude.
+ * BPHS uses the 45/33/12 Khanda construction; Raman uses the six-step
+ * Kranti table and Kesava Daivagna's (24 ± Kranti) / 48 × 60 rule.
+ * BPHS 27.18 pairs Sun Cheshta with its Ayana value. Raman Ch. V art. 75
+ * doubles Sun Ayana within Kala instead, so no separate Sun Cheshta is added.
+ */
+export function calculateAyanaBalaForSayanaLongitude(
+  planet: string,
+  sayanaLongitude: number,
+  method: AyanaBalaMethod = "bphs-khanda"
+): AyanaBalaResult {
+  if (!ShadbalaEngine.PLANETS.includes(planet)) {
+    throw new RangeError("Ayana Bala is defined here only for the seven classical planets.");
+  }
+  if (!Number.isFinite(sayanaLongitude) || sayanaLongitude < 0 || sayanaLongitude >= 360) {
+    throw new RangeError("Sayana longitude must be normalized to [0°, 360°).");
+  }
+  const raman = calculateRamanKrantiDegrees(sayanaLongitude);
+  const khanda = calculateBphsAyanaKhandaDegrees(sayanaLongitude);
+  const isAdditive = ayanaDirectionIsAdditive(planet, raman.hemisphere);
+
+  let basePoints: number;
+  let note: string;
+  if (method === "bphs-khanda") {
+    const signedKhanda = isAdditive ? khanda.khandaDegrees : -khanda.khandaDegrees;
+    basePoints = (90 + signedKhanda) / 3;
+    note = "BPHS 27.15–17: 45°/33°/12° Khanda segments from the nearest equinox, signed by graha and hemisphere.";
+  } else {
+    const signedKranti = isAdditive ? raman.krantiDegrees : -raman.krantiDegrees;
+    basePoints = (24 + signedKranti) / 48 * 60;
+    note = "Raman Ch. V, arts. 71–75: six-step Kranti table and Kesava Daivagna's 24° normalization.";
+  }
+
+  // Raman explicitly doubles the Sun's Ayana Bala in Kala. BPHS 27.18 instead
+  // uses the (undoubled) Sun Ayana again as its Cheshta Bala.
+  const pointsInKala = method === "raman-kranti" && planet === "Sun"
+    ? basePoints * 2
+    : basePoints;
+  const pointsInCheshta = method === "bphs-khanda" && planet === "Sun"
+    ? basePoints
+    : 0;
+  const points = Math.round(pointsInKala * 100) / 100;
+  const cheshtaPoints = Math.round(pointsInCheshta * 100) / 100;
+  const details: AyanaBalaDetails = {
+    method,
+    sayanaLongitude,
+    bhujaDegrees: method === "bphs-khanda" ? khanda.bhujaDegrees : raman.bhujaDegrees,
+    khandaDegrees: khanda.khandaDegrees,
+    hemisphere: raman.hemisphere,
+    krantiDegrees: raman.krantiDegrees,
+    signedKrantiDegrees: isAdditive ? raman.krantiDegrees : -raman.krantiDegrees,
+    basePoints: Math.round(basePoints * 100) / 100,
+    pointsInKala: points,
+    pointsInCheshta: cheshtaPoints,
+    note,
+  };
+  return {
+    planet,
+    available: true,
+    points,
+    cheshtaPoints,
+    details,
+    description: planet + " Ayana Bala = " + points.toFixed(2) + " Virupas. " + note +
+      (planet === "Sun" && method === "raman-kranti"
+        ? " Sun's Ayana is doubled inside Kala; a separate Sun Cheshta is not added under this profile."
+        : planet === "Sun"
+          ? " BPHS 27.18 uses the same undoubled Ayana figure as Sun Cheshta."
+          : ""),
+  };
+}
+
+/** Resolve a chart's sidereal graha longitude to the source's Sayana frame. */
+export function calculateAyanaBala(
+  planet: string,
+  input: ShadbalaChartInput
+): AyanaBalaResult {
+  const position = input.planets[planet];
+  if (
+    !position ||
+    !Number.isFinite(position.longitude) ||
+    position.longitude < 0 ||
+    position.longitude >= 360 ||
+    !Number.isFinite(input.ayanamsaDegrees) ||
+    (input.ayanamsaDegrees as number) < 0 ||
+    (input.ayanamsaDegrees as number) >= 360
+  ) {
+    return {
+      planet,
+      available: false,
+      points: null,
+      cheshtaPoints: null,
+      description: "Ayana Bala unavailable: a normalized sidereal longitude and the birth-date ayanamsa are required to obtain Sayana longitude.",
+    };
+  }
+  const sayanaLongitude = ((position.longitude + (input.ayanamsaDegrees as number)) % 360 + 360) % 360;
+  return calculateAyanaBalaForSayanaLongitude(
+    planet,
+    sayanaLongitude,
+    input.ayanaMethod ?? "bphs-khanda"
+  );
+}
+
 export interface RamanTimeLordsResult {
   available: true;
   method: "raman-graha-bhava-balas-chapter-v-1827-epoch";
