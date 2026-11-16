@@ -82,6 +82,25 @@ assert.equal(
   true,
   "Sun's meridian peak must be disclosed as approximate without a chart-derived Midheaven"
 );
+const incompleteJupiter = engine.calculateShadbala("Jupiter", {
+  ...noMidheavenChart,
+  ascendant: Number.NaN,
+});
+assert.ok(
+  incompleteJupiter.unavailableComponents.some((item) => item.startsWith("Dig Bala:")),
+  "An unavailable Dig Bala must make the six-fold subtotal explicitly incomplete"
+);
+assert.equal(
+  incompleteJupiter.totalVirupas,
+  Math.round((
+    incompleteJupiter.sthanaBala.total +
+    incompleteJupiter.kalaBala.total +
+    incompleteJupiter.cheshtaBala.points +
+    incompleteJupiter.naisargikaBala.points +
+    incompleteJupiter.drikBala.points
+  ) * 100) / 100,
+  "An unavailable Dig Bala must contribute no fabricated score to the subtotal"
+);
 
 // Raman's Standard Horoscope (13th ed., 1992), printed pp. 2-3, 31-33:
 // Example 14 supplies the powerless-point arcs; Example 15 divides those
