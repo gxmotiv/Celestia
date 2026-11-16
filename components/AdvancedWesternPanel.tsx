@@ -958,7 +958,7 @@ export function AdvancedWesternPanel({
               <span>Tight Aspects to Fixed Stars (&lt; 1.25° orb): <strong className="text-amber-300 font-mono">{starContacts.length} active</strong></span>
               <span>Including 4 Royal Archangel Stars &amp; Medusa Algol</span>
             </div>
-            <span className="text-[10px] text-slate-500">J2000 catalogue longitudes receive an approximate general-precession correction. Proper motion and full 3D stellar coordinates are not included.</span>
+            <span className="text-[10px] text-slate-500">Traditional fixed-star meanings are symbolic interpretations, not guaranteed outcomes. J2000 catalogue longitudes receive an approximate general-precession correction; proper motion and full 3D stellar coordinates are not included.</span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -994,10 +994,10 @@ export function AdvancedWesternPanel({
           <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
             <h4 className="text-xs font-bold text-rose-300 flex items-center gap-1.5">
               <Sun className="w-3.5 h-3.5 text-rose-400" />
-              Major Solar &amp; Lunar Eclipses Impacting Your Natal Houses
+              Future Eclipses &amp; Traditional House Symbolism
             </h4>
             <p className="text-xs text-slate-300 leading-relaxed">
-              Eclipses act as cosmic wildcards, catalyzing non-negotiable course-corrections in the specific houses they touch over a 6 to 12 month cycle.
+              In astrological traditions, eclipses are interpreted symbolically in relation to natal houses. These themes are reflective prompts, not guaranteed events or deterministic forecasts.
             </p>
           </div>
 
