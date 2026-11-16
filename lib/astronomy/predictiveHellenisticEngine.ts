@@ -304,7 +304,8 @@ export class ZodiacalReleasingEngine {
   private static readonly DAY_MS = 86400000;
   private static readonly SIGN_NAMES = ZODIAC_SIGNS.map((sign) => sign.name);
 
-  private getAngleFromFortune(signIndex: number, fortuneIndex: number): number {
+  private getAngleFromFortune(signIndex: number, fortuneIndex: number | null): number | null {
+    if (fortuneIndex === null) return null;
     return ((signIndex - fortuneIndex + 12) % 12) + 1;
   }
 
@@ -313,7 +314,7 @@ export class ZodiacalReleasingEngine {
     signIndex: number,
     startMs: number,
     durationDays: number,
-    fortuneIndex: number,
+    fortuneIndex: number | null,
     isLoosingBond: boolean
   ): ReleasingPeriodInternal {
     const signName = ZodiacalReleasingEngine.SIGN_NAMES[signIndex] || "Aries";
@@ -329,8 +330,8 @@ export class ZodiacalReleasingEngine {
       durationYears: durationDays / ZodiacalReleasingEngine.YEAR_LENGTH_DAYS,
       startDate: startDate.toISOString().slice(0, 10),
       endDate: endDate.toISOString().slice(0, 10),
-      isAngular: angle === 1 || angle === 4 || angle === 7 || angle === 10,
-      angleFromFortune: angle === 1 || angle === 4 || angle === 7 || angle === 10 ? angle : null,
+      isAngular: angle !== null && (angle === 1 || angle === 4 || angle === 7 || angle === 10),
+      angleFromFortune: angle !== null && (angle === 1 || angle === 4 || angle === 7 || angle === 10) ? angle : null,
       isPeak: angle === 10,
       isLoosingBond,
       ruler: ProfectionsEngine.SIGN_RULERS[signName]?.ruler || "Sun",
@@ -349,7 +350,7 @@ export class ZodiacalReleasingEngine {
     startSignIndex: number,
     startMs: number,
     cutoffMs: number,
-    fortuneIndex: number
+    fortuneIndex: number | null
   ): ReleasingPeriodInternal[] {
     const periods: ReleasingPeriodInternal[] = [];
     let signIndex = startSignIndex;
@@ -376,7 +377,7 @@ export class ZodiacalReleasingEngine {
   private generateSubperiods(
     parent: ReleasingPeriodInternal,
     level: Exclude<ReleasingLevel, "L1">,
-    fortuneIndex: number
+    fortuneIndex: number | null
   ): ReleasingPeriodInternal[] {
     const periods: ReleasingPeriodInternal[] = [];
     const levelNumber = Number(level.slice(1));
@@ -439,11 +440,11 @@ export class ZodiacalReleasingEngine {
   ): ZodiacalReleasingReport {
     const lotSignIndex = Math.floor(((lotLongitude % 360) + 360) % 360 / 30);
     const hasFortune = typeof fortuneLongitude === "number" && Number.isFinite(fortuneLongitude);
-    const fortuneSignIndex = hasFortune
+    const fortuneSignIndex: number | null = hasFortune
       ? Math.floor(((fortuneLongitude % 360) + 360) % 360 / 30)
-      : lotSignIndex;
+      : null;
     const lotSign = ZodiacalReleasingEngine.SIGN_NAMES[lotSignIndex] || "Aries";
-    const fortuneSign = hasFortune
+    const fortuneSign = hasFortune && fortuneSignIndex !== null
       ? ZodiacalReleasingEngine.SIGN_NAMES[fortuneSignIndex] || "Aries"
       : "Not supplied";
 
