@@ -263,6 +263,7 @@ export class VedicBenchmarkRunner {
     // Jupiter peaks in 1st House (0° from Ascendant = 60 Virupas)
     const jupiterAtLagnaInput: ShadbalaChartInput = {
       ascendant: 90,
+      birthTimeKnown: true,
       planets: {
         Jupiter: { longitude: 90 }, // exactly at Lagna
       },
@@ -272,18 +273,20 @@ export class VedicBenchmarkRunner {
       id: "SB-02",
       name: "Jupiter Dig Bala Peak at Lagna (1st House)",
       category: "Shadbala",
-      shastraReference: "BPHS Ch. 27, Sloka 13-14",
+      shastraReference: "BPHS Ch. 27, Sloka 7-8",
       expected: "60.0 Virupas",
-      actual: `${jupDig.points} Virupas`,
-      passed: jupDig.points >= 59.9,
+      actual: jupDig.available && jupDig.points !== null ? `${jupDig.points} Virupas` : "Unavailable",
+      passed: jupDig.available && jupDig.points !== null && jupDig.points >= 59.9,
       notes: "Jupiter and Mercury achieve peak directional strength (60 Virupas) in the 1st House (East).",
     });
 
     // Test 2.3: Mars Dig Bala Peak at 10th House
     const marsAt10thInput: ShadbalaChartInput = {
       ascendant: 0,
+      midheaven: 270,
+      birthTimeKnown: true,
       planets: {
-        Mars: { longitude: 270 }, // 10th house cusp (South)
+        Mars: { longitude: 270 }, // chart-derived meridian (South)
       },
     };
     const marsDig = this.shadbalaEngine.calculateDigBala("Mars", marsAt10thInput);
@@ -291,18 +294,19 @@ export class VedicBenchmarkRunner {
       id: "SB-03",
       name: "Mars Dig Bala Peak at Midheaven (10th House)",
       category: "Shadbala",
-      shastraReference: "BPHS Ch. 27, Sloka 13-14",
+      shastraReference: "BPHS Ch. 27, Sloka 7-8",
       expected: "60.0 Virupas",
-      actual: `${marsDig.points} Virupas`,
-      passed: marsDig.points >= 59.9,
+      actual: marsDig.available && marsDig.points !== null ? `${marsDig.points} Virupas` : "Unavailable",
+      passed: marsDig.available && marsDig.points !== null && marsDig.points >= 59.9,
       notes: "Sun and Mars achieve peak directional strength (60 Virupas) at the South point (10th House).",
     });
 
     // Test 2.4: Saturn Dig Bala Peak at 7th House
     const saturnAt7thInput: ShadbalaChartInput = {
       ascendant: 0,
+      birthTimeKnown: true,
       planets: {
-        Saturn: { longitude: 180 }, // 7th house cusp (West)
+        Saturn: { longitude: 180 }, // descendant (West)
       },
     };
     const satDig = this.shadbalaEngine.calculateDigBala("Saturn", saturnAt7thInput);
@@ -310,10 +314,10 @@ export class VedicBenchmarkRunner {
       id: "SB-04",
       name: "Saturn Dig Bala Peak at Descendant (7th House)",
       category: "Shadbala",
-      shastraReference: "BPHS Ch. 27, Sloka 13-14",
+      shastraReference: "BPHS Ch. 27, Sloka 7-8",
       expected: "60.0 Virupas",
-      actual: `${satDig.points} Virupas`,
-      passed: satDig.points >= 59.9,
+      actual: satDig.available && satDig.points !== null ? `${satDig.points} Virupas` : "Unavailable",
+      passed: satDig.available && satDig.points !== null && satDig.points >= 59.9,
       notes: "Saturn achieves peak directional strength (60 Virupas) in the West (7th House).",
     });
 
