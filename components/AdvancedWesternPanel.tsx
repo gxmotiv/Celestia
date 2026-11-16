@@ -953,9 +953,12 @@ export function AdvancedWesternPanel({
       {/* SUB-TAB 11: FIXED STARS */}
       {activeSubTab === "fixedStars" && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between text-xs px-3 py-2 bg-slate-950/80 border border-slate-800 rounded-lg text-slate-400">
-            <span>Tight Aspects to Fixed Stars (&lt; 1.25° orb): <strong className="text-amber-300 font-mono">{starContacts.length} active</strong></span>
-            <span>Including 4 Royal Archangel Stars &amp; Medusa Algol</span>
+          <div className="flex flex-col gap-1 text-xs px-3 py-2 bg-slate-950/80 border border-slate-800 rounded-lg text-slate-400">
+            <div className="flex items-center justify-between gap-2">
+              <span>Tight Aspects to Fixed Stars (&lt; 1.25° orb): <strong className="text-amber-300 font-mono">{starContacts.length} active</strong></span>
+              <span>Including 4 Royal Archangel Stars &amp; Medusa Algol</span>
+            </div>
+            <span className="text-[10px] text-slate-500">J2000 catalogue longitudes receive an approximate general-precession correction. Proper motion and full 3D stellar coordinates are not included.</span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -972,7 +975,7 @@ export function AdvancedWesternPanel({
                 </div>
                 <p className="text-xs text-slate-300 leading-relaxed">{c.interpretation}</p>
                 <div className="text-[10px] text-slate-400 font-mono pt-1 border-t border-slate-800/80">
-                  Orb: {c.orb}° · Star Longitude: {c.starLongitude.toFixed(2)}°
+                  Orb: {c.orb}° · Date-adjusted: {c.starLongitude.toFixed(2)}° · J2000: {c.j2000Longitude.toFixed(2)}° · Precession: {c.precessionCorrectionDegrees >= 0 ? "+" : ""}{c.precessionCorrectionDegrees.toFixed(3)}°
                 </div>
               </div>
             ))}
