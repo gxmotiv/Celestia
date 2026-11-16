@@ -1521,30 +1521,37 @@ export class ShadbalaEngine {
 
   public calculateCheshtaBala(planet: string, input: ShadbalaChartInput): CheshtaBalaResult {
     const pPos = input.planets[planet];
-    const isRetro = pPos?.isRetrograde ?? false;
     const dailyMotion = pPos?.dailyMotion ?? pPos?.speed;
+    const isRetrograde = pPos?.isRetrograde ?? (typeof dailyMotion === "number" && dailyMotion < 0);
+    const motion = typeof dailyMotion === "number" && Number.isFinite(dailyMotion) ? dailyMotion : 0;
+    const unavailable = (description: string): CheshtaBalaResult => ({
+      points: 0,
+      motion,
+      isRetrograde,
+      state: "Unavailable (mean/seeghrocha not supplied)",
+      available: false,
+      description,
+    });
 
+    if (!ShadbalaEngine.PLANETS.includes(planet)) {
+      throw new RangeError("Cheshta Bala is defined here only for the seven classical planets.");
+    }
+
+    // BPHS 27.18 pairs luminary Cheshta with a different Kala component.
     if (planet === "Moon") {
       const paksha = calculatePakshaBala("Moon", input);
       if (!paksha.available) {
-        return {
-          points: 0,
-          motion: 0,
-          isRetrograde: false,
-          state: "Unavailable (motion not supplied)",
-          available: false,
-          description: "Moon Cheshta Bala is unavailable because BPHS 27.18 identifies it with Paksha Bala, which requires valid Sun and Moon longitudes.",
-        };
+        return unavailable("Moon Cheshta Bala is unavailable because BPHS 27.18 identifies it with Paksha Bala, which requires valid Sun and Moon longitudes.");
       }
       const accountingRule = input.pakshaMoonAccountingRule ?? "bphs-kala-plus-cheshta";
       return {
         points: accountingRule === "bphs-kala-plus-cheshta" ? paksha.points : 0,
         motion: 0,
         isRetrograde: false,
-        state: "Samanya (Direct)",
+        state: "Kendra computed",
         available: true,
         description: accountingRule === "bphs-kala-plus-cheshta"
-          ? `BPHS 27.18: Moon Cheshta Bala equals its Paksha Bala (${paksha.points.toFixed(2)} Virupas), complementing the undoubled Kala component.`
+          ? "BPHS 27.18: Moon Cheshta Bala equals its Paksha Bala, complementing the undoubled Kala component."
           : "Raman Chapter V / Example 56: Moon Paksha is doubled within Kala; no separate Moon Cheshta row is added in that worked accounting profile.",
       };
     }
@@ -1552,20 +1559,13 @@ export class ShadbalaEngine {
     if (planet === "Sun") {
       const ayana = calculateAyanaBala("Sun", input);
       if (!ayana.available) {
-        return {
-          points: 0,
-          motion: 0,
-          isRetrograde: false,
-          state: "Unavailable (motion not supplied)",
-          available: false,
-          description: "Sun Cheshta Bala unavailable: Ayana Bala requires a valid Sayana longitude. BPHS 27.18 identifies Sun Cheshta with Ayana; Raman Ch. V art. 75 doubles Sun Ayana within Kala instead.",
-        };
+        return unavailable("Sun Cheshta Bala unavailable: Ayana Bala requires a valid Sayana longitude. BPHS 27.18 identifies Sun Cheshta with Ayana; Raman Ch. V art. 75 doubles Sun Ayana within Kala instead.");
       }
       return {
         points: ayana.cheshtaPoints ?? 0,
         motion: 0,
         isRetrograde: false,
-        state: "Samanya (Direct)",
+        state: "Kendra computed",
         available: true,
         description: ayana.details?.method === "raman-kranti"
           ? "Raman Ch. V art. 75: Sun Ayana is doubled inside Kala; no separate Sun Cheshta row is added."
@@ -1573,45 +1573,45 @@ export class ShadbalaEngine {
       };
     }
 
-    if (dailyMotion === undefined || !Number.isFinite(dailyMotion)) {
-      return {
-        points: 0,
-        motion: 0,
-        isRetrograde: isRetro,
-        state: "Unavailable (motion not supplied)",
-        available: false,
-        description: "Cheshta Bala was not estimated because an actual daily-motion value was not supplied. No default speed is invented.",
-      };
+    if (!pPos || !Number.isFinite(pPos.longitude) || pPos.longitude < 0 || pPos.longitude >= 360) {
+      return unavailable("Cheshta Bala unavailable: a normalized true longitude is required for the seven classical grahas.");
     }
 
-    let points = 30;
-    let state: "Vakra (Retrograde)" | "Anuvakra (Slow)" | "Samanya (Direct)" | "Mandatara (Fast)" =
-      "Samanya (Direct)";
+    const sunMeanLongitude = input.planets.Sun?.meanLongitude;
+    const meanLongitude =
+      planet === "Mars" || planet === "Jupiter" || planet === "Saturn"
+        ? pPos.meanLongitude
+        : sunMeanLongitude;
+    const seeghrochaLongitude =
+      planet === "Mars" || planet === "Jupiter" || planet === "Saturn"
+        ? sunMeanLongitude
+        : pPos.seeghrochaLongitude;
 
-    if (isRetro || dailyMotion < 0) {
-      points = 60;
-      state = "Vakra (Retrograde)";
-    } else if (dailyMotion < 0.25) {
-      points = 45;
-      state = "Anuvakra (Slow)";
-    } else if (dailyMotion < 1.0) {
-      points = 30;
-      state = "Samanya (Direct)";
-    } else {
-      points = 15;
-      state = "Mandatara (Fast)";
+    if (!Number.isFinite(meanLongitude) || !Number.isFinite(seeghrochaLongitude)) {
+      const missing = [
+        ...(!Number.isFinite(meanLongitude) ? [planet === "Mercury" || planet === "Venus" ? "the Raman mean-Sun longitude" : planet + " mean longitude"] : []),
+        ...(!Number.isFinite(seeghrochaLongitude) ? [planet === "Mercury" || planet === "Venus" ? planet + " seeghrocha/apogee from Raman Table VIII/IX or an explicitly selected equivalent source" : "the mean-Sun longitude used as superior-planet seeghrocha"] : []),
+      ];
+      return unavailable("Cheshta Kendra unavailable: missing " + missing.join(" and ") + ". Apparent geocentric daily speed cannot substitute for mean longitude or seeghrocha.");
     }
 
+    const details = calculateCheshtaKendra(
+      meanLongitude as number,
+      pPos.longitude,
+      seeghrochaLongitude as number
+    );
     return {
-      points,
-      motion: dailyMotion,
-      isRetrograde: isRetro,
-      state,
+      points: details.points,
+      motion,
+      isRetrograde,
+      state: "Kendra computed",
       available: true,
-      description: `${planet} is in ${state} motion, securing a provisional ${points} Virupas Cheshta Bala estimate.`,
+      details,
+      description: planet + " Cheshta Bala = " + details.points.toFixed(2) + " Virupas from the source-defined Chesta Kendra. " +
+        "Mean " + details.meanLongitude.toFixed(2) + "°, true " + details.trueLongitude.toFixed(2) + "°, seeghrocha " + details.seeghrochaLongitude.toFixed(2) + "°; reduced Kendra " + details.reducedKendraDegrees.toFixed(2) + "° / 3. " +
+        "Apparent daily motion is displayed only as diagnostic metadata and does not determine the score.",
     };
   }
-
   public calculateNaisargikaBala(planet: string): NaisargikaBalaResult {
     const pts = ShadbalaEngine.NAISARGIKA_POINTS[planet] ?? 0;
     return {
