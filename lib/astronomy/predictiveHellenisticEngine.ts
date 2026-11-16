@@ -333,7 +333,164 @@ export class SolarArcDirectionsEngine {
 }
 
 // ---------------------------------------------------------------------------
-// 2. HELLENISTIC ANNUAL PROFECTIONS
+// 3. SOLAR RETURN CHARTS
+// ---------------------------------------------------------------------------
+
+export interface SolarReturnReport {
+  targetYear: number;
+  returnInstantUTC: string;
+  natalSunLongitude: number;
+  returnSunLongitude: number;
+  latitude: number;
+  longitude: number;
+  houseSystem: WesternChartData["houseSystem"];
+  returnChart: WesternChartData;
+  method: string;
+}
+
+/**
+ * Finds the exact annual tropical solar return by solving the instant at which
+ * the transiting geocentric Sun reaches the natal Sun's longitude. A short
+ * mean-motion estimate supplies the initial bracket; bisection refines the
+ * crossing using the same SwissEphemeris facade as the natal chart.
+ */
+export class SolarReturnEngine {
+  private static readonly DAY_MS = 86400000;
+  private static readonly MEAN_SOLAR_MOTION = 360 / 365.2422;
+
+  private calculateSunLongitude(instantMs: number): number {
+    const date = new Date(instantMs);
+    const julianDay = swissEphemeris.calculateJulianDay(
+      date.getUTCFullYear(),
+      date.getUTCMonth() + 1,
+      date.getUTCDate(),
+      date.getUTCHours(),
+      date.getUTCMinutes(),
+      date.getUTCSeconds(),
+      0
+    );
+    return swissEphemeris.calculatePlanetPosition(
+      swissEphemeris.SUN,
+      julianDay
+    ).longitude;
+  }
+
+  private signedAngularDifference(longitude: number, targetLongitude: number): number {
+    let difference = normalizeDegrees(longitude - targetLongitude);
+    if (difference > 180) difference -= 360;
+    return difference;
+  }
+
+  public calculateSolarReturn(
+    natalChart: WesternChartData,
+    targetYear: number,
+    latitude: number,
+    longitude: number,
+    houseSystem: WesternChartData["houseSystem"] = natalChart.houseSystem
+  ): SolarReturnReport {
+    if (!Number.isInteger(targetYear) || targetYear < 1 || targetYear > 9998) {
+      throw new Error("Solar Return year must be a whole-number year between 1 and 9998.");
+    }
+    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
+      throw new Error("Solar Return latitude must be between -90 and 90 degrees.");
+    }
+    if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+      throw new Error("Solar Return longitude must be between -180 and 180 degrees.");
+    }
+
+    const natalSun = natalChart.planets.find((planet) => planet.name === "Sun");
+    if (!natalSun) {
+      throw new Error("Solar Return requires a natal Sun longitude.");
+    }
+
+    const yearStartMs = Date.UTC(targetYear, 0, 1, 0, 0, 0);
+    const yearStartLongitude = this.calculateSunLongitude(yearStartMs);
+    const forwardArc = normalizeDegrees(natalSun.longitude - yearStartLongitude);
+    const approximateReturnMs = yearStartMs
+      + (forwardArc / SolarReturnEngine.MEAN_SOLAR_MOTION) * SolarReturnEngine.DAY_MS;
+
+    let lowMs = 0;
+    let highMs = 0;
+    let bracketed = false;
+
+    // The equation of center can move the actual crossing by around two days
+    // from the mean-motion estimate. Expand defensively and require a signed
+    // longitude crossing before starting bisection.
+    for (const halfWidthDays of [2, 4, 8, 12]) {
+      lowMs = approximateReturnMs - halfWidthDays * SolarReturnEngine.DAY_MS;
+      highMs = approximateReturnMs + halfWidthDays * SolarReturnEngine.DAY_MS;
+      const lowDifference = this.signedAngularDifference(
+        this.calculateSunLongitude(lowMs),
+        natalSun.longitude
+      );
+      const highDifference = this.signedAngularDifference(
+        this.calculateSunLongitude(highMs),
+        natalSun.longitude
+      );
+
+      if (lowDifference <= 0 && highDifference >= 0) {
+        bracketed = true;
+        break;
+      }
+    }
+
+    if (!bracketed) {
+      throw new Error(`Could not bracket the ${targetYear} Solar Return crossing.`);
+    }
+
+    let lowDifference = this.signedAngularDifference(
+      this.calculateSunLongitude(lowMs),
+      natalSun.longitude
+    );
+    for (let iteration = 0; iteration < 48; iteration++) {
+      const midMs = (lowMs + highMs) / 2;
+      const midDifference = this.signedAngularDifference(
+        this.calculateSunLongitude(midMs),
+        natalSun.longitude
+      );
+      if (midDifference < 0) {
+        lowMs = midMs;
+        lowDifference = midDifference;
+      } else {
+        highMs = midMs;
+      }
+      if (highMs - lowMs < 250) break;
+    }
+
+    const returnDate = new Date((lowMs + highMs) / 2);
+    const returnChart = calculateWesternChart(
+      returnDate.getUTCFullYear(),
+      returnDate.getUTCMonth() + 1,
+      returnDate.getUTCDate(),
+      returnDate.getUTCHours(),
+      returnDate.getUTCMinutes(),
+      latitude,
+      longitude,
+      0,
+      houseSystem,
+      returnDate.getUTCSeconds()
+    );
+    const returnSun = returnChart.planets.find((planet) => planet.name === "Sun");
+    if (!returnSun) {
+      throw new Error("Solar Return chart did not contain a calculated Sun position.");
+    }
+
+    return {
+      targetYear,
+      returnInstantUTC: returnDate.toISOString(),
+      natalSunLongitude: natalSun.longitude,
+      returnSunLongitude: returnSun.longitude,
+      latitude,
+      longitude,
+      houseSystem,
+      returnChart,
+      method: "Exact tropical return of the natal geocentric Sun longitude, solved with the shared SwissEphemeris facade and refined by bisection. Houses and angles use the supplied return-place coordinates; this panel defaults to the natal chart location.",
+    };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 4. HELLENISTIC ANNUAL PROFECTIONS
 // ---------------------------------------------------------------------------
 
 export interface ProfectionResult {
@@ -408,7 +565,7 @@ export class ProfectionsEngine {
 }
 
 // ---------------------------------------------------------------------------
-// 3. ZODIACAL RELEASING (Spirit & Fortune)
+// 5. ZODIACAL RELEASING (Spirit & Fortune)
 // ---------------------------------------------------------------------------
 
 export type ReleasingLevel = "L1" | "L2" | "L3" | "L4";
@@ -697,7 +854,7 @@ export class ZodiacalReleasingEngine {
 }
 
 // ---------------------------------------------------------------------------
-// 4. MEDIEVAL FIRDARIA
+// 6. MEDIEVAL FIRDARIA
 // ---------------------------------------------------------------------------
 
 export interface FirdariaPeriod {
