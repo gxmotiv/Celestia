@@ -3,6 +3,7 @@ import {
   calculateSaptavargajaBala,
   type ShadbalaChartInput,
 } from "../lib/vedic/shadbalaEngine";
+import { calculateDivisionalSignIndex } from "../lib/vedic/divisionalCalc";
 
 const chart: ShadbalaChartInput = {
   ascendant: 0,
