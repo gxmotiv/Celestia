@@ -10,6 +10,7 @@ import {
   DrikMercuryAssociationRule,
   PakshaMoonNatureRule,
   PakshaMoonAccountingRule,
+  AyanaBalaMethod,
 } from "@/lib/vedic/shadbalaEngine";
 import type { DrishtiVirupaVariant } from "@/lib/vedic/drishtiEngine";
 import { WesternChartData } from "@/lib/astronomy/ephemeris";
@@ -69,6 +70,7 @@ export function ShadbalaPanel({
   const [pakshaMercuryAssociationRule, setPakshaMercuryAssociationRule] =
     useState<DrikMercuryAssociationRule>("same-sign");
   const [pakshaMercuryAssociationOrbInput, setPakshaMercuryAssociationOrbInput] = useState("2");
+  const [ayanaMethod, setAyanaMethod] = useState<AyanaBalaMethod>("bphs-khanda");
 
   const chartInput: ShadbalaChartInput = useMemo(() => {
     const planetsMap: ShadbalaChartInput["planets"] = {};
@@ -149,6 +151,8 @@ export function ShadbalaPanel({
       planets: planetsMap,
       birthDate: bDateObj,
       birthTimeKnown,
+      ayanamsaDegrees: vedicData.ayanamsa,
+      ayanaMethod,
       latitude: birthLatitude,
       longitude: birthLongitude,
       ianaTimezone: birthIanaTimezone,
@@ -182,6 +186,7 @@ export function ShadbalaPanel({
     birthIanaTimezone,
     birthUtcOffsetSeconds,
     birthTimeKnown,
+    ayanaMethod,
     saptavargajaScale,
     drishtiVirupaVariant,
     drikFullAspectReading,
@@ -347,6 +352,17 @@ export function ShadbalaPanel({
             )}
           </div>
           <label className="flex flex-col gap-1.5 text-xs text-slate-400">
+            Ayana Bala method
+            <select
+              value={ayanaMethod}
+              onChange={(event) => setAyanaMethod(event.target.value as AyanaBalaMethod)}
+              className="rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-xs text-slate-200"
+            >
+              <option value="bphs-khanda">BPHS 27.15–17: 45° / 33° / 12° Khanda</option>
+              <option value="raman-kranti">Raman Ch. V: six-step Kranti table</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1.5 text-xs text-slate-400">
             Paksha Moon nature source
             <select
               value={pakshaMoonNatureRule}
@@ -397,7 +413,7 @@ export function ShadbalaPanel({
             )}
           </div>
           <p className="lg:col-span-3 text-[10px] leading-relaxed text-slate-500">
-            Paksha is calculated from the folded Moon–Sun elongation. BPHS and Raman differ on the Moon’s benefic window and where its doubled value is accounted. Mercury is only treated as malefic when it joins a malefic under the selected association rule; the source does not prescribe a universal degree orb. Rahu/Ketu can condition Mercury but receive no Paksha Bala themselves.
+            Ayana uses Sayana longitudes (sidereal longitude + the chart ayanamsa). BPHS uses 45°/33°/12° Khanda portions; Raman uses his 24° Kranti table. BPHS 27.18 pairs the Sun's undoubled Ayana with Sun Cheshta; Raman doubles Sun Ayana within Kala and does not add a separate Sun Cheshta. Paksha uses folded Moon–Sun elongation; its Moon-nature and accounting differences remain separately selectable.
           </p>
         </div>
 
@@ -722,6 +738,22 @@ export function ShadbalaPanel({
                         : `${activeResult.kalaBala.components.horaBala.toFixed(2)} Virupas`}
                     </span>
                   </div>
+                  <div>
+                    Ayana Bala:
+                    <span className="ml-1 font-mono text-slate-300">
+                      {activeResult.kalaBala.components.ayanaBala === null
+                        ? "Unavailable — Sayana longitude required"
+                        : `${activeResult.kalaBala.components.ayanaBala.toFixed(2)} Virupas`}
+                    </span>
+                  </div>
+                  {activeResult.kalaBala.ayanaDetails && (
+                    <div className="sm:col-span-2">
+                      {activeResult.kalaBala.ayanaDetails.note} ·
+                      Sayana {activeResult.kalaBala.ayanaDetails.sayanaLongitude.toFixed(2)}° ·
+                      {activeResult.kalaBala.ayanaDetails.hemisphere} Kranti {activeResult.kalaBala.ayanaDetails.krantiDegrees.toFixed(2)}° ·
+                      Sun Cheshta {activeResult.kalaBala.ayanaDetails.pointsInCheshta.toFixed(2)} Virupas
+                    </div>
+                  )}
                   {activeResult.kalaBala.timeLordDetails && (
                     <div className="sm:col-span-2 space-y-0.5">
                       <span className="text-slate-400">Raman sunrise-to-sunrise time lords</span>
