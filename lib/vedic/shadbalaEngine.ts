@@ -45,10 +45,17 @@ export interface SthanaBalaBreakdown {
 }
 
 export interface DigBalaResult {
-  points: number;
+  /** Null when the required directional longitude inputs are unavailable or invalid. */
+  points: number | null;
   strongestHouse: number;
-  actualHouse: number;
-  angularDistance: number;
+  /** Whole-sign house metadata from the Ascendant; null when it is unavailable. */
+  actualHouse: number | null;
+  /** Shortest angular distance from the selected strongest directional point. */
+  angularDistance: number | null;
+  available: boolean;
+  /** True only for the disclosed quadrant approximation when MC is absent. */
+  estimated: boolean;
+  unavailableComponents: string[];
   description: string;
 }
 
@@ -248,7 +255,7 @@ export type SaptavargajaScale = "bphs-santhanam" | "raman-halving";
 
 export interface ShadbalaChartInput {
   ascendant: number;
-  /** Sidereal Midheaven longitude; used to derive the MC and IC Dig Bala peaks. */
+  /** Sidereal ecliptic longitude of the local meridian (MC); used for Sun/Mars and the opposite IC peaks. */
   midheaven?: number;
   /** Source-labelled point scale; defaults to the R. Santhanam BPHS translation. */
   saptavargajaScale?: SaptavargajaScale;
@@ -1332,7 +1339,7 @@ export class ShadbalaEngine {
     const totalVirupas =
       Math.round(
         (sthanaBala.total +
-          digBala.points +
+          (digBala.points ?? 0) +
           kalaBala.total +
           cheshtaBala.points +
           naisargikaBala.points +
@@ -1350,6 +1357,9 @@ export class ShadbalaEngine {
       ...(!cheshtaBala.available
         ? ["Cheshta Bala: " + cheshtaBala.description]
         : []),
+      ...(!digBala.available
+        ? digBala.unavailableComponents.map((item) => "Dig Bala: " + item)
+        : []),
       ...(!drikBala.available
         ? ["Drik Bala: " + drikBala.description]
         : []),
@@ -1358,8 +1368,8 @@ export class ShadbalaEngine {
         : []),
     ];
     const estimatedComponents = [
-      ...(!Number.isFinite(input.midheaven)
-        ? ["Dig Bala uses an approximate quadrant peak because a chart-derived Midheaven was not supplied."]
+      ...(digBala.estimated
+        ? ["Dig Bala: " + digBala.description]
         : []),
       ...(String(SHADBALA_IMPLEMENTATION_STATUS.level) !== "complete"
         ? ["The overall six-fold Shadbala implementation remains partial / approximate and is not independently validated."]
@@ -1530,55 +1540,130 @@ export class ShadbalaEngine {
   }
 
   public calculateDigBala(planet: string, input: ShadbalaChartInput): DigBalaResult {
-    let strongestHouse = 1;
-    const asc = ((input.ascendant % 360) + 360) % 360;
-    const hasMidheaven = Number.isFinite(input.midheaven);
-    const midheaven = hasMidheaven
-      ? (((input.midheaven as number) % 360) + 360) % 360
-      : ((asc + 270) % 360);
-    let peakLongitude = asc;
+    if (!ShadbalaEngine.PLANETS.includes(planet)) {
+      throw new RangeError("Dig Bala is defined here only for the seven classical planets.");
+    }
+
+    const strongestHouseByPlanet: Record<string, number> = {
+      Jupiter: 1,
+      Mercury: 1,
+      Sun: 10,
+      Mars: 10,
+      Saturn: 7,
+      Moon: 4,
+      Venus: 4,
+    };
+    const strongestHouse = strongestHouseByPlanet[planet];
+    const requiresMeridian = ["Sun", "Mars", "Moon", "Venus"].includes(planet);
+    const hasValidAscendant =
+      Number.isFinite(input.ascendant) && input.ascendant >= 0 && input.ascendant < 360;
+    const hasSuppliedMidheaven = input.midheaven !== undefined;
+    const hasValidMidheaven =
+      hasSuppliedMidheaven &&
+      Number.isFinite(input.midheaven) &&
+      (input.midheaven as number) >= 0 &&
+      (input.midheaven as number) < 360;
+
+    const unavailable = (reason: string): DigBalaResult => ({
+      points: null,
+      strongestHouse,
+      actualHouse: null,
+      angularDistance: null,
+      available: false,
+      estimated: false,
+      unavailableComponents: [reason],
+      description: `Dig Bala unavailable: ${reason}.`,
+    });
+
+    const pPos = input.planets[planet];
+    if (!pPos) {
+      return unavailable(`the normalized longitude for ${planet} is missing`);
+    }
+    if (!Number.isFinite(pPos.longitude) || pPos.longitude < 0 || pPos.longitude >= 360) {
+      return unavailable(`${planet}'s longitude must be finite and normalized in [0°, 360°)`);
+    }
+
+    // BPHS 27.7-8 / Raman Ch. IV: Jupiter and Mercury peak at the Ascendant,
+    // Sun and Mars at the 10th/meridian, Saturn at the Descendant, and Moon
+    // and Venus at the 4th/nadir. MC/IC are a true opposite pair.
+    let peakLongitude: number;
+    let estimated = false;
 
     switch (planet) {
       case "Jupiter":
       case "Mercury":
-        strongestHouse = 1;
-        peakLongitude = asc;
+        if (!hasValidAscendant) {
+          return unavailable("Jupiter and Mercury require a valid normalized Ascendant longitude for the eastern peak");
+        }
+        peakLongitude = input.ascendant;
+        break;
+      case "Saturn":
+        if (!hasValidAscendant) {
+          return unavailable("Saturn requires a valid normalized Ascendant longitude to derive the western Descendant peak");
+        }
+        peakLongitude = (input.ascendant + 180) % 360;
         break;
       case "Sun":
       case "Mars":
-        strongestHouse = 10;
-        // Dig Bala peaks at the actual Midheaven, not at a fixed 270° offset.
-        peakLongitude = hasMidheaven ? midheaven : ((asc + 270) % 360);
-        break;
-      case "Saturn":
-        strongestHouse = 7;
-        peakLongitude = (asc + 180) % 360;
+        if (hasValidMidheaven) {
+          peakLongitude = input.midheaven as number;
+        } else if (hasSuppliedMidheaven) {
+          return unavailable("an explicit Midheaven was supplied but is not a finite normalized longitude in [0°, 360°)");
+        } else if (hasValidAscendant) {
+          // Compatibility fallback only: MC is not generally Ascendant + 270°.
+          peakLongitude = (input.ascendant + 270) % 360;
+          estimated = true;
+        } else {
+          return unavailable("Sun and Mars require the chart-derived Midheaven; the approximate fallback also requires a valid Ascendant");
+        }
         break;
       case "Moon":
       case "Venus":
-        strongestHouse = 4;
-        // The IC is exactly opposite the supplied MC.
-        peakLongitude = hasMidheaven
-          ? (midheaven + 180) % 360
-          : (asc + 90) % 360;
+        if (hasValidMidheaven) {
+          peakLongitude = ((input.midheaven as number) + 180) % 360;
+        } else if (hasSuppliedMidheaven) {
+          return unavailable("an explicit Midheaven was supplied but is not a finite normalized longitude in [0°, 360°)");
+        } else if (hasValidAscendant) {
+          // Compatibility fallback only: IC is not generally Ascendant + 90°.
+          peakLongitude = (input.ascendant + 90) % 360;
+          estimated = true;
+        } else {
+          return unavailable("Moon and Venus require the chart-derived Imum Coeli; the approximate fallback also requires a valid Ascendant");
+        }
         break;
+      default:
+        return unavailable("no source-defined directional peak is registered for this graha");
     }
 
-    const pPos = input.planets[planet];
-    const lon = pPos ? ((pPos.longitude % 360) + 360) % 360 : 0;
-    const actualHouse = ((Math.floor(lon / 30) - Math.floor(asc / 30) + 12) % 12) + 1;
+    const lon = pPos.longitude;
+    const actualHouse = hasValidAscendant
+      ? ((Math.floor(lon / 30) - Math.floor(input.ascendant / 30) + 12) % 12) + 1
+      : null;
     const rawAngularDifference = Math.abs(lon - peakLongitude);
     const angularDiff = Math.min(rawAngularDifference, 360 - rawAngularDifference);
-    const points = Math.round(Math.max(0, (1 - angularDiff / 180) * 60) * 100) / 100;
+    // Equivalent to the BPHS/Raman powerless-point arc divided by 3:
+    // the zero point is 180° opposite the selected maximum-strength point.
+    const points = Math.round(Math.max(0, (180 - angularDiff) / 3) * 100) / 100;
+    const peakKind = strongestHouse === 10
+      ? "meridian (10th-house) peak"
+      : strongestHouse === 4
+        ? "nadir (4th-house) peak"
+        : strongestHouse === 7
+          ? "Descendant (7th-house) peak"
+          : "Ascendant (1st-house) peak";
+    const description = estimated
+      ? `${planet} receives ${points.toFixed(2)} Virupas at an approximate ${peakKind} (${peakLongitude.toFixed(2)}°); no chart-derived sidereal Midheaven was supplied.`
+      : `${planet} receives ${points.toFixed(2)} Virupas from ${angularDiff.toFixed(2)}° separation to its chart-derived ${peakKind} at ${peakLongitude.toFixed(2)}°.`;
 
     return {
       points,
       strongestHouse,
       actualHouse,
       angularDistance: Math.round(angularDiff * 10) / 10,
-      description: hasMidheaven
-        ? `${planet} receives ${points} Virupas relative to its chart-derived directional peak at ${peakLongitude.toFixed(2)}°.`
-        : `${planet} receives ${points} Virupas using the approximate quadrant peak for House ${strongestHouse}; no Midheaven was supplied.`,
+      available: true,
+      estimated,
+      unavailableComponents: [],
+      description,
     };
   }
 
