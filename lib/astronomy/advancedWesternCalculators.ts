@@ -428,3 +428,125 @@ export class DeclinationCalculator {
     };
   }
 }
+
+// -------------------------------------------------------------
+// 4. ANTISCIA & CONTRA-ANTISCIA
+// -------------------------------------------------------------
+
+export interface AntisciaPoint {
+  point: string;
+  symbol: string;
+  natalLongitude: number;
+  antiscionLongitude: number;
+  contraAntiscionLongitude: number;
+  antiscionFormatted: string;
+  contraAntiscionFormatted: string;
+}
+
+export interface AntisciaContact {
+  point1: string;
+  point2: string;
+  contactType: "Antiscion" | "Contra-antiscion";
+  mirroredLongitude: number;
+  targetLongitude: number;
+  orb: number;
+  interpretation: string;
+}
+
+export interface AntisciaReport {
+  points: AntisciaPoint[];
+  antiscionContacts: AntisciaContact[];
+  contraAntiscionContacts: AntisciaContact[];
+  orb: number;
+  method: string;
+}
+
+/**
+ * Traditional tropical zodiac mirror points:
+ * antiscion = (180° - longitude) mod 360° across the solstitial axis;
+ * contra-antiscion = (360° - longitude) mod 360° across the equinoctial axis.
+ * Contacts compare each point's mirror with another natal point once per pair.
+ */
+export class AntisciaCalculator {
+  public calculateAntiscion(longitude: number): number {
+    return normalizeDegrees(180 - longitude);
+  }
+
+  public calculateContraAntiscion(longitude: number): number {
+    return normalizeDegrees(360 - longitude);
+  }
+
+  private angularDifference(first: number, second: number): number {
+    const difference = Math.abs(normalizeDegrees(first) - normalizeDegrees(second));
+    return Math.min(difference, 360 - difference);
+  }
+
+  public calculate(points: PlanetPosition[], orb = 1.5): AntisciaReport {
+    if (!Number.isFinite(orb) || orb < 0 || orb > 15) {
+      throw new Error("Antiscia orb must be between 0 and 15 degrees.");
+    }
+
+    const pointRecords: AntisciaPoint[] = points.map((point) => {
+      const antiscionLongitude = this.calculateAntiscion(point.longitude);
+      const contraAntiscionLongitude = this.calculateContraAntiscion(point.longitude);
+      return {
+        point: point.name,
+        symbol: point.symbol,
+        natalLongitude: normalizeDegrees(point.longitude),
+        antiscionLongitude,
+        contraAntiscionLongitude,
+        antiscionFormatted: formatDegreeMinute(antiscionLongitude),
+        contraAntiscionFormatted: formatDegreeMinute(contraAntiscionLongitude),
+      };
+    });
+
+    const antiscionContacts: AntisciaContact[] = [];
+    const contraAntiscionContacts: AntisciaContact[] = [];
+
+    for (let i = 0; i < points.length; i++) {
+      for (let j = i + 1; j < points.length; j++) {
+        const first = points[i];
+        const second = points[j];
+
+        const antiscion = this.calculateAntiscion(first.longitude);
+        const antiscionOrb = this.angularDifference(antiscion, second.longitude);
+        if (antiscionOrb <= orb) {
+          antiscionContacts.push({
+            point1: first.name,
+            point2: second.name,
+            contactType: "Antiscion",
+            mirroredLongitude: antiscion,
+            targetLongitude: normalizeDegrees(second.longitude),
+            orb: Math.round(antiscionOrb * 1000) / 1000,
+            interpretation: `${first.name}'s antiscion (${formatDegreeMinute(antiscion)}) is conjunct ${second.name} within ${antiscionOrb.toFixed(3)}°.`,
+          });
+        }
+
+        const contraAntiscion = this.calculateContraAntiscion(first.longitude);
+        const contraOrb = this.angularDifference(contraAntiscion, second.longitude);
+        if (contraOrb <= orb) {
+          contraAntiscionContacts.push({
+            point1: first.name,
+            point2: second.name,
+            contactType: "Contra-antiscion",
+            mirroredLongitude: contraAntiscion,
+            targetLongitude: normalizeDegrees(second.longitude),
+            orb: Math.round(contraOrb * 1000) / 1000,
+            interpretation: `${first.name}'s contra-antiscion (${formatDegreeMinute(contraAntiscion)}) is conjunct ${second.name} within ${contraOrb.toFixed(3)}°.`,
+          });
+        }
+      }
+    }
+
+    antiscionContacts.sort((a, b) => a.orb - b.orb);
+    contraAntiscionContacts.sort((a, b) => a.orb - b.orb);
+
+    return {
+      points: pointRecords,
+      antiscionContacts,
+      contraAntiscionContacts,
+      orb,
+      method: "Antiscion = (180° − tropical longitude) mod 360° across the 0° Cancer–0° Capricorn solstitial axis. Contra-antiscion = (360° − tropical longitude) mod 360° across the 0° Aries–0° Libra equinoctial axis. These are derived mirror points, not physical celestial bodies.",
+    };
+  }
+}
