@@ -149,6 +149,28 @@ for (const invalidAscendant of [Number.NaN, Number.POSITIVE_INFINITY, -0.01, 360
     Math.round((result.ucchaBala + (result.saptavargajaBala ?? 0) + result.ojayugmaBala + result.drekkanaBala) * 100) / 100,
     "The displayed partial subtotal must not include a fabricated Kendradi score");
 }
+// Even a finite noon-placeholder Ascendant is not a valid natal angle
+// when the birth time is explicitly unknown.
+const unknownBirthTimeSthana = engine.calculateSthanaBala("Sun", {
+  ...ramanStandardHoroscope,
+  birthTimeKnown: false,
+});
+assert.equal(unknownBirthTimeSthana.kendradiBala, null);
+assert.equal(unknownBirthTimeSthana.available, false);
+assert.ok(
+  unknownBirthTimeSthana.unavailableComponents.some((item) => /known birth time/.test(item)),
+  "Kendradi Bala must require the actual known birth time, not merely a finite placeholder Ascendant"
+);
+assert.equal(
+  unknownBirthTimeSthana.total,
+  Math.round((
+    unknownBirthTimeSthana.ucchaBala +
+    (unknownBirthTimeSthana.saptavargajaBala ?? 0) +
+    unknownBirthTimeSthana.ojayugmaBala +
+    unknownBirthTimeSthana.drekkanaBala
+  ) * 100) / 100
+);
+
 assert.throws(
   () => engine.calculateSthanaBala("Rahu", ramanStandardHoroscope),
   /seven classical planets/,
