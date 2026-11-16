@@ -43,7 +43,7 @@ const standard: ShadbalaChartInput = {
   assert.equal(fullMoon.beneficShareVirupas, 60);
   assert.equal(fullMoon.maleficShareVirupas, 0);
 
-  const waningMirror = calculatePakshaPoolVirupas(200, 0);
+  const waningMirror = calculatePakshaPoolVirupas(0, 200);
   assert.equal(waningMirror.elongationDegrees, 200);
   assert.equal(waningMirror.foldedArcDegrees, 160);
   close(waningMirror.beneficShareVirupas, 160 / 3, "Waning folded benefic share");
