@@ -67,6 +67,30 @@ assert.equal(sthana("Sun", justBeforeNavamsaBoundary).ojayugmaBala, 30,
 assert.equal(sthana("Sun", exactNavamsaBoundary).ojayugmaBala, 15,
   "At 3°20', the next (even) Navamsa begins under the half-open boundary rule");
 
+// Cross-check Ojayugma against the longitudes in Raman's Standard Horoscope
+// (published worked-chart table). Expected values are 0/15/15/30/15/30/15.
+const ramanStandardHoroscope: ShadbalaChartInput = {
+  ascendant: 294.95, // 24°57' Capricorn
+  planets: {
+    Sun: { longitude: 150 + 29 + 8 / 60 },      // 29°08' Virgo
+    Moon: { longitude: 300 + 11 + 40 / 60 },    // 11°40' Aquarius
+    Mars: { longitude: 210 + 19 + 49 / 60 },    // 19°49' Scorpio
+    Mercury: { longitude: 180 + 0 + 33 / 60 },  // 0°33' Libra
+    Jupiter: { longitude: 60 + 23 + 35 / 60 },  // 23°35' Gemini
+    Venus: { longitude: 150 + 20 + 4 / 60 },    // 20°04' Virgo
+    Saturn: { longitude: 120 + 4 + 51 / 60 },   // 4°51' Leo
+  },
+};
+const ramanOjayugma: Array<[string, number]> = [
+  ["Sun", 0], ["Moon", 15], ["Mars", 15], ["Mercury", 30],
+  ["Jupiter", 15], ["Venus", 30], ["Saturn", 15],
+];
+for (const [planet, expected] of ramanOjayugma) {
+  const result = engine.calculateSthanaBala(planet, ramanStandardHoroscope);
+  assert.equal(result.ojayugmaBala, expected,
+    `Raman Standard Horoscope Ojayugma for ${planet} must match the independently transcribed worked-chart table`);
+}
+
 // BPHS 27.6 Sanskrit orders the decanates and classes as masculine,
 // neuter and feminine: male first, Mercury/Saturn middle, female last.
 const drekkanaMatches: Array<[string, number]> = [
