@@ -23,7 +23,7 @@ export const SHADBALA_IMPLEMENTATION_STATUS = {
     "Saptavargaja now evaluates D1, D2, D3, D7, D9, D12 and D30 separately. Its default score scale is the R. Santhanam BPHS translation (45/30/20/15/10/4/2); the alternative Raman halving scale can be selected explicitly. Five-fold friendship is derived from D1 relationships, and Moolatrikona is applied in D1 only.",
     "Dig Bala uses the actual sidereal Midheaven when supplied by the chart; callers without a Midheaven retain the disclosed 90° ecliptic fallback.",
     "Nathonnatha Bala uses Meeus-corrected local apparent time. Paksha Bala supports separate BPHS/Raman Moon-nature and Moon-accounting profiles. Tribhaga uses location-specific NOAA-model sunrise/sunset unequal thirds. Abda, Masa, Vara and Hora use Raman Chapter V's 1827-epoch 360/30-day year/month lords and equal 24-hour sunrise-to-sunrise Hora cycle; the original tabulated epoch range is proleptically extended to 2100 and remains a named lineage.",
-    "Ayana Bala supports BPHS 27.15–17's 45°/33°/12° Khanda method and Raman Chapter V's six-step 24° Kranti table as separate profiles. BPHS Sun Cheshta reuses undoubled Ayana per 27.18; Raman doubles Sun Ayana inside Kala and adds no separate Sun Cheshta row. Non-luminary Cheshta still uses provisional speed bands until the source-required mean longitude and seeghrocha are supplied.",
+    "Ayana Bala supports BPHS 27.15–17's 45°/33°/12° Khanda method and Raman Chapter V's six-step 24° Kranti table as separate profiles. BPHS Sun Cheshta reuses undoubled Ayana per 27.18; Raman doubles Sun Ayana inside Kala and adds no separate Sun Cheshta row. Non-luminary Cheshta now uses Raman/Sripati's mean-true-seeghrocha Kendra formula and is unavailable until the source-required mean longitude and apogee inputs are explicitly provided; apparent daily speed is never substituted.",
     "Drik Bala now uses directed longitude-based Drishti Pinda for the seven classical grahas, with source-labelled BPHS verse and Raman/translator aspect curves and explicit Mercury/Jupiter full-aspect readings. It still requires validation against a complete independent Shadbala worked chart before the Shadbala module can be promoted beyond partial."
   ]
 } as const;
@@ -74,12 +74,24 @@ export interface KalaBalaResult {
   description: string;
 }
 
+export interface CheshtaKendraDetails {
+  meanLongitude: number;
+  trueLongitude: number;
+  seeghrochaLongitude: number;
+  midpointLongitude: number;
+  rawKendraDegrees: number;
+  reducedKendraDegrees: number;
+  points: number;
+  note: string;
+}
+
 export interface CheshtaBalaResult {
   points: number;
   motion: number;
   isRetrograde: boolean;
-  state: "Vakra (Retrograde)" | "Anuvakra (Slow)" | "Samanya (Direct)" | "Mandatara (Fast)" | "Unavailable (motion not supplied)";
+  state: "Vakra (Retrograde)" | "Anuvakra (Slow)" | "Samanya (Direct)" | "Mandatara (Fast)" | "Kendra computed" | "Unavailable (mean/seeghrocha not supplied)" | "Unavailable (motion not supplied)";
   available: boolean;
+  details?: CheshtaKendraDetails;
   description: string;
 }
 
@@ -247,6 +259,14 @@ export interface ShadbalaChartInput {
       isRetrograde?: boolean;
       dailyMotion?: number;
       speed?: number;
+      /**
+       * Source-specific mean longitude in the same zodiac frame as longitude.
+       * Under Raman's method Mercury/Venus use the mean Sun here; the caller
+       * must supply that explicitly rather than infer it from geocentric speed.
+       */
+      meanLongitude?: number;
+      /** Mercury/Venus seeghrocha (apogee) from the selected source table. */
+      seeghrochaLongitude?: number;
     };
   };
   birthDate?: Date;
@@ -1144,6 +1164,56 @@ export function calculateTribhagaBala(
   });
 }
 
+/**
+ * Shortest signed angular difference from one longitude to another, in
+ * [-180°, 180°). This provides a wrap-safe midpoint for a mean/true pair
+ * which straddles 0°.
+ */
+function signedLongitudeDifference(from: number, to: number): number {
+  return ((to - from + 540) % 360) - 180;
+}
+
+/**
+ * Chesta Kendra (BPHS 27.24–25; Raman, Graha and Bhava Balas, Ch. VI,
+ * articles 105–107): fold seeghrocha minus the mean/true midpoint to the
+ * smaller arc, then divide by three for Virupas. All longitudes must use
+ * the same zodiac frame.
+ */
+export function calculateCheshtaKendra(
+  meanLongitude: number,
+  trueLongitude: number,
+  seeghrochaLongitude: number
+): CheshtaKendraDetails {
+  const values = [
+    ["Mean longitude", meanLongitude],
+    ["True longitude", trueLongitude],
+    ["Seeghrocha longitude", seeghrochaLongitude],
+  ] as const;
+  for (const [name, value] of values) {
+    if (!Number.isFinite(value) || value < 0 || value >= 360) {
+      throw new RangeError(name + " must be normalized to [0°, 360°).");
+    }
+  }
+
+  const midpointLongitude =
+    ((meanLongitude + signedLongitudeDifference(meanLongitude, trueLongitude) / 2) % 360 + 360) % 360;
+  const rawKendraDegrees =
+    ((seeghrochaLongitude - midpointLongitude) % 360 + 360) % 360;
+  const reducedKendraDegrees =
+    rawKendraDegrees > 180 ? 360 - rawKendraDegrees : rawKendraDegrees;
+  const points = Math.round((reducedKendraDegrees / 3) * 100) / 100;
+
+  return {
+    meanLongitude,
+    trueLongitude,
+    seeghrochaLongitude,
+    midpointLongitude,
+    rawKendraDegrees,
+    reducedKendraDegrees,
+    points,
+    note: "BPHS 27.24–25 / Raman Ch. VI articles 105–107: Chesta Kendra = seeghrocha minus the mean/true midpoint, folded to 0–180°, then divided by 3. Circular midpoint handles the 0° wrap.",
+  };
+}
 export class ShadbalaEngine {
   public static readonly PLANETS = [
     "Sun",
