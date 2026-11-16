@@ -74,8 +74,9 @@ assert.deepEqual(
   [
     "Tribhaga Bala (requires a known birth time, latitude, longitude and normal sunrise/sunset)",
     "Abda/Masa/Vara/Hora Bala (requires a known local sunrise-to-sunrise interval and supported Raman epoch date)",
+    "Ayana Bala (requires a normalized sidereal graha longitude and birth-date ayanamsa)",
   ],
-  "Nathonnatha is available; Tribhaga and Raman's time lords remain unavailable without location and solar intervals"
+  "Nathonnatha is available; Tribhaga, Raman time lords and Ayana remain unavailable without their source inputs"
 );
 assert.match(knownTime.description, /Meeus-corrected local apparent time/);
 
@@ -95,8 +96,9 @@ assert.deepEqual(
     "Paksha Bala (requires valid Sun and Moon longitudes)",
     "Tribhaga Bala (requires a known birth time, latitude, longitude and normal sunrise/sunset)",
     "Abda/Masa/Vara/Hora Bala (requires a known local sunrise-to-sunrise interval and supported Raman epoch date)",
+    "Ayana Bala (requires a normalized sidereal graha longitude and birth-date ayanamsa)",
   ],
-  "Unknown birth time invalidates local-time Nathonnatha, Paksha, Tribhaga and Raman time-lord calculations"
+  "Unknown birth time invalidates local-time Nathonnatha, Paksha, Tribhaga and Raman time-lord calculations; Ayana is independently unavailable without a birth-date ayanamsa"
 );
 assert.match(unknownTime.description, /Nathonnatha is unavailable/);
 
