@@ -216,8 +216,8 @@ export function AdvancedWesternPanel({
   // Astrocartography
   const astrocartographyEngine = useMemo(() => new AstrocartographyEngine(), []);
   const astrocartographyReport: AstrocartographyReport = useMemo(() => {
-    return astrocartographyEngine.calculatePowerLines(chartData);
-  }, [astrocartographyEngine, chartData]);
+    return astrocartographyEngine.calculatePowerLines(chartData, longitude);
+  }, [astrocartographyEngine, chartData, longitude]);
 
   const asteroids = chartData.asteroids;
   const points = chartData.additionalPoints;
@@ -1055,17 +1055,17 @@ export function AdvancedWesternPanel({
               Astrocartography Planetary Power Lines
             </h4>
             <p className="text-xs text-slate-300 leading-relaxed">
-              Where your planetary energies project onto terrestrial meridians, creating geographic hotspots for career, love, vitality, and sanctuary.
+              {astrocartographyReport.method}
             </p>
           </div>
 
           {/* Top Recommendations */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
-            {astrocartographyReport.topDestinations.map((t, i) => (
+            {astrocartographyReport.lineGuidance.map((item, i) => (
               <div key={i} className="p-3 bg-slate-950/60 border border-slate-800 rounded-xl space-y-1">
-                <span className="text-[10px] font-bold text-cyan-400 block">{t.purpose}</span>
-                <span className="text-xs font-semibold text-slate-200">{t.planetaryLine}</span>
-                <p className="text-[11px] text-slate-400">{t.suggestedRegion}</p>
+                <span className="text-[10px] font-bold text-cyan-400 block">{item.purpose}</span>
+                <span className="text-xs font-semibold text-slate-200">{item.planetaryLine}</span>
+                <p className="text-[11px] text-slate-400">{item.guidance}</p>
               </div>
             ))}
           </div>
@@ -1076,7 +1076,7 @@ export function AdvancedWesternPanel({
               <thead className="bg-slate-950/80 text-slate-400 border-b border-slate-800 text-[11px]">
                 <tr>
                   <th className="py-2.5 px-3">Planet &amp; Angle</th>
-                  <th className="py-2.5 px-3">Terrestrial Longitude</th>
+                  <th className="py-2.5 px-3">Meridian / Equator Reference</th>
                   <th className="py-2.5 px-3">Thematic Influence</th>
                   <th className="py-2.5 px-3">Best Applied For</th>
                 </tr>
@@ -1088,7 +1088,7 @@ export function AdvancedWesternPanel({
                       <span className="text-amber-400">{line.symbol}</span>
                       {line.planet} {line.lineType}
                     </td>
-                    <td className="py-2 px-3 text-cyan-300 font-bold">{line.longitudeStr}</td>
+                    <td className="py-2 px-3 text-cyan-300 font-bold">{line.longitudeStr}{line.pathPoints.length > 0 && <span className="block text-[10px] text-slate-500 font-normal">{line.pathPoints.length} latitude samples · 5° spacing</span>}</td>
                     <td className="py-2 px-3 font-sans text-slate-300 max-w-sm truncate">{line.theme}</td>
                     <td className="py-2 px-3 font-sans text-amber-300/90">{line.bestFor}</td>
                   </tr>
