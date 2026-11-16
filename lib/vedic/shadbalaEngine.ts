@@ -34,7 +34,8 @@ export interface SthanaBalaBreakdown {
   /** Null when one or more of the seven classical graha positions is unavailable. */
   saptavargajaBala: number | null;
   ojayugmaBala: number;
-  kendradiBala: number;
+  /** Null until a valid normalized Ascendant is supplied for the selected sign-based rule. */
+  kendradiBala: number | null;
   drekkanaBala: number;
   drekkanaBalaMethod: DrekkanaBalaMethod;
   total: number;
@@ -1399,6 +1400,9 @@ export class ShadbalaEngine {
   }
 
   public calculateSthanaBala(planet: string, input: ShadbalaChartInput): SthanaBalaBreakdown {
+    if (!ShadbalaEngine.PLANETS.includes(planet)) {
+      throw new RangeError("Sthana Bala is defined here only for the seven classical planets.");
+    }
     const pPos = input.planets[planet];
     const drekkanaBalaMethod = input.drekkanaBalaMethod ?? "bphs-sanskrit-raman";
     if (drekkanaBalaMethod !== "bphs-sanskrit-raman" &&
@@ -1416,7 +1420,7 @@ export class ShadbalaEngine {
         ucchaBala: 0,
         saptavargajaBala: null,
         ojayugmaBala: 0,
-        kendradiBala: 0,
+        kendradiBala: null,
         drekkanaBala: 0,
         drekkanaBalaMethod,
         total: 0,
@@ -1430,7 +1434,8 @@ export class ShadbalaEngine {
     }
 
     const lon = pPos.longitude;
-    const asc = ((input.ascendant % 360) + 360) % 360;
+    const hasValidAscendant =
+      Number.isFinite(input.ascendant) && input.ascendant >= 0 && input.ascendant < 360;
 
     const sign = Math.floor(lon / 30);
     const degInSign = lon % 30;
@@ -1463,10 +1468,16 @@ export class ShadbalaEngine {
     const ojayugmaBala = (ojayugmaRasi ? 15 : 0) + (ojayugmaNavamsa ? 15 : 0);
 
     const isMalePlanet = ["Sun", "Mars", "Jupiter"].includes(planet);
-    const house = ((Math.floor(lon / 30) - Math.floor(asc / 30) + 12) % 12) + 1;
-    let kendradiBala = 15;
-    if ([1, 4, 7, 10].includes(house)) kendradiBala = 60;
-    else if ([2, 5, 8, 11].includes(house)) kendradiBala = 30;
+    // BPHS/Raman sign-based profile: count the occupied Rasi from the
+    // Ascendant Rasi. Do not invent Apoklima strength when the Ascendant is
+    // missing, non-finite, or outside the normalized longitude range.
+    let kendradiBala: number | null = null;
+    if (hasValidAscendant) {
+      const house = ((Math.floor(lon / 30) - Math.floor(input.ascendant / 30) + 12) % 12) + 1;
+      if ([1, 4, 7, 10].includes(house)) kendradiBala = 60;
+      else if ([2, 5, 8, 11].includes(house)) kendradiBala = 30;
+      else kendradiBala = 15;
+    }
 
     const drekkanaIdx = Math.floor(degInSign / 10);
     const isFemalePlanet = ["Moon", "Venus"].includes(planet);
@@ -1489,12 +1500,20 @@ export class ShadbalaEngine {
     }
 
     const total = Math.round(
-      (ucchaBala + (saptavargajaBala ?? 0) + ojayugmaBala + kendradiBala + drekkanaBala) * 100
+      (ucchaBala + (saptavargajaBala ?? 0) + ojayugmaBala + (kendradiBala ?? 0) + drekkanaBala) * 100
     ) / 100;
 
-    const unavailableComponents = saptavargajaAvailable
-      ? []
-      : ["Saptavargaja Bala (requires all seven classical planetary longitudes; missing " + missingPlanetInputs.join(", ") + ")"];
+    const unavailableComponents = [
+      ...(!saptavargajaAvailable
+        ? ["Saptavargaja Bala (requires all seven classical planetary longitudes; missing " + missingPlanetInputs.join(", ") + ")"]
+        : []),
+      ...(!hasValidAscendant
+        ? ["Kendradi Bala (requires a finite Ascendant longitude in the normalized [0°, 360°) range; no house-position score is substituted)"]
+        : []),
+    ];
+    const description = unavailableComponents.length === 0
+      ? `Sthana Bala from Uchcha (${ucchaBala}), Saptavargaja (${saptavargajaBala}), Ojayugma (${ojayugmaBala}), sign-based Kendradi (${kendradiBala}) and Drekkana (${drekkanaBala}).`
+      : `Partial Sthana Bala subtotal: available Uchcha (${ucchaBala}), Ojayugma (${ojayugmaBala}) and Drekkana (${drekkanaBala})${saptavargajaBala === null ? "" : `, Saptavargaja (${saptavargajaBala})`}${kendradiBala === null ? "" : `, Kendradi (${kendradiBala})`}. Unavailable: ${unavailableComponents.join("; ")}.`;
 
     return {
       ucchaBala,
@@ -1506,9 +1525,7 @@ export class ShadbalaEngine {
       total,
       available: unavailableComponents.length === 0,
       unavailableComponents,
-      description: saptavargajaAvailable
-        ? `Positional strength from Exaltation (${ucchaBala}), 7 Vargas (${saptavargajaBala}), and Kendra placement (${kendradiBala}).`
-        : `Partial Sthana Bala subtotal: Exaltation, Ojayugma, Kendra and Drekkana are available; Saptavargaja is unavailable because ${missingPlanetInputs.join(", ")} is missing.`,
+      description,
     };
   }
 
