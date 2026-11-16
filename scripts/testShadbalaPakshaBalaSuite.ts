@@ -84,10 +84,10 @@ assert.throws(() => isPakshaMoonBenefic(360, "bphs-waxing-waning"), /normalized/
     pakshaMoonAccountingRule: "raman-double-in-kala",
   });
 
-  close(resultMercury.points, 132.5333333333 / 3, "Raman Example 18 Mercury Shubha");
-  close(resultSun.points, 60 - 132.5333333333 / 3, "Raman Example 18 Sun Papa");
-  close(resultMoonBphs.points, 132.5333333333 / 3, "BPHS Moon Kala component remains undoubled");
-  close(resultMoonRaman.points, 2 * 132.5333333333 / 3, "Raman Example 18 doubles Moon Paksha within Kala");
+  assert.equal(resultMercury.points, 44.18, "Raman Example 18 Mercury Shubha rounded to two decimals");
+  assert.equal(resultSun.points, 15.82, "Raman Example 18 Sun Papa rounded to two decimals");
+  assert.equal(resultMoonBphs.points, 44.18, "BPHS Moon Kala component remains undoubled and rounded");
+  assert.equal(resultMoonRaman.points, 88.36, "Raman Example 18 doubles Moon Paksha within Kala and rounds to two decimals");
   assert.equal(resultMoonBphs.details?.moonNature, "Benefic");
   assert.equal(resultMoonRaman.details?.moonAccountingRule, "raman-double-in-kala");
   assert.equal(resultSun.nature, "Malefic");
