@@ -8,6 +8,8 @@ import {
   SHADBALA_IMPLEMENTATION_STATUS,
   DrikFullAspectReading,
   DrikMercuryAssociationRule,
+  PakshaMoonNatureRule,
+  PakshaMoonAccountingRule,
 } from "@/lib/vedic/shadbalaEngine";
 import type { DrishtiVirupaVariant } from "@/lib/vedic/drishtiEngine";
 import { WesternChartData } from "@/lib/astronomy/ephemeris";
@@ -54,6 +56,13 @@ export function ShadbalaPanel({
   const [drikMercuryAssociationRule, setDrikMercuryAssociationRule] =
     useState<DrikMercuryAssociationRule>("same-sign");
   const [mercuryAssociationOrbInput, setMercuryAssociationOrbInput] = useState("2");
+  const [pakshaMoonNatureRule, setPakshaMoonNatureRule] =
+    useState<PakshaMoonNatureRule>("bphs-waxing-waning");
+  const [pakshaMoonAccountingRule, setPakshaMoonAccountingRule] =
+    useState<PakshaMoonAccountingRule>("bphs-kala-plus-cheshta");
+  const [pakshaMercuryAssociationRule, setPakshaMercuryAssociationRule] =
+    useState<DrikMercuryAssociationRule>("same-sign");
+  const [pakshaMercuryAssociationOrbInput, setPakshaMercuryAssociationOrbInput] = useState("2");
 
   const chartInput: ShadbalaChartInput = useMemo(() => {
     const planetsMap: ShadbalaChartInput["planets"] = {};
@@ -141,6 +150,12 @@ export function ShadbalaPanel({
       ...(drikMercuryAssociationRule === "degree-orb"
         ? { drikMercuryAssociationOrbDeg: Number(mercuryAssociationOrbInput) }
         : {}),
+      pakshaMoonNatureRule,
+      pakshaMoonAccountingRule,
+      pakshaMercuryAssociationRule,
+      ...(pakshaMercuryAssociationRule === "degree-orb"
+        ? { pakshaMercuryAssociationOrbDeg: Number(pakshaMercuryAssociationOrbInput) }
+        : {}),
     };
   }, [
     vedicData,
@@ -155,6 +170,10 @@ export function ShadbalaPanel({
     drikFullAspectReading,
     drikMercuryAssociationRule,
     mercuryAssociationOrbInput,
+    pakshaMoonNatureRule,
+    pakshaMoonAccountingRule,
+    pakshaMercuryAssociationRule,
+    pakshaMercuryAssociationOrbInput,
   ]);
 
   const engine = useMemo(() => new ShadbalaEngine(), []);
@@ -310,8 +329,58 @@ export function ShadbalaPanel({
               </div>
             )}
           </div>
+          <label className="flex flex-col gap-1.5 text-xs text-slate-400">
+            Paksha Moon nature source
+            <select
+              value={pakshaMoonNatureRule}
+              onChange={(event) => setPakshaMoonNatureRule(event.target.value as PakshaMoonNatureRule)}
+              className="rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-xs text-slate-200"
+            >
+              <option value="bphs-waxing-waning">BPHS 3.11: waxing benefic / waning malefic</option>
+              <option value="raman-ashtami-window-through-krishna-ashtami">Raman: Shukla Ashtami through Krishna Ashtami</option>
+              <option value="raman-ashtami-window-through-krishna-saptami">Raman alternate: end before Krishna Ashtami</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1.5 text-xs text-slate-400">
+            Moon Paksha accounting
+            <select
+              value={pakshaMoonAccountingRule}
+              onChange={(event) => setPakshaMoonAccountingRule(event.target.value as PakshaMoonAccountingRule)}
+              className="rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-xs text-slate-200"
+            >
+              <option value="bphs-kala-plus-cheshta">BPHS 27.18: Kala Paksha + same Moon Cheshta</option>
+              <option value="raman-double-in-kala">Raman Ch. V: double Paksha inside Kala, no separate Moon Cheshta</option>
+            </select>
+          </label>
+          <div className="flex flex-col gap-1.5 text-xs text-slate-400">
+            <label htmlFor="shadbala-paksha-mercury-association">Paksha Mercury association</label>
+            <select
+              id="shadbala-paksha-mercury-association"
+              value={pakshaMercuryAssociationRule}
+              onChange={(event) => setPakshaMercuryAssociationRule(event.target.value as DrikMercuryAssociationRule)}
+              className="rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-xs text-slate-200"
+            >
+              <option value="same-sign">Same sidereal sign</option>
+              <option value="degree-orb">Explicit degree orb</option>
+            </select>
+            {pakshaMercuryAssociationRule === "degree-orb" && (
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="number"
+                  min="0"
+                  max="30"
+                  step="0.25"
+                  value={pakshaMercuryAssociationOrbInput}
+                  onChange={(event) => setPakshaMercuryAssociationOrbInput(event.target.value)}
+                  aria-label="Paksha Mercury association orb in degrees"
+                  className="w-20 rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs text-slate-200"
+                />
+                <span>degrees (explicit method choice)</span>
+              </div>
+            )}
+          </div>
           <p className="lg:col-span-3 text-[10px] leading-relaxed text-slate-500">
-            Nodes are not Shadbala grahas and do not cast Drik Bala here. Rahu/Ketu may only be considered as malefic companions when the optional Mercury association rule is evaluated. Waxing/waning Moon nature is derived from the directed Sun–Moon elongation.
+            Paksha is calculated from the folded Moon–Sun elongation. BPHS and Raman differ on the Moon’s benefic window and where its doubled value is accounted. Mercury is only treated as malefic when it joins a malefic under the selected association rule; the source does not prescribe a universal degree orb. Rahu/Ketu can condition Mercury but receive no Paksha Bala themselves.
           </p>
         </div>
 
@@ -559,13 +628,31 @@ export function ShadbalaPanel({
                 <p className="text-[11px] text-slate-400 leading-snug">
                   {activeResult.kalaBala.description}
                 </p>
-                <div className="text-[10px] text-slate-500">
-                  Nathonnatha (local apparent time):
-                  <span className="ml-1 font-mono text-slate-300">
-                    {activeResult.kalaBala.components.nathonnathaBala === null
-                      ? "Unavailable — known birth time and longitude required"
-                      : `${activeResult.kalaBala.components.nathonnathaBala.toFixed(2)} Virupas`}
-                  </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1 text-[10px] text-slate-500">
+                  <div>
+                    Nathonnatha (local apparent time):
+                    <span className="ml-1 font-mono text-slate-300">
+                      {activeResult.kalaBala.components.nathonnathaBala === null
+                        ? "Unavailable — known time and longitude required"
+                        : `${activeResult.kalaBala.components.nathonnathaBala.toFixed(2)} Virupas`}
+                    </span>
+                  </div>
+                  <div>
+                    Paksha Bala:
+                    <span className="ml-1 font-mono text-slate-300">
+                      {activeResult.kalaBala.components.pakshaBala === null
+                        ? "Unavailable — Sun/Moon longitudes required"
+                        : `${activeResult.kalaBala.components.pakshaBala.toFixed(2)} Virupas`}
+                    </span>
+                  </div>
+                  {activeResult.kalaBala.pakshaDetails && (
+                    <div className="sm:col-span-2">
+                      Moon: {activeResult.kalaBala.pakshaDetails.moonNature} · Mercury: {activeResult.kalaBala.pakshaDetails.mercuryNature} ·
+                      elongation {activeResult.kalaBala.pakshaDetails.elongationDegrees.toFixed(2)}° ·
+                      {activeResult.kalaBala.pakshaDetails.moonNatureRule} ·
+                      {activeResult.kalaBala.pakshaDetails.moonAccountingRule}
+                    </div>
+                  )}
                 </div>
               </div>
 
