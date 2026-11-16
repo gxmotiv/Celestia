@@ -109,12 +109,12 @@ export class LunarPointsCalculator {
     }
 
     // The negative eccentricity vector points toward apogee.
-    const apogeeVector = {
-      x: -eccentricity.x,
-      y: -eccentricity.y,
-      z: -eccentricity.z,
-      t: time,
-    };
+    const apogeeVector = new Astronomy.Vector(
+      -eccentricity.x,
+      -eccentricity.y,
+      -eccentricity.z,
+      time
+    );
     const ecliptic = Astronomy.Ecliptic(apogeeVector);
     return normalizeDegrees(ecliptic.elon);
   }
