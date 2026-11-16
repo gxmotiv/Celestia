@@ -69,8 +69,10 @@ const DAY_MS = 86_400_000;
   const birth = new Date(sunrise.getTime() + 8.1 / 24 * 23 * 3_600_000);
   const result = calculateRamanTimeLordsFromSunriseInterval(date, sunrise, birth, day23h);
   assert.ok(result);
+  assert.equal(result.varaLord, "Sun");
   assert.equal(result.horaNumber, 9);
-  assert.equal(result.horaLord, "Moon");
+  assert.equal(result.horaLord, "Venus",
+    "Sunday starts with Sun; the ninth Chaldean Hora is Venus even on a 23-hour sunrise day");
   assert.equal(result.sunriseToSunriseHours, 23);
 }
 
