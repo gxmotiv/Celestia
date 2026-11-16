@@ -17,6 +17,8 @@ import {
 import {
   ProgressionsEngine,
   ProgressedChartResult,
+  SolarArcDirectionsEngine,
+  SolarArcDirectionsReport,
   ProfectionsEngine,
   ProfectionResult,
   ZodiacalReleasingEngine,
@@ -86,6 +88,7 @@ export function AdvancedWesternPanel({
     | "harmonics"
     | "declinations"
     | "progressions"
+    | "solarArc"
     | "profections"
     | "releasing"
     | "firdaria"
@@ -179,6 +182,22 @@ export function AdvancedWesternPanel({
       : null;
   }, [activeSubTab, progEngine, birthDateObj, nowObj, latitude, longitude, timezoneOffset]);
 
+  // Solar Arc Directions use the exact progressed-Sun arc applied to all natal points.
+  const solarArcEngine = useMemo(() => new SolarArcDirectionsEngine(), []);
+  const solarArcReport: SolarArcDirectionsReport | null = useMemo(() => {
+    return activeSubTab === "solarArc"
+      ? solarArcEngine.calculateSolarArc(
+          chartData,
+          birthDateObj,
+          nowObj,
+          latitude,
+          longitude,
+          timezoneOffset,
+          1.0
+        )
+      : null;
+  }, [activeSubTab, solarArcEngine, chartData, birthDateObj, nowObj, latitude, longitude, timezoneOffset]);
+
   // Hellenistic Profections
   const profEngine = useMemo(() => new ProfectionsEngine(), []);
   const profectionReport: ProfectionResult | null = useMemo(() => {
@@ -257,7 +276,7 @@ export function AdvancedWesternPanel({
             Complete Western Astrology Architecture
           </h3>
           <p className="text-[11px] text-slate-400">
-            Asteroids · Shadow Axis · Arabian Parts · Midpoints · Harmonics · Declinations · Progressions · Profections · Releasing · Firdaria · Fixed Stars · Eclipses · Medical · Astrocartography
+            Asteroids · Shadow Axis · Arabian Parts · Midpoints · Harmonics · Declinations · Progressions · Solar Arc · Profections · Releasing · Firdaria · Fixed Stars · Eclipses · Medical · Astrocartography
           </p>
         </div>
 
@@ -271,6 +290,7 @@ export function AdvancedWesternPanel({
             { id: "harmonics", label: "Harmonics", icon: "〰" },
             { id: "declinations", label: "Declinations", icon: "||" },
             { id: "progressions", label: "Progressions", icon: "☽" },
+            { id: "solarArc", label: "Solar Arc", icon: "☉" },
             { id: "profections", label: "Profections", icon: "⏳" },
             { id: "releasing", label: "Zodiacal Releasing", icon: "📜" },
             { id: "firdaria", label: "Firdaria", icon: "👑" },
@@ -750,6 +770,88 @@ export function AdvancedWesternPanel({
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* SUB-TAB 8: SOLAR ARC DIRECTIONS */}
+      {activeSubTab === "solarArc" && solarArcReport && (
+        <div className="space-y-4">
+          <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <span className="text-[10px] font-mono text-amber-400 uppercase tracking-widest block">Directed natal chart · Exact progressed-Sun key</span>
+                <h4 className="text-sm font-bold text-slate-100">Solar Arc Directions (Age {solarArcReport.age})</h4>
+              </div>
+              <span className="text-xs font-mono text-slate-300">Progressed reference date: <strong>{solarArcReport.progressedDate}</strong></span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="p-3 bg-slate-900 border border-slate-800 rounded-lg">
+                <span className="text-[10px] text-slate-400 block">Solar Arc</span>
+                <span className="text-lg font-bold text-amber-300 font-mono">{solarArcReport.solarArcDegrees.toFixed(4)}°</span>
+              </div>
+              <div className="p-3 bg-slate-900 border border-slate-800 rounded-lg">
+                <span className="text-[10px] text-slate-400 block">Directed points</span>
+                <span className="text-lg font-bold text-slate-100 font-mono">{solarArcReport.directedPoints.length}</span>
+              </div>
+              <div className="p-3 bg-slate-900 border border-slate-800 rounded-lg">
+                <span className="text-[10px] text-slate-400 block">Contacts within orb</span>
+                <span className="text-lg font-bold text-cyan-300 font-mono">{solarArcReport.contacts.length}</span>
+              </div>
+              <div className="p-3 bg-slate-900 border border-slate-800 rounded-lg">
+                <span className="text-[10px] text-slate-400 block">Maximum orb</span>
+                <span className="text-lg font-bold text-slate-100 font-mono">{solarArcReport.maxOrb.toFixed(1)}°</span>
+              </div>
+            </div>
+            <p className="text-[11px] text-slate-400">{solarArcReport.method}</p>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs text-slate-300">
+              <thead className="bg-slate-950/80 text-slate-400 border-b border-slate-800 text-[11px]">
+                <tr>
+                  <th className="py-2.5 px-3">Directed point</th>
+                  <th className="py-2.5 px-3">Directed longitude</th>
+                  <th className="py-2.5 px-3">Natal longitude</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60 font-mono">
+                {solarArcReport.directedPoints.map((point) => (
+                  <tr key={point.name}>
+                    <td className="py-2 px-3 font-sans font-semibold text-slate-200">{point.symbol} {point.name}</td>
+                    <td className="py-2 px-3 text-amber-300">{point.signDegreeFormatted}</td>
+                    <td className="py-2 px-3 text-slate-400">{formatDegreeMinute(point.natalLongitude)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="overflow-x-auto">
+            <h5 className="text-xs font-bold text-slate-200 mb-2">Directed-to-natal aspect contacts (tightest first)</h5>
+            <table className="w-full text-left text-xs text-slate-300">
+              <thead className="bg-slate-950/80 text-slate-400 border-b border-slate-800 text-[11px]">
+                <tr>
+                  <th className="py-2.5 px-3">Directed point</th>
+                  <th className="py-2.5 px-3">Natal point</th>
+                  <th className="py-2.5 px-3">Aspect</th>
+                  <th className="py-2.5 px-3">Orb</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60 font-mono">
+                {solarArcReport.contacts.map((contact, index) => (
+                  <tr key={`${contact.directedPoint}-${contact.natalPoint}-${contact.aspect}-${index}`}>
+                    <td className="py-2 px-3 font-sans font-semibold text-amber-300">{contact.directedPoint}</td>
+                    <td className="py-2 px-3 font-sans text-slate-200">{contact.natalPoint}</td>
+                    <td className="py-2 px-3">{contact.aspect} ({contact.exactAngle}°)</td>
+                    <td className="py-2 px-3 text-cyan-300">{contact.orb.toFixed(3)}°</td>
+                  </tr>
+                ))}
+                {solarArcReport.contacts.length === 0 && (
+                  <tr><td colSpan={4} className="py-5 text-center text-slate-500">No directed-to-natal contacts fall within the selected 1° orb.</td></tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
