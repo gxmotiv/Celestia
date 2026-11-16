@@ -488,7 +488,164 @@ export class SolarReturnEngine {
 }
 
 // ---------------------------------------------------------------------------
-// 4. HELLENISTIC ANNUAL PROFECTIONS
+// 4. LUNAR RETURN CHARTS
+// ---------------------------------------------------------------------------
+
+export interface LunarReturnReport {
+  anchorDateUTC: string;
+  returnInstantUTC: string;
+  natalMoonLongitude: number;
+  returnMoonLongitude: number;
+  daysFromAnchor: number;
+  latitude: number;
+  longitude: number;
+  houseSystem: WesternChartData["houseSystem"];
+  returnChart: WesternChartData;
+  method: string;
+}
+
+/**
+ * Finds the nearest lunar return to a selected UTC anchor date. The root is
+ * solved from the transiting geocentric Moon's tropical longitude returning
+ * to its natal longitude; the return chart is then cast for the supplied
+ * location. Its exact instant is global, while its angles/houses are local.
+ */
+export class LunarReturnEngine {
+  private static readonly DAY_MS = 86400000;
+  private static readonly MEAN_MOON_MOTION = 360 / 27.321661;
+
+  private calculateMoonLongitude(instantMs: number): number {
+    const date = new Date(instantMs);
+    const julianDay = swissEphemeris.calculateJulianDay(
+      date.getUTCFullYear(),
+      date.getUTCMonth() + 1,
+      date.getUTCDate(),
+      date.getUTCHours(),
+      date.getUTCMinutes(),
+      date.getUTCSeconds(),
+      0
+    );
+    return swissEphemeris.calculatePlanetPosition(
+      swissEphemeris.MOON,
+      julianDay
+    ).longitude;
+  }
+
+  private signedAngularDifference(longitude: number, targetLongitude: number): number {
+    let difference = normalizeDegrees(longitude - targetLongitude);
+    if (difference > 180) difference -= 360;
+    return difference;
+  }
+
+  public calculateLunarReturn(
+    natalChart: WesternChartData,
+    anchorDate: Date,
+    latitude: number,
+    longitude: number,
+    houseSystem: WesternChartData["houseSystem"] = natalChart.houseSystem
+  ): LunarReturnReport {
+    if (!Number.isFinite(anchorDate.getTime())) {
+      throw new Error("Lunar Return requires a valid anchor date.");
+    }
+    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
+      throw new Error("Lunar Return latitude must be between -90 and 90 degrees.");
+    }
+    if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+      throw new Error("Lunar Return longitude must be between -180 and 180 degrees.");
+    }
+
+    const natalMoon = natalChart.planets.find((planet) => planet.name === "Moon");
+    if (!natalMoon) {
+      throw new Error("Lunar Return requires a natal Moon longitude.");
+    }
+
+    const anchorMs = anchorDate.getTime();
+    const anchorMoonLongitude = this.calculateMoonLongitude(anchorMs);
+    const differenceAtAnchor = this.signedAngularDifference(
+      anchorMoonLongitude,
+      natalMoon.longitude
+    );
+    const approximateReturnMs = anchorMs
+      - (differenceAtAnchor / LunarReturnEngine.MEAN_MOON_MOTION)
+        * LunarReturnEngine.DAY_MS;
+
+    let lowMs = 0;
+    let highMs = 0;
+    let bracketed = false;
+
+    // The Moon's variable speed makes the mean-motion estimate approximate.
+    // Expand the local bracket until it encloses the nearest longitude crossing.
+    for (const halfWidthDays of [2, 4, 8]) {
+      lowMs = approximateReturnMs - halfWidthDays * LunarReturnEngine.DAY_MS;
+      highMs = approximateReturnMs + halfWidthDays * LunarReturnEngine.DAY_MS;
+      const lowDifference = this.signedAngularDifference(
+        this.calculateMoonLongitude(lowMs),
+        natalMoon.longitude
+      );
+      const highDifference = this.signedAngularDifference(
+        this.calculateMoonLongitude(highMs),
+        natalMoon.longitude
+      );
+
+      if (lowDifference <= 0 && highDifference >= 0) {
+        bracketed = true;
+        break;
+      }
+    }
+
+    if (!bracketed) {
+      throw new Error("Could not bracket the nearest Lunar Return crossing.");
+    }
+
+    for (let iteration = 0; iteration < 48; iteration++) {
+      const midMs = (lowMs + highMs) / 2;
+      const midDifference = this.signedAngularDifference(
+        this.calculateMoonLongitude(midMs),
+        natalMoon.longitude
+      );
+      if (midDifference < 0) {
+        lowMs = midMs;
+      } else {
+        highMs = midMs;
+      }
+      if (highMs - lowMs < 250) break;
+    }
+
+    const returnDate = new Date((lowMs + highMs) / 2);
+    const returnChart = calculateWesternChart(
+      returnDate.getUTCFullYear(),
+      returnDate.getUTCMonth() + 1,
+      returnDate.getUTCDate(),
+      returnDate.getUTCHours(),
+      returnDate.getUTCMinutes(),
+      latitude,
+      longitude,
+      0,
+      houseSystem,
+      returnDate.getUTCSeconds()
+    );
+    const returnMoon = returnChart.planets.find((planet) => planet.name === "Moon");
+    if (!returnMoon) {
+      throw new Error("Lunar Return chart did not contain a calculated Moon position.");
+    }
+
+    return {
+      anchorDateUTC: anchorDate.toISOString(),
+      returnInstantUTC: returnDate.toISOString(),
+      natalMoonLongitude: natalMoon.longitude,
+      returnMoonLongitude: returnMoon.longitude,
+      daysFromAnchor: (returnDate.getTime() - anchorMs) / LunarReturnEngine.DAY_MS,
+      latitude,
+      longitude,
+      houseSystem,
+      returnChart,
+      method: "Nearest return of the geocentric tropical Moon to its natal longitude, estimated with mean lunar motion and refined by bisection. Houses and angles use the supplied return-place coordinates; this panel defaults to the natal chart location.",
+    };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 5. HELLENISTIC ANNUAL PROFECTIONS
 // ---------------------------------------------------------------------------
 
 export interface ProfectionResult {
@@ -563,7 +720,7 @@ export class ProfectionsEngine {
 }
 
 // ---------------------------------------------------------------------------
-// 5. ZODIACAL RELEASING (Spirit & Fortune)
+// 6. ZODIACAL RELEASING (Spirit & Fortune)
 // ---------------------------------------------------------------------------
 
 export type ReleasingLevel = "L1" | "L2" | "L3" | "L4";
@@ -852,7 +1009,7 @@ export class ZodiacalReleasingEngine {
 }
 
 // ---------------------------------------------------------------------------
-// 6. MEDIEVAL FIRDARIA
+// 7. MEDIEVAL FIRDARIA
 // ---------------------------------------------------------------------------
 
 export interface FirdariaPeriod {
