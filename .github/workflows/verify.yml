@@ -44,6 +44,7 @@ jobs:
           - testShadbalaAyanaBalaSuite.ts
           - testShadbalaDrikBalaSuite.ts
           - testShadbalaSaptavargajaSuite.ts
+          - testShadbalaSthanaBalaSuite.ts
           - testShadbalaRamanReferenceSuite.ts
           - testShadbalaDigBalaSuite.ts
           - testRegiomontanusHouseSystemSuite.ts
