@@ -89,9 +89,10 @@ assert.deepEqual(
   unknownTime.unavailableComponents,
   [
     "Nathonnatha Bala (requires a known local apparent birth time)",
+    "Paksha Bala (requires valid Sun and Moon longitudes)",
     "Tribhaga Bala (requires a known birth time, latitude, longitude and normal sunrise/sunset)",
   ],
-  "Unknown birth time invalidates Nathonnatha and Tribhaga; supplied Sun/Moon longitudes still make Paksha calculable"
+  "Unknown birth time invalidates time-sensitive Nathonnatha, chart-time-dependent Paksha and Tribhaga calculations"
 );
 assert.match(unknownTime.description, /Nathonnatha is unavailable/);
 
