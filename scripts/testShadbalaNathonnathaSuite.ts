@@ -69,7 +69,11 @@ const knownTime = engine.calculateKalaBala("Sun", {
   planets: positions,
 });
 close(knownTime.components.nathonnathaBala, 145 / 3, "Integrated Kala Bala Nathonnatha");
-assert.deepEqual(knownTime.unavailableComponents, []);
+assert.deepEqual(
+  knownTime.unavailableComponents,
+  ["Tribhaga Bala (requires a known birth time, latitude, longitude and normal sunrise/sunset)"],
+  "Nathonnatha is available; Tribhaga correctly remains unavailable without local solar intervals"
+);
 assert.match(knownTime.description, /Meeus-corrected local apparent time/);
 
 const unknownTime = engine.calculateKalaBala("Sun", {
@@ -85,9 +89,9 @@ assert.deepEqual(
   unknownTime.unavailableComponents,
   [
     "Nathonnatha Bala (requires a known local apparent birth time)",
-    "Paksha Bala (requires valid Sun and Moon longitudes)",
+    "Tribhaga Bala (requires a known birth time, latitude, longitude and normal sunrise/sunset)",
   ],
-  "Unknown birth time invalidates both local-apparent-time Nathonnatha and exact Moon-dependent Paksha"
+  "Unknown birth time invalidates Nathonnatha and Tribhaga; supplied Sun/Moon longitudes still make Paksha calculable"
 );
 assert.match(unknownTime.description, /Nathonnatha is unavailable/);
 
