@@ -774,29 +774,19 @@ function isValidGregorianParts(year: number, month: number, day: number): boolea
  */
 export function calculateRamanTimeLordsFromSunriseInterval(
   effectiveSunriseDate: Date,
+  sunriseInstantUtc: Date,
   birthInstantUtc: Date,
   nextSunriseInstantUtc: Date
 ): RamanTimeLordsResult | null {
-  const inputs = [effectiveSunriseDate, birthInstantUtc, nextSunriseInstantUtc];
+  const inputs = [effectiveSunriseDate, sunriseInstantUtc, birthInstantUtc, nextSunriseInstantUtc];
   if (!inputs.every((value) => value instanceof Date && Number.isFinite(value.getTime()))) return null;
   if (effectiveSunriseDate.getUTCHours() !== 0 || effectiveSunriseDate.getUTCMinutes() !== 0 ||
       effectiveSunriseDate.getUTCSeconds() !== 0 || effectiveSunriseDate.getUTCMilliseconds() !== 0) return null;
   const dateMs = effectiveSunriseDate.getTime();
+  if (dateMs < RAMAN_ABBREVIATED_AHARGANA_EPOCH || dateMs >= Date.UTC(2101, 0, 1)) return null;
   const aharganaDays = Math.floor((dateMs - RAMAN_ABBREVIATED_AHARGANA_EPOCH) / DAY_MS);
-  // The printed tables begin at the 1827 epoch; the Gregorian formula is
-  // extended to the end of 2100 so current charts have a deterministic value.
-  const maxDateMs = Date.UTC(2101, 0, 1);
-  if (dateMs < RAMAN_ABBREVIATED_AHARGANA_EPOCH || dateMs >= maxDateMs) return null;
-  const dayLengthMs = nextSunriseInstantUtc.getTime() - birthInstantUtc.getTime() +
-    (birthInstantUtc.getTime() - dateMs);
-  const sunriseToSunriseMs = nextSunriseInstantUtc.getTime() - (dateMs);
-  // effectiveSunriseDate is a local calendar date, not the sunrise instant;
-  // callers pass a separate sunrise-aligned instant below through the birth
-  // and next-sunrise values. Derive the start instant from the caller's
-  // elapsed interval by requiring birth to precede the next sunrise and by
-  // using the civil-day date only for the Ahargana arithmetic.
-  const elapsedMs = birthInstantUtc.getTime() - (nextSunriseInstantUtc.getTime() - sunriseToSunriseMs);
-  void dayLengthMs;
+  const sunriseToSunriseMs = nextSunriseInstantUtc.getTime() - sunriseInstantUtc.getTime();
+  const elapsedMs = birthInstantUtc.getTime() - sunriseInstantUtc.getTime();
   if (!(sunriseToSunriseMs > 0) || elapsedMs < 0 || elapsedMs >= sunriseToSunriseMs) return null;
 
   const completeAstrologicalYears = Math.floor(aharganaDays / 360);
