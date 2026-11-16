@@ -58,6 +58,7 @@ jobs:
           bun run scripts/testAdvancedWesternFixedStarSuite.ts
           bun run scripts/testAdvancedWesternLilithSuite.ts
           bun run scripts/testAdvancedWesternMidpointSuite.ts
+          bun run scripts/testAdvancedWesternSolarArcSuite.ts
           bun run scripts/testWesternBenchmarkSuite.ts
       - name: Install temporary Cloudflare build tools
         run: npm install --no-save --package-lock=false --no-audit --no-fund @opennextjs/cloudflare@latest wrangler@latest
