@@ -769,14 +769,34 @@ export function ShadbalaPanel({
                 </div>
               </div>
 
-              <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80 space-y-1.5">
+              <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80 space-y-2">
                 <div className="flex justify-between font-semibold text-slate-200">
                   <span>4. Cheshta Bala (Motional)</span>
-                  <span className="font-mono text-emerald-300">{activeResult.cheshtaBala.points} Virupas</span>
+                  <span className={`font-mono ${activeResult.cheshtaBala.available ? "text-emerald-300" : "text-amber-300"}`}>
+                    {activeResult.cheshtaBala.available
+                      ? `${activeResult.cheshtaBala.points.toFixed(2)} Virupas`
+                      : "Unavailable"}
+                  </span>
                 </div>
                 <p className="text-[11px] text-slate-400 leading-snug">
                   {activeResult.cheshtaBala.description}
                 </p>
+                <div className="text-[10px] text-slate-500">
+                  Method: {activeResult.cheshtaBala.state}
+                  {activeResult.cheshtaBala.available && activeResult.cheshtaBala.details && (
+                    <span className="block mt-1 font-mono">
+                      Mean {activeResult.cheshtaBala.details.meanLongitude.toFixed(2)}° ·
+                      True {activeResult.cheshtaBala.details.trueLongitude.toFixed(2)}° ·
+                      Seeghrocha {activeResult.cheshtaBala.details.seeghrochaLongitude.toFixed(2)}° ·
+                      Kendra {activeResult.cheshtaBala.details.reducedKendraDegrees.toFixed(2)}° / 3
+                    </span>
+                  )}
+                  {!activeResult.cheshtaBala.available && (
+                    <span className="block mt-1 text-amber-300">
+                      No strength is inferred from apparent daily speed alone.
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80 space-y-1.5">
