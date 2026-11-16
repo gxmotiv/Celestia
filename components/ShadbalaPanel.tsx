@@ -924,9 +924,18 @@ export function ShadbalaPanel({
                       <li key={item}>{item}</li>
                     ))}
                   </ul>
-                  <p className="text-slate-500">
-                    {activeResult.estimatedComponents.length} method-level approximation or validation issue(s) also remain.
-                  </p>
+                  {activeResult.estimatedComponents.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-slate-500">
+                        {activeResult.estimatedComponents.length} method-level approximation or validation issue(s) also remain:
+                      </p>
+                      <ul className="list-disc pl-4 space-y-1 text-slate-400">
+                        {activeResult.estimatedComponents.slice(0, 5).map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
