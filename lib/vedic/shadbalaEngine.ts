@@ -20,7 +20,7 @@ export const SHADBALA_IMPLEMENTATION_STATUS = {
   summary:
     "This is a partial six-component estimate. Missing Balas are listed as unavailable; the displayed points are an available subtotal, not a final Shadbala total. Strong/weak classifications, rankings and strength-based interpretations are withheld until the complete method is available and independently verified.",
   limitations: [
-    "Saptavargaja now evaluates D1, D2, D3, D7, D9, D12 and D30 separately. Its default score scale is the R. Santhanam BPHS translation (45/30/20/15/10/4/2); the alternative Raman halving scale can be selected explicitly. Five-fold friendship is derived from D1 relationships, and Moolatrikona is applied in D1 only.",
+    "Saptavargaja now evaluates D1, D2, D3, D7, D9, D12 and D30 separately. Its default score scale is the R. Santhanam BPHS translation (45/30/20/15/10/4/2); the alternative Raman halving scale can be selected explicitly. Five-fold friendship is derived from D1 relationships, and Moolatrikona receives the 45-Virupa special score in D1 only, following Raman, Graha and Bhava Balas, Chapter III, Article 30; this is a declared lineage choice because readings of BPHS 27.2–4 differ.",
     "Ojayugma Bala follows BPHS 27.5: Moon/Venus gain 15 Virupas in even Rasi and Navamsa signs; all other classical grahas, including Mercury and Saturn, gain 15 in odd signs. Drekkana Bala exposes the BPHS Sanskrit/Raman masculine-neuter-feminine order and the distinct R. Santhanam Vol. I English masculine-feminine-eunuch order as selectable methods.",
     "Dig Bala uses the actual sidereal Midheaven when supplied by the chart; callers without a Midheaven retain the disclosed 90° ecliptic fallback.",
     "Nathonnatha Bala uses Meeus-corrected local apparent time. Paksha Bala supports separate BPHS/Raman Moon-nature and Moon-accounting profiles. Tribhaga uses location-specific NOAA-model sunrise/sunset unequal thirds. Abda, Masa, Vara and Hora use Raman Chapter V's 1827-epoch 360/30-day year/month lords and equal 24-hour sunrise-to-sunrise Hora cycle; the original tabulated epoch range is proleptically extended to 2100 and remains a named lineage.",
@@ -456,7 +456,7 @@ function getCompoundRelationship(
  * as a separate input option rather than blended into this source variant.
  *
  * Temporary and natural relationships are combined using BPHS 3.55–58 from
- * the natal Rasi chart. Moolatrikona is evaluated only in D1 using BPHS 3.51–54.
+ * the natal Rasi chart. Moolatrikona is evaluated only in D1 under Raman, Graha and Bhava Balas, Chapter III, Article 30; BPHS Chapter 27, verses 2–4, and later translations have not been represented as an unambiguous universal scope rule.
  */
 export function calculateSaptavargajaBala(
   planet: string,
