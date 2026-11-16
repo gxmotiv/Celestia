@@ -690,6 +690,52 @@ export function ShadbalaPanel({
                       {activeResult.kalaBala.pakshaDetails.moonAccountingRule}
                     </div>
                   )}
+                  <div>
+                    Abda Bala:
+                    <span className="ml-1 font-mono text-slate-300">
+                      {activeResult.kalaBala.components.abdaBala === null
+                        ? "Unavailable"
+                        : `${activeResult.kalaBala.components.abdaBala.toFixed(2)} Virupas`}
+                    </span>
+                  </div>
+                  <div>
+                    Masa Bala:
+                    <span className="ml-1 font-mono text-slate-300">
+                      {activeResult.kalaBala.components.maasaBala === null
+                        ? "Unavailable"
+                        : `${activeResult.kalaBala.components.maasaBala.toFixed(2)} Virupas`}
+                    </span>
+                  </div>
+                  <div>
+                    Vara Bala:
+                    <span className="ml-1 font-mono text-slate-300">
+                      {activeResult.kalaBala.components.varaBala === null
+                        ? "Unavailable"
+                        : `${activeResult.kalaBala.components.varaBala.toFixed(2)} Virupas`}
+                    </span>
+                  </div>
+                  <div>
+                    Hora Bala:
+                    <span className="ml-1 font-mono text-slate-300">
+                      {activeResult.kalaBala.components.horaBala === null
+                        ? "Unavailable"
+                        : `${activeResult.kalaBala.components.horaBala.toFixed(2)} Virupas`}
+                    </span>
+                  </div>
+                  {activeResult.kalaBala.timeLordDetails && (
+                    <div className="sm:col-span-2 space-y-0.5">
+                      <span className="text-slate-400">Raman sunrise-to-sunrise time lords</span>
+                      <div>
+                        {activeResult.kalaBala.timeLordDetails.effectiveSunriseDate} ·
+                        Ahargana {activeResult.kalaBala.timeLordDetails.aharganaDays} ·
+                        Year {activeResult.kalaBala.timeLordDetails.yearLord} ·
+                        Month {activeResult.kalaBala.timeLordDetails.monthLord} ·
+                        Weekday {activeResult.kalaBala.timeLordDetails.varaLord} ·
+                        Hora {activeResult.kalaBala.timeLordDetails.horaNumber}/24 ({activeResult.kalaBala.timeLordDetails.horaLord})
+                      </div>
+                      <div>{activeResult.kalaBala.timeLordDetails.description}</div>
+                    </div>
+                  )}
                 </div>
               </div>
 
