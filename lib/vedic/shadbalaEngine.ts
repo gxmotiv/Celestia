@@ -21,7 +21,7 @@ export const SHADBALA_IMPLEMENTATION_STATUS = {
   limitations: [
     "Saptavargaja now evaluates D1, D2, D3, D7, D9, D12 and D30 separately. Its default score scale is the R. Santhanam BPHS translation (45/30/20/15/10/4/2); the alternative Raman halving scale can be selected explicitly. Five-fold friendship is derived from D1 relationships, and Moolatrikona is applied in D1 only.",
     "Dig Bala uses the actual sidereal Midheaven when supplied by the chart; callers without a Midheaven retain the disclosed 90° ecliptic fallback.",
-    "Nathonnatha Bala now uses exact local apparent solar time derived from the UTC instant, longitude and the Meeus equation of time. Tribhaga, year, month and Ayana components still contain fixed placeholders, and Hora is not yet derived from the sunrise-based planetary-hour engine.",
+    "Nathonnatha Bala now uses exact local apparent solar time derived from the UTC instant, longitude and the Meeus equation of time. Paksha Bala now supports separate BPHS waxing/waning and Raman Ashtami-window readings, selectable Mercury association, and explicit Moon accounting (BPHS Kala plus Cheshta versus Raman doubled within Kala). Tribhaga, year, month and Ayana still contain fixed placeholders, and Hora is not yet derived from the sunrise-based planetary-hour engine.",
     "Cheshta Bala uses coarse motion bands; non-luminary scores require an actual daily-motion value. Sun and Moon still use provisional constants rather than their textually specified Ayana/Paksha derivations.",
     "Drik Bala now uses directed longitude-based Drishti Pinda for the seven classical grahas, with source-labelled BPHS verse and Raman/translator aspect curves and explicit Mercury/Jupiter full-aspect readings. It still requires validation against a complete independent Shadbala worked chart before the Shadbala module can be promoted beyond partial."
   ]
@@ -48,7 +48,8 @@ export interface DigBalaResult {
 export interface KalaBalaComponents {
   /** Null when exact local apparent birth time is unavailable (except Mercury, always 60). */
   nathonnathaBala: number | null;
-  pakshaBala: number;
+  /** Null when a valid Sun/Moon longitude pair is unavailable. */
+  pakshaBala: number | null;
   tribhagaBala: number;
   abdaBala: number;
   maasaBala: number;
@@ -62,6 +63,7 @@ export interface KalaBalaResult {
   components: KalaBalaComponents;
   total: number;
   unavailableComponents: string[];
+  pakshaDetails?: PakshaBalaDetails;
   description: string;
 }
 
@@ -85,6 +87,33 @@ export type DrikFullAspectReading =
   | "quarter-only";
 
 export type DrikMercuryAssociationRule = "same-sign" | "degree-orb";
+
+/** Source-specific rule for when the Moon is classified as benefic for Paksha Bala. */
+export type PakshaMoonNatureRule =
+  | "bphs-waxing-waning"
+  | "raman-ashtami-window-through-krishna-ashtami"
+  | "raman-ashtami-window-through-krishna-saptami";
+
+/**
+ * Avoid double-counting the Moon:
+ * - BPHS 27.18: ordinary Paksha in Kala and the same value in Cheshta.
+ * - Raman Ch. V / Example 56: doubled Paksha inside Kala, no separate Moon Cheshta row.
+ */
+export type PakshaMoonAccountingRule =
+  | "bphs-kala-plus-cheshta"
+  | "raman-double-in-kala";
+
+export interface PakshaBalaDetails {
+  elongationDegrees: number;
+  foldedArcDegrees: number;
+  beneficShareVirupas: number;
+  maleficShareVirupas: number;
+  moonNature: "Benefic" | "Malefic";
+  mercuryNature: "Benefic" | "Malefic";
+  moonNatureRule: PakshaMoonNatureRule;
+  moonAccountingRule: PakshaMoonAccountingRule;
+  mercuryAssociationRule: DrikMercuryAssociationRule;
+}
 
 export interface DrikBalaAspect {
   aspectingPlanet: string;
@@ -162,6 +191,14 @@ export interface ShadbalaChartInput {
   localApparentTimeMinutes?: number;
   /** Explicitly false for an unknown placeholder birth time. */
   birthTimeKnown?: boolean;
+  /** BPHS waxing/waning Moon or B. V. Raman's wider Ashtami-window reading. */
+  pakshaMoonNatureRule?: PakshaMoonNatureRule;
+  /** Whether the Moon's Paksha is paired with Cheshta or doubled inside Kala. */
+  pakshaMoonAccountingRule?: PakshaMoonAccountingRule;
+  /** Mercury's company rule for its temporary benefic/malefic Paksha nature. */
+  pakshaMercuryAssociationRule?: DrikMercuryAssociationRule;
+  /** Required only by the explicitly selected degree-orb Mercury association rule. */
+  pakshaMercuryAssociationOrbDeg?: number;
   planets: {
     [name: string]: {
       longitude: number;
@@ -357,6 +394,169 @@ export function calculateSaptavargajaBala(
   }
 
   return Math.round(total * 1000) / 1000;
+}
+
+/**
+ * Folded Moon-Sun elongation for BPHS Ch. 27 vv. 10-11.
+ * The short arc is 0° at conjunction and 180° at opposition.
+ */
+export function calculatePakshaPoolVirupas(
+  sunLongitude: number,
+  moonLongitude: number
+): { elongationDegrees: number; foldedArcDegrees: number; beneficShareVirupas: number; maleficShareVirupas: number } {
+  for (const [name, value] of [["Sun", sunLongitude], ["Moon", moonLongitude]] as const) {
+    if (!Number.isFinite(value) || value < 0 || value >= 360) {
+      throw new RangeError(`Paksha Bala requires normalized [0°, 360°) ${name} longitude.`);
+    }
+  }
+  const elongationDegrees = ((moonLongitude - sunLongitude) % 360 + 360) % 360;
+  const foldedArcDegrees = elongationDegrees > 180 ? 360 - elongationDegrees : elongationDegrees;
+  const beneficShareVirupas = foldedArcDegrees / 3;
+  return {
+    elongationDegrees,
+    foldedArcDegrees,
+    beneficShareVirupas,
+    maleficShareVirupas: 60 - beneficShareVirupas,
+  };
+}
+
+/** Whether the Moon is treated as a Paksha benefic under the named lineage. */
+export function isPakshaMoonBenefic(
+  elongationDegrees: number,
+  rule: PakshaMoonNatureRule = "bphs-waxing-waning"
+): boolean {
+  if (!Number.isFinite(elongationDegrees) || elongationDegrees < 0 || elongationDegrees >= 360) {
+    throw new RangeError("Moon-Sun elongation must be normalized to [0°, 360°).");
+  }
+  if (rule === "bphs-waxing-waning") {
+    // BPHS 3.11: increasing Moon is benefic; decreasing Moon is malefic.
+    // At exact New Moon the Moon is assigned to the waning/malefic side;
+    // exact Full Moon is retained on the waxing/benefic side.
+    return elongationDegrees > 0 && elongationDegrees <= 180;
+  }
+  if (rule === "raman-ashtami-window-through-krishna-ashtami") {
+    // Raman, Graha and Bhava Balas, Ch. V, Art. 53:
+    // Shukla Ashtami (84°) up to but not including the end of Krishna Ashtami (276°).
+    return elongationDegrees >= 84 && elongationDegrees < 276;
+  }
+  // Alternate reading: Krishna Ashtami is outside the benefic window.
+  return elongationDegrees >= 84 && elongationDegrees < 264;
+}
+
+function pakshaGrahaIsMalefic(
+  name: string,
+  input: ShadbalaChartInput,
+  elongationDegrees: number,
+  moonNatureRule: PakshaMoonNatureRule,
+  mercuryAssociationRule: DrikMercuryAssociationRule
+): boolean {
+  if (name === "Sun" || name === "Mars" || name === "Saturn") return true;
+  if (name === "Jupiter" || name === "Venus") return false;
+  if (name === "Moon") return !isPakshaMoonBenefic(elongationDegrees, moonNatureRule);
+  if (name === "Mercury") {
+    const mercury = input.planets.Mercury;
+    if (!mercury) return false;
+    if (mercuryAssociationRule === "degree-orb") {
+      const orb = input.pakshaMercuryAssociationOrbDeg;
+      if (!Number.isFinite(orb) || (orb as number) < 0 || (orb as number) > 30) {
+        throw new RangeError("Paksha degree-orb Mercury association requires a finite orb from 0° through 30°.");
+      }
+    }
+    const companions = ["Sun", "Moon", "Mars", "Saturn", "Rahu", "Ketu"]
+      .filter((otherName) => Boolean(input.planets[otherName]));
+    return companions.some((otherName) => {
+      const other = input.planets[otherName];
+      const otherIsMalefic = otherName === "Moon"
+        ? !isPakshaMoonBenefic(elongationDegrees, moonNatureRule)
+        : ["Sun", "Mars", "Saturn", "Rahu", "Ketu"].includes(otherName);
+      if (!otherIsMalefic) return false;
+      const separation = Math.min(
+        ((other.longitude - mercury.longitude) % 360 + 360) % 360,
+        ((mercury.longitude - other.longitude) % 360 + 360) % 360
+      );
+      return mercuryAssociationRule === "same-sign"
+        ? Math.floor(other.longitude / 30) === Math.floor(mercury.longitude / 30)
+        : separation <= (input.pakshaMercuryAssociationOrbDeg as number);
+    });
+  }
+  return false;
+}
+
+export interface PakshaBalaResult {
+  planet: string;
+  points: number;
+  rawShareVirupas: number;
+  nature: "Benefic" | "Malefic";
+  available: boolean;
+  details?: PakshaBalaDetails;
+  description: string;
+}
+
+/**
+ * Paksha Bala (BPHS Ch. 27 vv. 10-11; Moon nature per Ch. 3 v. 11).
+ * The Moon's score placement is handled separately so its Paksha strength is
+ * never counted three times: see PakshaMoonAccountingRule and Ch. 27 v. 18.
+ */
+export function calculatePakshaBala(
+  planet: string,
+  input: ShadbalaChartInput
+): PakshaBalaResult {
+  const moonNatureRule = input.pakshaMoonNatureRule ?? "bphs-waxing-waning";
+  const moonAccountingRule = input.pakshaMoonAccountingRule ?? "bphs-kala-plus-cheshta";
+  const mercuryAssociationRule = input.pakshaMercuryAssociationRule ?? "same-sign";
+  if (!ShadbalaEngine.PLANETS.includes(planet)) {
+    throw new RangeError(`Paksha Bala is defined here only for the seven classical planets; received ${planet}.`);
+  }
+  const sunLongitude = input.planets.Sun?.longitude;
+  const moonLongitude = input.planets.Moon?.longitude;
+  if (sunLongitude === undefined || moonLongitude === undefined ||
+      !Number.isFinite(sunLongitude) || !Number.isFinite(moonLongitude)) {
+    return {
+      planet,
+      points: 0,
+      rawShareVirupas: 0,
+      nature: "Malefic",
+      available: false,
+      description: "Paksha Bala unavailable: valid Sun and Moon longitudes are required; no zero-position fallback is substituted.",
+    };
+  }
+  const pool = calculatePakshaPoolVirupas(sunLongitude, moonLongitude);
+  const moonNature = isPakshaMoonBenefic(pool.elongationDegrees, moonNatureRule)
+    ? "Benefic" : "Malefic";
+  const mercuryNature = pakshaGrahaIsMalefic(
+    "Mercury", input, pool.elongationDegrees, moonNatureRule, mercuryAssociationRule
+  ) ? "Malefic" : "Benefic";
+  const planetNature = planet === "Moon"
+    ? moonNature
+    : planet === "Mercury"
+      ? mercuryNature
+      : ["Sun", "Mars", "Saturn"].includes(planet) ? "Malefic" : "Benefic";
+  const rawShareVirupas = planetNature === "Benefic"
+    ? pool.beneficShareVirupas
+    : pool.maleficShareVirupas;
+  const multiplier = planet === "Moon" && moonAccountingRule === "raman-double-in-kala" ? 2 : 1;
+  const points = rawShareVirupas * multiplier;
+  const details: PakshaBalaDetails = {
+    elongationDegrees: pool.elongationDegrees,
+    foldedArcDegrees: pool.foldedArcDegrees,
+    beneficShareVirupas: pool.beneficShareVirupas,
+    maleficShareVirupas: pool.maleficShareVirupas,
+    moonNature,
+    mercuryNature,
+    moonNatureRule,
+    moonAccountingRule,
+    mercuryAssociationRule,
+  };
+  return {
+    planet,
+    points: Math.round(points * 100) / 100,
+    rawShareVirupas: Math.round(rawShareVirupas * 100) / 100,
+    nature: planetNature,
+    available: true,
+    details,
+    description:
+      `Paksha Bala ${points.toFixed(2)} Virupas from ${planetNature.toLowerCase()} share ${rawShareVirupas.toFixed(2)}; Moon: ${moonNature.toLowerCase()} (${moonNatureRule}); Mercury: ${mercuryNature.toLowerCase()} (${mercuryAssociationRule}); Moon accounting: ${moonAccountingRule}.`,
+  };
 }
 
 export class ShadbalaEngine {
@@ -597,15 +797,8 @@ export class ShadbalaEngine {
       input.birthTimeKnown ?? true
     );
 
-    const sunLon = input.planets["Sun"]?.longitude ?? 0;
-    const moonLon = input.planets["Moon"]?.longitude || 0;
-    let elongation = (moonLon - sunLon + 360) % 360;
-    const pakshaFraction = elongation <= 180 ? elongation / 180 : (360 - elongation) / 180;
-    const isBenefic = ["Jupiter", "Venus", "Moon", "Mercury"].includes(planet);
-
-    const pakshaBala = isBenefic
-      ? Math.round(pakshaFraction * 60 * 100) / 100
-      : Math.round((1 - pakshaFraction) * 60 * 100) / 100;
+    const pakshaResult = calculatePakshaBala(planet, input);
+    const pakshaBala = pakshaResult.available ? pakshaResult.points : null;
 
     const tribhagaBala = 30;
     const abdaBala = 15;
@@ -625,13 +818,18 @@ export class ShadbalaEngine {
     const ayanaBala = 35.5;
     const yuddhaBala = 0;
 
-    const unavailableComponents = nathonnathaBala === null
-      ? ["Nathonnatha Bala (requires a known local apparent birth time)"]
-      : [];
+    const unavailableComponents = [
+      ...(nathonnathaBala === null
+        ? ["Nathonnatha Bala (requires a known local apparent birth time)"]
+        : []),
+      ...(!pakshaResult.available
+        ? ["Paksha Bala (requires valid Sun and Moon longitudes)"]
+        : []),
+    ];
     const total =
       Math.round(
         ((nathonnathaBala ?? 0) +
-          pakshaBala +
+          (pakshaBala ?? 0) +
           tribhagaBala +
           abdaBala +
           maasaBala +
@@ -656,9 +854,9 @@ export class ShadbalaEngine {
       },
       total,
       unavailableComponents,
-      description: nathonnathaBala === null
-        ? `Partial temporal estimate of ${total} Virupas. Nathonnatha Bala is unavailable because a known local apparent birth time was not supplied; remaining Kala components still include provisional values.`
-        : `Partial temporal estimate of ${total} Virupas. Nathonnatha Bala uses Meeus-corrected local apparent time (${nathonnathaBala.toFixed(2)}) and Paksha (${pakshaBala}); other Kala components remain partly provisional.`,
+      ...(pakshaResult.details ? { pakshaDetails: pakshaResult.details } : {}),
+      description:
+        `Partial temporal estimate of ${total} Virupas. Nathonnatha ${nathonnathaBala === null ? "is unavailable" : `uses Meeus-corrected local apparent time (${nathonnathaBala.toFixed(2)})`}; Paksha ${pakshaBala === null ? "is unavailable" : `uses the ${pakshaResult.details?.moonNatureRule} / ${pakshaResult.details?.moonAccountingRule} profile (${pakshaBala.toFixed(2)} Virupas)`}. Other Kala components still include provisional values.`,
     };
   }
 
@@ -667,14 +865,39 @@ export class ShadbalaEngine {
     const isRetro = pPos?.isRetrograde ?? false;
     const dailyMotion = pPos?.dailyMotion ?? pPos?.speed;
 
-    if (planet === "Sun" || planet === "Moon") {
+    if (planet === "Moon") {
+      const paksha = calculatePakshaBala("Moon", input);
+      if (!paksha.available) {
+        return {
+          points: 0,
+          motion: 0,
+          isRetrograde: false,
+          state: "Unavailable (motion not supplied)",
+          available: false,
+          description: "Moon Cheshta Bala is unavailable because BPHS 27.18 identifies it with Paksha Bala, which requires valid Sun and Moon longitudes.",
+        };
+      }
+      const accountingRule = input.pakshaMoonAccountingRule ?? "bphs-kala-plus-cheshta";
       return {
-        points: planet === "Sun" ? 45.0 : 50.0,
-        motion: planet === "Sun" ? 1.0 : 13.2,
+        points: accountingRule === "bphs-kala-plus-cheshta" ? paksha.points : 0,
+        motion: 0,
         isRetrograde: false,
         state: "Samanya (Direct)",
         available: true,
-        description: `${planet} uses a provisional motional-strength constant; the source-specified Ayana/Paksha derivation remains to be implemented.`,
+        description: accountingRule === "bphs-kala-plus-cheshta"
+          ? `BPHS 27.18: Moon Cheshta Bala equals its Paksha Bala (${paksha.points.toFixed(2)} Virupas), complementing the undoubled Kala component.`
+          : "Raman Chapter V / Example 56: Moon Paksha is doubled within Kala; no separate Moon Cheshta row is added in that worked accounting profile.",
+      };
+    }
+
+    if (planet === "Sun") {
+      return {
+        points: 45.0,
+        motion: 1.0,
+        isRetrograde: false,
+        state: "Samanya (Direct)",
+        available: true,
+        description: "Sun uses a provisional motional-strength constant; the source-specific Ayana Bala equivalence and accounting profile remain to be implemented.",
       };
     }
 
