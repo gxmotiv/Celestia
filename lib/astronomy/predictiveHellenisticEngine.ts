@@ -184,6 +184,155 @@ export class ProgressionsEngine {
 }
 
 // ---------------------------------------------------------------------------
+// 2. SOLAR ARC DIRECTIONS
+// ---------------------------------------------------------------------------
+
+export type SolarArcAspectName =
+  | "Conjunction"
+  | "Semisquare"
+  | "Sextile"
+  | "Square"
+  | "Trine"
+  | "Sesquiquadrate"
+  | "Quincunx"
+  | "Opposition";
+
+export interface SolarArcDirectedPoint {
+  name: string;
+  symbol: string;
+  natalLongitude: number;
+  directedLongitude: number;
+  sign: string;
+  signDegreeFormatted: string;
+}
+
+export interface SolarArcDirectionContact {
+  directedPoint: string;
+  natalPoint: string;
+  aspect: SolarArcAspectName;
+  exactAngle: number;
+  orb: number;
+  directedLongitude: number;
+  natalLongitude: number;
+}
+
+export interface SolarArcDirectionsReport {
+  age: number;
+  progressedDate: string;
+  solarArcDegrees: number;
+  maxOrb: number;
+  directedPoints: SolarArcDirectedPoint[];
+  contacts: SolarArcDirectionContact[];
+  method: string;
+}
+
+/**
+ * Solar Arc Directions applies the exact secondary-progressed solar arc
+ * (progressed Sun longitude minus natal Sun longitude) to all natal planets
+ * and angles. Contacts are directed-point to natal-point aspects. This
+ * implementation uses the tropical zodiac and reports an explicit orb.
+ */
+export class SolarArcDirectionsEngine {
+  private static readonly ASPECTS: Array<{
+    name: SolarArcAspectName;
+    angle: number;
+  }> = [
+    { name: "Conjunction", angle: 0 },
+    { name: "Semisquare", angle: 45 },
+    { name: "Sextile", angle: 60 },
+    { name: "Square", angle: 90 },
+    { name: "Trine", angle: 120 },
+    { name: "Sesquiquadrate", angle: 135 },
+    { name: "Quincunx", angle: 150 },
+    { name: "Opposition", angle: 180 },
+  ];
+
+  private readonly progressionsEngine = new ProgressionsEngine();
+
+  public calculateSolarArc(
+    natalChart: WesternChartData,
+    birthDate: Date,
+    currentDate: Date,
+    latitude: number,
+    longitude: number,
+    timezoneOffset: number,
+    maxOrb = 1.0
+  ): SolarArcDirectionsReport {
+    const natalSun = natalChart.planets.find((planet) => planet.name === "Sun");
+    if (!natalSun) {
+      throw new Error("Solar Arc Directions requires a natal Sun position.");
+    }
+
+    const progressed = this.progressionsEngine.calculateProgressions(
+      birthDate,
+      currentDate,
+      latitude,
+      longitude,
+      timezoneOffset
+    );
+    const solarArcDegrees = normalizeDegrees(
+      progressed.progressedSun.longitude - natalSun.longitude
+    );
+
+    const natalPoints = [
+      ...natalChart.planets,
+      natalChart.ascendant,
+      natalChart.midheaven,
+    ];
+    const directedPoints = natalPoints.map((point) => {
+      const directedLongitude = normalizeDegrees(point.longitude + solarArcDegrees);
+      return {
+        name: point.name,
+        symbol: point.symbol,
+        natalLongitude: point.longitude,
+        directedLongitude,
+        sign: ZODIAC_SIGNS[Math.floor(directedLongitude / 30)]?.name || "Aries",
+        signDegreeFormatted: formatDegreeMinute(directedLongitude),
+      };
+    });
+
+    const contacts: SolarArcDirectionContact[] = [];
+    directedPoints.forEach((directedPoint) => {
+      natalPoints.forEach((natalPoint) => {
+        // A directed point contacting its own natal position is a valid
+        // direction, so self-pairs are retained (including solar arc Sun-Sun).
+        const difference = Math.abs(
+          directedPoint.directedLongitude - natalPoint.longitude
+        );
+        const separation = difference > 180 ? 360 - difference : difference;
+
+        SolarArcDirectionsEngine.ASPECTS.forEach((aspect) => {
+          const orb = Math.abs(separation - aspect.angle);
+          if (orb <= maxOrb) {
+            contacts.push({
+              directedPoint: directedPoint.name,
+              natalPoint: natalPoint.name,
+              aspect: aspect.name,
+              exactAngle: aspect.angle,
+              orb: Math.round(orb * 1000) / 1000,
+              directedLongitude: directedPoint.directedLongitude,
+              natalLongitude: natalPoint.longitude,
+            });
+          }
+        });
+      });
+    });
+
+    contacts.sort((a, b) => a.orb - b.orb);
+
+    return {
+      age: progressed.age,
+      progressedDate: progressed.progressedDate,
+      solarArcDegrees: Math.round(solarArcDegrees * 10000) / 10000,
+      maxOrb,
+      directedPoints,
+      contacts,
+      method: "Exact secondary-progressed Sun longitude minus natal Sun longitude; the same tropical arc is added to natal planets, Ascendant and Midheaven. Contacts are directed-to-natal aspects.",
+    };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // 2. HELLENISTIC ANNUAL PROFECTIONS
 // ---------------------------------------------------------------------------
 
