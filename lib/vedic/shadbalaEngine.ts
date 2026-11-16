@@ -1039,7 +1039,8 @@ export class ShadbalaEngine {
     const pakshaResult = calculatePakshaBala(planet, input);
     const pakshaBala = pakshaResult.available ? pakshaResult.points : null;
 
-    const tribhagaBala = 30;
+    const tribhagaResult = calculateTribhagaBala(planet, input);
+    const tribhagaBala = tribhagaResult.available ? tribhagaResult.points : null;
     const abdaBala = 15;
     const maasaBala = 30;
 
@@ -1064,12 +1065,15 @@ export class ShadbalaEngine {
       ...(!pakshaResult.available
         ? ["Paksha Bala (requires valid Sun and Moon longitudes)"]
         : []),
+      ...(!tribhagaResult.available
+        ? ["Tribhaga Bala (requires a known birth time, latitude, longitude and normal sunrise/sunset)"]
+        : []),
     ];
     const total =
       Math.round(
         ((nathonnathaBala ?? 0) +
           (pakshaBala ?? 0) +
-          tribhagaBala +
+          (tribhagaBala ?? 0) +
           abdaBala +
           maasaBala +
           varaBala +
@@ -1094,8 +1098,9 @@ export class ShadbalaEngine {
       total,
       unavailableComponents,
       ...(pakshaResult.details ? { pakshaDetails: pakshaResult.details } : {}),
+      tribhagaDetails: tribhagaResult,
       description:
-        `Partial temporal estimate of ${total} Virupas. Nathonnatha ${nathonnathaBala === null ? "is unavailable" : `uses Meeus-corrected local apparent time (${nathonnathaBala.toFixed(2)})`}; Paksha ${pakshaBala === null ? "is unavailable" : `uses the ${pakshaResult.details?.moonNatureRule} / ${pakshaResult.details?.moonAccountingRule} profile (${pakshaBala.toFixed(2)} Virupas)`}. Other Kala components still include provisional values.`,
+        `Partial temporal estimate of ${total} Virupas. Nathonnatha ${nathonnathaBala === null ? "is unavailable" : `uses Meeus-corrected local apparent time (${nathonnathaBala.toFixed(2)})`}; Paksha ${pakshaBala === null ? "is unavailable" : `uses the ${pakshaResult.details?.moonNatureRule} / ${pakshaResult.details?.moonAccountingRule} profile (${pakshaBala.toFixed(2)} Virupas)`}; Tribhaga ${tribhagaBala === null ? "is unavailable" : `uses the BPHS 27.12 local unequal-third method (${tribhagaBala.toFixed(2)} Virupas)`}. Abda, Masa and Ayana remain provisional, and Vara/Hora have not yet been implemented from their sunrise-based lord methods.`,
     };
   }
 
