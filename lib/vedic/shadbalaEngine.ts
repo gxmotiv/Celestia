@@ -1,4 +1,5 @@
 import { calculateDivisionalSignIndex } from "./divisionalCalc";
+import { PlanetaryHoursCalculator } from "../astronomy/planetaryHours";
 import {
   calculateLongitudeDrishtiVirupas,
   type DrishtiVirupaVariant,
@@ -21,7 +22,7 @@ export const SHADBALA_IMPLEMENTATION_STATUS = {
   limitations: [
     "Saptavargaja now evaluates D1, D2, D3, D7, D9, D12 and D30 separately. Its default score scale is the R. Santhanam BPHS translation (45/30/20/15/10/4/2); the alternative Raman halving scale can be selected explicitly. Five-fold friendship is derived from D1 relationships, and Moolatrikona is applied in D1 only.",
     "Dig Bala uses the actual sidereal Midheaven when supplied by the chart; callers without a Midheaven retain the disclosed 90° ecliptic fallback.",
-    "Nathonnatha Bala now uses exact local apparent solar time derived from the UTC instant, longitude and the Meeus equation of time. Paksha Bala now supports separate BPHS waxing/waning and Raman Ashtami-window readings, selectable Mercury association, and explicit Moon accounting (BPHS Kala plus Cheshta versus Raman doubled within Kala). Tribhaga, year, month and Ayana still contain fixed placeholders, and Hora is not yet derived from the sunrise-based planetary-hour engine.",
+    "Nathonnatha Bala now uses exact local apparent solar time derived from the UTC instant, longitude and the Meeus equation of time. Paksha Bala now supports separate BPHS waxing/waning and Raman Ashtami-window readings, selectable Mercury association, and explicit Moon accounting (BPHS Kala plus Cheshta versus Raman doubled within Kala). Tribhaga now uses location-specific NOAA-model sunrise/sunset unequal thirds and explicit unavailable states for missing time/location or polar conditions. Abda, Masa and Ayana still contain fixed placeholders, while Vara and Hora remain provisional and are not yet derived from sunrise-based weekday/hora lords.",
     "Cheshta Bala uses coarse motion bands; non-luminary scores require an actual daily-motion value. Sun and Moon still use provisional constants rather than their textually specified Ayana/Paksha derivations.",
     "Drik Bala now uses directed longitude-based Drishti Pinda for the seven classical grahas, with source-labelled BPHS verse and Raman/translator aspect curves and explicit Mercury/Jupiter full-aspect readings. It still requires validation against a complete independent Shadbala worked chart before the Shadbala module can be promoted beyond partial."
   ]
@@ -50,7 +51,8 @@ export interface KalaBalaComponents {
   nathonnathaBala: number | null;
   /** Null when a valid Sun/Moon longitude pair is unavailable. */
   pakshaBala: number | null;
-  tribhagaBala: number;
+  /** Null when birth time, location or sunrise/sunset intervals are unavailable. */
+  tribhagaBala: number | null;
   abdaBala: number;
   maasaBala: number;
   varaBala: number;
@@ -64,6 +66,7 @@ export interface KalaBalaResult {
   total: number;
   unavailableComponents: string[];
   pakshaDetails?: PakshaBalaDetails;
+  tribhagaDetails?: TribhagaBalaResult;
   description: string;
 }
 
@@ -199,6 +202,10 @@ export interface ShadbalaChartInput {
   pakshaMercuryAssociationRule?: DrikMercuryAssociationRule;
   /** Required only by the explicitly selected degree-orb Mercury association rule. */
   pakshaMercuryAssociationOrbDeg?: number;
+  /** IANA zone identifier for date-specific sunrise/sunset UTC offsets. */
+  ianaTimezone?: string;
+  /** Exact civil UTC offset at the known birth instant. */
+  timezoneOffsetSeconds?: number;
   planets: {
     [name: string]: {
       longitude: number;
