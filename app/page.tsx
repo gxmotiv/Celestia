@@ -518,6 +518,8 @@ export default function HomePage() {
                 birthDate={formData.birthDate}
                 birthTime={formData.birthTime}
                 birthUtcInstant={birthTimeContext.utcInstant}
+                birthLongitude={formData.longitude}
+                isBirthTimeUnknown={formData.isTimeUnknown}
                 westernData={westernData}
                 numerologyData={numerologyData}
                 baziData={baziData}
