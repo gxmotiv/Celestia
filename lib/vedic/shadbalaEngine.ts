@@ -95,8 +95,8 @@ export interface CheshtaBalaResult {
     | "Samanya (Direct)"
     | "Mandatara (Fast)"
     | "Kendra computed"
-    | "Paksha-derived (BPHS 27.18)"
-    | "Ayana-derived (BPHS 27.18)"
+    | "Paksha-derived Moon accounting"
+    | "Ayana-derived Sun accounting"
     | "Unavailable (mean/seeghrocha not supplied)"
     | "Unavailable (motion not supplied)";
   available: boolean;
@@ -1557,7 +1557,7 @@ export class ShadbalaEngine {
         points: accountingRule === "bphs-kala-plus-cheshta" ? paksha.points : 0,
         motion: 0,
         isRetrograde: false,
-        state: "Paksha-derived (BPHS 27.18)",
+        state: "Paksha-derived Moon accounting",
         available: true,
         description: accountingRule === "bphs-kala-plus-cheshta"
           ? "BPHS 27.18: Moon Cheshta Bala equals its Paksha Bala, complementing the undoubled Kala component."
@@ -1574,7 +1574,7 @@ export class ShadbalaEngine {
         points: ayana.cheshtaPoints ?? 0,
         motion: 0,
         isRetrograde: false,
-        state: "Ayana-derived (BPHS 27.18)",
+        state: "Ayana-derived Sun accounting",
         available: true,
         description: ayana.details?.method === "raman-kranti"
           ? "Raman Ch. V art. 75: Sun Ayana is doubled inside Kala; no separate Sun Cheshta row is added."
