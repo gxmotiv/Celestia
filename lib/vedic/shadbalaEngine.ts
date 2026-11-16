@@ -778,7 +778,8 @@ export function calculateRamanTimeLordsFromSunriseInterval(
       effectiveSunriseDate.getUTCSeconds() !== 0 || effectiveSunriseDate.getUTCMilliseconds() !== 0) return null;
   const dateMs = effectiveSunriseDate.getTime();
   if (dateMs < RAMAN_ABBREVIATED_AHARGANA_EPOCH || dateMs >= Date.UTC(2101, 0, 1)) return null;
-  const aharganaDays = Math.floor((dateMs - RAMAN_ABBREVIATED_AHARGANA_EPOCH) / DAY_MS);
+  // Raman's abbreviated Ahargana is inclusive: the epoch date itself is day 1.
+  const aharganaDays = Math.floor((dateMs - RAMAN_ABBREVIATED_AHARGANA_EPOCH) / DAY_MS) + 1;
   const sunriseToSunriseMs = nextSunriseInstantUtc.getTime() - sunriseInstantUtc.getTime();
   const elapsedMs = birthInstantUtc.getTime() - sunriseInstantUtc.getTime();
   if (!(sunriseToSunriseMs > 0) || elapsedMs < 0 || elapsedMs >= sunriseToSunriseMs) return null;
@@ -791,7 +792,7 @@ export function calculateRamanTimeLordsFromSunriseInterval(
   const monthCountFromWednesday = positiveModulo(completeAstrologicalMonths * 2 + 1, 7) || 7;
   const monthLord = WEEKDAY_LORDS[positiveModulo(3 + monthCountFromWednesday - 1, 7)];
 
-  const varaLord = WEEKDAY_LORDS[positiveModulo(3 + aharganaDays, 7)];
+  const varaLord = WEEKDAY_LORDS[positiveModulo(3 + aharganaDays - 1, 7)];
   const horaNumber = Math.min(24, Math.floor((elapsedMs / sunriseToSunriseMs) * 24) + 1);
   const horaIndex = RAMAN_HORA_ORDER.indexOf(varaLord as (typeof RAMAN_HORA_ORDER)[number]);
   const horaLord = RAMAN_HORA_ORDER[(horaIndex + horaNumber - 1) % 7];
