@@ -6,6 +6,7 @@ on:
       - "app/**"
       - "components/**"
       - "lib/**"
+      - "scripts/**"
       - "public/**"
       - "next.config.ts"
       - "open-next.config.ts"
@@ -42,6 +43,17 @@ jobs:
         run: npm install --global npm@10.9.9
       - name: Install locked app dependencies
         run: npm ci --no-audit --no-fund
+      - name: Set up Bun for TypeScript regression suites
+        uses: oven-sh/setup-bun@v2
+      - name: Run Western Astrology regression suites
+        run: |
+          bun run scripts/testAdvancedWesternBirthTimeSuite.ts
+          bun run scripts/testAdvancedWesternTimingSuite.ts
+          bun run scripts/testAdvancedWesternEclipseSuite.ts
+          bun run scripts/testAdvancedWesternAstrocartographySuite.ts
+          bun run scripts/testAdvancedWesternFirdariaSuite.ts
+          bun run scripts/testAdvancedWesternFixedStarSuite.ts
+          bun run scripts/testWesternBenchmarkSuite.ts
       - name: Install temporary Cloudflare build tools
         run: npm install --no-save --package-lock=false --no-audit --no-fund @opennextjs/cloudflare@latest wrangler@latest
       - name: Build the Next.js application
