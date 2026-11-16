@@ -340,7 +340,7 @@ export class DeclinationCalculator {
     obliquity = 23.43929,
     maxOrb = 1.2
   ): DeclinationReport {
-    const OOB_THRESHOLD = 23.43929; // Out of Bounds if > maximum solar obliquity
+    const OOB_THRESHOLD = Math.abs(obliquity); // Epoch-specific maximum solar declination
 
     const declinationList: DeclinationData[] = planets.map((p) => {
       const dec = this.calculateDeclination(p.longitude, p.latitude || 0, obliquity);
