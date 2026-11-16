@@ -767,6 +767,14 @@ export function ShadbalaPanel({
                         : `${activeResult.kalaBala.components.ayanaBala.toFixed(2)} Virupas`}
                     </span>
                   </div>
+                  <div>
+                    Yuddha Bala:
+                    <span className="ml-1 font-mono text-amber-300">
+                      {activeResult.kalaBala.components.yuddhaBala === null
+                        ? "Unavailable — validated war event and source-specific victor rule required"
+                        : `${activeResult.kalaBala.components.yuddhaBala.toFixed(2)} Virupas`}
+                    </span>
+                  </div>
                   {activeResult.kalaBala.ayanaDetails && (
                     <div className="sm:col-span-2">
                       {activeResult.kalaBala.ayanaDetails.note} ·
