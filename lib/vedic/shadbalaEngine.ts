@@ -486,7 +486,7 @@ export interface PakshaBalaResult {
   planet: string;
   points: number;
   rawShareVirupas: number;
-  nature: "Benefic" | "Malefic";
+  nature: "Benefic" | "Malefic" | null;
   available: boolean;
   details?: PakshaBalaDetails;
   description: string;
@@ -515,7 +515,7 @@ export function calculatePakshaBala(
       planet,
       points: 0,
       rawShareVirupas: 0,
-      nature: "Malefic",
+      nature: null,
       available: false,
       description: "Paksha Bala unavailable: valid Sun and Moon longitudes are required; no zero-position fallback is substituted.",
     };
