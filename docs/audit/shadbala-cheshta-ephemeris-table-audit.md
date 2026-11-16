@@ -86,6 +86,13 @@ This is a primary source for Raman's exposition and the tables he reproduces, bu
 - Define whether the transfer uses pre-Yuddha total Shadbala or another source-attested base. Do not select an implementation merely because its output looks plausible.
 - Tests must cover exact threshold boundaries, 0°/360° wrap, adjacent-sign pairs, excluded luminaries/nodes, Venus victory, missing latitude, unresolved near-ties, multi-body clusters, conservation of pairwise adjustment, and prevention of circular reapplication.
 
-### 6.4 Present product behavior
+### 6.4 Position-provider and adapter audit
 
+- `lib/astronomy/swissEphemeris.ts` already exposes `getApparentGeocentricEclipticPosition()`. It uses Astronomy Engine's geocentric vector with light-time and aberration corrections and transforms it to the true ecliptic of date. It returns unrounded tropical ecliptic longitude and latitude; it does **not** return right ascension or declination.
+- `SwissPlanetPosition` also carries geocentric ecliptic latitude and distance, but its public result is rounded to 0.0001° for longitude/latitude and 0.00001 AU for distance. Display rounding must not be mistaken for physical ephemeris accuracy.
+- `components/ShadbalaPanel.tsx` currently builds each engine planet input from `vedicData.planets[].siderealLongitude`, retrograde state and western daily speed. It reads the matching `westernData.planets` record for speed but currently discards its apparent geocentric longitude and latitude. Thus the Shadbala engine presently receives neither apparent geocentric coordinate as a dedicated field.
+- This is an adapter gap, not proof that every required Yuddha coordinate is already solved. Before implementation, decide whether the selected source profile needs apparent ecliptic longitude/latitude, equatorial right ascension/declination, topocentric or geocentric positions, and apparent disc diameter. The present helper's coordinate frame must not be relabelled as declination or topocentric position.
+- The safer next adapter is to compute the unrounded apparent geocentric ecliptic coordinates at the exact UTC birth instant, attach them under an explicitly named coordinate-frame object, and validate the time conversion against the chart's resolved UTC instant. The Yuddha engine should remain unavailable until its selected historical source profile's full input requirements are met.
+
+### 6.5 Present product behavior
 The Shadbala engine leaves Yuddha Bala null and includes it in the unavailable-component list. This is intentional and protects the displayed Shadbala subtotal from presenting an unsupported result as zero. The Shadbala panel now calls out this missing evidence explicitly.
