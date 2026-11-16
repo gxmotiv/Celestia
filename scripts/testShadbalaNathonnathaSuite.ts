@@ -76,7 +76,6 @@ assert.deepEqual(
     "Abda/Masa/Vara/Hora Bala (requires a known local sunrise-to-sunrise interval and supported Raman epoch date)",
     "Ayana Bala (requires a normalized sidereal graha longitude and birth-date ayanamsa)",
     "Yuddha Bala (planetary-war calculation and victor rules are not implemented)",
-    "Yuddha Bala (planetary-war calculation and victor rules are not implemented)",
   ],
   "Nathonnatha is available; Tribhaga, Raman time lords and Ayana remain unavailable without their source inputs"
 );
@@ -99,6 +98,7 @@ assert.deepEqual(
     "Tribhaga Bala (requires a known birth time, latitude, longitude and normal sunrise/sunset)",
     "Abda/Masa/Vara/Hora Bala (requires a known local sunrise-to-sunrise interval and supported Raman epoch date)",
     "Ayana Bala (requires a normalized sidereal graha longitude and birth-date ayanamsa)",
+    "Yuddha Bala (planetary-war calculation and victor rules are not implemented)",
   ],
   "Unknown birth time invalidates local-time Nathonnatha, Paksha, Tribhaga and Raman time-lord calculations; Ayana is independently unavailable without a birth-date ayanamsa"
 );
