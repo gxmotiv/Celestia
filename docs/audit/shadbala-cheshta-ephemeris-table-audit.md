@@ -185,3 +185,15 @@ The new independent regression rebuilds the chart from Raman's printed planetary
 - B. V. Raman, *Graha and Bhava Balas*, 13th edition (1992), Chapter IV, Articles 41–45 and Examples 14–15, printed pp. 30–33: [scanned edition](https://dn790000.ca.archive.org/0/items/1050-jyotish-books-with-siderial-zodiac/Bhava%20and%20Graha%20Balas_B.V.Raman%201996.pdf). The directional assignments and arc rule appear on PDF pages 34–35; the worked arcs and values appear on PDF pages 36–37.
 
 This audit verifies the direction/arc formula and hardens input integrity. It does not make the overall Shadbala complete: the six-fold status stays partial, and remaining Kala/Cheshta/Yuddha and full-chart independent reconciliation gaps remain open.
+
+
+## 9. Unknown-birth-time angle guard
+
+The natal Ascendant, Descendant, Midheaven and Nadir depend on the actual birth instant and location. A chart UI may still populate finite angle values from a noon placeholder when time is unknown; numeric validity alone must not turn those values into natal angles.
+
+Celestia now treats `birthTimeKnown === false` as a hard stop for angle-dependent strength:
+- Sthana Bala keeps its independently computable terms, but Kendradi Bala is null, listed as unavailable, and excluded from the partial subtotal.
+- Dig Bala is unavailable for all seven grahas because each classical directional peak requires a reliable Ascendant/Descendant or MC/IC. A supplied finite placeholder MC does not override the unknown-time flag.
+- This does not invalidate longitude-only Sthana components by itself, nor does it make the whole Shadbala complete. Other planetary positions in an unknown-time chart still need their own precision/status audit.
+
+Regression tests now use finite Raman-chart angles with `birthTimeKnown: false` and verify that neither Kendradi nor Dig Bala treats them as exact. The behavior is fail-closed rather than silently using noon-derived cardinal points.
