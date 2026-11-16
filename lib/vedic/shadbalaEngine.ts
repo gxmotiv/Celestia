@@ -1341,7 +1341,7 @@ export class ShadbalaEngine {
       ...(!Number.isFinite(input.midheaven)
         ? ["Dig Bala uses an approximate quadrant peak because a chart-derived Midheaven was not supplied."]
         : []),
-      ...(SHADBALA_IMPLEMENTATION_STATUS.level !== "complete"
+      ...(String(SHADBALA_IMPLEMENTATION_STATUS.level) !== "complete"
         ? ["The overall six-fold Shadbala implementation remains partial / approximate and is not independently validated."]
         : []),
     ];
