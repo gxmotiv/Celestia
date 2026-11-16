@@ -178,6 +178,10 @@ export class EclipseAnalyzer {
     { date: "2029-07-11", time: "15:36", type: "Partial Solar" },
     { date: "2029-12-05", time: "15:03", type: "Partial Solar" },
     { date: "2029-12-20", time: "22:42", type: "Total Lunar" },
+    { date: "2030-06-01", time: "06:28", type: "Annular Solar" },
+    { date: "2030-06-15", time: "18:33", type: "Partial Lunar" },
+    { date: "2030-11-25", time: "06:50", type: "Total Solar" },
+    { date: "2030-12-09", time: "22:28", type: "Penumbral Lunar" },
   ];
 
   public analyzeEclipses(chart: WesternChartData, currentDate: Date = new Date()): EclipseItem[] {
