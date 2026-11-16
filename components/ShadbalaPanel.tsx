@@ -548,14 +548,14 @@ export function ShadbalaPanel({
                             <div className="flex justify-between text-[11px] text-slate-300">
                               <span className="truncate">{b.name}</span>
                               <span className="font-mono font-bold text-slate-200">
-                                {b.available === false
+                                {"available" in b && b.available === false
                                   ? (b.points > 0 ? `${b.points.toFixed(1)} pt · partial` : "Unavailable")
                                   : `${b.points.toFixed(1)} pt`}
                               </span>
                             </div>
                             <div className="w-full h-1.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
                               <div
-                                className={`h-full rounded-full ${b.available === false ? "bg-slate-500" : b.color}`}
+                                className={`h-full rounded-full ${("available" in b && b.available === false) ? "bg-slate-500" : b.color}`}
                                 style={{
                                   width: `${Math.min(100, (("absolute" in b && b.absolute) ? Math.abs(b.points) : Math.max(0, b.points)) / b.max * 100)}%`,
                                 }}
