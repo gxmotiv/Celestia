@@ -576,6 +576,228 @@ export function calculatePakshaBala(
   };
 }
 
+export type TribhagaPart = "first" | "middle" | "last";
+export type TribhagaPeriod = "day" | "night";
+
+export interface TribhagaSolarIntervals {
+  birthLocalMinutes: number;
+  sunriseMinutes: number;
+  sunsetMinutes: number;
+  previousSunsetMinutes: number;
+  nextSunriseMinutes: number;
+}
+
+export interface TribhagaBalaResult {
+  points: number | null;
+  available: boolean;
+  period: TribhagaPeriod | null;
+  part: TribhagaPart | null;
+  awardedLord: string | null;
+  intervalStartMinutes: number | null;
+  intervalEndMinutes: number | null;
+  description: string;
+}
+
+const TRIBHAGA_PLANETS = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"] as const;
+const DAY_TRIBHAGA_LORDS = ["Mercury", "Sun", "Saturn"] as const;
+const NIGHT_TRIBHAGA_LORDS = ["Moon", "Venus", "Mars"] as const;
+
+/**
+ * BPHS 27.12: one rupa to the ruling graha of each of the three unequal
+ * daylight/night thirds; Jupiter receives one rupa at all times.
+ * Intervals are half-open: sunrise starts the first day part, sunset starts
+ * the first night part, and an exact third boundary enters the next part.
+ */
+export function calculateTribhagaBalaFromSolarIntervals(
+  planet: string,
+  intervals?: TribhagaSolarIntervals
+): TribhagaBalaResult {
+  if (!TRIBHAGA_PLANETS.includes(planet as (typeof TRIBHAGA_PLANETS)[number])) {
+    throw new RangeError(\`Tribhaga Bala is defined only for the seven classical planets; received \${planet}.\`);
+  }
+  if (planet === "Jupiter") {
+    return {
+      points: 60, available: true, period: null, part: null, awardedLord: "Jupiter",
+      intervalStartMinutes: null, intervalEndMinutes: null,
+      description: "BPHS 27.12: Jupiter receives full Tribhaga Bala (60 Virupas) at all times.",
+    };
+  }
+  if (!intervals) {
+    return {
+      points: null, available: false, period: null, part: null, awardedLord: null,
+      intervalStartMinutes: null, intervalEndMinutes: null,
+      description: "Tribhaga Bala unavailable: a known local birth clock, valid latitude/longitude and normal sunrise/sunset intervals are required.",
+    };
+  }
+  const values = [
+    intervals.birthLocalMinutes, intervals.sunriseMinutes, intervals.sunsetMinutes,
+    intervals.previousSunsetMinutes, intervals.nextSunriseMinutes,
+  ];
+  if (!values.every(Number.isFinite) || values.some((value) => value < 0 || value >= 1440)) {
+    throw new RangeError("Tribhaga local solar times must be finite clock minutes in [0, 1440).");
+  }
+  if (intervals.sunsetMinutes <= intervals.sunriseMinutes) {
+    throw new RangeError("Tribhaga sunrise must precede sunset on the local birth date.");
+  }
+
+  let period: TribhagaPeriod;
+  let elapsedMinutes: number;
+  let intervalDuration: number;
+  let intervalStart: number;
+  if (
+    intervals.birthLocalMinutes >= intervals.sunriseMinutes &&
+    intervals.birthLocalMinutes < intervals.sunsetMinutes
+  ) {
+    period = "day";
+    elapsedMinutes = intervals.birthLocalMinutes - intervals.sunriseMinutes;
+    intervalDuration = intervals.sunsetMinutes - intervals.sunriseMinutes;
+    intervalStart = intervals.sunriseMinutes;
+  } else if (intervals.birthLocalMinutes < intervals.sunriseMinutes) {
+    period = "night";
+    intervalDuration = intervals.sunriseMinutes + 1440 - intervals.previousSunsetMinutes;
+    elapsedMinutes = intervals.birthLocalMinutes + 1440 - intervals.previousSunsetMinutes;
+    intervalStart = intervals.previousSunsetMinutes;
+  } else {
+    period = "night";
+    intervalDuration = intervals.nextSunriseMinutes + 1440 - intervals.sunsetMinutes;
+    elapsedMinutes = intervals.birthLocalMinutes - intervals.sunsetMinutes;
+    intervalStart = intervals.sunsetMinutes;
+  }
+  if (intervalDuration <= 0 || elapsedMinutes < 0 || elapsedMinutes >= intervalDuration) {
+    throw new RangeError("Tribhaga birth time does not fall inside the selected sunrise/sunset interval.");
+  }
+
+  const partIndex = Math.min(2, Math.floor(elapsedMinutes / (intervalDuration / 3)));
+  const part: TribhagaPart = partIndex === 0 ? "first" : partIndex === 1 ? "middle" : "last";
+  const awardedLord = period === "day" ? DAY_TRIBHAGA_LORDS[partIndex] : NIGHT_TRIBHAGA_LORDS[partIndex];
+  const normalize = (minutes: number) => ((minutes % 1440) + 1440) % 1440;
+  const intervalStartMinutes = normalize(intervalStart + partIndex * intervalDuration / 3);
+  const intervalEndMinutes = normalize(intervalStart + (partIndex + 1) * intervalDuration / 3);
+  const active = planet === awardedLord;
+  return {
+    points: active ? 60 : 0,
+    available: true,
+    period,
+    part,
+    awardedLord,
+    intervalStartMinutes,
+    intervalEndMinutes,
+    description: \`BPHS 27.12: \${period} \${part} third awards 60 Virupas to \${awardedLord}; \${planet} receives \${active ? 60 : 0}. Local unequal sunrise/sunset thirds are used.\`,
+  };
+}
+
+function offsetSecondsAtWallClock(
+  timeZone: string | undefined,
+  year: number,
+  month: number,
+  day: number,
+  hour: number,
+  fallbackOffsetSeconds: number
+): number | null {
+  if (!timeZone) return fallbackOffsetSeconds;
+  try {
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      timeZoneName: "longOffset",
+      hour: "2-digit",
+      hourCycle: "h23",
+    });
+    const wallClockMs = Date.UTC(year, month - 1, day, hour);
+    let offset = fallbackOffsetSeconds;
+    for (let pass = 0; pass < 3; pass += 1) {
+      const candidate = new Date(wallClockMs - offset * 1000);
+      const label = formatter.formatToParts(candidate).find((part) => part.type === "timeZoneName")?.value;
+      if (!label || label === "GMT" || label === "UTC") {
+        offset = 0;
+        break;
+      }
+      const match = /^GMT([+-])(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(label);
+      if (!match) return null;
+      const sign = match[1] === "-" ? -1 : 1;
+      const nextOffset = sign * (
+        Number(match[2]) * 3600 + Number(match[3]) * 60 + Number(match[4] ?? "0")
+      );
+      if (nextOffset === offset) break;
+      offset = nextOffset;
+    }
+    return offset;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Uses the existing NOAA daily solar model for location-specific sunrise and
+ * sunset. This is an approximation, not a precision topocentric rise/set
+ * ephemeris. Adjacent-date offsets are resolved through the IANA time zone.
+ */
+export function calculateTribhagaBala(
+  planet: string,
+  input: ShadbalaChartInput
+): TribhagaBalaResult {
+  if (!TRIBHAGA_PLANETS.includes(planet as (typeof TRIBHAGA_PLANETS)[number])) {
+    throw new RangeError(\`Tribhaga Bala is defined only for the seven classical planets; received \${planet}.\`);
+  }
+  if (planet === "Jupiter") return calculateTribhagaBalaFromSolarIntervals(planet);
+  const birth = input.birthDate;
+  if (
+    input.birthTimeKnown === false ||
+    !(birth instanceof Date) || !Number.isFinite(birth.getTime()) ||
+    !Number.isFinite(input.latitude) || !Number.isFinite(input.longitude) ||
+    (input.latitude as number) < -90 || (input.latitude as number) > 90 ||
+    (input.longitude as number) < -180 || (input.longitude as number) > 180 ||
+    !Number.isFinite(input.timezoneOffsetSeconds)
+  ) {
+    return calculateTribhagaBalaFromSolarIntervals(planet);
+  }
+
+  const year = birth.getUTCFullYear();
+  const month = birth.getUTCMonth() + 1;
+  const day = birth.getUTCDate();
+  const birthLocalMinutes = birth.getUTCHours() * 60 + birth.getUTCMinutes() +
+    birth.getUTCSeconds() / 60 + birth.getUTCMilliseconds() / 60_000;
+  const solar = new PlanetaryHoursCalculator();
+  const shiftedDate = (days: number) => {
+    const date = new Date(Date.UTC(year, month - 1, day + days));
+    return { year: date.getUTCFullYear(), month: date.getUTCMonth() + 1, day: date.getUTCDate() };
+  };
+  const getEvent = (
+    date: { year: number; month: number; day: number },
+    event: "sunrise" | "sunset"
+  ) => {
+    const localHour = event === "sunrise" ? 6 : 18;
+    const offset = offsetSecondsAtWallClock(
+      input.ianaTimezone, date.year, date.month, date.day, localHour,
+      input.timezoneOffsetSeconds as number
+    );
+    if (offset === null) return { minute: Number.NaN, condition: "polar-night" as const };
+    const result = solar.calculateSunTimes(
+      date.year, date.month, date.day,
+      input.latitude as number, input.longitude as number, offset / 3600
+    );
+    return { minute: Math.round(result[event] * 60) % 1440, condition: result.solarCondition };
+  };
+  const today = { year, month, day };
+  const sunrise = getEvent(today, "sunrise");
+  const sunset = getEvent(today, "sunset");
+  const previousSunset = getEvent(shiftedDate(-1), "sunset");
+  const nextSunrise = getEvent(shiftedDate(1), "sunrise");
+  if (
+    sunrise.condition !== "normal" || sunset.condition !== "normal" ||
+    previousSunset.condition !== "normal" || nextSunrise.condition !== "normal" ||
+    ![sunrise.minute, sunset.minute, previousSunset.minute, nextSunrise.minute].every(Number.isFinite)
+  ) {
+    return calculateTribhagaBalaFromSolarIntervals(planet);
+  }
+  return calculateTribhagaBalaFromSolarIntervals(planet, {
+    birthLocalMinutes,
+    sunriseMinutes: sunrise.minute,
+    sunsetMinutes: sunset.minute,
+    previousSunsetMinutes: previousSunset.minute,
+    nextSunriseMinutes: nextSunrise.minute,
+  });
+}
+
 export class ShadbalaEngine {
   public static readonly PLANETS = [
     "Sun",
