@@ -36,16 +36,22 @@ The new `scripts/testShadbalaSthanaBalaSuite.ts` regression suite covers:
 
 ## 3. Drekkana Bala source reading
 
-BPHS 27.6 in the same Sanskrit transcription reads:
+BPHS 27.6 in the Sanskrit transcription reads:
 
 `आद्यमध्यावसानेषु द्रेष्काणेषु स्थिताः क्रमात् । पुंनपुंसकयोषाख्या दद्युरङ्घ्रिमितं बलम् ॥६॥`
 
-The verse orders the first, middle and last Drekkana with the labels `puṃ`, `napuṃsaka`, and `yoṣā` respectively: masculine, neuter and feminine. Under the conventional planetary gender classes, this maps to:
+The wording orders the first, middle and last Drekkana with the labels `puṃ`, `napuṃsaka`, and `yoṣā` respectively: masculine, neuter and feminine. This is also the rule stated in B. V. Raman's primary book, *Graha and Bhava Balas*, Chapter III, Article 36, and confirmed by its Standard Horoscope Example 12 (printed pp. 27–28; PDF pages 31–32). Under this profile:
 - masculine: Sun, Mars, Jupiter — first Drekkana;
 - neuter: Mercury, Saturn — middle Drekkana;
 - feminine: Moon, Venus — last Drekkana.
 
-The current engine uses this direct Sanskrit sequence. Some English summaries and modern secondary tables reorder the gender labels, and Raman's printed Drekkana article has also been reported with a different order from the BPHS verse. Celestia must keep such lineages separately named rather than blending the two orders. The new tests explicitly protect the BPHS Sanskrit sequence. The Raman alternative is not silently substituted.
+A second, materially different reading appears in R. Santhanam's *Brihat Parasara Hora Sastra*, Vol. I, Chapter 27, printed pp. 266–267. Its English translation and explanatory notes explicitly give masculine / feminine / eunuch in the first / second / third Drekkana. The Sanskrit line printed in that edition also differs from the fuller `puṃ-napuṃsaka-yoṣā` wording preserved in the Sanskrit transcription above. Celestia records this as a distinct **Santhanam Vol. I edition/translation profile**, rather than silently rewriting it as the wording of every BPHS Sanskrit witness.
+
+Celestia now exposes both choices:
+- `bphs-sanskrit-raman` (default): masculine / neuter / feminine in first / middle / last, matching the cited Sanskrit transcription and Raman Article 36 / Example 12.
+- `santhanam-english-translation`: masculine / feminine / eunuch in first / second / third, matching Santhanam Vol. I's printed English explanation and notes.
+
+The regression suite tests both profiles on individual decanates and uses the exact planetary longitudes from Raman's primary Standard Horoscope to reproduce Example 12: Sun and Venus receive 15 Virupas under the Sanskrit/Raman profile, while the other five receive zero. It separately checks the Santhanam ordering, where the Moon in the second decanate and Mercury/Saturn in the third qualify. This keeps a real edition discrepancy visible rather than choosing one silently.
 
 ## 4. Other Sthana Bala choices that remain source-labelled
 
@@ -55,11 +61,12 @@ The current engine uses this direct Sanskrit sequence. Some English summaries an
 
 ## 5. Sources
 
-- [BPHS Chapter 27 — Sanskrit, IAST and word-by-word translation](https://enjoylearningsanskrit.com/scriptures/parashara/chapter-27/), especially verses 5–6 and 1–4.
-- [BPHS Chapter 27, verses 1–5](https://www.siva.sh/brihat-parashara-hora-shastra/27/1-5), showing an alternative presentation/numbering of the positional-strength rules.
-- [Brihat Parāśara Hora Śāstra Chapter 27 notes and translation](https://jyotishvidya.com/ch27.htm), including the 4½ Ojayugma, Kendradi and Drekkana headings.
-- [Sthana Bala worked comparison of BPHS and B. V. Raman](https://www.livepanditji.com/blog/sthana-bala-saptavargaja-ojayugma-kendradi-drekkana/), used as a secondary audit aid for the Standard Horoscope; its Drekkana-order summary is not treated as stronger evidence than the Sanskrit verse itself.
+- [BPHS Chapter 27, verse 6 — Sanskrit, IAST and grammatical word meanings](https://enjoylearningsanskrit.com/scriptures/parashara/chapter-27/verse-6/), supporting the masculine / neuter / feminine wording.
+- [R. Santhanam, Brihat Parasara Hora Sastra, Vol. I](https://storage.yandexcloud.net/j108/library/hr6fkynz/Maharishi_Parashara_-_Brihat_Parasara_Hora_Sastra_%28Vol._1%29.pdf), Chapter 27, printed pp. 266–267: its English translation and explanatory notes specify masculine / feminine / eunuch in the first / second / third decanates.
+- [B. V. Raman, Graha and Bhava Balas, 13th ed. scan](https://dn790000.ca.archive.org/0/items/1050-jyotish-books-with-siderial-zodiac/Bhava%20and%20Graha%20Balas_B.V.Raman%201996.pdf), Article 36 and Example 12, printed pp. 27–28: masculine / hermaphrodite / feminine and the Sun/Venus worked results. PDF pages 31–32 were inspected directly.
+- [BPHS Chapter 27, verses 1–5](https://www.siva.sh/brihat-parashara-hora-shastra/27/1-5), showing an alternative presentation/numbering of positional-strength rules.
+- [Sthana Bala worked comparison of BPHS and B. V. Raman](https://www.livepanditji.com/blog/sthana-bala-saptavargaja-ojayugma-kendradi-drekkana/), a secondary audit aid only; its Drekkana labels misattribute the Raman order and its Standard Horoscope longitudes differ from Raman's primary scan. Celestia's regression fixture now uses Raman's printed source positions.
 
-## 6. Remaining validation boundary
+## 6. Validation boundary
 
-Passing the targeted regression suite establishes that the implemented Ojayugma groups and tested BPHS Drekkana mapping follow the selected text. It does not prove the whole Sthana Bala total against every BPHS edition or Raman worked example, and it does not resolve all Saptavargaja, Kendradi or Uchcha Bala variants. The overall Shadbala implementation remains explicitly **partial / approximate** until all six components are source-complete and independently checked against end-to-end worked charts.
+Passing the targeted regression suite establishes that the Ojayugma groups and both selected Drekkana profiles follow their declared source methods. It does not prove the whole Sthana Bala total against every BPHS edition or Raman worked example, and it does not resolve all Saptavargaja, Kendradi or Uchcha Bala variants. The overall Shadbala implementation remains explicitly **partial / approximate** until all six components are source-complete and independently checked against end-to-end worked charts.
