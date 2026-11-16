@@ -53,10 +53,11 @@ export interface KalaBalaComponents {
   pakshaBala: number | null;
   /** Null when birth time, location or sunrise/sunset intervals are unavailable. */
   tribhagaBala: number | null;
-  abdaBala: number;
-  maasaBala: number;
-  varaBala: number;
-  horaBala: number;
+  /** Null if the local sunrise-to-sunrise calculation is unavailable. */
+  abdaBala: number | null;
+  maasaBala: number | null;
+  varaBala: number | null;
+  horaBala: number | null;
   ayanaBala: number;
   yuddhaBala: number;
 }
@@ -67,6 +68,7 @@ export interface KalaBalaResult {
   unavailableComponents: string[];
   pakshaDetails?: PakshaBalaDetails;
   tribhagaDetails?: TribhagaBalaResult;
+  timeLordDetails?: RamanTimeLordsResult;
   description: string;
 }
 
@@ -206,6 +208,8 @@ export interface ShadbalaChartInput {
   ianaTimezone?: string;
   /** Exact civil UTC offset at the known birth instant. */
   timezoneOffsetSeconds?: number;
+  /** Resolved UTC birth instant; preferred for elapsed sunrise-to-sunrise Hora time. */
+  birthUtcInstant?: Date;
   planets: {
     [name: string]: {
       longitude: number;
@@ -731,6 +735,100 @@ function offsetSecondsAtWallClock(
  * sunset. This is an approximation, not a precision topocentric rise/set
  * ephemeris. Adjacent-date offsets are resolved through the IANA time zone.
  */
+export interface RamanTimeLordsResult {
+  available: true;
+  method: "raman-graha-bhava-balas-chapter-v-1827-epoch";
+  aharganaDays: number;
+  effectiveSunriseDate: string;
+  yearLord: string;
+  monthLord: string;
+  varaLord: string;
+  horaLord: string;
+  horaNumber: number;
+  elapsedHours: number;
+  sunriseToSunriseHours: number;
+  description: string;
+}
+
+const RAMAN_ABBREVIATED_AHARGANA_EPOCH = Date.UTC(1827, 4, 2); // Wednesday
+const RAMAN_HORA_ORDER = ["Saturn", "Jupiter", "Mars", "Sun", "Venus", "Mercury", "Moon"] as const;
+const WEEKDAY_LORDS = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"] as const;
+const DAY_MS = 86_400_000;
+
+function positiveModulo(value: number, divisor: number): number {
+  return ((value % divisor) + divisor) % divisor;
+}
+
+function isValidGregorianParts(year: number, month: number, day: number): boolean {
+  if (![year, month, day].every(Number.isInteger) || year < 1 || year > 9999 || month < 1 || month > 12 || day < 1 || day > 31) return false;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}
+
+/**
+ * Raman's abbreviated Ahargana time-lord rules, based on the Wednesday 2 May
+ * 1827 epoch in Graha and Bhava Balas, Chapter V, articles 58-70.
+ * The book's tabulated interval is extended proleptically through 2100 using
+ * Gregorian civil-day arithmetic; that extension is labelled, not passed off
+ * as a verbatim printed table.
+ */
+export function calculateRamanTimeLordsFromSunriseInterval(
+  effectiveSunriseDate: Date,
+  birthInstantUtc: Date,
+  nextSunriseInstantUtc: Date
+): RamanTimeLordsResult | null {
+  const inputs = [effectiveSunriseDate, birthInstantUtc, nextSunriseInstantUtc];
+  if (!inputs.every((value) => value instanceof Date && Number.isFinite(value.getTime()))) return null;
+  if (effectiveSunriseDate.getUTCHours() !== 0 || effectiveSunriseDate.getUTCMinutes() !== 0 ||
+      effectiveSunriseDate.getUTCSeconds() !== 0 || effectiveSunriseDate.getUTCMilliseconds() !== 0) return null;
+  const dateMs = effectiveSunriseDate.getTime();
+  const aharganaDays = Math.floor((dateMs - RAMAN_ABBREVIATED_AHARGANA_EPOCH) / DAY_MS);
+  // The printed tables begin at the 1827 epoch; the Gregorian formula is
+  // extended to the end of 2100 so current charts have a deterministic value.
+  const maxDateMs = Date.UTC(2101, 0, 1);
+  if (dateMs < RAMAN_ABBREVIATED_AHARGANA_EPOCH || dateMs >= maxDateMs) return null;
+  const dayLengthMs = nextSunriseInstantUtc.getTime() - birthInstantUtc.getTime() +
+    (birthInstantUtc.getTime() - dateMs);
+  const sunriseToSunriseMs = nextSunriseInstantUtc.getTime() - (dateMs);
+  // effectiveSunriseDate is a local calendar date, not the sunrise instant;
+  // callers pass a separate sunrise-aligned instant below through the birth
+  // and next-sunrise values. Derive the start instant from the caller's
+  // elapsed interval by requiring birth to precede the next sunrise and by
+  // using the civil-day date only for the Ahargana arithmetic.
+  const elapsedMs = birthInstantUtc.getTime() - (nextSunriseInstantUtc.getTime() - sunriseToSunriseMs);
+  void dayLengthMs;
+  if (!(sunriseToSunriseMs > 0) || elapsedMs < 0 || elapsedMs >= sunriseToSunriseMs) return null;
+
+  const completeAstrologicalYears = Math.floor(aharganaDays / 360);
+  const yearCountFromWednesday = positiveModulo(completeAstrologicalYears * 3 + 1, 7) || 7;
+  const yearLord = WEEKDAY_LORDS[positiveModulo(3 + yearCountFromWednesday - 1, 7)];
+
+  const completeAstrologicalMonths = Math.floor(aharganaDays / 30);
+  const monthCountFromWednesday = positiveModulo(completeAstrologicalMonths * 2 + 1, 7) || 7;
+  const monthLord = WEEKDAY_LORDS[positiveModulo(3 + monthCountFromWednesday - 1, 7)];
+
+  const varaLord = WEEKDAY_LORDS[positiveModulo(3 + aharganaDays, 7)];
+  const horaNumber = Math.min(24, Math.floor((elapsedMs / sunriseToSunriseMs) * 24) + 1);
+  const horaIndex = RAMAN_HORA_ORDER.indexOf(varaLord as (typeof RAMAN_HORA_ORDER)[number]);
+  const horaLord = RAMAN_HORA_ORDER[(horaIndex + horaNumber - 1) % 7];
+  const elapsedHours = elapsedMs / 3_600_000;
+  const sunriseToSunriseHours = sunriseToSunriseMs / 3_600_000;
+  const effectiveSunriseDateLabel = effectiveSunriseDate.toISOString().slice(0, 10);
+  return {
+    available: true,
+    method: "raman-graha-bhava-balas-chapter-v-1827-epoch",
+    aharganaDays,
+    effectiveSunriseDate: effectiveSunriseDateLabel,
+    yearLord,
+    monthLord,
+    varaLord,
+    horaLord,
+    horaNumber,
+    elapsedHours,
+    sunriseToSunriseHours,
+    description: `Raman Ch. V §§58–70: Abda ${yearLord}, Masa ${monthLord}, Vara ${varaLord}, Hora ${horaLord} (hora ${horaNumber}/24); ${aharganaDays} days from the 1827-05-02 Wednesday epoch. Equal sunrise-to-sunrise horas are used.`,
+  };
+}
 export function calculateTribhagaBala(
   planet: string,
   input: ShadbalaChartInput
