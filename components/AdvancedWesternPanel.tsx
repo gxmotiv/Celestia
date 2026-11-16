@@ -204,8 +204,8 @@ export function AdvancedWesternPanel({
   // Eclipses
   const eclipseEngine = useMemo(() => new EclipseAnalyzer(), []);
   const upcomingEclipses: EclipseItem[] = useMemo(() => {
-    return eclipseEngine.analyzeEclipses(chartData);
-  }, [eclipseEngine, chartData]);
+    return eclipseEngine.analyzeEclipses(chartData, nowObj);
+  }, [eclipseEngine, chartData, nowObj]);
 
   // Medical Astrology
   const medicalEngine = useMemo(() => new MedicalAstrologyEngine(), []);
