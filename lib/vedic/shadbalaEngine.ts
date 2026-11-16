@@ -613,7 +613,7 @@ export function calculateTribhagaBalaFromSolarIntervals(
   intervals?: TribhagaSolarIntervals
 ): TribhagaBalaResult {
   if (!TRIBHAGA_PLANETS.includes(planet as (typeof TRIBHAGA_PLANETS)[number])) {
-    throw new RangeError(\`Tribhaga Bala is defined only for the seven classical planets; received \${planet}.\`);
+    throw new RangeError(`Tribhaga Bala is defined only for the seven classical planets; received ${planet}.`);
   }
   if (planet === "Jupiter") {
     return {
@@ -682,7 +682,7 @@ export function calculateTribhagaBalaFromSolarIntervals(
     awardedLord,
     intervalStartMinutes,
     intervalEndMinutes,
-    description: \`BPHS 27.12: \${period} \${part} third awards 60 Virupas to \${awardedLord}; \${planet} receives \${active ? 60 : 0}. Local unequal sunrise/sunset thirds are used.\`,
+    description: `BPHS 27.12: ${period} ${part} third awards 60 Virupas to ${awardedLord}; ${planet} receives ${active ? 60 : 0}. Local unequal sunrise/sunset thirds are used.`,
   };
 }
 
@@ -736,7 +736,7 @@ export function calculateTribhagaBala(
   input: ShadbalaChartInput
 ): TribhagaBalaResult {
   if (!TRIBHAGA_PLANETS.includes(planet as (typeof TRIBHAGA_PLANETS)[number])) {
-    throw new RangeError(\`Tribhaga Bala is defined only for the seven classical planets; received \${planet}.\`);
+    throw new RangeError(`Tribhaga Bala is defined only for the seven classical planets; received ${planet}.`);
   }
   if (planet === "Jupiter") return calculateTribhagaBalaFromSolarIntervals(planet);
   const birth = input.birthDate;
