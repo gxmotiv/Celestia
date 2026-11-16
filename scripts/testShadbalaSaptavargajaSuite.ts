@@ -56,6 +56,42 @@ assert.equal(
   "D1 Moolatrikona must receive 45 Virupas under the declared D1-only policy"
 );
 
+// Raman, Graha and Bhava Balas, Article 30 (printed p. 23):
+// the 45-Virupa Moolatrikona award applies in D1 only, not the other
+// six vargas. Sun at 15° Aries is not D1 Moolatrikona, but maps to Leo
+// (Sun's Moolatrikona sign) in both D3 and D9. Those varga placements
+// must therefore score as own-sign 30, not 45.
+const sunMoolatrikonaOnlyInOtherVargas: ShadbalaChartInput = {
+  ...chart,
+  planets: {
+    ...chart.planets,
+    Sun: { longitude: 15 },
+  },
+};
+assert.equal(
+  calculateDivisionalSignIndex(15, "D3"),
+  4,
+  "15° Aries must map to Leo in D3 for this source-profile regression"
+);
+assert.equal(
+  calculateDivisionalSignIndex(15, "D9"),
+  4,
+  "15° Aries must map to Leo in D9 for this source-profile regression"
+);
+assert.equal(
+  calculateSaptavargajaBala("Sun", sunMoolatrikonaOnlyInOtherVargas),
+  140,
+  "BPHS/Santhanam scoring must not award 45 for D3/D9 Moolatrikona-like varga signs"
+);
+assert.equal(
+  calculateSaptavargajaBala("Sun", {
+    ...sunMoolatrikonaOnlyInOtherVargas,
+    saptavargajaScale: "raman-halving",
+  }),
+  142.5,
+  "Raman scoring must also restrict the 45-Virupa Moolatrikona award to D1"
+);
+
 assert.throws(
   () => calculateSaptavargajaBala("Sun", {
     ascendant: 0,
