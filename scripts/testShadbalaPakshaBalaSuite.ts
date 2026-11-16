@@ -8,8 +8,10 @@ import {
 } from "../lib/vedic/shadbalaEngine";
 
 const close = (actual: number, expected: number, label: string, tolerance = 1e-8) => {
-  assert.ok(Math.abs(actual - expected) <= tolerance,
-    `${label}: expected ${expected}, received ${actual}`);
+  // The engine exposes Shadbala values rounded to two decimal Virupas.
+  const expectedRounded = Math.round(expected * 100) / 100;
+  assert.ok(Math.abs(actual - expectedRounded) <= tolerance,
+    `${label}: expected ${expectedRounded}, received ${actual}`);
 };
 
 const engine = new ShadbalaEngine();
