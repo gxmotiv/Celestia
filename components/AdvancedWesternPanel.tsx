@@ -97,8 +97,11 @@ export function AdvancedWesternPanel({
   // Midpoints calculation
   const midpointCalc = useMemo(() => new MidpointCalculator(), []);
   const allMidpoints = useMemo(() => {
-    return midpointCalc.calculateAllMidpoints(chartData.planets);
-  }, [midpointCalc, chartData.planets]);
+    // Avoid calculating the full midpoint matrix until its tab is opened.
+    return activeSubTab === "midpoints"
+      ? midpointCalc.calculateAllMidpoints(chartData.planets)
+      : [];
+  }, [activeSubTab, midpointCalc, chartData.planets]);
 
   const [midpointSearch, setMidpointSearch] = useState("");
   const filteredMidpoints = useMemo(() => {
@@ -116,15 +119,19 @@ export function AdvancedWesternPanel({
   // Harmonics calculation
   const harmonicCalc = useMemo(() => new HarmonicChartCalculator(), []);
   const [selectedHarmonic, setSelectedHarmonic] = useState<number>(5); // default H5 (creative talent)
-  const currentHarmonicChart: HarmonicChart = useMemo(() => {
-    return harmonicCalc.calculateHarmonic(chartData.planets, selectedHarmonic);
-  }, [harmonicCalc, chartData.planets, selectedHarmonic]);
+  const currentHarmonicChart: HarmonicChart | null = useMemo(() => {
+    return activeSubTab === "harmonics"
+      ? harmonicCalc.calculateHarmonic(chartData.planets, selectedHarmonic)
+      : null;
+  }, [activeSubTab, harmonicCalc, chartData.planets, selectedHarmonic]);
 
   // Declinations calculation
   const declinationCalc = useMemo(() => new DeclinationCalculator(), []);
-  const declinationReport: DeclinationReport = useMemo(() => {
-    return declinationCalc.calculateAll(chartData.planets, chartData.obliquity);
-  }, [declinationCalc, chartData.planets, chartData.obliquity]);
+  const declinationReport: DeclinationReport | null = useMemo(() => {
+    return activeSubTab === "declinations"
+      ? declinationCalc.calculateAll(chartData.planets, chartData.obliquity)
+      : null;
+  }, [activeSubTab, declinationCalc, chartData.planets, chartData.obliquity]);
 
   // Birth inputs are local civil time. Normalize them to the true UTC instant
   // before age-based and secondary-progressed calculations. The shared engine
@@ -163,22 +170,26 @@ export function AdvancedWesternPanel({
 
   // Secondary Progressions
   const progEngine = useMemo(() => new ProgressionsEngine(), []);
-  const progressionsReport: ProgressedChartResult = useMemo(() => {
-    return progEngine.calculateProgressions(birthDateObj, nowObj, latitude, longitude, timezoneOffset);
-  }, [progEngine, birthDateObj, nowObj, latitude, longitude, timezoneOffset]);
+  const progressionsReport: ProgressedChartResult | null = useMemo(() => {
+    return activeSubTab === "progressions"
+      ? progEngine.calculateProgressions(birthDateObj, nowObj, latitude, longitude, timezoneOffset)
+      : null;
+  }, [activeSubTab, progEngine, birthDateObj, nowObj, latitude, longitude, timezoneOffset]);
 
   // Hellenistic Profections
   const profEngine = useMemo(() => new ProfectionsEngine(), []);
-  const profectionReport: ProfectionResult = useMemo(() => {
-    return profEngine.calculateAnnualProfection(chartData, currentAgeYears);
-  }, [profEngine, chartData, currentAgeYears]);
+  const profectionReport: ProfectionResult | null = useMemo(() => {
+    return activeSubTab === "profections"
+      ? profEngine.calculateAnnualProfection(chartData, currentAgeYears)
+      : null;
+  }, [activeSubTab, profEngine, chartData, currentAgeYears]);
 
   // Zodiacal Releasing (from Spirit): Fortune defines angular/peak periods.
   const zrEngine = useMemo(() => new ZodiacalReleasingEngine(), []);
   const spiritReleasing: ZodiacalReleasingReport | null = useMemo(() => {
     const spiritLon = chartData.arabianParts?.partOfSpirit.longitude;
     const fortuneLon = chartData.arabianParts?.partOfFortune.longitude;
-    if (spiritLon === undefined || fortuneLon === undefined) return null;
+    if (activeSubTab !== "releasing" || spiritLon === undefined || fortuneLon === undefined) return null;
 
     return zrEngine.calculateReleasing(
       birthDateObj,
@@ -187,37 +198,47 @@ export function AdvancedWesternPanel({
       fortuneLon,
       nowObj
     );
-  }, [zrEngine, birthDateObj, nowObj, chartData.arabianParts]);
+  }, [activeSubTab, zrEngine, birthDateObj, nowObj, chartData.arabianParts]);
 
   // Firdaria
   const firdariaEngine = useMemo(() => new FirdariaEngine(), []);
-  const firdariaReport: FirdariaReport = useMemo(() => {
-    return firdariaEngine.calculateFirdaria(chartData, currentAgeYears);
-  }, [firdariaEngine, chartData, currentAgeYears]);
+  const firdariaReport: FirdariaReport | null = useMemo(() => {
+    return activeSubTab === "firdaria"
+      ? firdariaEngine.calculateFirdaria(chartData, currentAgeYears)
+      : null;
+  }, [activeSubTab, firdariaEngine, chartData, currentAgeYears]);
 
   // Fixed Stars
   const fixedStarsEngine = useMemo(() => new FixedStarsEngine(), []);
   const starContacts: StarContact[] = useMemo(() => {
-    return fixedStarsEngine.calculateStarContacts(chartData);
-  }, [fixedStarsEngine, chartData]);
+    return activeSubTab === "fixedStars"
+      ? fixedStarsEngine.calculateStarContacts(chartData)
+      : [];
+  }, [activeSubTab, fixedStarsEngine, chartData]);
 
   // Eclipses
   const eclipseEngine = useMemo(() => new EclipseAnalyzer(), []);
   const upcomingEclipses: EclipseItem[] = useMemo(() => {
-    return eclipseEngine.analyzeEclipses(chartData, nowObj);
-  }, [eclipseEngine, chartData, nowObj]);
+    return activeSubTab === "eclipses"
+      ? eclipseEngine.analyzeEclipses(chartData, nowObj)
+      : [];
+  }, [activeSubTab, eclipseEngine, chartData, nowObj]);
 
   // Medical Astrology
   const medicalEngine = useMemo(() => new MedicalAstrologyEngine(), []);
-  const medicalReport: MedicalAstrologyReport = useMemo(() => {
-    return medicalEngine.analyzeHealth(chartData);
-  }, [medicalEngine, chartData]);
+  const medicalReport: MedicalAstrologyReport | null = useMemo(() => {
+    return activeSubTab === "medical"
+      ? medicalEngine.analyzeHealth(chartData)
+      : null;
+  }, [activeSubTab, medicalEngine, chartData]);
 
   // Astrocartography
   const astrocartographyEngine = useMemo(() => new AstrocartographyEngine(), []);
-  const astrocartographyReport: AstrocartographyReport = useMemo(() => {
-    return astrocartographyEngine.calculatePowerLines(chartData, longitude);
-  }, [astrocartographyEngine, chartData, longitude]);
+  const astrocartographyReport: AstrocartographyReport | null = useMemo(() => {
+    return activeSubTab === "astrocartography"
+      ? astrocartographyEngine.calculatePowerLines(chartData, longitude)
+      : null;
+  }, [activeSubTab, astrocartographyEngine, chartData, longitude]);
 
   const asteroids = chartData.asteroids;
   const points = chartData.additionalPoints;
@@ -501,7 +522,7 @@ export function AdvancedWesternPanel({
       )}
 
       {/* SUB-TAB 5: HARMONIC CHARTS */}
-      {activeSubTab === "harmonics" && (
+      {activeSubTab === "harmonics" && currentHarmonicChart && (
         <div className="space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
@@ -576,7 +597,7 @@ export function AdvancedWesternPanel({
       )}
 
       {/* SUB-TAB 6: DECLINATIONS & PARALLELS */}
-      {activeSubTab === "declinations" && (
+      {activeSubTab === "declinations" && declinationReport && (
         <div className="space-y-4">
           <div className="flex items-center justify-between text-xs px-3 py-2 bg-slate-950/80 border border-slate-800 rounded-lg text-slate-400">
             <span>
@@ -654,7 +675,7 @@ export function AdvancedWesternPanel({
       )}
 
       {/* SUB-TAB 7: SECONDARY PROGRESSIONS */}
-      {activeSubTab === "progressions" && (
+      {activeSubTab === "progressions" && progressionsReport && (
         <div className="space-y-4">
           <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
@@ -731,7 +752,7 @@ export function AdvancedWesternPanel({
       )}
 
       {/* SUB-TAB 8: HELLENISTIC ANNUAL PROFECTIONS */}
-      {activeSubTab === "profections" && (
+      {activeSubTab === "profections" && profectionReport && (
         <div className="space-y-4">
           <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
@@ -886,7 +907,7 @@ export function AdvancedWesternPanel({
       )}
 
       {/* SUB-TAB 10: MEDIEVAL FIRDARIA */}
-      {activeSubTab === "firdaria" && (
+      {activeSubTab === "firdaria" && firdariaReport && (
         <div className="space-y-4">
           <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
             <div className="flex items-center justify-between flex-wrap gap-2">
@@ -1005,7 +1026,7 @@ export function AdvancedWesternPanel({
       )}
 
       {/* SUB-TAB 13: MEDICAL ASTROLOGY */}
-      {activeSubTab === "medical" && (
+      {activeSubTab === "medical" && medicalReport && (
         <div className="space-y-4">
           <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
             <h4 className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
@@ -1047,7 +1068,7 @@ export function AdvancedWesternPanel({
       )}
 
       {/* SUB-TAB 14: ASTROCARTOGRAPHY */}
-      {activeSubTab === "astrocartography" && (
+      {activeSubTab === "astrocartography" && astrocartographyReport && (
         <div className="space-y-4">
           <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
             <h4 className="text-xs font-bold text-cyan-300 flex items-center gap-1.5">
