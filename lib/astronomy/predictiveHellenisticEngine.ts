@@ -406,6 +406,19 @@ export class ZodiacalReleasingEngine {
     level: Exclude<ReleasingLevel, "L1">,
     fortuneIndex: number | null
   ): ReleasingPeriodInternal[] {
+    if (!parent) {
+      throw new Error(`Cannot generate ${level}: the active parent period was not found.`);
+    }
+    if (
+      !Number.isFinite(parent.startMs)
+      || !Number.isFinite(parent.endMs)
+      || parent.endMs <= parent.startMs
+    ) {
+      throw new Error(
+        `Cannot generate ${level}: invalid parent interval for ${parent.level} ${parent.sign} (${parent.startMs}–${parent.endMs}).`
+      );
+    }
+
     const periods: ReleasingPeriodInternal[] = [];
     const levelNumber = Number(level.slice(1));
     const unitDays = ZodiacalReleasingEngine.YEAR_LENGTH_DAYS / (12 ** (levelNumber - 1));
@@ -449,6 +462,9 @@ export class ZodiacalReleasingEngine {
   }
 
   private findActivePeriod(periods: ReleasingPeriodInternal[], instantMs: number): ReleasingPeriodInternal {
+    if (periods.length === 0) {
+      throw new Error("Cannot resolve an active Zodiacal Releasing period: the generated level contains no periods.");
+    }
     return periods.find((period) => instantMs >= period.startMs && instantMs < period.endMs)
       || periods[periods.length - 1];
   }
