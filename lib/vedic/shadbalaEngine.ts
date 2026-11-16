@@ -18,7 +18,7 @@ export const SHADBALA_IMPLEMENTATION_STATUS = {
   level: "partial",
   label: "Partial / approximate",
   summary:
-    "This is a provisional six-component estimate, not yet an independently verified classical Shadbala calculation.",
+    "This is a partial six-component estimate. Missing Balas are listed as unavailable; the displayed points are an available subtotal, not a final Shadbala total. Strong/weak classifications, rankings and strength-based interpretations are withheld until the complete method is available and independently verified.",
   limitations: [
     "Saptavargaja now evaluates D1, D2, D3, D7, D9, D12 and D30 separately. Its default score scale is the R. Santhanam BPHS translation (45/30/20/15/10/4/2); the alternative Raman halving scale can be selected explicitly. Five-fold friendship is derived from D1 relationships, and Moolatrikona is applied in D1 only.",
     "Dig Bala uses the actual sidereal Midheaven when supplied by the chart; callers without a Midheaven retain the disclosed 90° ecliptic fallback.",
