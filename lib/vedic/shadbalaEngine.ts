@@ -34,7 +34,7 @@ export interface SthanaBalaBreakdown {
   /** Null when one or more of the seven classical graha positions is unavailable. */
   saptavargajaBala: number | null;
   ojayugmaBala: number;
-  /** Null until a valid normalized Ascendant is supplied for the selected sign-based rule. */
+  /** Null when birth time or a valid normalized Ascendant is unavailable for the selected sign-based rule. */
   kendradiBala: number | null;
   drekkanaBala: number;
   drekkanaBalaMethod: DrekkanaBalaMethod;
@@ -1445,6 +1445,7 @@ export class ShadbalaEngine {
 
     const lon = pPos.longitude;
     const hasValidAscendant =
+      input.birthTimeKnown !== false &&
       Number.isFinite(input.ascendant) && input.ascendant >= 0 && input.ascendant < 360;
 
     const sign = Math.floor(lon / 30);
@@ -1518,7 +1519,7 @@ export class ShadbalaEngine {
         ? ["Saptavargaja Bala (requires all seven classical planetary longitudes; missing " + missingPlanetInputs.join(", ") + ")"]
         : []),
       ...(!hasValidAscendant
-        ? ["Kendradi Bala (requires a finite Ascendant longitude in the normalized [0°, 360°) range; no house-position score is substituted)"]
+        ? ["Kendradi Bala (requires a known birth time and a finite Ascendant longitude in the normalized [0°, 360°) range; no house-position score is substituted)"]
         : []),
     ];
     const description = unavailableComponents.length === 0
@@ -1554,8 +1555,8 @@ export class ShadbalaEngine {
       Venus: 4,
     };
     const strongestHouse = strongestHouseByPlanet[planet];
-    const requiresMeridian = ["Sun", "Mars", "Moon", "Venus"].includes(planet);
     const hasValidAscendant =
+      input.birthTimeKnown !== false &&
       Number.isFinite(input.ascendant) && input.ascendant >= 0 && input.ascendant < 360;
     const hasSuppliedMidheaven = input.midheaven !== undefined;
     const hasValidMidheaven =
@@ -1574,6 +1575,10 @@ export class ShadbalaEngine {
       unavailableComponents: [reason],
       description: `Dig Bala unavailable: ${reason}.`,
     });
+
+    if (input.birthTimeKnown === false) {
+      return unavailable("birth time is unknown; supplied Ascendant/Midheaven angles may only be placeholder chart values");
+    }
 
     const pPos = input.planets[planet];
     if (!pPos) {
