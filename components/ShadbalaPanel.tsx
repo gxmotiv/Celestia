@@ -451,7 +451,7 @@ export function ShadbalaPanel({
               const isExpanded = !!expandedCards[planet.planet];
 
               const balas = [
-                { name: "Sthana (Positional)", points: planet.sthanaBala.total, max: 250, color: "bg-amber-500" },
+                { name: "Sthana (Positional)", points: planet.sthanaBala.total, max: 250, color: "bg-amber-500", available: planet.sthanaBala.available },
                 { name: "Dig (Directional)", points: planet.digBala.points, max: 60, color: "bg-cyan-500" },
                 { name: "Kala (Temporal)", points: planet.kalaBala.total, max: 200, color: "bg-purple-500" },
                 { name: "Cheshta (Motional)", points: planet.cheshtaBala.points, max: 60, color: "bg-emerald-500" },
@@ -548,12 +548,14 @@ export function ShadbalaPanel({
                             <div className="flex justify-between text-[11px] text-slate-300">
                               <span className="truncate">{b.name}</span>
                               <span className="font-mono font-bold text-slate-200">
-                                {b.points.toFixed(1)} pt
+                                {b.available === false
+                                  ? (b.points > 0 ? `${b.points.toFixed(1)} pt · partial` : "Unavailable")
+                                  : `${b.points.toFixed(1)} pt`}
                               </span>
                             </div>
                             <div className="w-full h-1.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
                               <div
-                                className={`h-full rounded-full ${b.color}`}
+                                className={`h-full rounded-full ${b.available === false ? "bg-slate-500" : b.color}`}
                                 style={{
                                   width: `${Math.min(100, (("absolute" in b && b.absolute) ? Math.abs(b.points) : Math.max(0, b.points)) / b.max * 100)}%`,
                                 }}
@@ -642,11 +644,24 @@ export function ShadbalaPanel({
               <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80 space-y-1.5">
                 <div className="flex justify-between font-semibold text-slate-200">
                   <span>1. Sthana Bala (Positional)</span>
-                  <span className="font-mono text-amber-300">{activeResult.sthanaBala.total} Virupas</span>
+                  <span className="font-mono text-amber-300">
+                    {activeResult.sthanaBala.available
+                      ? `${activeResult.sthanaBala.total} Virupas`
+                      : activeResult.sthanaBala.total > 0
+                        ? `${activeResult.sthanaBala.total} Virupas · partial`
+                        : "Unavailable"}
+                  </span>
                 </div>
                 <p className="text-[11px] text-slate-400 leading-snug">
                   {activeResult.sthanaBala.description}
                 </p>
+                {!activeResult.sthanaBala.available && (
+                  <ul className="list-disc pl-4 text-[10px] text-amber-300">
+                    {activeResult.sthanaBala.unavailableComponents.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                )}
               </div>
 
               <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80 space-y-1.5">
