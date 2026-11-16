@@ -60,7 +60,8 @@ export interface KalaBalaComponents {
   horaBala: number | null;
   /** Null when no valid sidereal longitude and ayanamsa are available. */
   ayanaBala: number | null;
-  yuddhaBala: number;
+  /** Null until the source-specific planetary-war calculation is implemented. */
+  yuddhaBala: number | null;
 }
 
 export interface KalaBalaResult {
@@ -211,7 +212,12 @@ export interface ShadbalaResult {
   totalRupas: number;
   requiredVirupas: number;
   requiredRupas: number;
+  /** Ratio of the available subtotal to the classical requirement; provisional while incomplete. */
   strengthRatio: number;
+  /** True only after every Bala is available and the method status is validated. */
+  isComplete: boolean;
+  unavailableComponents: string[];
+  estimatedComponents: string[];
   isStrong: boolean;
   rank: number;
   interpretation: string;
@@ -1282,12 +1288,15 @@ export class ShadbalaEngine {
       results.push(res);
     }
 
-    const sorted = [...results].sort((a, b) => b.strengthRatio - a.strengthRatio);
-    sorted.forEach((item, idx) => {
-      const match = results.find((r) => r.planet === item.planet);
-      if (match) {
-        match.rank = idx + 1;
-      }
+    const completeResults = results
+      .filter((result) => result.isComplete)
+      .sort((a, b) => b.strengthRatio - a.strengthRatio);
+    completeResults.forEach((item, idx) => {
+      const match = results.find((result) => result.planet === item.planet);
+      if (match) match.rank = idx + 1;
+    });
+    results.forEach((result) => {
+      if (!result.isComplete) result.rank = 0;
     });
 
     return results;
@@ -1316,10 +1325,35 @@ export class ShadbalaEngine {
     const reqRupas = ShadbalaEngine.REQUIRED_RUPAS[planet] || 5.0;
     const reqVirupas = reqRupas * 60;
     const strengthRatio = Math.round((totalVirupas / reqVirupas) * 100) / 100;
-    const isStrong = totalVirupas >= reqVirupas;
+    const unavailableComponents = [
+      ...kalaBala.unavailableComponents.map((item) => "Kala Bala: " + item),
+      ...(!cheshtaBala.available
+        ? ["Cheshta Bala: " + cheshtaBala.description]
+        : []),
+      ...(!drikBala.available
+        ? ["Drik Bala: " + drikBala.description]
+        : []),
+      ...(!input.planets[planet]
+        ? ["True longitude for " + planet + " is missing."]
+        : []),
+    ];
+    const estimatedComponents = [
+      ...(!Number.isFinite(input.midheaven)
+        ? ["Dig Bala uses an approximate quadrant peak because a chart-derived Midheaven was not supplied."]
+        : []),
+      ...(SHADBALA_IMPLEMENTATION_STATUS.level !== "complete"
+        ? ["The overall six-fold Shadbala implementation remains partial / approximate and is not independently validated."]
+        : []),
+    ];
+    const isComplete = unavailableComponents.length === 0 && estimatedComponents.length === 0;
+    const isStrong = isComplete && totalVirupas >= reqVirupas;
 
-    const interpretation = this.interpretPlanetStrength(planet, totalRupas, reqRupas, isStrong);
-    const predictions = this.generateStrengthBasedPredictions(planet);
+    const interpretation = isComplete
+      ? this.interpretPlanetStrength(planet, totalRupas, reqRupas, isStrong)
+      : `${planet} Shadbala is incomplete. ${totalRupas} Rupas is an available subtotal, not a validated six-fold total. Final strong/weak classification is withheld. ${unavailableComponents.length} unavailable item(s); ${estimatedComponents.length} method limitation(s) remain.`;
+    const predictions = isComplete
+      ? this.generateStrengthBasedPredictions(planet)
+      : { strongEffects: [], weakEffects: [] };
 
     return {
       planet,
@@ -1335,8 +1369,11 @@ export class ShadbalaEngine {
       requiredVirupas: reqVirupas,
       requiredRupas: reqRupas,
       strengthRatio,
+      isComplete,
+      unavailableComponents,
+      estimatedComponents,
       isStrong,
-      rank: 1,
+      rank: 0,
       interpretation,
       predictions,
     };
@@ -1472,7 +1509,9 @@ export class ShadbalaEngine {
     const horaBala = timeLordResult ? (timeLordResult.horaLord === planet ? 60 : 0) : null;
     const ayanaResult = calculateAyanaBala(planet, input);
     const ayanaBala = ayanaResult.available ? ayanaResult.points : null;
-    const yuddhaBala = 0;
+    // Graha Yuddha requires validated conjunction, latitude and victor rules.
+    // Never assign a fabricated zero while that source-specific calculation is absent.
+    const yuddhaBala: number | null = null;
 
     const unavailableComponents = [
       ...(nathonnathaBala === null
@@ -1490,6 +1529,7 @@ export class ShadbalaEngine {
       ...(!ayanaResult.available
         ? ["Ayana Bala (requires a normalized sidereal graha longitude and birth-date ayanamsa)"]
         : []),
+      "Yuddha Bala (planetary-war calculation and victor rules are not implemented)",
     ];
     const total =
       Math.round(
@@ -1501,7 +1541,7 @@ export class ShadbalaEngine {
           (varaBala ?? 0) +
           (horaBala ?? 0) +
           (ayanaBala ?? 0) +
-          yuddhaBala) *
+          (yuddhaBala ?? 0)) *
           100
       ) / 100;
 
