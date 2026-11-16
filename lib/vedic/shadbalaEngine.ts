@@ -1371,6 +1371,9 @@ export class ShadbalaEngine {
       ...(digBala.estimated
         ? ["Dig Bala: " + digBala.description]
         : []),
+      ...(input.birthTimeKnown === false
+        ? ["Birth time unknown: longitude-derived components use the chart's representative instant; intraday position ranges and sign/varga/aspect boundary stability are not evaluated."]
+        : []),
       ...(String(SHADBALA_IMPLEMENTATION_STATUS.level) !== "complete"
         ? ["The overall six-fold Shadbala implementation remains partial / approximate and is not independently validated."]
         : []),
