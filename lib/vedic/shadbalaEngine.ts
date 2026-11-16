@@ -814,7 +814,7 @@ export function calculateRamanTimeLordsFromSunriseInterval(
     description: `Raman Ch. V §§58–70: Abda ${yearLord}, Masa ${monthLord}, Vara ${varaLord}, Hora ${horaLord} (hora ${horaNumber}/24); ${aharganaDays} days from the 1827-05-02 Wednesday epoch. Equal sunrise-to-sunrise horas are used.`,
   };
 }
-function calculateRamanTimeLords(input: ShadbalaChartInput): RamanTimeLordsResult | null {
+export function calculateRamanTimeLords(input: ShadbalaChartInput): RamanTimeLordsResult | null {
   const birth = input.birthDate;
   if (
     input.birthTimeKnown === false ||
