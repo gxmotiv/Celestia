@@ -468,7 +468,7 @@ export function ShadbalaPanel({
 
               const balas = [
                 { name: "Sthana (Positional)", points: planet.sthanaBala.total, max: 250, color: "bg-amber-500", available: planet.sthanaBala.available },
-                { name: "Dig (Directional)", points: planet.digBala.points, max: 60, color: "bg-cyan-500" },
+                { name: "Dig (Directional)", points: planet.digBala.points ?? 0, max: 60, color: "bg-cyan-500", available: planet.digBala.available, estimated: planet.digBala.estimated },
                 { name: "Kala (Temporal)", points: planet.kalaBala.total, max: 200, color: "bg-purple-500" },
                 { name: "Cheshta (Motional)", points: planet.cheshtaBala.points, max: 60, color: "bg-emerald-500" },
                 { name: "Naisargika (Natural)", points: planet.naisargikaBala.points, max: 60, color: "bg-blue-500" },
@@ -566,7 +566,7 @@ export function ShadbalaPanel({
                               <span className="font-mono font-bold text-slate-200">
                                 {"available" in b && b.available === false
                                   ? (b.points > 0 ? `${b.points.toFixed(1)} pt · partial` : "Unavailable")
-                                  : `${b.points.toFixed(1)} pt`}
+                                  : `${b.points.toFixed(1)} pt${("estimated" in b && b.estimated) ? " · approximate" : ""}`}
                               </span>
                             </div>
                             <div className="w-full h-1.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
@@ -683,7 +683,11 @@ export function ShadbalaPanel({
               <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80 space-y-1.5">
                 <div className="flex justify-between font-semibold text-slate-200">
                   <span>2. Dig Bala (Directional)</span>
-                  <span className="font-mono text-cyan-300">{activeResult.digBala.points} Virupas</span>
+                  <span className="font-mono text-cyan-300">
+                    {activeResult.digBala.available && activeResult.digBala.points !== null
+                      ? `${activeResult.digBala.points.toFixed(2)} Virupas${activeResult.digBala.estimated ? " · approximate" : ""}`
+                      : "Unavailable"}
+                  </span>
                 </div>
                 <p className="text-[11px] text-slate-400 leading-snug">
                   {activeResult.digBala.description}
