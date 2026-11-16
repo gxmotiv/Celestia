@@ -27,6 +27,10 @@ const incompletePlanetResult = engine.calculateShadbala("Jupiter", {
   },
 });
 assert.equal(incompletePlanetResult.isComplete, false);
+assert.equal(incompletePlanetResult.sthanaBala.available, false);
+assert.equal(incompletePlanetResult.sthanaBala.saptavargajaBala, null);
+assert.ok(incompletePlanetResult.sthanaBala.unavailableComponents.some((item) => item.includes("Sun")));
+assert.match(incompletePlanetResult.sthanaBala.description, /Partial Sthana Bala subtotal/);
 assert.equal(incompletePlanetResult.isStrong, false,
   "A partial Virupa subtotal must not be classified as above or below the classical threshold");
 assert.equal(incompletePlanetResult.rank, 0,
