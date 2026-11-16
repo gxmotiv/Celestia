@@ -235,100 +235,263 @@ export class ProfectionsEngine {
 // 3. ZODIACAL RELEASING (Spirit & Fortune)
 // ---------------------------------------------------------------------------
 
+export type ReleasingLevel = "L1" | "L2" | "L3" | "L4";
+
 export interface ReleasingPeriod {
-  level: "L1" | "L2";
+  level: ReleasingLevel;
   sign: string;
+  /** Duration expressed as 360-day ideal years (fractional for L2-L4). */
   durationYears: number;
+  /** Exact period length in days under the selected 360-day-year convention. */
+  durationDays: number;
   startDate: string;
   endDate: string;
+  isAngular: boolean;
+  /** 1st, 4th, 7th, 10th from the Lot of Fortune; null if unavailable. */
+  angleFromFortune: number | null;
+  /** The 10th sign from Fortune is the traditional major peak. */
   isPeak: boolean;
+  /** Marks the period immediately following a completed 12-sign circuit. */
+  isLoosingBond: boolean;
   ruler: string;
 }
 
 export interface ZodiacalReleasingReport {
   lotName: string;
   lotSign: string;
+  fortuneSign: string;
+  releasingStartSign: string;
   currentL1Period: ReleasingPeriod;
   currentL2Period: ReleasingPeriod;
+  currentL3Period: ReleasingPeriod;
+  currentL4Period: ReleasingPeriod;
   allL1Periods: ReleasingPeriod[];
+  currentL2Periods: ReleasingPeriod[];
+  currentL3Periods: ReleasingPeriod[];
+  currentL4Periods: ReleasingPeriod[];
   peakPeriodsCount: number;
+  calculationStandard: string;
   interpretation: string;
 }
 
+type ReleasingPeriodInternal = ReleasingPeriod & {
+  startMs: number;
+  endMs: number;
+};
+
 export class ZodiacalReleasingEngine {
-  // Planetary period allotments in years for each zodiac sign
+  /**
+   * Valens/Brennan-style minor-year allotments used by the common 360-day
+   * Zodiacal Releasing convention. Capricorn is 27; Aquarius remains 30.
+   * Other historical variants exist, so the selected convention is reported.
+   */
   public static readonly SIGN_PERIODS: Record<string, number> = {
-    Aries: 15,       // Mars
-    Taurus: 8,       // Venus
-    Gemini: 20,      // Mercury
-    Cancer: 25,      // Moon
-    Leo: 19,         // Sun
-    Virgo: 20,       // Mercury
-    Libra: 8,        // Venus
-    Scorpio: 15,     // Mars
-    Sagittarius: 12, // Jupiter
-    Capricorn: 27,   // Saturn
-    Aquarius: 30,    // Saturn
-    Pisces: 12,      // Jupiter
+    Aries: 15,
+    Taurus: 8,
+    Gemini: 20,
+    Cancer: 25,
+    Leo: 19,
+    Virgo: 20,
+    Libra: 8,
+    Scorpio: 15,
+    Sagittarius: 12,
+    Capricorn: 27,
+    Aquarius: 30,
+    Pisces: 12,
   };
+
+  public static readonly YEAR_LENGTH_DAYS = 360;
+  private static readonly DAY_MS = 86400000;
+  private static readonly SIGN_NAMES = ZODIAC_SIGNS.map((sign) => sign.name);
+
+  private getAngleFromFortune(signIndex: number, fortuneIndex: number): number {
+    return ((signIndex - fortuneIndex + 12) % 12) + 1;
+  }
+
+  private buildPeriod(
+    level: ReleasingLevel,
+    signIndex: number,
+    startMs: number,
+    durationDays: number,
+    fortuneIndex: number,
+    isLoosingBond: boolean
+  ): ReleasingPeriodInternal {
+    const signName = ZodiacalReleasingEngine.SIGN_NAMES[signIndex] || "Aries";
+    const angle = this.getAngleFromFortune(signIndex, fortuneIndex);
+    const endMs = startMs + durationDays;
+    const startDate = new Date(startMs);
+    const endDate = new Date(endMs);
+
+    return {
+      level,
+      sign: signName,
+      durationDays,
+      durationYears: durationDays / ZodiacalReleasingEngine.YEAR_LENGTH_DAYS,
+      startDate: startDate.toISOString().slice(0, 10),
+      endDate: endDate.toISOString().slice(0, 10),
+      isAngular: angle === 1 || angle === 4 || angle === 7 || angle === 10,
+      angleFromFortune: angle === 1 || angle === 4 || angle === 7 || angle === 10 ? angle : null,
+      isPeak: angle === 10,
+      isLoosingBond,
+      ruler: ProfectionsEngine.SIGN_RULERS[signName]?.ruler || "Sun",
+      startMs,
+      endMs,
+    };
+  }
+
+  private getNextSignIndex(signIndex: number, loosenBond: boolean): number {
+    // After a complete 12-sign circuit, the sequence resumes at the sign
+    // opposite the sign that would otherwise have followed the parent sign.
+    return (signIndex + 1 + (loosenBond ? 6 : 0)) % 12;
+  }
+
+  private generateL1Periods(
+    startSignIndex: number,
+    startMs: number,
+    cutoffMs: number,
+    fortuneIndex: number
+  ): ReleasingPeriodInternal[] {
+    const periods: ReleasingPeriodInternal[] = [];
+    let signIndex = startSignIndex;
+    let periodStart = startMs;
+    let signsProcessed = 0;
+
+    while (periodStart < cutoffMs && periods.length < 10000) {
+      const signName = ZodiacalReleasingEngine.SIGN_NAMES[signIndex] || "Aries";
+      const durationDays = ZodiacalReleasingEngine.SIGN_PERIODS[signName] * ZodiacalReleasingEngine.YEAR_LENGTH_DAYS;
+      periods.push(
+        this.buildPeriod("L1", signIndex, periodStart, durationDays, fortuneIndex, signsProcessed === 12)
+      );
+
+      const loosenBond = signsProcessed === 11;
+      signsProcessed += 1;
+      signIndex = this.getNextSignIndex(signIndex, loosenBond);
+      periodStart += durationDays * ZodiacalReleasingEngine.DAY_MS;
+    }
+
+    return periods;
+  }
+
+  private generateSubperiods(
+    parent: ReleasingPeriodInternal,
+    level: Exclude<ReleasingLevel, "L1">,
+    fortuneIndex: number
+  ): ReleasingPeriodInternal[] {
+    const periods: ReleasingPeriodInternal[] = [];
+    const levelNumber = Number(level.slice(1));
+    const unitDays = ZodiacalReleasingEngine.YEAR_LENGTH_DAYS / (12 ** (levelNumber - 1));
+    const parentDurationMs = parent.endMs - parent.startMs;
+
+    let signIndex = ZodiacalReleasingEngine.SIGN_NAMES.indexOf(parent.sign);
+    if (signIndex < 0) signIndex = 0;
+
+    let elapsedMs = 0;
+    let signsProcessed = 0;
+
+    while (elapsedMs < parentDurationMs - 0.001 && periods.length < 10000) {
+      const signName = ZodiacalReleasingEngine.SIGN_NAMES[signIndex] || "Aries";
+      const idealDurationDays = ZodiacalReleasingEngine.SIGN_PERIODS[signName] * unitDays;
+      const idealDurationMs = idealDurationDays * ZodiacalReleasingEngine.DAY_MS;
+      const remainingMs = parentDurationMs - elapsedMs;
+      const actualDurationMs = Math.min(idealDurationMs, remainingMs);
+      const actualDurationDays = actualDurationMs / ZodiacalReleasingEngine.DAY_MS;
+      const wasTruncated = actualDurationMs < idealDurationMs - 0.001;
+
+      periods.push(
+        this.buildPeriod(
+          level,
+          signIndex,
+          parent.startMs + elapsedMs,
+          actualDurationDays,
+          fortuneIndex,
+          signsProcessed === 12
+        )
+      );
+
+      elapsedMs += actualDurationMs;
+      if (wasTruncated) break;
+
+      const loosenBond = signsProcessed === 11;
+      signsProcessed += 1;
+      signIndex = this.getNextSignIndex(signIndex, loosenBond);
+    }
+
+    return periods;
+  }
+
+  private findActivePeriod(periods: ReleasingPeriodInternal[], instantMs: number): ReleasingPeriodInternal {
+    return periods.find((period) => instantMs >= period.startMs && instantMs < period.endMs)
+      || periods[periods.length - 1];
+  }
+
+  private toPublicPeriod(period: ReleasingPeriodInternal): ReleasingPeriod {
+    const { startMs: _startMs, endMs: _endMs, ...publicPeriod } = period;
+    return publicPeriod;
+  }
 
   public calculateReleasing(
     birthDate: Date,
     lotLongitude: number,
-    lotName: "Spirit (Career & Purpose)" | "Fortune (Physical Health & Material Fortune)"
+    lotName: "Spirit (Career & Purpose)" | "Fortune (Physical Health & Material Fortune)",
+    fortuneLongitude: number = lotLongitude,
+    currentDate: Date = new Date()
   ): ZodiacalReleasingReport {
-    const startSignIdx = Math.floor(lotLongitude / 30);
-    const lotSign = ZODIAC_SIGNS[startSignIdx]?.name || "Aries";
+    const lotSignIndex = Math.floor(((lotLongitude % 360) + 360) % 360 / 30);
+    const fortuneSignIndex = Math.floor(((fortuneLongitude % 360) + 360) % 360 / 30);
+    const lotSign = ZodiacalReleasingEngine.SIGN_NAMES[lotSignIndex] || "Aries";
+    const fortuneSign = ZodiacalReleasingEngine.SIGN_NAMES[fortuneSignIndex] || "Aries";
 
-    const l1Periods: ReleasingPeriod[] = [];
-    let curDate = new Date(birthDate);
+    // Valens' same-sign Spirit adjustment: when Spirit and Fortune occupy
+    // the same sign, Spirit releasing begins from the following sign.
+    const applySpiritAdjustment = lotName.startsWith("Spirit") && lotSignIndex === fortuneSignIndex;
+    const releasingStartIndex = applySpiritAdjustment ? (lotSignIndex + 1) % 12 : lotSignIndex;
+    const releasingStartSign = ZodiacalReleasingEngine.SIGN_NAMES[releasingStartIndex] || "Aries";
 
-    for (let i = 0; i < 12; i++) {
-      const signIdx = (startSignIdx + i) % 12;
-      const signName = ZODIAC_SIGNS[signIdx]?.name || "Aries";
-      const duration = ZodiacalReleasingEngine.SIGN_PERIODS[signName] || 15;
+    const birthMs = birthDate.getTime();
+    const nowMs = Math.max(currentDate.getTime(), birthMs);
+    const ageInYears = Math.max(0, (nowMs - birthMs) / (365.2425 * ZodiacalReleasingEngine.DAY_MS));
+    const horizonYears = Math.max(120, Math.ceil(ageInYears) + 10);
+    const cutoffMs = birthMs + horizonYears * 365.2425 * ZodiacalReleasingEngine.DAY_MS;
 
-      const startDateStr = curDate.toLocaleDateString();
-      const nextDate = new Date(curDate);
-      nextDate.setFullYear(nextDate.getFullYear() + duration);
-      const endDateStr = nextDate.toLocaleDateString();
+    // L1 periods use the 360-day ideal year and continue far enough to include
+    // the current period plus a useful forward horizon for older birth dates.
+    const l1Internal = this.generateL1Periods(releasingStartIndex, birthMs, cutoffMs, fortuneSignIndex);
+    const currentL1Internal = this.findActivePeriod(l1Internal, nowMs);
 
-      // Peak period: if sign is angular (1st, 4th, 7th, 10th from Lot)
-      const isPeak = i === 0 || i === 3 || i === 6 || i === 9;
-      const ruler = ProfectionsEngine.SIGN_RULERS[signName]?.ruler || "Sun";
+    // L2, L3 and L4 are generated recursively from the active parent period.
+    // Each level subdivides by the same 12 sign-period allotments, with the
+    // final child truncated exactly at its parent's end.
+    const l2Internal = this.generateSubperiods(currentL1Internal, "L2", fortuneSignIndex);
+    const currentL2Internal = this.findActivePeriod(l2Internal, nowMs);
 
-      l1Periods.push({
-        level: "L1",
-        sign: signName,
-        durationYears: duration,
-        startDate: startDateStr,
-        endDate: endDateStr,
-        isPeak,
-        ruler,
-      });
+    const l3Internal = this.generateSubperiods(currentL2Internal, "L3", fortuneSignIndex);
+    const currentL3Internal = this.findActivePeriod(l3Internal, nowMs);
 
-      curDate = nextDate;
-    }
+    const l4Internal = this.generateSubperiods(currentL3Internal, "L4", fortuneSignIndex);
+    const currentL4Internal = this.findActivePeriod(l4Internal, nowMs);
 
-    const currentL1 = l1Periods[0];
-    const currentL2: ReleasingPeriod = {
-      level: "L2",
-      sign: lotSign,
-      durationYears: Math.round((currentL1.durationYears / 12) * 10) / 10,
-      startDate: birthDate.toLocaleDateString(),
-      endDate: "Active Sub-phase",
-      isPeak: true,
-      ruler: currentL1.ruler,
-    };
+    const currentL1 = this.toPublicPeriod(currentL1Internal);
+    const currentL2 = this.toPublicPeriod(currentL2Internal);
+    const currentL3 = this.toPublicPeriod(currentL3Internal);
+    const currentL4 = this.toPublicPeriod(currentL4Internal);
+    const allL1Periods = l1Internal.map((period) => this.toPublicPeriod(period));
 
     return {
       lotName,
       lotSign,
+      fortuneSign,
+      releasingStartSign,
       currentL1Period: currentL1,
       currentL2Period: currentL2,
-      allL1Periods: l1Periods,
-      peakPeriodsCount: l1Periods.filter((p) => p.isPeak).length,
-      interpretation: `Zodiacal Releasing unfolds the chapters of your life from the sign of the Part of ${lotName} (${lotSign}). The current L1 chapter spans ${currentL1.durationYears} years under ${currentL1.sign} (ruled by ${currentL1.ruler})${currentL1.isPeak ? " [PEAK CHAPTER: Angular manifestation of major destiny milestones]" : ""}.`,
+      currentL3Period: currentL3,
+      currentL4Period: currentL4,
+      allL1Periods,
+      currentL2Periods: l2Internal.map((period) => this.toPublicPeriod(period)),
+      currentL3Periods: l3Internal.map((period) => this.toPublicPeriod(period)),
+      currentL4Periods: l4Internal.map((period) => this.toPublicPeriod(period)),
+      peakPeriodsCount: allL1Periods.filter((period) => period.isPeak).length,
+      calculationStandard: "Valens/Brennan-style releasing: 360-day ideal years, Capricorn 27 / Aquarius 30, opposite-sign Loosing of the Bond, and truncated child periods.",
+      interpretation: `Zodiacal Releasing from ${lotName} begins in ${releasingStartSign} (the Lot itself is in ${lotSign}; Fortune is in ${fortuneSign}). The active L1 chapter is ${currentL1.sign}, ruled by ${currentL1.ruler}, from ${currentL1.startDate} to ${currentL1.endDate}.${currentL1.isPeak ? " This is a 10th-from-Fortune peak period." : ""} The active L2 period is ${currentL2.sign}, with L3 in ${currentL3.sign} and L4 in ${currentL4.sign}.`,
     };
   }
 }
