@@ -30,11 +30,14 @@ export const SHADBALA_IMPLEMENTATION_STATUS = {
 
 export interface SthanaBalaBreakdown {
   ucchaBala: number;
+  /** Zero is a subtotal placeholder only when available=false. */
   saptavargajaBala: number;
   ojayugmaBala: number;
   kendradiBala: number;
   drekkanaBala: number;
   total: number;
+  available: boolean;
+  unavailableComponents: string[];
   description: string;
 }
 
@@ -1326,6 +1329,7 @@ export class ShadbalaEngine {
     const reqVirupas = reqRupas * 60;
     const strengthRatio = Math.round((totalVirupas / reqVirupas) * 100) / 100;
     const unavailableComponents = [
+      ...sthanaBala.unavailableComponents.map((item) => "Sthana Bala: " + item),
       ...kalaBala.unavailableComponents.map((item) => "Kala Bala: " + item),
       ...(!cheshtaBala.available
         ? ["Cheshta Bala: " + cheshtaBala.description]
@@ -1381,7 +1385,30 @@ export class ShadbalaEngine {
 
   public calculateSthanaBala(planet: string, input: ShadbalaChartInput): SthanaBalaBreakdown {
     const pPos = input.planets[planet];
-    const lon = pPos ? ((pPos.longitude % 360) + 360) % 360 : 0;
+    const validPlanetLongitude = (position: ShadbalaChartInput["planets"][string] | undefined) =>
+      Boolean(position && Number.isFinite(position.longitude) &&
+        position.longitude >= 0 && position.longitude < 360);
+    const missingPlanetInputs = ShadbalaEngine.PLANETS.filter(
+      (name) => !validPlanetLongitude(input.planets[name])
+    );
+    if (!validPlanetLongitude(pPos)) {
+      return {
+        ucchaBala: 0,
+        saptavargajaBala: 0,
+        ojayugmaBala: 0,
+        kendradiBala: 0,
+        drekkanaBala: 0,
+        total: 0,
+        available: false,
+        unavailableComponents: [
+          "True longitude for " + planet + " is missing or outside [0°, 360°).",
+          "Saptavargaja Bala requires all seven classical planetary longitudes; missing " + missingPlanetInputs.join(", ") + ".",
+        ],
+        description: "Sthana Bala unavailable: the target planet's normalized true longitude is missing.",
+      };
+    }
+
+    const lon = pPos.longitude;
     const asc = ((input.ascendant % 360) + 360) % 360;
 
     const sign = Math.floor(lon / 30);
@@ -1394,7 +1421,12 @@ export class ShadbalaEngine {
     if (distFromDebil > 180) distFromDebil = 360 - distFromDebil;
     const ucchaBala = Math.round((distFromDebil / 180) * 60 * 100) / 100;
 
-    const saptavargajaBala = calculateSaptavargajaBala(planet, input);
+    // Keep the direct Saptavargaja engine strict, while allowing the parent
+    // six-fold report to surface an incomplete component without crashing.
+    const saptavargajaAvailable = missingPlanetInputs.length === 0;
+    const saptavargajaBala = saptavargajaAvailable
+      ? calculateSaptavargajaBala(planet, input)
+      : 0;
 
     const isOddSign = sign % 2 === 0;
     const navPart = Math.floor(degInSign / (30 / 9));
@@ -1426,6 +1458,10 @@ export class ShadbalaEngine {
       (ucchaBala + saptavargajaBala + ojayugmaBala + kendradiBala + drekkanaBala) * 100
     ) / 100;
 
+    const unavailableComponents = saptavargajaAvailable
+      ? []
+      : ["Saptavargaja Bala (requires all seven classical planetary longitudes; missing " + missingPlanetInputs.join(", ") + ")"];
+
     return {
       ucchaBala,
       saptavargajaBala,
@@ -1433,7 +1469,11 @@ export class ShadbalaEngine {
       kendradiBala,
       drekkanaBala,
       total,
-      description: `Positional strength from Exaltation (${ucchaBala}), 7 Vargas (${saptavargajaBala}), and Kendra placement (${kendradiBala}).`,
+      available: unavailableComponents.length === 0,
+      unavailableComponents,
+      description: saptavargajaAvailable
+        ? `Positional strength from Exaltation (${ucchaBala}), 7 Vargas (${saptavargajaBala}), and Kendra placement (${kendradiBala}).`
+        : `Partial Sthana Bala subtotal: Exaltation, Ojayugma, Kendra and Drekkana are available; Saptavargaja is unavailable because ${missingPlanetInputs.join(", ")} is missing.`,
     };
   }
 
