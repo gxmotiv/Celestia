@@ -126,17 +126,15 @@ export function ShadbalaPanel({
       (birthLongitude as number) >= -180 &&
       (birthLongitude as number) <= 180
     ) {
-      if (resolvedBirthUtcDate) {
-        const apparentClock = createBaZiClock(resolvedBirthUtcDate, {
-          timeBasis: "local-apparent-solar",
-          longitudeDegrees: birthLongitude as number,
-        }).clockDate;
-        localApparentTimeMinutes =
-          apparentClock.getUTCHours() * 60 +
-          apparentClock.getUTCMinutes() +
-          apparentClock.getUTCSeconds() / 60 +
-          apparentClock.getUTCMilliseconds() / 60_000;
-      }
+      const apparentClock = createBaZiClock(resolvedBirthUtcDate, {
+        timeBasis: "local-apparent-solar",
+        longitudeDegrees: birthLongitude as number,
+      }).clockDate;
+      localApparentTimeMinutes =
+        apparentClock.getUTCHours() * 60 +
+        apparentClock.getUTCMinutes() +
+        apparentClock.getUTCSeconds() / 60 +
+        apparentClock.getUTCMilliseconds() / 60_000;
     }
 
     const tropicalMidheaven = westernData?.midheaven.longitude;
@@ -413,7 +411,7 @@ export function ShadbalaPanel({
             )}
           </div>
           <p className="lg:col-span-3 text-[10px] leading-relaxed text-slate-500">
-            Ayana uses Sayana longitudes (sidereal longitude + the chart ayanamsa). BPHS uses 45°/33°/12° Khanda portions; Raman uses his 24° Kranti table. BPHS 27.18 pairs the Sun's undoubled Ayana with Sun Cheshta; Raman doubles Sun Ayana within Kala and does not add a separate Sun Cheshta. Paksha uses folded Moon–Sun elongation; its Moon-nature and accounting differences remain separately selectable.
+            Ayana uses Sayana longitudes (sidereal longitude + the chart ayanamsa). BPHS uses 45°/33°/12° Khanda portions; Raman uses his 24° Kranti table. BPHS 27.18 pairs the Sun&apos;s undoubled Ayana with Sun Cheshta; Raman doubles Sun Ayana within Kala and does not add a separate Sun Cheshta. Paksha uses folded Moon–Sun elongation; its Moon-nature and accounting differences remain separately selectable.
           </p>
         </div>
 
