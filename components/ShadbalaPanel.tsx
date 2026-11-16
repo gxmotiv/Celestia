@@ -32,6 +32,9 @@ interface ShadbalaPanelProps {
   birthTime?: string;
   birthUtcInstant?: string;
   birthLongitude?: number;
+  birthLatitude?: number;
+  birthIanaTimezone?: string;
+  birthUtcOffsetSeconds?: number;
   birthTimeKnown?: boolean;
 }
 
@@ -42,6 +45,9 @@ export function ShadbalaPanel({
   birthTime = "12:00",
   birthUtcInstant,
   birthLongitude,
+  birthLatitude,
+  birthIanaTimezone,
+  birthUtcOffsetSeconds,
   birthTimeKnown = true,
 }: ShadbalaPanelProps) {
   const [selectedPlanet, setSelectedPlanet] = useState<string>("Sun");
@@ -140,6 +146,10 @@ export function ShadbalaPanel({
       planets: planetsMap,
       birthDate: bDateObj,
       birthTimeKnown,
+      latitude: birthLatitude,
+      longitude: birthLongitude,
+      ianaTimezone: birthIanaTimezone,
+      timezoneOffsetSeconds: birthUtcOffsetSeconds,
       ...(localApparentTimeMinutes !== undefined
         ? { localApparentTimeMinutes }
         : {}),
@@ -164,6 +174,9 @@ export function ShadbalaPanel({
     birthTime,
     birthUtcInstant,
     birthLongitude,
+    birthLatitude,
+    birthIanaTimezone,
+    birthUtcOffsetSeconds,
     birthTimeKnown,
     saptavargajaScale,
     drishtiVirupaVariant,
