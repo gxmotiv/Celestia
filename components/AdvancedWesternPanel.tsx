@@ -228,7 +228,7 @@ export function AdvancedWesternPanel({
   const medicalEngine = useMemo(() => new MedicalAstrologyEngine(), []);
   const medicalReport: MedicalAstrologyReport | null = useMemo(() => {
     return activeSubTab === "medical"
-      ? medicalEngine.analyzeHealth(chartData)
+      ? medicalEngine.analyzeTraditionalSymbolism(chartData)
       : null;
   }, [activeSubTab, medicalEngine, chartData]);
 
@@ -1034,37 +1034,38 @@ export function AdvancedWesternPanel({
           <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
             <h4 className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
               <HeartPulse className="w-3.5 h-3.5 text-emerald-400" />
-              Iatromathematical Constitution &amp; Somatic Rulerships
+              Traditional Medical Astrology Symbolism
             </h4>
             <p className="text-xs text-slate-300 leading-relaxed">
-              {medicalReport.vitalityConstitution}
+              {medicalReport.constitutionSymbolism}
+            </p>
+            <p className="text-[11px] text-amber-200/90 border-t border-slate-800 pt-2">
+              {medicalReport.disclaimer}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-400 pt-1">
-              <div>{medicalReport.sixthHouseNote}</div>
-              <div>{medicalReport.twelfthHouseNote}</div>
+              <div>{medicalReport.sixthHouseSymbolism}</div>
+              <div>{medicalReport.twelfthHouseSymbolism}</div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {medicalReport.vulnerableSystems.map((v, i) => (
-              <div key={i} className="p-3.5 bg-slate-950/60 border border-slate-800 rounded-xl space-y-1.5 hover:border-slate-700 transition-all">
-                <div className="flex items-center justify-between">
-                  <h5 className="text-xs font-bold text-slate-100">{v.systemName}</h5>
-                  <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded border ${
-                    v.stressLevel === "Elevated"
-                      ? "bg-rose-500/15 border-rose-500/30 text-rose-300"
-                      : "bg-emerald-500/15 border-emerald-500/30 text-emerald-300"
-                  }`}>
-                    {v.stressLevel} Priority
-                  </span>
-                </div>
+            {medicalReport.traditionalBodyCorrespondences.map((item, i) => (
+              <div key={i} className="p-3.5 bg-slate-950/60 border border-slate-800 rounded-xl space-y-1.5">
+                <h5 className="text-xs font-bold text-slate-100">{item.systemName}</h5>
                 <div className="text-[11px] text-slate-400">
-                  Sign Ruler: <strong className="text-slate-300">{v.signRuler}</strong> · Anatomy: {v.governedAnatomy}
+                  Traditional sign: <strong className="text-slate-300">{item.signRuler}</strong> · Symbolic body correspondence: {item.governedAnatomy}
                 </div>
                 <p className="text-xs text-slate-300 pt-1 border-t border-slate-800/80">
-                  <strong>Preventive Care:</strong> {v.preventiveAdvice}
+                  {item.symbolicAssociation}
                 </p>
               </div>
+            ))}
+          </div>
+
+          <div className="p-4 bg-slate-950/50 border border-slate-800 rounded-xl space-y-2">
+            <h5 className="text-xs font-semibold text-slate-200">Reflection prompts</h5>
+            {medicalReport.reflectionPrompts.map((prompt, index) => (
+              <p key={index} className="text-xs text-slate-400">{prompt}</p>
             ))}
           </div>
         </div>
