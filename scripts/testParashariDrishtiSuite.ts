@@ -69,9 +69,10 @@ assert.equal(
   30,
   "BPHS 26.12 Jupiter c=8 uses 60 minus twice the degrees past the eighth sign"
 );
-assert.equal(
-  calculateLongitudeDrishtiVirupas(269.999, "Jupiter", "bphs-verse-special-formula"),
-  0.002,
+assert.ok(
+  Math.abs(
+    calculateLongitudeDrishtiVirupas(269.999, "Jupiter", "bphs-verse-special-formula") - 0.002
+  ) < 1e-9,
   "Jupiter c=8 approaches zero immediately before the ninth-sign boundary"
 );
 assert.equal(
