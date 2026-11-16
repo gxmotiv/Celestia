@@ -89,7 +89,7 @@ assert.deepEqual(
   ],
   "Unknown birth time invalidates both local-apparent-time Nathonnatha and exact Moon-dependent Paksha"
 );
-assert.match(unknownTime.description, /Nathonnatha Bala is unavailable/);
+assert.match(unknownTime.description, /Nathonnatha is unavailable/);
 
 console.log(
   "Shadbala Nathonnatha suite passed: apparent midnight/noon, mirrored hours, Raman Example 17, Mercury invariance and unknown-time fail-closed integration."
