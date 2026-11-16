@@ -171,6 +171,14 @@ assert.ok(
   unknownBirthTime.unavailableComponents.some((item) => /birth time is unknown/.test(item)),
   "Known-looking Ascendant and MC values must not validate a noon-placeholder chart"
 );
+const unknownTimeShadbala = engine.calculateShadbala("Sun", {
+  ...noMidheavenChart,
+  birthTimeKnown: false,
+});
+assert.ok(
+  unknownTimeShadbala.estimatedComponents.some((item) => /Birth time unknown/.test(item)),
+  "Unknown birth time must disclose that longitude-derived component inputs may be representative-time values"
+);
 
 for (const invalidAscendant of [Number.NaN, Number.POSITIVE_INFINITY, -0.01, 360]) {
   for (const planet of ["Jupiter", "Mercury", "Saturn"]) {
