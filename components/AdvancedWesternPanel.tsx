@@ -23,6 +23,7 @@ import {
   ZodiacalReleasingReport,
   FirdariaEngine,
   FirdariaReport,
+  calculateCompletedAge,
 } from "@/lib/astronomy/predictiveHellenisticEngine";
 import { swissEphemeris } from "@/lib/astronomy/swissEphemeris";
 import {
@@ -164,8 +165,7 @@ export function AdvancedWesternPanel({
 
   const nowObj = useMemo(() => new Date(), []);
   const currentAgeYears = useMemo(() => {
-    const diff = nowObj.getTime() - birthDateObj.getTime();
-    return Math.max(0, Math.floor(diff / (365.2422 * 86400000)));
+    return calculateCompletedAge(birthDateObj, nowObj);
   }, [nowObj, birthDateObj]);
 
   // Secondary Progressions
