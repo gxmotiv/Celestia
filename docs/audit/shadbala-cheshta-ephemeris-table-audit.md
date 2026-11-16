@@ -55,3 +55,36 @@ That is intentional. A user-visible unavailable state is preferable to a confide
 [B. V. Raman, *Graha and Bhava Balas*, 13th edition (1992), scanned PDF](https://dn790000.ca.archive.org/0/items/1050-jyotish-books-with-siderial-zodiac/Bhava%20and%20Graha%20Balas_B.V.Raman%201996.pdf), especially pp. 68–81 (Chapter VI, Articles 86–107 and Examples 36–51) and pp. 112–117 (Tables IV–IX).
 
 This is a primary source for Raman's exposition and the tables he reproduces, but it is not the original Book of Fate source. That distinction is material to the unresolved table conflicts.
+## 6. Graha Yuddha / Yuddha Bala source-fidelity audit
+
+**Review date:** 16 November 2026  
+**Decision:** keep Yuddha Bala unavailable in live chart totals until event detection, winner and transfer conventions are explicit and testable. Do not silently substitute a one-degree ecliptic-longitude conjunction test.
+
+### 6.1 What the sources establish
+
+- **BPHS 27.20** gives the Shadbala adjustment after a war has been established: the strength difference between the two participating stellar planets is added to the victor and subtracted from the defeated planet. It does not, by itself, define the astronomical event-detection algorithm or fully specify how to avoid circularly including Yuddha Bala in the pre-transfer Shadbala difference.
+- **BPHS 79.9** names Venus as victorious regardless of its north/south course; another planet is victorious when it is *saumyagata* in mutual conjunction. The Sanskrit phrase and its English rendering must be preserved with the selected edition. It must not be silently rewritten as higher zodiacal longitude. See the [Sanskrit text and transliteration](https://enjoylearningsanskrit.com/scriptures/parashara/chapter-79/verse-9/).
+- **Surya Siddhanta, chapter 7**, treats close planetary conjunctions using astronomical separation, latitude and apparent disc size. The modern scholarly paper by B. S. Shylaja and B. S. Shubha, *Conjunction of planets: procedures and examples from Indian astronomy texts* (Journal of Astrophysics and Astronomy 44, 80; DOI [10.1007/s12036-023-09967-3](https://doi.org/10.1007/s12036-023-09967-3)), explains the historical workflow: iterate to the conjunction, calculate the north–south separation, and compare it with the sum of apparent diameters to classify the event. This is a distinct astronomical lineage, not simply a synonym for the popular one-degree ecliptic-longitude rule.
+- Some modern teaching/software implementations use a one-degree ecliptic-longitude threshold. Other technical teaching material proposes apparent-longitude separation. These are not interchangeable inputs; Celestia must label and expose each adopted algorithm rather than imply that all sources prescribe the same one-degree test.
+- Winner conventions also differ in modern implementations: Venus/north-south position, apparent brightness/diameter, lower or higher longitude, or pre-war strength. A code implementation that chooses by greatest existing Kala/Shadbala total is a modern convention, not the direct wording of BPHS 79.9.
+
+### 6.2 Specific implementation hazards
+
+1. **Coordinate confusion:** zodiacal ecliptic longitude, apparent/equatorial position, ecliptic latitude and declination are different quantities. A higher zodiacal degree does not prove a planet is north of another.
+2. **Boundary and wrap errors:** the pair separation must be circular (0° and 360° are adjacent); cross-sign pairs can qualify in a longitude-based profile. The source variant determines whether the criterion is ecliptic longitude or an apparent-sky conjunction.
+3. **Winner ambiguity:** if the chosen source rule requires a north/south comparison, missing or nearly equal latitude/declination must yield an unresolved winner, not a guessed result.
+4. **Three-planet clusters:** pairwise wars need deterministic pair enumeration and must not apply the same strength transfer repeatedly in an order-dependent way without a declared multi-body convention.
+5. **Circular strength transfer:** BPHS 27.20 refers to the Shadbala difference, while Yuddha Bala itself is included in Kala Bala. The base strength used to calculate the transfer must be defined so the calculation does not solve itself by repeatedly feeding its own adjustment back into the difference.
+6. **Conservation and sign:** a matched positive adjustment to the victor and negative adjustment to the defeated planet conserves the pair's combined subtotal. Missing inputs must not be represented by a fabricated zero.
+
+### 6.3 Required profiles and acceptance tests before activation
+
+- Add a named event profile for the conventional one-degree ecliptic-longitude method only if it is explicitly described as that convention, with the threshold's inclusive/exclusive boundary documented.
+- Add a separate Surya Siddhanta astronomical-conjunction profile only after apparent geocentric positions, latitude, apparent angular diameters and the source's conjunction-time iteration are supplied by a validated ephemeris. Do not approximate it by comparing natal chart longitudes alone.
+- Add an explicitly named BPHS victor profile for the Venus exception and the selected interpretation of *saumyagata*; preserve alternative translations/interpretations as separate options pending source review.
+- Define whether the transfer uses pre-Yuddha total Shadbala or another source-attested base. Do not select an implementation merely because its output looks plausible.
+- Tests must cover exact threshold boundaries, 0°/360° wrap, adjacent-sign pairs, excluded luminaries/nodes, Venus victory, missing latitude, unresolved near-ties, multi-body clusters, conservation of pairwise adjustment, and prevention of circular reapplication.
+
+### 6.4 Present product behavior
+
+The Shadbala engine leaves Yuddha Bala null and includes it in the unavailable-component list. This is intentional and protects the displayed Shadbala subtotal from presenting an unsupported result as zero. The Shadbala panel now calls out this missing evidence explicitly.
