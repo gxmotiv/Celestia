@@ -110,3 +110,36 @@ The source check adds an important distinction to the profile design:
 Additional acceptance tests for the Sūryasiddhānta profile: verify longitude-conjunction iteration for direct/direct, retrograde/retrograde and mixed-motion pairs; apparent-position correction across the relevant latitude signs; apparent interval immediately below, at and above the one-degree boundary; same-sign versus opposite-sign latitude; grazing/contact/overlap versus close-conjunction classification using source-derived apparent diameters; and the 7.21 brightness/size/north/south winner cases. A missing apparent diameter, observer geometry input or unresolved source interpretation must return unavailable, not fall back to a one-degree zodiac-longitude result.
 
 The existing Astronomy Engine helper returns apparent geocentric ecliptic longitude/latitude of date, with light-time and aberration correction. That helper is a useful input primitive, but it does not alone reproduce Sūryasiddhānta's historical *drikkarman*, observer-geometry correction, angular-diameter model, or the complete conjunction-time iteration. The adapter audit above therefore remains open; the helper must not be promoted as a completed classical Graha Yuddha calculator.
+
+
+## 7. Sthana Bala source reconciliation and fail-closed inputs
+
+This section records the primary-source checks behind the current five-part Sthana Bala implementation. It deliberately separates a Sanskrit verse's wording, an editor/translator's rendering, Raman's worked method, and Celestia's current selectable profiles.
+
+### 7.1 Source hierarchy and rulings
+
+- **Saptavargaja scoring scale:** BPHS Chapter 27, verses 2–4, as translated by R. Santhanam, gives the dignity values 45 (Moolatrikona), 30 (own), 20 (great friend), 15 (friend), 10 (neutral), 4 (enemy), and 2 (great enemy), then directs that the remaining six varga occupations are also evaluated and added. Celestia exposes these as the `bphs-santhanam` scale. Raman's *Graha and Bhava Balas*, Chapter III, Article 30, instead prints 45 / 30 / 22.5 / 15 / 7.5 / 3.75 / 1.875. The `raman-halving` scale is separate; the two tables must not be averaged or silently mixed.
+- **Moolatrikona scope:** Raman, Article 30, explicitly says the 45-Shashtiamsa Moolatrikona award is given only when the planet occupies its Moolatrikona *Rasi*, not when one of the other six vargas is merely owned by that planet. The current D1-only scope follows that explicit Raman rule. BPHS 27.2–4 and its translations have been interpreted differently on this point, so Celestia must describe D1-only as a selected source lineage, not as a universally undisputed reading of the Sanskrit.
+- **Ojayugma:** BPHS 27.5 states that Venus and the Moon receive the quarter-strength in even signs and the other planets in odd signs; the same rule applies to the corresponding Navamsa. One quarter of a Rupa (60 Virupas) is 15 Virupas, independently for Rasi and Navamsa. Celestia therefore tests both divisional signs independently, including Mercury and Saturn among “the others.”
+- **Kendradi:** BPHS 27.5 names Kendra, Panaphara and Apoklima and assigns full, half and quarter strength (60 / 30 / 15 Virupas). Raman, Articles 32–35, explicitly counts these from the Rasi/sign chart: he records disagreement between counting Rasis and Bhavas, says Parashara inclines toward Rasi counting, notes the Sripati commentator and Balabhadra favor Bhava counting, and chooses the Rasi view for his own calculation. Celestia's present `calculateSthanaBala` is this named sign-based profile. It does not claim to implement the alternative Bhava-cusp profile.
+- **Drekkana:** BPHS 27.6 Sanskrit reads `ādyamadhyāvasāneṣu dreṣkāṇeṣu sthitāḥ kramāt puṁnapuṁsakayoṣā-ākhyāḥ`: in sequence, first / middle / last decanate and masculine / neuter / feminine. The verse therefore supports male planets in the first, neuter planets in the middle, and female planets in the last decanate. The seven-planet gender groups are Sun/Mars/Jupiter (male), Mercury/Saturn (neuter), and Moon/Venus (female). The R. Santhanam English translation/notes are preserved as a separately named alternate order in the code rather than overwriting the Sanskrit sequence. Raman's Articles 36–40 and his worked example support the Sanskrit/Raman sequence in the current default profile.
+
+### 7.2 Implementation safeguards added
+
+- `calculateSthanaBala` now rejects a target outside the seven classical grahas instead of substituting an exaltation point of 0° and attempting to compute a false positional score.
+- A missing, non-finite, negative, or 360°-and-above Ascendant no longer falls through to the default 15-Virupa Apoklima value. `kendradiBala` is `null`, the component is listed as unavailable, and the displayed Sthana subtotal excludes it. Other independently computable components remain visible as a partial subtotal.
+- Regression coverage now exercises `NaN`, positive infinity, a negative longitude, and 360°; checks the null/availability/unavailable-component contract; verifies the subtotal excludes the missing Kendradi value; and asserts non-classical targets are rejected.
+- The branch's current sign-based Kendradi method still requires a valid normalized Ascendant longitude in `[0°, 360°)`. No Bhava house is inferred from a Rasi sign and no 15-Virupa default is inserted for invalid input.
+
+### 7.3 Remaining source-profile work
+
+A genuine Bhava-based Kendradi alternative requires an explicit, validated set of twelve Bhava middles/cusps from the selected house system and a documented rule for deriving the Bhava interval containing a planet. The present Shadbala caller supplies the sidereal Ascendant and planetary longitudes, but does not yet select and pass a Bhava-cusp array for this purpose. Do not turn the current sign-based score into a purported Bhava score by reusing Western house cusps or by assuming that a Bhava cusp list is self-describing. Add the alternate profile only after the Vedic house system, cusp semantics, cyclic boundary policy, and source lineage are made explicit and independently tested.
+
+### 7.4 References
+
+- BPHS Chapter 27, verse 5, Sanskrit and translation: [Enjoy Learning Sanskrit](https://enjoylearningsanskrit.com/scriptures/parashara/chapter-27/verse-5/) and [Siva.sh](https://www.siva.sh/brihat-parashara-hora-shastra/27/5).
+- BPHS Chapter 27, verse 6, Sanskrit, IAST, and word-by-word morphology: [Enjoy Learning Sanskrit](https://enjoylearningsanskrit.com/scriptures/parashara/chapter-27/verse-6/).
+- R. Santhanam (translator, commentator, editor), *Brihat Parashara Hora Sastra*, Volume I, Chapter 27, especially pp. 263–267: [Internet Archive full-text transcription](https://archive.org/stream/BPHSEnglish/BPHS%20-%201%20RSanthanam_djvu.txt).
+- B. V. Raman, *Graha and Bhava Balas*, Chapter III, Articles 30–40 (Saptavargaja scope/scale, Ojayugma, Kendradi sign-versus-Bhava discussion, Drekkana and worked examples): [scanned edition](https://dn790000.ca.archive.org/0/items/1050-jyotish-books-with-siderial-zodiac/Bhava%20and%20Graha%20Balas_B.V.Raman%201996.pdf).
+
+The current Shadbala feature remains partial overall. This Sthana Bala work improves source traceability and input integrity; it does not complete the six-fold Shadbala or resolve Yuddha Bala, Cheshta source tables, and independent full-chart reconciliation.
