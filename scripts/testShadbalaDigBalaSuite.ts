@@ -161,6 +161,16 @@ assert.equal(validMeridianWithoutAscendant.points, 60);
 assert.equal(validMeridianWithoutAscendant.available, true);
 assert.equal(validMeridianWithoutAscendant.actualHouse, null);
 assert.equal(validMeridianWithoutAscendant.estimated, false);
+const unknownBirthTime = engine.calculateDigBala("Sun", {
+  ...ramanStandardHoroscope,
+  birthTimeKnown: false,
+});
+assert.equal(unknownBirthTime.points, null);
+assert.equal(unknownBirthTime.available, false);
+assert.ok(
+  unknownBirthTime.unavailableComponents.some((item) => /birth time is unknown/.test(item)),
+  "Known-looking Ascendant and MC values must not validate a noon-placeholder chart"
+);
 
 for (const invalidAscendant of [Number.NaN, Number.POSITIVE_INFINITY, -0.01, 360]) {
   for (const planet of ["Jupiter", "Mercury", "Saturn"]) {
