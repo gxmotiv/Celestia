@@ -197,3 +197,5 @@ Celestia now treats `birthTimeKnown === false` as a hard stop for angle-dependen
 - This does not invalidate longitude-only Sthana components by itself, nor does it make the whole Shadbala complete. Other planetary positions in an unknown-time chart still need their own precision/status audit.
 
 Regression tests now use finite Raman-chart angles with `birthTimeKnown: false` and verify that neither Kendradi nor Dig Bala treats them as exact. The behavior is fail-closed rather than silently using noon-derived cardinal points.
+
+The Shadbala result now also carries a visible estimate note for unknown-time charts: longitude-derived values use the chart's representative instant, and the engine does not yet evaluate an intraday ephemeris range to prove that signs, vargas, paksha relationships, and aspect classes remain unchanged. The detail panel lists the actual estimate/validation reasons rather than showing only their count.
