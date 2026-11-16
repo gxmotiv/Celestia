@@ -36,6 +36,7 @@ jobs:
           - testJaiminiKarakasSuite.ts
           - testParashariDrishtiSuite.ts
           - testShadbalaStatusSuite.ts
+          - testShadbalaNathonnathaSuite.ts
           - testShadbalaDrikBalaSuite.ts
           - testShadbalaSaptavargajaSuite.ts
           - testShadbalaRamanReferenceSuite.ts
