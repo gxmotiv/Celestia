@@ -70,14 +70,14 @@ assert.equal(
   "BPHS 26.12 Jupiter c=8 uses 60 minus twice the degrees past the eighth sign"
 );
 assert.equal(
-  calculateLongitudeDrishtiVirupas(270, "Jupiter", "bphs-verse-special-formula"),
-  15,
-  "At 270 degrees Jupiter enters the ninth-sign interval and the generic curve returns 15"
+  calculateLongitudeDrishtiVirupas(269.999, "Jupiter", "bphs-verse-special-formula"),
+  0.002,
+  "Jupiter c=8 approaches zero immediately before the ninth-sign boundary"
 );
 assert.equal(
   calculateLongitudeDrishtiVirupas(270, "Jupiter", "bphs-verse-special-formula"),
-  0,
-  "The verse-special discontinuity is preserved rather than smoothed into the generic c=9 curve"
+  15,
+  "At exactly 270 degrees Jupiter enters the next sign interval and the generic curve returns 15"
 );
 assert.equal(
   calculateLongitudeDrishtiVirupas(75, "Saturn", "bphs-translator-special-adjustments"),
