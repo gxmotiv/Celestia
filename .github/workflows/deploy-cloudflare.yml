@@ -48,6 +48,7 @@ jobs:
       - name: Run Western Astrology regression suites
         run: |
           bun run scripts/testAdvancedWesternBirthTimeSuite.ts
+          bun run scripts/testAdvancedWesternAgeSuite.ts
           bun run scripts/testAdvancedWesternTimingSuite.ts
           bun run scripts/testAdvancedWesternEclipseSuite.ts
           bun run scripts/testAdvancedWesternAstrocartographySuite.ts
