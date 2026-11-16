@@ -356,7 +356,8 @@ export class ZodiacalReleasingEngine {
     let periodStart = startMs;
     let signsProcessed = 0;
 
-    while (periodStart < cutoffMs && periods.length < 10000) {
+    // Always retain one complete 12-sign L1 circuit for compatibility and context.
+    while ((periodStart < cutoffMs || periods.length < 12) && periods.length < 10000) {
       const signName = ZodiacalReleasingEngine.SIGN_NAMES[signIndex] || "Aries";
       const durationDays = ZodiacalReleasingEngine.SIGN_PERIODS[signName] * ZodiacalReleasingEngine.YEAR_LENGTH_DAYS;
       periods.push(
@@ -433,17 +434,25 @@ export class ZodiacalReleasingEngine {
     birthDate: Date,
     lotLongitude: number,
     lotName: "Spirit (Career & Purpose)" | "Fortune (Physical Health & Material Fortune)",
-    fortuneLongitude: number = lotLongitude,
+    fortuneLongitude?: number,
     currentDate: Date = new Date()
   ): ZodiacalReleasingReport {
     const lotSignIndex = Math.floor(((lotLongitude % 360) + 360) % 360 / 30);
-    const fortuneSignIndex = Math.floor(((fortuneLongitude % 360) + 360) % 360 / 30);
+    const hasFortune = typeof fortuneLongitude === "number" && Number.isFinite(fortuneLongitude);
+    const fortuneSignIndex = hasFortune
+      ? Math.floor(((fortuneLongitude % 360) + 360) % 360 / 30)
+      : lotSignIndex;
     const lotSign = ZodiacalReleasingEngine.SIGN_NAMES[lotSignIndex] || "Aries";
-    const fortuneSign = ZodiacalReleasingEngine.SIGN_NAMES[fortuneSignIndex] || "Aries";
+    const fortuneSign = hasFortune
+      ? ZodiacalReleasingEngine.SIGN_NAMES[fortuneSignIndex] || "Aries"
+      : "Not supplied";
 
-    // Valens' same-sign Spirit adjustment: when Spirit and Fortune occupy
-    // the same sign, Spirit releasing begins from the following sign.
-    const applySpiritAdjustment = lotName.startsWith("Spirit") && lotSignIndex === fortuneSignIndex;
+    // Valens' same-sign Spirit adjustment: apply only when Fortune was
+    // explicitly supplied and both lots occupy the same sign. Legacy callers
+    // without Fortune retain the unadjusted releasing start sign.
+    const applySpiritAdjustment = hasFortune
+      && lotName.startsWith("Spirit")
+      && lotSignIndex === fortuneSignIndex;
     const releasingStartIndex = applySpiritAdjustment ? (lotSignIndex + 1) % 12 : lotSignIndex;
     const releasingStartSign = ZodiacalReleasingEngine.SIGN_NAMES[releasingStartIndex] || "Aries";
 
