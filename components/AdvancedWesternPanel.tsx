@@ -19,6 +19,8 @@ import {
   ProgressedChartResult,
   SolarArcDirectionsEngine,
   SolarArcDirectionsReport,
+  SolarReturnEngine,
+  SolarReturnReport,
   ProfectionsEngine,
   ProfectionResult,
   ZodiacalReleasingEngine,
@@ -89,6 +91,7 @@ export function AdvancedWesternPanel({
     | "declinations"
     | "progressions"
     | "solarArc"
+    | "solarReturn"
     | "profections"
     | "releasing"
     | "firdaria"
@@ -111,6 +114,7 @@ export function AdvancedWesternPanel({
   }, [activeSubTab, midpointCalc, chartData.planets]);
 
   const [midpointSearch, setMidpointSearch] = useState("");
+  const [solarReturnYear, setSolarReturnYear] = useState<number>(new Date().getUTCFullYear());
   const filteredMidpoints = useMemo(() => {
     if (!midpointSearch.trim()) return allMidpoints;
     const term = midpointSearch.toLowerCase();
@@ -198,6 +202,21 @@ export function AdvancedWesternPanel({
       : null;
   }, [activeSubTab, solarArcEngine, chartData, birthDateObj, nowObj, latitude, longitude, timezoneOffset]);
 
+  // Solar returns are cast at the natal coordinates by default. A separate
+  // return-location selector can be added without changing the return instant.
+  const solarReturnEngine = useMemo(() => new SolarReturnEngine(), []);
+  const solarReturnReport: SolarReturnReport | null = useMemo(() => {
+    return activeSubTab === "solarReturn"
+      ? solarReturnEngine.calculateSolarReturn(
+          chartData,
+          solarReturnYear,
+          latitude,
+          longitude,
+          chartData.houseSystem
+        )
+      : null;
+  }, [activeSubTab, solarReturnEngine, chartData, solarReturnYear, latitude, longitude]);
+
   // Hellenistic Profections
   const profEngine = useMemo(() => new ProfectionsEngine(), []);
   const profectionReport: ProfectionResult | null = useMemo(() => {
@@ -276,7 +295,7 @@ export function AdvancedWesternPanel({
             Complete Western Astrology Architecture
           </h3>
           <p className="text-[11px] text-slate-400">
-            Asteroids · Shadow Axis · Arabian Parts · Midpoints · Harmonics · Declinations · Progressions · Solar Arc · Profections · Releasing · Firdaria · Fixed Stars · Eclipses · Medical · Astrocartography
+            Asteroids · Shadow Axis · Arabian Parts · Midpoints · Harmonics · Declinations · Progressions · Solar Arc · Solar Return · Profections · Releasing · Firdaria · Fixed Stars · Eclipses · Medical · Astrocartography
           </p>
         </div>
 
@@ -291,6 +310,7 @@ export function AdvancedWesternPanel({
             { id: "declinations", label: "Declinations", icon: "||" },
             { id: "progressions", label: "Progressions", icon: "☽" },
             { id: "solarArc", label: "Solar Arc", icon: "☉" },
+            { id: "solarReturn", label: "Solar Return", icon: "☼" },
             { id: "profections", label: "Profections", icon: "⏳" },
             { id: "releasing", label: "Zodiacal Releasing", icon: "📜" },
             { id: "firdaria", label: "Firdaria", icon: "👑" },
@@ -856,7 +876,111 @@ export function AdvancedWesternPanel({
         </div>
       )}
 
-      {/* SUB-TAB 9: HELLENISTIC ANNUAL PROFECTIONS */}
+      {/* SUB-TAB 9: SOLAR RETURN CHART */}
+      {activeSubTab === "solarReturn" && solarReturnReport && (
+        <div className="space-y-4">
+          <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <span className="text-[10px] font-mono text-amber-400 uppercase tracking-widest block">Annual revolution · Exact tropical solar return</span>
+                <h4 className="text-sm font-bold text-slate-100">Solar Return Chart · {solarReturnReport.targetYear}</h4>
+              </div>
+              <label className="text-xs text-slate-400 flex items-center gap-2">
+                Return year
+                <input
+                  type="number"
+                  min={100}
+                  max={9998}
+                  value={solarReturnYear}
+                  onChange={(event) => {
+                    const nextYear = Number(event.target.value);
+                    if (Number.isInteger(nextYear) && nextYear >= 100 && nextYear <= 9998) {
+                      setSolarReturnYear(nextYear);
+                    }
+                  }}
+                  className="w-24 px-2 py-1 rounded bg-slate-900 border border-slate-700 text-slate-100 font-mono"
+                />
+              </label>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="p-3 bg-slate-900 border border-slate-800 rounded-lg">
+                <span className="text-[10px] text-slate-400 block">Exact return moment</span>
+                <span className="text-sm font-bold text-amber-300 font-mono">{solarReturnReport.returnInstantUTC}</span>
+                <span className="text-[10px] text-slate-500 block">UTC</span>
+              </div>
+              <div className="p-3 bg-slate-900 border border-slate-800 rounded-lg">
+                <span className="text-[10px] text-slate-400 block">Natal Sun longitude</span>
+                <span className="text-sm font-bold text-slate-100 font-mono">{formatDegreeMinute(solarReturnReport.natalSunLongitude)}</span>
+              </div>
+              <div className="p-3 bg-slate-900 border border-slate-800 rounded-lg">
+                <span className="text-[10px] text-slate-400 block">Return Sun longitude</span>
+                <span className="text-sm font-bold text-emerald-300 font-mono">{formatDegreeMinute(solarReturnReport.returnSunLongitude)}</span>
+              </div>
+            </div>
+            <p className="text-[11px] text-slate-400">{solarReturnReport.method}</p>
+            <p className="text-[10px] text-slate-500">
+              Return place: natal coordinates ({solarReturnReport.latitude.toFixed(4)}°, {solarReturnReport.longitude.toFixed(4)}°) · {solarReturnReport.houseSystem} houses. The exact instant is global; angles and houses change with the return location.
+            </p>
+          </div>
+
+          <div className="overflow-x-auto">
+            <h5 className="text-xs font-bold text-slate-200 mb-2">Solar Return planetary positions</h5>
+            <table className="w-full text-left text-xs text-slate-300">
+              <thead className="bg-slate-950/80 text-slate-400 border-b border-slate-800 text-[11px]">
+                <tr>
+                  <th className="py-2.5 px-3">Body</th>
+                  <th className="py-2.5 px-3">Position</th>
+                  <th className="py-2.5 px-3">House</th>
+                  <th className="py-2.5 px-3">Motion</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60 font-mono">
+                {solarReturnReport.returnChart.planets.map((planet) => (
+                  <tr key={planet.name}>
+                    <td className="py-2 px-3 font-sans font-semibold text-slate-200">{planet.symbol} {planet.name}</td>
+                    <td className="py-2 px-3 text-amber-300">{planet.signDegreeFormatted}</td>
+                    <td className="py-2 px-3">{planet.house}</td>
+                    <td className={planet.isRetrograde ? "py-2 px-3 text-rose-300" : "py-2 px-3 text-emerald-300"}>
+                      {planet.isRetrograde ? "Retrograde" : "Direct"}
+                    </td>
+                  </tr>
+                ))}
+                <tr>
+                  <td className="py-2 px-3 font-sans font-semibold text-cyan-300">ASC</td>
+                  <td className="py-2 px-3 text-cyan-300">{solarReturnReport.returnChart.ascendant.signDegreeFormatted}</td>
+                  <td className="py-2 px-3">1</td>
+                  <td className="py-2 px-3">—</td>
+                </tr>
+                <tr>
+                  <td className="py-2 px-3 font-sans font-semibold text-cyan-300">MC</td>
+                  <td className="py-2 px-3 text-cyan-300">{solarReturnReport.returnChart.midheaven.signDegreeFormatted}</td>
+                  <td className="py-2 px-3">10</td>
+                  <td className="py-2 px-3">—</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div className="overflow-x-auto">
+            <h5 className="text-xs font-bold text-slate-200 mb-2">Solar Return house cusps</h5>
+            <table className="w-full text-left text-xs text-slate-300">
+              <thead className="bg-slate-950/80 text-slate-400 border-b border-slate-800 text-[11px]">
+                <tr><th className="py-2 px-3">House</th><th className="py-2 px-3">Cusp</th></tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60 font-mono">
+                {solarReturnReport.returnChart.houses.map((house) => (
+                  <tr key={house.house}>
+                    <td className="py-2 px-3">{house.house}</td>
+                    <td className="py-2 px-3 text-slate-200">{house.signDegreeFormatted}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* SUB-TAB 10: HELLENISTIC ANNUAL PROFECTIONS */}
       {activeSubTab === "profections" && profectionReport && (
         <div className="space-y-4">
           <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-3">
@@ -914,7 +1038,7 @@ export function AdvancedWesternPanel({
         </div>
       )}
 
-      {/* SUB-TAB 10: ZODIACAL RELEASING */}
+      {/* SUB-TAB 11: ZODIACAL RELEASING */}
       {activeSubTab === "releasing" && spiritReleasing && (
         <div className="space-y-4">
           <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
@@ -1011,7 +1135,7 @@ export function AdvancedWesternPanel({
         </div>
       )}
 
-      {/* SUB-TAB 11: MEDIEVAL FIRDARIA */}
+      {/* SUB-TAB 12: MEDIEVAL FIRDARIA */}
       {activeSubTab === "firdaria" && firdariaReport && (
         <div className="space-y-4">
           <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
@@ -1055,7 +1179,7 @@ export function AdvancedWesternPanel({
         </div>
       )}
 
-      {/* SUB-TAB 12: FIXED STARS */}
+      {/* SUB-TAB 13: FIXED STARS */}
       {activeSubTab === "fixedStars" && (
         <div className="space-y-4">
           <div className="flex flex-col gap-1 text-xs px-3 py-2 bg-slate-950/80 border border-slate-800 rounded-lg text-slate-400">
@@ -1093,7 +1217,7 @@ export function AdvancedWesternPanel({
         </div>
       )}
 
-      {/* SUB-TAB 13: ECLIPSE ANALYZER */}
+      {/* SUB-TAB 14: ECLIPSE ANALYZER */}
       {activeSubTab === "eclipses" && (
         <div className="space-y-4">
           <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
@@ -1133,7 +1257,7 @@ export function AdvancedWesternPanel({
         </div>
       )}
 
-      {/* SUB-TAB 14: MEDICAL ASTROLOGY */}
+      {/* SUB-TAB 15: MEDICAL ASTROLOGY */}
       {activeSubTab === "medical" && medicalReport && (
         <div className="space-y-4">
           <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
@@ -1176,7 +1300,7 @@ export function AdvancedWesternPanel({
         </div>
       )}
 
-      {/* SUB-TAB 15: ASTROCARTOGRAPHY */}
+      {/* SUB-TAB 16: ASTROCARTOGRAPHY */}
       {activeSubTab === "astrocartography" && astrocartographyReport && (
         <div className="space-y-4">
           <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
