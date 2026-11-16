@@ -819,6 +819,69 @@ export function calculateRamanTimeLordsFromSunriseInterval(
     description: `Raman Ch. V §§58–70: Abda ${yearLord}, Masa ${monthLord}, Vara ${varaLord}, Hora ${horaLord} (hora ${horaNumber}/24); ${aharganaDays} days from the 1827-05-02 Wednesday epoch. Equal sunrise-to-sunrise horas are used.`,
   };
 }
+function calculateRamanTimeLords(input: ShadbalaChartInput): RamanTimeLordsResult | null {
+  const birth = input.birthDate;
+  if (
+    input.birthTimeKnown === false ||
+    !(birth instanceof Date) || !Number.isFinite(birth.getTime()) ||
+    !Number.isFinite(input.latitude) || !Number.isFinite(input.longitude) ||
+    (input.latitude as number) < -90 || (input.latitude as number) > 90 ||
+    (input.longitude as number) < -180 || (input.longitude as number) > 180 ||
+    !Number.isFinite(input.timezoneOffsetSeconds)
+  ) return null;
+
+  const year = birth.getUTCFullYear();
+  const month = birth.getUTCMonth() + 1;
+  const day = birth.getUTCDate();
+  const birthLocalMinutes = birth.getUTCHours() * 60 + birth.getUTCMinutes() +
+    birth.getUTCSeconds() / 60 + birth.getUTCMilliseconds() / 60_000;
+  const birthOffsetSeconds = input.timezoneOffsetSeconds as number;
+  const solar = new PlanetaryHoursCalculator();
+  const shiftedDate = (days: number) => {
+    const date = new Date(Date.UTC(year, month - 1, day + days));
+    return { year: date.getUTCFullYear(), month: date.getUTCMonth() + 1, day: date.getUTCDate() };
+  };
+  const sunriseAt = (date: { year: number; month: number; day: number }) => {
+    const offset = offsetSecondsAtWallClock(
+      input.ianaTimezone, date.year, date.month, date.day, 6, birthOffsetSeconds
+    );
+    if (offset === null) return null;
+    const result = solar.calculateSunTimes(
+      date.year, date.month, date.day,
+      input.latitude as number, input.longitude as number, offset / 3600
+    );
+    if (result.solarCondition !== "normal") return null;
+    const localMinute = Math.round(result.sunrise * 60) % 1440;
+    const utcMillis = Date.UTC(date.year, date.month - 1, date.day, 0, localMinute) - offset * 1000;
+    return { localMinute, utcMillis, date };
+  };
+
+  const today = { year, month, day };
+  const previousDay = shiftedDate(-1);
+  const nextDay = shiftedDate(1);
+  const todaySunrise = sunriseAt(today);
+  const previousSunrise = sunriseAt(previousDay);
+  const nextSunrise = sunriseAt(nextDay);
+  if (!todaySunrise || !previousSunrise || !nextSunrise) return null;
+
+  const birthInstantUtc = input.birthUtcInstant instanceof Date && Number.isFinite(input.birthUtcInstant.getTime())
+    ? input.birthUtcInstant
+    : new Date(Date.UTC(
+        year, month - 1, day, birth.getUTCHours(), birth.getUTCMinutes(),
+        birth.getUTCSeconds(), birth.getUTCMilliseconds()
+      ) - birthOffsetSeconds * 1000);
+  const beforeTodaySunrise = birthInstantUtc.getTime() < todaySunrise.utcMillis;
+  const startSunrise = beforeTodaySunrise ? previousSunrise : todaySunrise;
+  const endSunrise = beforeTodaySunrise ? todaySunrise : nextSunrise;
+  const effectiveDate = startSunrise.date;
+  const effectiveSunriseDate = new Date(Date.UTC(effectiveDate.year, effectiveDate.month - 1, effectiveDate.day));
+  return calculateRamanTimeLordsFromSunriseInterval(
+    effectiveSunriseDate,
+    new Date(startSunrise.utcMillis),
+    birthInstantUtc,
+    new Date(endSunrise.utcMillis)
+  );
+}
 export function calculateTribhagaBala(
   planet: string,
   input: ShadbalaChartInput
@@ -1129,20 +1192,11 @@ export class ShadbalaEngine {
 
     const tribhagaResult = calculateTribhagaBala(planet, input);
     const tribhagaBala = tribhagaResult.available ? tribhagaResult.points : null;
-    const abdaBala = 15;
-    const maasaBala = 30;
-
-    const dayOfWeek = bDate instanceof Date && Number.isFinite(bDate.getTime())
-      ? bDate.getUTCDay()
-      : null;
-    const localCivilHour = bDate instanceof Date && Number.isFinite(bDate.getTime())
-      ? bDate.getUTCHours()
-      : null;
-    const weekdayLords = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"];
-    const varaBala = dayOfWeek !== null && weekdayLords[dayOfWeek] === planet ? 45 : 0;
-    // This legacy Hora estimate remains explicitly provisional and is not
-    // confused with the sunrise-based hora clock used by the planetary-hours engine.
-    const horaBala = localCivilHour !== null && Math.floor(localCivilHour % 7) === weekdayLords.indexOf(planet) ? 60 : 0;
+    const timeLordResult = calculateRamanTimeLords(input);
+    const abdaBala = timeLordResult ? (timeLordResult.yearLord === planet ? 15 : 0) : null;
+    const maasaBala = timeLordResult ? (timeLordResult.monthLord === planet ? 30 : 0) : null;
+    const varaBala = timeLordResult ? (timeLordResult.varaLord === planet ? 45 : 0) : null;
+    const horaBala = timeLordResult ? (timeLordResult.horaLord === planet ? 60 : 0) : null;
     const ayanaBala = 35.5;
     const yuddhaBala = 0;
 
@@ -1156,16 +1210,19 @@ export class ShadbalaEngine {
       ...(!tribhagaResult.available
         ? ["Tribhaga Bala (requires a known birth time, latitude, longitude and normal sunrise/sunset)"]
         : []),
+      ...(!timeLordResult
+        ? ["Abda/Masa/Vara/Hora Bala (requires a known local sunrise-to-sunrise interval and supported Raman epoch date)"]
+        : []),
     ];
     const total =
       Math.round(
         ((nathonnathaBala ?? 0) +
           (pakshaBala ?? 0) +
           (tribhagaBala ?? 0) +
-          abdaBala +
-          maasaBala +
-          varaBala +
-          horaBala +
+          (abdaBala ?? 0) +
+          (maasaBala ?? 0) +
+          (varaBala ?? 0) +
+          (horaBala ?? 0) +
           ayanaBala +
           yuddhaBala) *
           100
@@ -1187,8 +1244,9 @@ export class ShadbalaEngine {
       unavailableComponents,
       ...(pakshaResult.details ? { pakshaDetails: pakshaResult.details } : {}),
       tribhagaDetails: tribhagaResult,
+      ...(timeLordResult ? { timeLordDetails: timeLordResult } : {}),
       description:
-        `Partial temporal estimate of ${total} Virupas. Nathonnatha ${nathonnathaBala === null ? "is unavailable" : `uses Meeus-corrected local apparent time (${nathonnathaBala.toFixed(2)})`}; Paksha ${pakshaBala === null ? "is unavailable" : `uses the ${pakshaResult.details?.moonNatureRule} / ${pakshaResult.details?.moonAccountingRule} profile (${pakshaBala.toFixed(2)} Virupas)`}; Tribhaga ${tribhagaBala === null ? "is unavailable" : `uses the BPHS 27.12 local unequal-third method (${tribhagaBala.toFixed(2)} Virupas)`}. Abda, Masa and Ayana remain provisional, and Vara/Hora have not yet been implemented from their sunrise-based lord methods.`,
+        `Partial temporal estimate of ${total} Virupas. Nathonnatha ${nathonnathaBala === null ? "is unavailable" : `uses Meeus-corrected local apparent time (${nathonnathaBala.toFixed(2)})`}; Paksha ${pakshaBala === null ? "is unavailable" : `uses the ${pakshaResult.details?.moonNatureRule} / ${pakshaResult.details?.moonAccountingRule} profile (${pakshaBala.toFixed(2)} Virupas)`}; Tribhaga ${tribhagaBala === null ? "is unavailable" : `uses the BPHS 27.12 local unequal-third method (${tribhagaBala.toFixed(2)} Virupas)`}; Abda/Masa/Vara/Hora ${timeLordResult ? `use Raman's 1827-epoch sunrise-to-sunrise time-lord method (year ${timeLordResult.yearLord}, month ${timeLordResult.monthLord}, weekday ${timeLordResult.varaLord}, hora ${timeLordResult.horaLord})` : "are unavailable without a normal local sunrise-to-sunrise interval and supported epoch date"}. Ayana remains provisional and Yuddha requires a separate planetary-war calculation.`,
     };
   }
 
