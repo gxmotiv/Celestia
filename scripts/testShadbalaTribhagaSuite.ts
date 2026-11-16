@@ -141,7 +141,7 @@ const base: TribhagaSolarIntervals = {
 // 5. The adapter does not invent a day segment with unknown birth time,
 // missing location or a polar condition; Jupiter's explicit exception remains.
 {
-  const date = new Date(Date.UTC(2026, 2, 20, 12, 0));
+  const date = new Date(Date.UTC(2026, 5, 21, 12, 0));
   const knownBase: ShadbalaChartInput = {
     ascendant: 0,
     birthDate: date,
