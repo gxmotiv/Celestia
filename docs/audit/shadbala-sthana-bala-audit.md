@@ -73,13 +73,13 @@ This table is independently supported by Raman's Example 6 dignity grid (printed
 
 The code's D2, D3, D7, D9, D12 and D30 mappings reproduce the individual dignity placements in Raman's table for these longitudes. This is a narrow but meaningful worked-chart verification; it does not validate every possible varga boundary, alternate D30 tradition or every edition of BPHS. The source-specific regression lives in `scripts/testShadbalaRamanReferenceSuite.ts`.
 
-## 4. Other Sthana Bala choices that remain source-labelled
+## 5. Other Sthana Bala choices that remain source-labelled
 
-- **Saptavargaja:** D1, D2, D3, D7, D9, D12 and D30 are calculated separately. The BPHS/Santhanam point scale and Raman's halving scale remain selectable; the natural/temporary relationship derivation and Moolatrikona policy are documented in the engine status and the dedicated Saptavargaja test suite.
+- **Saptavargaja:** D1, D2, D3, D7, D9, D12 and D30 are calculated separately. The BPHS/Santhanam point scale and Raman's halving scale remain selectable; the natural/temporary relationship derivation and Moolatrikona policy are documented in the engine status and dedicated tests. Raman Article 30 (printed p. 23) explicitly states that 45 Virupas for Moolatrikona is awarded only in the Rāśi, not when a planet occupies its Moolatrikona sign in any of the other six vargas. The code follows this D1-only rule. A new regression puts the Sun in Leo in D3 and D9 while its D1 longitude is Aries; it verifies that those varga placements score as own-sign 30, not 45, under both scoring scales.
 - **Kendradi:** the current implementation counts the house from the Rāśi sign of the Ascendant (Kendra 60, Panaphara 30, Apoklima 15). Raman identifies sign-counting as the Parāśara approach and records a bhava-based alternative from Balabhadra. The current choice is therefore a declared lineage, not a universal claim.
 - **Uchcha:** the current calculation folds angular distance from deep debilitation and divides by three. A complete independent multi-planet worked-chart reconciliation is still required before this component or the aggregate Shadbala can be declared fully validated.
 
-## 5. Raman Example 13: all five Sthana Bala components together
+## 6. Raman Example 13: all five Sthana Bala components together
 
 The regression suite now reconstructs all five components on the same primary-source Standard Horoscope using the Raman halving Saptavargaja scale and the BPHS Sanskrit/Raman Drekkana order. Raman's Example 13 (printed pp. 23–24) provides the worked comparison:
 
@@ -95,14 +95,14 @@ The regression suite now reconstructs all five components on the same primary-so
 
 The exact-value tests require Saptavargaja, Ojayugma, Kendradi and Drekkana to agree with the itemized source table. Uchcha and the resulting total are compared within 0.15 Virupa because Raman prints rounded/truncated component values; this tolerance is explicit and does not relabel his rounded presentation as exact. The full five-part comparison is in `scripts/testShadbalaSthanaBalaSuite.ts`.
 
-## 6. Sources
+## 7. Sources
 
 - [BPHS Chapter 27, verse 6 — Sanskrit, IAST and grammatical word meanings](https://enjoylearningsanskrit.com/scriptures/parashara/chapter-27/verse-6/), supporting the masculine / neuter / feminine wording.
 - [R. Santhanam, Brihat Parasara Hora Sastra, Vol. I](https://storage.yandexcloud.net/j108/library/hr6fkynz/Maharishi_Parashara_-_Brihat_Parasara_Hora_Sastra_%28Vol._1%29.pdf), Chapter 27, printed pp. 266–267: its English translation and explanatory notes specify masculine / feminine / eunuch in the first / second / third decanates.
-- [B. V. Raman, Graha and Bhava Balas, 13th ed. scan](https://dn790000.ca.archive.org/0/items/1050-jyotish-books-with-siderial-zodiac/Bhava%20and%20Graha%20Balas_B.V.Raman%201996.pdf), Example 6 / Example 9 for Saptavargaja (printed pp. 20, 23–24; PDF pages 23, 26–28), and Article 36 / Example 12 for Drekkana (printed pp. 27–28; PDF pages 31–32).
+- [B. V. Raman, Graha and Bhava Balas, 13th ed. scan](https://dn790000.ca.archive.org/0/items/1050-jyotish-books-with-siderial-zodiac/Bhava%20and%20Graha%20Balas_B.V.Raman%201996.pdf), Article 30 for D1-only Moolatrikona (printed p. 23; PDF page 26), Examples 6/9/13 for Saptavargaja and total Sthana Bala (printed pp. 20, 23–24; PDF pages 23, 26–28), and Article 36 / Example 12 for Drekkana (printed pp. 27–28; PDF pages 31–32).
 - [BPHS Chapter 27, verses 1–5](https://www.siva.sh/brihat-parashara-hora-shastra/27/1-5), showing an alternative presentation/numbering of positional-strength rules.
 - [Sthana Bala worked comparison of BPHS and B. V. Raman](https://www.livepanditji.com/blog/sthana-bala-saptavargaja-ojayugma-kendradi-drekkana/), a secondary audit aid only; its Drekkana labels misattribute the Raman order and its Standard Horoscope longitudes differ from Raman's primary scan. Celestia's regression fixture now uses Raman's printed source positions.
 
-## 7. Validation boundary
+## 8. Validation boundary
 
 Passing the targeted regression suite establishes that the Ojayugma groups and both selected Drekkana profiles follow their declared source methods. It does not prove the whole Sthana Bala total against every BPHS edition or Raman worked example, and it does not resolve all Saptavargaja, Kendradi or Uchcha Bala variants. The overall Shadbala implementation remains explicitly **partial / approximate** until all six components are source-complete and independently checked against end-to-end worked charts.
