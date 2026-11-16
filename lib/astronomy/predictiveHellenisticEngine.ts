@@ -424,7 +424,7 @@ export class ZodiacalReleasingEngine {
     const unitDays = ZodiacalReleasingEngine.YEAR_LENGTH_DAYS / (12 ** (levelNumber - 1));
     const parentDurationMs = parent.endMs - parent.startMs;
 
-    let signIndex = ZodiacalReleasingEngine.SIGN_NAMES.indexOf(parent.sign);
+    let signIndex = ZodiacalReleasingEngine.SIGN_NAMES.findIndex((sign) => sign === parent.sign);
     if (signIndex < 0) signIndex = 0;
 
     let elapsedMs = 0;
