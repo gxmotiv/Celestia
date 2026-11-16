@@ -65,15 +65,25 @@ assert.equal(
   "BPHS 26.10 Saturn c=8 uses degrees past the eighth sign plus 30"
 );
 assert.equal(
+  calculateLongitudeDrishtiVirupas(105, "Jupiter", "bphs-verse-special-formula"),
+  22.5,
+  "BPHS 26.12 Jupiter c=3 uses 15 plus half the degrees past the third sign"
+);
+assert.equal(
+  calculateLongitudeDrishtiVirupas(225, "Jupiter", "bphs-verse-special-formula"),
+  22.5,
+  "BPHS 26.12 Jupiter c=7 uses 15 plus half the degrees past the seventh sign"
+);
+assert.equal(
   calculateLongitudeDrishtiVirupas(255, "Jupiter", "bphs-verse-special-formula"),
-  30,
-  "BPHS 26.12 Jupiter c=8 uses 60 minus twice the degrees past the eighth sign"
+  45,
+  "BPHS 26.12 Jupiter c=8 uses 60 minus the degrees past the eighth sign"
 );
 assert.ok(
   Math.abs(
-    calculateLongitudeDrishtiVirupas(269.999, "Jupiter", "bphs-verse-special-formula") - 0.002
+    calculateLongitudeDrishtiVirupas(269.999, "Jupiter", "bphs-verse-special-formula") - 30.001
   ) < 1e-9,
-  "Jupiter c=8 approaches zero immediately before the ninth-sign boundary"
+  "Jupiter c=8 follows 60 minus degrees up to the ninth-sign boundary"
 );
 assert.equal(
   calculateLongitudeDrishtiVirupas(270, "Jupiter", "bphs-verse-special-formula"),
