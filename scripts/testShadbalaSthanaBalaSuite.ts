@@ -70,15 +70,16 @@ assert.equal(sthana("Sun", exactNavamsaBoundary).ojayugmaBala, 15,
 // Cross-check Ojayugma against the longitudes in Raman's Standard Horoscope
 // (published worked-chart table). Expected values are 0/15/15/30/15/30/15.
 const ramanStandardHoroscope: ShadbalaChartInput = {
-  ascendant: 294.95, // 24°57' Capricorn
+  ascendant: 298 + 27 / 60, // 298°27' from Raman, p. 3
+  // Primary-source positions: Raman, Graha and Bhava Balas, p. 2.
   planets: {
-    Sun: { longitude: 150 + 29 + 8 / 60 },      // 29°08' Virgo
-    Moon: { longitude: 300 + 11 + 40 / 60 },    // 11°40' Aquarius
-    Mars: { longitude: 210 + 19 + 49 / 60 },    // 19°49' Scorpio
-    Mercury: { longitude: 180 + 0 + 33 / 60 },  // 0°33' Libra
-    Jupiter: { longitude: 60 + 23 + 35 / 60 },  // 23°35' Gemini
-    Venus: { longitude: 150 + 20 + 4 / 60 },    // 20°04' Virgo
-    Saturn: { longitude: 120 + 4 + 51 / 60 },   // 4°51' Leo
+    Sun: { longitude: 180 + 53 / 60 + 55 / 3600 },
+    Moon: { longitude: 311 + 17 / 60 + 19 / 3600 },
+    Mars: { longitude: 229 + 30 / 60 + 34 / 3600 },
+    Mercury: { longitude: 181 + 31 / 60 + 34 / 3600 },
+    Jupiter: { longitude: 84 + 0 / 60 + 49 / 3600 },
+    Venus: { longitude: 171 + 9 / 60 + 56 / 3600 },
+    Saturn: { longitude: 124 + 22 / 60 + 41 / 3600 },
   },
 };
 const ramanOjayugma: Array<[string, number]> = [
@@ -90,6 +91,47 @@ for (const [planet, expected] of ramanOjayugma) {
   assert.equal(result.ojayugmaBala, expected,
     `Raman Standard Horoscope Ojayugma for ${planet} must match the independently transcribed worked-chart table`);
 }
+
+// Raman's own Standard Horoscope, Example 12, p. 28, yields 15 for
+// Sun in first and Venus in last Drekkana; every other planet gets zero.
+// This agrees with the BPHS Sanskrit order (male / neuter / female).
+const ramanDrekkanaExpected: Array<[string, number]> = [
+  ["Sun", 15], ["Moon", 0], ["Mars", 0], ["Mercury", 0],
+  ["Jupiter", 0], ["Venus", 15], ["Saturn", 0],
+];
+for (const [planet, expected] of ramanDrekkanaExpected) {
+  assert.equal(sthana(planet, ramanStandardHoroscope.planets[planet].longitude).drekkanaBala, expected,
+    `BPHS Sanskrit/Raman Drekkana Bala for ${planet} must match Raman Example 12`);
+}
+
+// Santhanam Vol. I, Chapter 27, pp. 266–267 explicitly maps female planets
+// to the middle Drekkana and eunuch planets to the last. Expose that as a
+// separate translation/edition profile, not as the Sanskrit/Raman default.
+const santhanamExpected: Array<[string, number, number]> = [
+  ["Sun", 5, 15], ["Mars", 5, 0], ["Jupiter", 25, 0],
+  ["Moon", 15, 15], ["Venus", 25, 0],
+  ["Mercury", 25, 15], ["Saturn", 25, 15],
+];
+for (const [planet, longitude, expected] of santhanamExpected) {
+  const result = engine.calculateSthanaBala(planet, {
+    ascendant: 0,
+    planets: { ...basePlanets, [planet]: { longitude } },
+    drekkanaBalaMethod: "santhanam-english-translation",
+  });
+  assert.equal(result.drekkanaBala, expected,
+    `Santhanam English Drekkana order must score ${planet} correctly`);
+  assert.equal(result.drekkanaBalaMethod, "santhanam-english-translation");
+}
+
+// Unknown method IDs fail closed rather than silently falling back.
+assert.throws(
+  () => engine.calculateSthanaBala("Sun", {
+    ascendant: 0,
+    planets: basePlanets,
+    drekkanaBalaMethod: "invented-order" as never,
+  }),
+  /Unknown Drekkana Bala source method/
+);
 
 // BPHS 27.6 Sanskrit orders the decanates and classes as masculine,
 // neuter and feminine: male first, Mercury/Saturn middle, female last.
@@ -110,4 +152,4 @@ for (const [planet, longitude] of drekkanaMismatches) {
     `${planet} must not receive Drekkana Bala in a non-matching decanate`);
 }
 
-console.log("Shadbala Sthana Bala suite passed: BPHS Ojayugma Rasi/Navamsa grouping, D9 boundaries, and Drekkana gender sequence.");
+console.log("Shadbala Sthana Bala suite passed: BPHS Ojayugma Rasi/Navamsa grouping, D9 boundaries, Raman's primary worked example, and both Drekkana source orders.");
