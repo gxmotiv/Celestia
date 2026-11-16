@@ -9,6 +9,8 @@ import {
 import {
   MidpointCalculator,
   MidpointItem,
+  AntisciaCalculator,
+  AntisciaReport,
   HarmonicChartCalculator,
   HarmonicChart,
   DeclinationCalculator,
@@ -92,6 +94,7 @@ export function AdvancedWesternPanel({
     | "progressions"
     | "solarArc"
     | "solarReturn"
+    | "antiscia"
     | "profections"
     | "releasing"
     | "firdaria"
@@ -217,6 +220,17 @@ export function AdvancedWesternPanel({
       : null;
   }, [activeSubTab, solarReturnEngine, chartData, solarReturnYear, latitude, longitude]);
 
+  // Traditional antiscia and contra-antiscia are derived from tropical longitudes.
+  const antisciaEngine = useMemo(() => new AntisciaCalculator(), []);
+  const antisciaReport: AntisciaReport | null = useMemo(() => {
+    if (activeSubTab !== "antiscia") return null;
+    return antisciaEngine.calculate([
+      ...chartData.planets,
+      { ...chartData.ascendant, name: "ASC" },
+      { ...chartData.midheaven, name: "MC" },
+    ], 1.5);
+  }, [activeSubTab, antisciaEngine, chartData]);
+
   // Hellenistic Profections
   const profEngine = useMemo(() => new ProfectionsEngine(), []);
   const profectionReport: ProfectionResult | null = useMemo(() => {
@@ -295,7 +309,7 @@ export function AdvancedWesternPanel({
             Complete Western Astrology Architecture
           </h3>
           <p className="text-[11px] text-slate-400">
-            Asteroids · Shadow Axis · Arabian Parts · Midpoints · Harmonics · Declinations · Progressions · Solar Arc · Solar Return · Profections · Releasing · Firdaria · Fixed Stars · Eclipses · Medical · Astrocartography
+            Asteroids · Shadow Axis · Arabian Parts · Midpoints · Harmonics · Declinations · Progressions · Solar Arc · Solar Return · Antiscia · Profections · Releasing · Firdaria · Fixed Stars · Eclipses · Medical · Astrocartography
           </p>
         </div>
 
@@ -311,6 +325,7 @@ export function AdvancedWesternPanel({
             { id: "progressions", label: "Progressions", icon: "☽" },
             { id: "solarArc", label: "Solar Arc", icon: "☉" },
             { id: "solarReturn", label: "Solar Return", icon: "☼" },
+            { id: "antiscia", label: "Antiscia", icon: "☯" },
             { id: "profections", label: "Profections", icon: "⏳" },
             { id: "releasing", label: "Zodiacal Releasing", icon: "📜" },
             { id: "firdaria", label: "Firdaria", icon: "👑" },
@@ -980,7 +995,82 @@ export function AdvancedWesternPanel({
         </div>
       )}
 
-      {/* SUB-TAB 10: HELLENISTIC ANNUAL PROFECTIONS */}
+      {/* SUB-TAB 10: ANTISCIA & CONTRA-ANTISCIA */}
+      {activeSubTab === "antiscia" && antisciaReport && (
+        <div className="space-y-4">
+          <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
+            <h4 className="text-xs font-bold text-amber-300">Traditional Solstice &amp; Equinox Mirror Points</h4>
+            <p className="text-[11px] text-slate-300">{antisciaReport.method}</p>
+            <p className="text-[10px] text-slate-500">
+              Contacts use a tight {antisciaReport.orb.toFixed(1)}° orb by default. Interpretations are traditional symbolism, not astronomical conjunctions.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <div className="p-4 bg-slate-950/60 border border-slate-800 rounded-xl space-y-2">
+              <div className="flex items-center justify-between">
+                <h5 className="text-xs font-bold text-slate-100">Antiscion contacts</h5>
+                <span className="text-xs text-amber-300 font-mono">{antisciaReport.antiscionContacts.length}</span>
+              </div>
+              <p className="text-[10px] text-slate-500">Solstitial mirror · interpreted as a hidden conjunction-like link</p>
+              {antisciaReport.antiscionContacts.map((contact, index) => (
+                <div key={`${contact.point1}-${contact.point2}-${index}`} className="py-2 border-t border-slate-800/70 flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="text-xs text-slate-200 font-semibold">{contact.point1} ↔ {contact.point2}</div>
+                    <div className="text-[10px] text-slate-500">{formatDegreeMinute(contact.mirroredLongitude)}</div>
+                  </div>
+                  <span className="text-xs text-cyan-300 font-mono">{contact.orb.toFixed(3)}°</span>
+                </div>
+              ))}
+              {antisciaReport.antiscionContacts.length === 0 && <p className="text-xs text-slate-500 py-3">No antiscion contacts within the selected orb.</p>}
+            </div>
+
+            <div className="p-4 bg-slate-950/60 border border-slate-800 rounded-xl space-y-2">
+              <div className="flex items-center justify-between">
+                <h5 className="text-xs font-bold text-slate-100">Contra-antiscion contacts</h5>
+                <span className="text-xs text-rose-300 font-mono">{antisciaReport.contraAntiscionContacts.length}</span>
+              </div>
+              <p className="text-[10px] text-slate-500">Equinoctial mirror · interpreted as a polarity or opposition-like link</p>
+              {antisciaReport.contraAntiscionContacts.map((contact, index) => (
+                <div key={`${contact.point1}-${contact.point2}-${index}`} className="py-2 border-t border-slate-800/70 flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="text-xs text-slate-200 font-semibold">{contact.point1} ↔ {contact.point2}</div>
+                    <div className="text-[10px] text-slate-500">{formatDegreeMinute(contact.mirroredLongitude)}</div>
+                  </div>
+                  <span className="text-xs text-cyan-300 font-mono">{contact.orb.toFixed(3)}°</span>
+                </div>
+              ))}
+              {antisciaReport.contraAntiscionContacts.length === 0 && <p className="text-xs text-slate-500 py-3">No contra-antiscion contacts within the selected orb.</p>}
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <h5 className="text-xs font-bold text-slate-200 mb-2">Mirror degrees for natal planets and angles</h5>
+            <table className="w-full text-left text-xs text-slate-300">
+              <thead className="bg-slate-950/80 text-slate-400 border-b border-slate-800 text-[11px]">
+                <tr>
+                  <th className="py-2.5 px-3">Natal point</th>
+                  <th className="py-2.5 px-3">Natal longitude</th>
+                  <th className="py-2.5 px-3">Antiscion</th>
+                  <th className="py-2.5 px-3">Contra-antiscion</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60 font-mono">
+                {antisciaReport.points.map((point) => (
+                  <tr key={point.point}>
+                    <td className="py-2 px-3 font-sans font-semibold text-slate-200">{point.symbol} {point.point}</td>
+                    <td className="py-2 px-3">{formatDegreeMinute(point.natalLongitude)}</td>
+                    <td className="py-2 px-3 text-amber-300">{point.antiscionFormatted}</td>
+                    <td className="py-2 px-3 text-rose-300">{point.contraAntiscionFormatted}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* SUB-TAB 11: HELLENISTIC ANNUAL PROFECTIONS */}
       {activeSubTab === "profections" && profectionReport && (
         <div className="space-y-4">
           <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-3">
@@ -1038,7 +1128,7 @@ export function AdvancedWesternPanel({
         </div>
       )}
 
-      {/* SUB-TAB 11: ZODIACAL RELEASING */}
+      {/* SUB-TAB 12: ZODIACAL RELEASING */}
       {activeSubTab === "releasing" && spiritReleasing && (
         <div className="space-y-4">
           <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
@@ -1135,7 +1225,7 @@ export function AdvancedWesternPanel({
         </div>
       )}
 
-      {/* SUB-TAB 12: MEDIEVAL FIRDARIA */}
+      {/* SUB-TAB 13: MEDIEVAL FIRDARIA */}
       {activeSubTab === "firdaria" && firdariaReport && (
         <div className="space-y-4">
           <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
@@ -1179,7 +1269,7 @@ export function AdvancedWesternPanel({
         </div>
       )}
 
-      {/* SUB-TAB 13: FIXED STARS */}
+      {/* SUB-TAB 14: FIXED STARS */}
       {activeSubTab === "fixedStars" && (
         <div className="space-y-4">
           <div className="flex flex-col gap-1 text-xs px-3 py-2 bg-slate-950/80 border border-slate-800 rounded-lg text-slate-400">
@@ -1217,7 +1307,7 @@ export function AdvancedWesternPanel({
         </div>
       )}
 
-      {/* SUB-TAB 14: ECLIPSE ANALYZER */}
+      {/* SUB-TAB 15: ECLIPSE ANALYZER */}
       {activeSubTab === "eclipses" && (
         <div className="space-y-4">
           <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
@@ -1257,7 +1347,7 @@ export function AdvancedWesternPanel({
         </div>
       )}
 
-      {/* SUB-TAB 15: MEDICAL ASTROLOGY */}
+      {/* SUB-TAB 16: MEDICAL ASTROLOGY */}
       {activeSubTab === "medical" && medicalReport && (
         <div className="space-y-4">
           <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
@@ -1300,7 +1390,7 @@ export function AdvancedWesternPanel({
         </div>
       )}
 
-      {/* SUB-TAB 16: ASTROCARTOGRAPHY */}
+      {/* SUB-TAB 17: ASTROCARTOGRAPHY */}
       {activeSubTab === "astrocartography" && astrocartographyReport && (
         <div className="space-y-4">
           <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
