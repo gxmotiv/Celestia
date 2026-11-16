@@ -19,7 +19,9 @@ const l1Check = engine.calculateReleasing(
 );
 assert(l1Check.releasingStartSign === "Aries", "Different Spirit/Fortune signs preserve the Spirit start sign");
 assert(l1Check.allL1Periods[0].durationDays === 15 * 360, "L1 duration uses the 360-day ideal year");
+assert(l1Check.allL1Periods[0].endDate === "2014-10-14", "L1 end date converts ideal days to real UTC milliseconds");
 assert(l1Check.currentL1Period.sign === "Taurus", "Current L1 advances past the completed Aries period");
+assert(l1Check.currentL1Period.startDate === "2014-10-14" && l1Check.currentL1Period.endDate === "2022-09-02", "The active Taurus L1 interval has the expected date boundaries");
 assert(l1Check.currentL2Periods.some((period) => period.sign === l1Check.currentL2Period.sign), "Active L2 belongs to the generated L2 sequence");
 assert(l1Check.currentL3Periods.some((period) => period.sign === l1Check.currentL3Period.sign), "Active L3 belongs to the generated L3 sequence");
 assert(l1Check.currentL4Periods.some((period) => period.sign === l1Check.currentL4Period.sign), "Active L4 belongs to the generated L4 sequence");
