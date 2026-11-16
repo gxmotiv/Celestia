@@ -18,6 +18,32 @@ import {
 } from "./ephemeris";
 import { swissEphemeris } from "./swissEphemeris";
 
+/**
+ * Returns completed Gregorian birth anniversaries for a UTC birth instant.
+ * The caller should first normalize the recorded civil birth date/time and
+ * applicable fixed UTC offset to UTC. With an offset-only birth record, this
+ * uses that same offset for the anniversary; historical DST transitions
+ * cannot be reconstructed without an IANA timezone identifier. Feb 29
+ * anniversaries follow JavaScript's March 1 normalization in non-leap years.
+ */
+export function calculateCompletedAge(birthDate: Date, currentDate: Date): number {
+  const birthMs = birthDate.getTime();
+  const currentMs = currentDate.getTime();
+  if (!Number.isFinite(birthMs) || !Number.isFinite(currentMs) || currentMs < birthMs) {
+    return 0;
+  }
+
+  let age = currentDate.getUTCFullYear() - birthDate.getUTCFullYear();
+  const anniversary = new Date(birthMs);
+  anniversary.setUTCFullYear(birthDate.getUTCFullYear() + age);
+
+  if (anniversary.getTime() > currentMs) {
+    age -= 1;
+  }
+
+  return Math.max(0, age);
+}
+
 // ---------------------------------------------------------------------------
 // 1. SECONDARY PROGRESSIONS
 // ---------------------------------------------------------------------------
@@ -56,7 +82,7 @@ export class ProgressionsEngine {
   ): ProgressedChartResult {
     const diffMs = currentDate.getTime() - birthDate.getTime();
     const ageYears = diffMs / (365.2422 * 86400000);
-    const age = Math.max(0, Math.floor(ageYears));
+    const age = calculateCompletedAge(birthDate, currentDate);
 
     // Secondary progression: 1 day after birth = 1 year of life
     const progressedTimeMs = birthDate.getTime() + ageYears * 86400000;
@@ -107,10 +133,11 @@ export class ProgressionsEngine {
 
     // Moon changes signs roughly every 2.3 to 2.5 years
     const moonSignChanges: MoonSignChangeEvent[] = [];
-    const currentYear = currentDate.getFullYear();
+    const currentYear = currentDate.getUTCFullYear();
 
     for (let delta = -2; delta <= 10; delta++) {
       const checkAge = age + delta;
+      if (checkAge < 0) continue;
       const checkTimeMs = birthDate.getTime() + checkAge * 86400000;
       const nextTimeMs = birthDate.getTime() + (checkAge + 1) * 86400000;
 
