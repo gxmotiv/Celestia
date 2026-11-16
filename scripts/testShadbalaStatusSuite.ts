@@ -8,26 +8,45 @@ assert.equal(SHADBALA_IMPLEMENTATION_STATUS.level, "partial");
 assert.ok(SHADBALA_IMPLEMENTATION_STATUS.limitations.length >= 5);
 
 const engine = new ShadbalaEngine();
-const missingMotion = engine.calculateCheshtaBala("Jupiter", {
-  ascendant: 0,
-  planets: { Jupiter: { longitude: 125, isRetrograde: false } },
-});
-assert.equal(missingMotion.available, false);
-assert.equal(missingMotion.points, 0);
-assert.match(missingMotion.description, /No default speed is invented/);
 
-const directMotion = engine.calculateCheshtaBala("Jupiter", {
+// Apparent geocentric daily speed is not a substitute for the classical
+// mean-longitude and seeghrocha data required by Chesta Kendra.
+const missingKendraInputs = engine.calculateCheshtaBala("Jupiter", {
   ascendant: 0,
   planets: { Jupiter: { longitude: 125, isRetrograde: false, speed: 0.8 } },
 });
-assert.equal(directMotion.available, true);
-assert.equal(directMotion.points, 30);
+assert.equal(missingKendraInputs.available, false);
+assert.equal(missingKendraInputs.points, 0);
+assert.match(missingKendraInputs.description, /missing Jupiter mean longitude and the mean-Sun longitude/);
+assert.match(missingKendraInputs.description, /cannot substitute for mean longitude or seeghrocha/);
 
-const retrogradeMotion = engine.calculateCheshtaBala("Jupiter", {
+// Once source-defined mean and seeghrocha longitudes are supplied, Kendra
+// determines the score. Daily speed remains diagnostic metadata only.
+const directKendra = engine.calculateCheshtaBala("Jupiter", {
   ascendant: 0,
-  planets: { Jupiter: { longitude: 125, isRetrograde: true, speed: -0.1 } },
+  planets: {
+    Sun: { longitude: 300, meanLongitude: 300 },
+    Jupiter: { longitude: 130, meanLongitude: 125, speed: 0.8, isRetrograde: false },
+  },
 });
-assert.equal(retrogradeMotion.available, true);
-assert.equal(retrogradeMotion.points, 60);
+assert.equal(directKendra.available, true);
+assert.equal(directKendra.state, "Kendra computed");
+assert.equal(directKendra.details?.midpointLongitude, 127.5);
+assert.equal(directKendra.details?.reducedKendraDegrees, 172.5);
+assert.equal(directKendra.points, 57.5);
+assert.equal(directKendra.motion, 0.8);
 
-console.log("Shadbala transparency and real-motion input suite passed.");
+// Changing only the apparent motion metadata must not change Chesta Kendra.
+const retrogradeMetadata = engine.calculateCheshtaBala("Jupiter", {
+  ascendant: 0,
+  planets: {
+    Sun: { longitude: 300, meanLongitude: 300 },
+    Jupiter: { longitude: 130, meanLongitude: 125, speed: -0.1, isRetrograde: true },
+  },
+});
+assert.equal(retrogradeMetadata.available, true);
+assert.equal(retrogradeMetadata.points, directKendra.points);
+assert.equal(retrogradeMetadata.motion, -0.1);
+assert.equal(retrogradeMetadata.isRetrograde, true);
+
+console.log("Shadbala transparency and source-defined Chesta Kendra suite passed.");
