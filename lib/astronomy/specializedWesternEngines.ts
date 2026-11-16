@@ -22,7 +22,7 @@ import { swissEphemeris } from "./swissEphemeris";
 export interface FixedStar {
   name: string;
   constellation: string;
-  longitude: number; // J2000 longitude
+  longitude: number; // J2000 tropical ecliptic longitude (catalog epoch)
   magnitude: number;
   nature: "Royal" | "Benefic" | "Malefic" | "Mixed";
   planetaryNature: string; // e.g. "Jupiter / Mars"
@@ -36,7 +36,12 @@ export interface StarContact {
   nature: FixedStar["nature"];
   planetName: string;
   planetSymbol: string;
+  /** Approximate precession-adjusted tropical longitude for the chart epoch. */
   starLongitude: number;
+  /** Unadjusted catalogue longitude at J2000. */
+  j2000Longitude: number;
+  /** Applied longitude-only general-precession estimate in degrees. */
+  precessionCorrectionDegrees: number;
   planetLongitude: number;
   orb: number;
   interpretation: string;
@@ -71,6 +76,26 @@ export class FixedStarsEngine {
     { name: "Achernar", constellation: "Eridanus", longitude: 345.31, magnitude: 0.46, nature: "Benefic", planetaryNature: "Jupiter", color: "Bright Blue", meaning: "The End of the River. Religious devotion, high moral authority, philanthropic success, and spiritual benevolence." },
   ];
 
+  /**
+   * Approximate J2000-to-date shift using general precession in longitude.
+   * The catalogue stores only ecliptic longitude, not full 3D position or
+   * proper motion, so this is a transparent longitude-only correction rather
+   * than a full astrometric transformation. It is most suitable for modest
+   * epoch offsets and should not be presented as a precision star ephemeris.
+   */
+  public getStarLongitudeAtEpoch(star: FixedStar, julianDay: number): {
+    longitude: number;
+    correctionDegrees: number;
+  } {
+    const T = (julianDay - 2451545.0) / 36525.0;
+    const precessionArcSeconds = 5028.796195 * T + 1.11113 * T * T;
+    const correctionDegrees = precessionArcSeconds / 3600;
+    return {
+      longitude: normalizeDegrees(star.longitude + correctionDegrees),
+      correctionDegrees,
+    };
+  }
+
   public calculateStarContacts(chart: WesternChartData, maxOrb = 1.25): StarContact[] {
     const contacts: StarContact[] = [];
     const testPoints = [
@@ -80,8 +105,9 @@ export class FixedStarsEngine {
     ];
 
     FixedStarsEngine.FIXED_STARS.forEach((star) => {
+      const starPosition = this.getStarLongitudeAtEpoch(star, chart.julianDay);
       testPoints.forEach((point) => {
-        let diff = Math.abs(point.longitude - star.longitude);
+        let diff = Math.abs(point.longitude - starPosition.longitude);
         if (diff > 180) diff = 360 - diff;
 
         if (diff <= maxOrb) {
@@ -91,10 +117,12 @@ export class FixedStarsEngine {
             nature: star.nature,
             planetName: point.name,
             planetSymbol: point.symbol,
-            starLongitude: star.longitude,
+            starLongitude: starPosition.longitude,
+            j2000Longitude: star.longitude,
+            precessionCorrectionDegrees: starPosition.correctionDegrees,
             planetLongitude: point.longitude,
             orb: Math.round(diff * 100) / 100,
-            interpretation: `${point.name} (${point.signDegreeFormatted}) exactly conjuncts ${star.name} (${formatDegreeMinute(star.longitude)}, orb ${diff.toFixed(2)}°). Nature: ${star.nature} (${star.planetaryNature}). ${star.meaning}`,
+            interpretation: `${point.name} (${point.signDegreeFormatted}) is within ${diff.toFixed(2)}° of ${star.name} (${formatDegreeMinute(starPosition.longitude)}, approximate date-adjusted longitude). Nature: ${star.nature} (${star.planetaryNature}). ${star.meaning}`,
           });
         }
       });
