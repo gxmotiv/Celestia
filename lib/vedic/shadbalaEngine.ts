@@ -30,8 +30,8 @@ export const SHADBALA_IMPLEMENTATION_STATUS = {
 
 export interface SthanaBalaBreakdown {
   ucchaBala: number;
-  /** Zero is a subtotal placeholder only when available=false. */
-  saptavargajaBala: number;
+  /** Null when one or more of the seven classical graha positions is unavailable. */
+  saptavargajaBala: number | null;
   ojayugmaBala: number;
   kendradiBala: number;
   drekkanaBala: number;
@@ -1394,7 +1394,7 @@ export class ShadbalaEngine {
     if (!validPlanetLongitude(pPos)) {
       return {
         ucchaBala: 0,
-        saptavargajaBala: 0,
+        saptavargajaBala: null,
         ojayugmaBala: 0,
         kendradiBala: 0,
         drekkanaBala: 0,
@@ -1426,7 +1426,7 @@ export class ShadbalaEngine {
     const saptavargajaAvailable = missingPlanetInputs.length === 0;
     const saptavargajaBala = saptavargajaAvailable
       ? calculateSaptavargajaBala(planet, input)
-      : 0;
+      : null;
 
     const isOddSign = sign % 2 === 0;
     const navPart = Math.floor(degInSign / (30 / 9));
@@ -1455,7 +1455,7 @@ export class ShadbalaEngine {
     else if (drekkanaIdx === 2 && ["Moon", "Venus"].includes(planet)) drekkanaBala = 15;
 
     const total = Math.round(
-      (ucchaBala + saptavargajaBala + ojayugmaBala + kendradiBala + drekkanaBala) * 100
+      (ucchaBala + (saptavargajaBala ?? 0) + ojayugmaBala + kendradiBala + drekkanaBala) * 100
     ) / 100;
 
     const unavailableComponents = saptavargajaAvailable
