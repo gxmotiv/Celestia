@@ -519,6 +519,9 @@ export default function HomePage() {
                 birthTime={formData.birthTime}
                 birthUtcInstant={birthTimeContext.utcInstant}
                 birthLongitude={formData.longitude}
+                birthLatitude={formData.latitude}
+                birthIanaTimezone={birthTimeContext.ianaTimezone ?? undefined}
+                birthUtcOffsetSeconds={birthTimeContext.offsetSeconds}
                 isBirthTimeUnknown={formData.isTimeUnknown}
                 westernData={westernData}
                 numerologyData={numerologyData}
