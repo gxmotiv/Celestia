@@ -47,4 +47,16 @@ assert(loosingBondCheck.currentL2Period.sign === "Leo", "L2 resumes at the sign 
 assert(loosingBondCheck.currentL2Period.isLoosingBond, "The post-circuit L2 period is flagged as Loosing of the Bond");
 assert(loosingBondCheck.currentL2Periods.some((period) => period.sign === "Capricorn" && period.isPeak), "10th-from-Fortune peak is measured from Fortune, not the releasing Lot");
 
+const legacyCall = engine.calculateReleasing(
+  birthDate,
+  0,
+  "Spirit (Career & Purpose)",
+  undefined,
+  birthDate
+);
+assert(legacyCall.fortuneSign === "Not supplied", "Legacy callers do not silently assume a Fortune position");
+assert(legacyCall.releasingStartSign === "Aries", "Legacy callers preserve the unadjusted Lot of Spirit start sign");
+assert(legacyCall.allL1Periods.length >= 12, "Legacy report retains at least one complete L1 twelve-sign circuit");
+assert(legacyCall.allL1Periods.every((period) => !period.isAngular && !period.isPeak), "Peak/angular status remains unassigned when Fortune is unavailable");
+
 console.log("\nAdvanced Western timing regression suite completed.");
