@@ -856,7 +856,7 @@ export function AdvancedWesternPanel({
         </div>
       )}
 
-      {/* SUB-TAB 8: HELLENISTIC ANNUAL PROFECTIONS */}
+      {/* SUB-TAB 9: HELLENISTIC ANNUAL PROFECTIONS */}
       {activeSubTab === "profections" && profectionReport && (
         <div className="space-y-4">
           <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-3">
@@ -914,7 +914,7 @@ export function AdvancedWesternPanel({
         </div>
       )}
 
-      {/* SUB-TAB 9: ZODIACAL RELEASING */}
+      {/* SUB-TAB 10: ZODIACAL RELEASING */}
       {activeSubTab === "releasing" && spiritReleasing && (
         <div className="space-y-4">
           <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
@@ -1011,7 +1011,7 @@ export function AdvancedWesternPanel({
         </div>
       )}
 
-      {/* SUB-TAB 10: MEDIEVAL FIRDARIA */}
+      {/* SUB-TAB 11: MEDIEVAL FIRDARIA */}
       {activeSubTab === "firdaria" && firdariaReport && (
         <div className="space-y-4">
           <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
@@ -1055,7 +1055,7 @@ export function AdvancedWesternPanel({
         </div>
       )}
 
-      {/* SUB-TAB 11: FIXED STARS */}
+      {/* SUB-TAB 12: FIXED STARS */}
       {activeSubTab === "fixedStars" && (
         <div className="space-y-4">
           <div className="flex flex-col gap-1 text-xs px-3 py-2 bg-slate-950/80 border border-slate-800 rounded-lg text-slate-400">
@@ -1093,7 +1093,7 @@ export function AdvancedWesternPanel({
         </div>
       )}
 
-      {/* SUB-TAB 12: ECLIPSE ANALYZER */}
+      {/* SUB-TAB 13: ECLIPSE ANALYZER */}
       {activeSubTab === "eclipses" && (
         <div className="space-y-4">
           <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
@@ -1133,7 +1133,7 @@ export function AdvancedWesternPanel({
         </div>
       )}
 
-      {/* SUB-TAB 13: MEDICAL ASTROLOGY */}
+      {/* SUB-TAB 14: MEDICAL ASTROLOGY */}
       {activeSubTab === "medical" && medicalReport && (
         <div className="space-y-4">
           <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
@@ -1176,7 +1176,7 @@ export function AdvancedWesternPanel({
         </div>
       )}
 
-      {/* SUB-TAB 14: ASTROCARTOGRAPHY */}
+      {/* SUB-TAB 15: ASTROCARTOGRAPHY */}
       {activeSubTab === "astrocartography" && astrocartographyReport && (
         <div className="space-y-4">
           <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
