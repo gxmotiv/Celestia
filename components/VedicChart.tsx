@@ -46,6 +46,8 @@ interface VedicChartProps {
   birthDate?: string;
   birthTime?: string;
   birthUtcInstant?: string;
+  birthLongitude?: number;
+  isBirthTimeUnknown?: boolean;
   westernData?: WesternChartData;
   numerologyData?: NumerologyProfile;
   baziData?: BaZiProfile;
@@ -59,6 +61,8 @@ export function VedicChart({
   birthDate = "1990-01-01",
   birthTime = "12:00",
   birthUtcInstant,
+  birthLongitude,
+  isBirthTimeUnknown = false,
   westernData,
   numerologyData,
   baziData,
@@ -348,6 +352,9 @@ export function VedicChart({
           vedicData={vedicData}
           birthDate={birthDate}
           birthTime={birthTime}
+          birthUtcInstant={birthUtcInstant}
+          birthLongitude={birthLongitude}
+          birthTimeKnown={!isBirthTimeUnknown}
         />
       )}
 
