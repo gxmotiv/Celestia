@@ -83,7 +83,11 @@ assert.equal(unknownTime.components.nathonnathaBala, null,
   "An explicit unknown-time flag must override the placeholder noon instant");
 assert.deepEqual(
   unknownTime.unavailableComponents,
-  ["Nathonnatha Bala (requires a known local apparent birth time)"]
+  [
+    "Nathonnatha Bala (requires a known local apparent birth time)",
+    "Paksha Bala (requires valid Sun and Moon longitudes)",
+  ],
+  "Unknown birth time invalidates both local-apparent-time Nathonnatha and exact Moon-dependent Paksha"
 );
 assert.match(unknownTime.description, /Nathonnatha Bala is unavailable/);
 
