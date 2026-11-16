@@ -658,6 +658,26 @@ export function ShadbalaPanel({
                         : `${activeResult.kalaBala.components.pakshaBala.toFixed(2)} Virupas`}
                     </span>
                   </div>
+                  <div>
+                    Tribhaga Bala (BPHS 27.12):
+                    <span className="ml-1 font-mono text-slate-300">
+                      {activeResult.kalaBala.components.tribhagaBala === null
+                        ? "Unavailable — known time/location required"
+                        : `${activeResult.kalaBala.components.tribhagaBala.toFixed(2)} Virupas`}
+                    </span>
+                  </div>
+                  {activeResult.kalaBala.tribhagaDetails && (
+                    <div className="sm:col-span-2">
+                      {activeResult.kalaBala.tribhagaDetails.awardedLord === "Jupiter"
+                        ? "Jupiter receives 60 Virupas at all times"
+                        : activeResult.kalaBala.tribhagaDetails.available
+                          ? `${activeResult.kalaBala.tribhagaDetails.period} ${activeResult.kalaBala.tribhagaDetails.part} third · ${activeResult.kalaBala.tribhagaDetails.awardedLord} is the period lord`
+                          : activeResult.kalaBala.tribhagaDetails.description}
+                      <span className="block text-slate-500">
+                        Sunrise/sunset are estimated with the NOAA daily solar model.
+                      </span>
+                    </div>
+                  )}
                   {activeResult.kalaBala.pakshaDetails && (
                     <div className="sm:col-span-2">
                       Moon: {activeResult.kalaBala.pakshaDetails.moonNature} · Mercury: {activeResult.kalaBala.pakshaDetails.mercuryNature} ·
