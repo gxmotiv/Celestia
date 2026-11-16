@@ -504,8 +504,11 @@ export interface FirdariaPeriod {
   planet: string;
   symbol: string;
   years: number;
+  /** One-based 75-year Firdaria cycle number. */
+  cycleNumber: number;
   startAge: number;
   endAge: number;
+  /** Lunar-node major periods have no sub-periods in the standard 75-year sequence. */
   subPeriods: Array<{ subLord: string; startAge: number; endAge: number }>;
 }
 
@@ -546,50 +549,75 @@ export class FirdariaEngine {
   ];
 
   public calculateFirdaria(chart: WesternChartData, currentAge: number): FirdariaReport {
-    // Diurnal if Sun is in Houses 7 through 12
+    // Diurnal if Sun is in Houses 7 through 12.
     const sunHouse = chart.planets.find((p) => p.name === "Sun")?.house || 1;
     const isDiurnal = sunHouse >= 7 && sunHouse <= 12;
-
     const sequence = isDiurnal ? FirdariaEngine.DIURNAL_LORDS : FirdariaEngine.NOCTURNAL_LORDS;
+    const planetarySubperiodOrder = sequence.slice(0, 7);
+    const cycleLengthYears = sequence.reduce((sum, item) => sum + item.years, 0); // 75 years
+    const safeAge = Math.max(0, Number.isFinite(currentAge) ? currentAge : 0);
+    const cycleIndex = Math.floor(safeAge / cycleLengthYears);
+    const cycleStartAge = cycleIndex * cycleLengthYears;
     const periods: FirdariaPeriod[] = [];
 
-    let cumAge = 0;
-    let activeMajor = sequence[0].planet;
-    let activeSub = sequence[0].planet;
+    let cumulativeAge = cycleStartAge;
+    let activeMajor = "No active Firdaria period";
+    let activeSub = "No active sub-period";
     let activeRange = "";
 
     sequence.forEach((item) => {
-      const start = cumAge;
-      const end = cumAge + item.years;
-      const subYears = item.years / 7;
-
+      const start = cumulativeAge;
+      const end = start + item.years;
       const subPeriods: FirdariaPeriod["subPeriods"] = [];
-      for (let s = 0; s < 7; s++) {
-        const subStart = Math.round((start + s * subYears) * 10) / 10;
-        const subEnd = Math.round((start + (s + 1) * subYears) * 10) / 10;
-        const subLord = sequence[s % 7].planet;
-        subPeriods.push({ subLord, startAge: subStart, endAge: subEnd });
 
-        if (currentAge >= subStart && currentAge < subEnd) {
-          activeSub = subLord;
+      const majorSubperiodStartIndex = planetarySubperiodOrder.findIndex(
+        (planet) => planet.planet === item.planet
+      );
+
+      // The seven classical planets receive seven equal subdivisions. Each
+      // major's sub-period sequence starts with that major lord and continues
+      // through the sect-specific Chaldean order. The lunar-node majors stand
+      // alone and are not split into planetary sub-periods in this variant.
+      if (majorSubperiodStartIndex >= 0) {
+        const subYears = item.years / 7;
+        for (let subIndex = 0; subIndex < 7; subIndex++) {
+          const subLord = planetarySubperiodOrder[
+            (majorSubperiodStartIndex + subIndex) % planetarySubperiodOrder.length
+          ].planet;
+          const subStart = start + subIndex * subYears;
+          const subEnd = subIndex === 6 ? end : start + (subIndex + 1) * subYears;
+
+          subPeriods.push({
+            subLord,
+            startAge: subStart,
+            endAge: subEnd,
+          });
+
+          if (safeAge >= subStart && safeAge < subEnd) {
+            activeSub = subLord;
+          }
         }
       }
 
-      if (currentAge >= start && currentAge < end) {
+      if (safeAge >= start && safeAge < end) {
         activeMajor = item.planet;
-        activeRange = `Age ${start} to ${end}`;
+        activeRange = `Age ${start.toFixed(2)} to ${end.toFixed(2)}`;
+        if (subPeriods.length === 0) {
+          activeSub = "No traditional sub-period (lunar-node major)";
+        }
       }
 
       periods.push({
         planet: item.planet,
         symbol: item.symbol,
         years: item.years,
+        cycleNumber: cycleIndex + 1,
         startAge: start,
         endAge: end,
         subPeriods,
       });
 
-      cumAge = end;
+      cumulativeAge = end;
     });
 
     return {
@@ -598,7 +626,6 @@ export class FirdariaEngine {
       activeSubLord: activeSub,
       activeYearsRange: activeRange,
       allPeriods: periods,
-      interpretation: `Under the medieval ${isDiurnal ? "Day (Diurnal)" : "Night (Nocturnal)"} Firdaria cycle, your current life master is ${activeMajor} (${activeRange}), with the active sub-ruler ${activeSub} shaping daily events and opportunities.`,
+      interpretation: `Under the medieval ${isDiurnal ? "Day (Diurnal)" : "Night (Nocturnal)"} Firdaria cycle, your current cycle is number ${cycleIndex + 1} (ages ${cycleStartAge}–${cycleStartAge + cycleLengthYears}). The active major lord is ${activeMajor} (${activeRange}), with ${activeSub.toLowerCase()} shaping the current sub-period where the traditional system assigns one.`,
     };
-  }
-}
+  }}
