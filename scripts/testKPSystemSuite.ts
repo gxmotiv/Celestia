@@ -613,6 +613,25 @@ assert.deepEqual(
   ["Saturn", "Mercury", "Mars", "Venus", "Sun"],
   "KP ruling planets must follow Lagna star, Lagna sign, Moon star, Moon sign, Day Lord preference"
 );
+assert.equal(rulingPlanets.dayLord, "Sun");
+assert.equal(rulingPlanets.dayLordResolution.status, "resolved");
+const unknownTimeRulings = predictionEngine.calculateRulingPlanets(
+  rulingPlanetCusps,
+  [moonForRulingPlanets],
+  rulingPlanetBirthInstant,
+  {
+    birthInstant: rulingPlanetBirthInstant,
+    latitude: 0,
+    longitude: 0,
+    birthTimeKnown: false,
+  }
+);
+assert.equal(unknownTimeRulings.dayLord, null);
+assert.equal(unknownTimeRulings.dayLordResolution.status, "birth-time-unknown");
+assert.ok(
+  !unknownTimeRulings.rulingPlanetsOrdered.includes("Sun"),
+  "An unavailable day lord must not be inserted into the ordered ruling-planet list."
+);
 assert.throws(
   () => predictionEngine.calculateRulingPlanets(rulingPlanetCusps, [], new Date(Date.UTC(2000, 0, 2))),
   /require Moon position data/
