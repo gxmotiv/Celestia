@@ -43,6 +43,7 @@ Keep the answer focused, practical, respectful, and structured. If essential cha
         systemPrompt,
         userPrompt,
         maxOutputTokens: 2048,
+        modelTier: "reasoning",
       });
       return NextResponse.json({
         success: true,
