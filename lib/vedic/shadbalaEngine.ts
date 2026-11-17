@@ -112,6 +112,7 @@ export interface CheshtaBalaResult {
     | "Paksha-derived Moon accounting"
     | "Ayana-derived Sun accounting"
     | "Unavailable (mean/seeghrocha not supplied)"
+    | "Unavailable (invalid mean/seeghrocha)"
     | "Unavailable (motion not supplied)";
   available: boolean;
   details?: CheshtaKendraDetails;
@@ -312,12 +313,16 @@ export interface ShadbalaChartInput {
       dailyMotion?: number;
       speed?: number;
       /**
-       * Source-specific mean longitude in the same zodiac frame as longitude.
-       * Under Raman's method Mercury/Venus use the mean Sun here; the caller
-       * must supply that explicitly rather than infer it from geocentric speed.
+       * Source-specific mean longitude, normalized to [0°, 360°) and in the
+       * same zodiac frame as longitude. Under Raman's method Mercury/Venus
+       * use the mean Sun here; supply it explicitly rather than inferring it
+       * from geocentric speed.
        */
       meanLongitude?: number;
-      /** Mercury/Venus seeghrocha (apogee) from the selected source table. */
+      /**
+       * Mercury/Venus seeghrocha (apogee), normalized to [0°, 360°) and in
+       * the same zodiac frame as the true and mean longitudes.
+       */
       seeghrochaLongitude?: number;
     };
   };
@@ -1810,11 +1815,14 @@ export class ShadbalaEngine {
     const dailyMotion = pPos?.dailyMotion ?? pPos?.speed;
     const isRetrograde = pPos?.isRetrograde ?? (typeof dailyMotion === "number" && dailyMotion < 0);
     const motion = typeof dailyMotion === "number" && Number.isFinite(dailyMotion) ? dailyMotion : 0;
-    const unavailable = (description: string): CheshtaBalaResult => ({
+    const unavailable = (
+      description: string,
+      state: CheshtaBalaResult["state"] = "Unavailable (mean/seeghrocha not supplied)"
+    ): CheshtaBalaResult => ({
       points: 0,
       motion,
       isRetrograde,
-      state: "Unavailable (mean/seeghrocha not supplied)",
+      state,
       available: false,
       description,
     });
@@ -1879,6 +1887,27 @@ export class ShadbalaEngine {
         ...(!Number.isFinite(seeghrochaLongitude) ? [planet === "Mercury" || planet === "Venus" ? planet + " seeghrocha/apogee from Raman Table VIII/IX or an explicitly selected equivalent source" : "the mean-Sun longitude used as superior-planet seeghrocha"] : []),
       ];
       return unavailable("Cheshta Kendra unavailable: missing " + missing.join(" and ") + ". Apparent geocentric daily speed cannot substitute for mean longitude or seeghrocha.");
+    }
+
+    const meanLabel = planet === "Mars" || planet === "Jupiter" || planet === "Saturn"
+      ? planet + " mean longitude"
+      : "mean-Sun longitude";
+    const seeghrochaLabel = planet === "Mars" || planet === "Jupiter" || planet === "Saturn"
+      ? "mean-Sun longitude used as superior-planet seeghrocha"
+      : planet + " seeghrocha/apogee";
+    const invalidSourceLongitudes = [
+      [meanLabel, meanLongitude],
+      [seeghrochaLabel, seeghrochaLongitude],
+    ] as const;
+    const invalidSourceLabels = invalidSourceLongitudes
+      .filter(([, value]) => typeof value !== "number" || value < 0 || value >= 360)
+      .map(([label]) => label);
+    if (invalidSourceLabels.length > 0) {
+      return unavailable(
+        "Cheshta Kendra unavailable: " + invalidSourceLabels.join(" and ") +
+        " must be normalized to [0°, 360°). Mean, true and seeghrocha longitudes must also use the same zodiac coordinate frame; the engine cannot infer or convert a mismatched frame.",
+        "Unavailable (invalid mean/seeghrocha)"
+      );
     }
 
     const details = calculateCheshtaKendra(
