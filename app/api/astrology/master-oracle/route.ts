@@ -51,6 +51,7 @@ Keep the answer focused, practical, respectful, and structured. If essential cha
         isAiGenerated: true,
         provider: result.provider,
         model: result.model,
+        usage: result.usage,
       });
     } catch (aiErr) {
       console.warn("Master Oracle provider unavailable; using local fallback:", aiErr);
