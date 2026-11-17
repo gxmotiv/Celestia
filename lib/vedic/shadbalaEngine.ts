@@ -225,6 +225,7 @@ export interface DrikBalaResult {
 
 export interface ShadbalaResult {
   planet: string;
+  requirementMethod: ShadbalaRequirementMethod;
   symbol: string;
   sthanaBala: SthanaBalaBreakdown;
   digBala: DigBalaResult;
@@ -251,12 +252,16 @@ export interface ShadbalaResult {
   };
 }
 
+export type ShadbalaRequirementMethod = "bphs-27-32-33" | "raman-article-122";
+
 export type SaptavargajaScale = "bphs-santhanam" | "raman-halving";
 
 export interface ShadbalaChartInput {
   ascendant: number;
   /** Sidereal ecliptic longitude of the local meridian (MC); used for Sun/Mars and the opposite IC peaks. */
   midheaven?: number;
+  /** Required total source: BPHS Ch. 27 vv. 32–33 or Raman Article 122. */
+  shadbalaRequirementMethod?: ShadbalaRequirementMethod;
   /** Source-labelled point scale; defaults to the R. Santhanam BPHS translation. */
   saptavargajaScale?: SaptavargajaScale;
   /** BPHS Sanskrit/Raman or the distinct Santhanam Vol. I English order for Drekkana Bala. */
@@ -1276,8 +1281,20 @@ export class ShadbalaEngine {
     Saturn: 200,
   };
 
+  /** BPHS Chapter 27, verses 32–33: 390, 360, 300, 420, 390, 330, 300 Virupas. */
   public static readonly REQUIRED_RUPAS: Record<string, number> = {
     Sun: 6.5,
+    Moon: 6.0,
+    Mars: 5.0,
+    Mercury: 7.0,
+    Jupiter: 6.5,
+    Venus: 5.5,
+    Saturn: 5.0,
+  };
+
+  /** B. V. Raman, Graha and Bhava Balas, Article 122 (Rupas). */
+  public static readonly RAMAN_REQUIRED_RUPAS: Record<string, number> = {
+    Sun: 5.0,
     Moon: 6.0,
     Mars: 5.0,
     Mercury: 7.0,
@@ -1348,7 +1365,19 @@ export class ShadbalaEngine {
       ) / 100;
 
     const totalRupas = Math.round((totalVirupas / 60) * 100) / 100;
-    const reqRupas = ShadbalaEngine.REQUIRED_RUPAS[planet] || 5.0;
+    const requirementMethod = input.shadbalaRequirementMethod ?? "bphs-27-32-33";
+    const requirementTable = requirementMethod === "bphs-27-32-33"
+      ? ShadbalaEngine.REQUIRED_RUPAS
+      : requirementMethod === "raman-article-122"
+        ? ShadbalaEngine.RAMAN_REQUIRED_RUPAS
+        : null;
+    if (!requirementTable) {
+      throw new RangeError("Unknown Shadbala requirement method: " + String(requirementMethod));
+    }
+    const reqRupas = requirementTable[planet];
+    if (!Number.isFinite(reqRupas)) {
+      throw new RangeError("Shadbala requirements are defined here only for the seven classical planets.");
+    }
     const reqVirupas = reqRupas * 60;
     const strengthRatio = Math.round((totalVirupas / reqVirupas) * 100) / 100;
     const unavailableComponents = [
@@ -1390,6 +1419,7 @@ export class ShadbalaEngine {
 
     return {
       planet,
+      requirementMethod,
       symbol: ShadbalaEngine.PLANET_SYMBOLS[planet] || "✦",
       sthanaBala,
       digBala,
