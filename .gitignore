@@ -8,3 +8,8 @@ coverage/
 tsconfig.tsbuildinfo
 .aistudio/
 backups/
+
+# OpenNext Cloudflare build artifacts and local secrets
+.open-next/
+.dev.vars
+cloudflare-env.d.ts
