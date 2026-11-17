@@ -817,6 +817,7 @@ export class MultiSystemTransitEngine {
   public birthVedic?: VedicChartData;
   public currentDate: Date;
   public ayanamsaValue: number;
+  private natalHouseCusps: number[] = [];
 
   constructor(
     config: TransitSystemConfig,
@@ -825,24 +826,31 @@ export class MultiSystemTransitEngine {
     currentDate: Date = new Date()
   ) {
     const effectiveConfig = { ...config };
+    let natalHouseCusps = birthWestern.houses.map((house) => house.longitude);
     if (
       config.houseSystem === "placidus" &&
       typeof birthWestern.latitude === "number" &&
       typeof birthWestern.longitude === "number"
     ) {
-      const placidusCheck = swissEphemeris.calculateHouses(
+      const placidusResult = swissEphemeris.calculateHouses(
         birthWestern.julianDay,
         birthWestern.latitude,
         birthWestern.longitude,
         "P"
       );
-      if (placidusCheck.houseSystemUsed === "E") {
+      // Cache the computed cusps once per engine instance. Transit calculations
+      // call calculateHouse repeatedly for each planet and should not recalculate
+      // the same natal house geometry on every placement.
+      if (placidusResult.houseSystemUsed === "E") {
         effectiveConfig.houseSystem = "equal";
+      } else {
+        natalHouseCusps = placidusResult.houseCusps;
       }
     }
 
     this.config = effectiveConfig;
     this.birthWestern = birthWestern;
+    this.natalHouseCusps = natalHouseCusps;
     this.birthVedic = birthVedic;
     this.currentDate = currentDate;
     this.ayanamsaValue = calculateAyanamsaValue(config.ayanamsa, currentDate);
@@ -921,17 +929,7 @@ export class MultiSystemTransitEngine {
 
     // 3. PLACIDUS / QUADRANT SYSTEMS
     // Use Western house cusps from birthChart
-    const cusps =
-      this.config.houseSystem === "placidus" &&
-      typeof this.birthWestern.latitude === "number" &&
-      typeof this.birthWestern.longitude === "number"
-        ? swissEphemeris.calculateHouses(
-            this.birthWestern.julianDay,
-            this.birthWestern.latitude,
-            this.birthWestern.longitude,
-            "P"
-          ).houseCusps
-        : this.birthWestern.houses.map((h) => h.longitude);
+    const cusps = this.natalHouseCusps;
     if (cusps.length < 12 || !cusps.every(Number.isFinite)) return 1;
 
     for (let i = 0; i < 12; i++) {
