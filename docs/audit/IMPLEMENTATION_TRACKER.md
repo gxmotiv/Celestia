@@ -61,6 +61,13 @@ Policy: keep changes on isolated branches; do not merge or deploy until the owne
 | D1–D60 divisional charts | Audit required | Inspect each implemented formula, sign assignment, boundary rule, tradition, and independent examples. Do not infer correctness from D9-only tests. |
 | Vimshottari and other dashas | Partial / audit required | Existing antardasha suite passes. Verify balance at birth, year-length convention, rounding, pratyantardasha and remaining systems. |
 
+## 2026-11-17 Jaimini Chara Dasha source-fidelity finding
+
+- Added `docs/audit/jaimini-chara-dasha-source-audit.md`.
+- Code inspection found the legacy `CharaDashaCalculator` selects sequence direction from Ascendant parity, derives sign duration from the ninth sign/ninth lord, caps counts at nine, and silently substitutes Aries for an invalid Ascendant. These behaviors do not match the cited BPHS/Santhanam sign-to-lord and ninth-sign direction rules as transcribed in the audit.
+- **Status: confirmed source mismatch; not fixed yet.** Do not advertise the current Chara Dasha output as source-faithful. A replacement requires explicit BPHS/Santhanam and Jaimini/Rao-Raman profiles, co-lord adjudication for Scorpio/Aquarius, validated inputs, and published worked-example fixtures.
+- Keep the 7/8 Chara Karaka selection separate from Dasha duration logic; the former does not resolve the latter.
+
 ## Workstream 3 — KP and interpretive output
 
 | Item | Current status | Evidence / next acceptance gate |
