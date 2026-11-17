@@ -13,6 +13,7 @@ import {
   AyanaBalaMethod,
   DrekkanaBalaMethod,
   ShadbalaRequirementMethod,
+  NaisargikaBalaMethod,
 } from "@/lib/vedic/shadbalaEngine";
 import type { DrishtiVirupaVariant } from "@/lib/vedic/drishtiEngine";
 import { WesternChartData } from "@/lib/astronomy/ephemeris";
@@ -77,6 +78,8 @@ export function ShadbalaPanel({
     useState<DrekkanaBalaMethod>("bphs-sanskrit-raman");
   const [requirementMethod, setRequirementMethod] =
     useState<ShadbalaRequirementMethod>("bphs-27-32-33");
+  const [naisargikaBalaMethod, setNaisargikaBalaMethod] =
+    useState<NaisargikaBalaMethod>("bphs-sevenths-rounded");
 
   const chartInput: ShadbalaChartInput = useMemo(() => {
     const planetsMap: ShadbalaChartInput["planets"] = {};
@@ -168,6 +171,7 @@ export function ShadbalaPanel({
         : {}),
       saptavargajaScale,
       shadbalaRequirementMethod: requirementMethod,
+      naisargikaBalaMethod,
       drishtiVirupaVariant,
       drikFullAspectReading,
       drikMercuryAssociationRule,
@@ -196,6 +200,7 @@ export function ShadbalaPanel({
     drekkanaBalaMethod,
     saptavargajaScale,
     requirementMethod,
+    naisargikaBalaMethod,
     drishtiVirupaVariant,
     drikFullAspectReading,
     drikMercuryAssociationRule,
@@ -323,6 +328,17 @@ export function ShadbalaPanel({
         </div>
 
         <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-3 rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+          <label className="flex flex-col gap-1.5 text-xs text-slate-400">
+            Naisargika Bala source
+            <select
+              value={naisargikaBalaMethod}
+              onChange={(event) => setNaisargikaBalaMethod(event.target.value as NaisargikaBalaMethod)}
+              className="rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-xs text-slate-200"
+            >
+              <option value="bphs-sevenths-rounded">BPHS 27.14: exact sevenths, rounded to 2 decimals</option>
+              <option value="raman-article-108">Raman Article 108: printed decimal table</option>
+            </select>
+          </label>
           <label className="flex flex-col gap-1.5 text-xs text-slate-400">
             Exact Drishti curve (BPHS Ch. 26)
             <select
