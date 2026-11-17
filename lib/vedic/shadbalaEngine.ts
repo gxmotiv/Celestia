@@ -1277,6 +1277,7 @@ export class ShadbalaEngine {
     "Saturn",
   ];
 
+  /** BPHS 3.49–50 deep-exaltation ecliptic longitudes, normalized to [0°, 360°). */
   public static readonly EXALTATION_POINTS: Record<string, number> = {
     Sun: 10,
     Moon: 33,
