@@ -81,4 +81,19 @@ assert.equal(resolveKPReaderVIDayLord({
   birthTimeKnown: true,
 }).status, "invalid-context");
 
+// Longyearbyen enters polar night in winter. The previous actual sunrise may
+// be weeks earlier; the 370-day backward search must retain that last sunrise
+// rather than rejecting the location after an arbitrary 24/48-hour window.
+const polarNight = resolveKPReaderVIDayLord({
+  birthInstant: new Date("2024-12-21T12:00:00.000Z"),
+  latitude: 78.223,
+  longitude: 15.646,
+  birthTimeKnown: true,
+});
+assert.equal(polarNight.status, "resolved");
+assert.ok(
+  (polarNight.sunriseAgeHours ?? 0) > 48,
+  "The last sunrise in polar night may be more than 48 hours before birth."
+);
+
 console.log("KP Reader VI sunrise day-lord suite passed: sunrise boundary, both longitude date-line shifts, unknown time, and invalid context.");
