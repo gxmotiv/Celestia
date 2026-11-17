@@ -154,8 +154,8 @@ export function AdvancedWesternPanel({
   const zrEngine = useMemo(() => new ZodiacalReleasingEngine(), []);
   const spiritReleasing: ZodiacalReleasingReport = useMemo(() => {
     const spiritLon = chartData.arabianParts?.partOfSpirit.longitude || 0;
-    return zrEngine.calculateReleasing(birthDateObj, spiritLon, "Spirit (Career & Purpose)");
-  }, [zrEngine, birthDateObj, chartData.arabianParts]);
+    return zrEngine.calculateReleasing(birthDateObj, spiritLon, "Spirit (Career & Purpose)", nowObj);
+  }, [zrEngine, birthDateObj, nowObj, chartData.arabianParts]);
 
   // Firdaria
   const firdariaEngine = useMemo(() => new FirdariaEngine(), []);
