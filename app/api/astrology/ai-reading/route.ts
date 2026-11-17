@@ -22,9 +22,9 @@ export async function POST(req: NextRequest) {
     const extendedSystemsJson = extendedSystems && typeof extendedSystems === "object"
       ? JSON.stringify(extendedSystems)
       : "";
-    const extendedSystemsSection = extendedSystemsJson.length > 0 && extendedSystemsJson.length <= 52000
+    const extendedSystemsSection = extendedSystemsJson.length > 0 && extendedSystemsJson.length <= 80000
       ? extendedSystemsJson
-      : extendedSystemsJson.length > 52000
+      : extendedSystemsJson.length > 80000
       ? "Extended context was omitted because it exceeded the route safety limit. Do not infer missing systems from the short chart summary."
       : "Not supplied.";
     const question = typeof userQuestion === "string" ? userQuestion.slice(0, 2000) : "";
