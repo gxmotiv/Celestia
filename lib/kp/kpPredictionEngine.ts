@@ -355,15 +355,19 @@ export class KPPredictionEngine {
       throw new Error("KP ruling planets require complete first-cusp sign, star, and sub-lord data.");
     }
 
-    // KP Reader VI's five-ruler preference order: Lagna star, Lagna sign,
-    // Moon star, Moon sign, then weekday lord. The weekday below currently
-    // uses the UTC civil date; a local sunrise-to-sunrise boundary is a
-    // separately disclosed limitation until birth-place sunrise data is wired.
-    const ordered = [lagna.starLord, lagna.signLord, moon.starLord, moon.signLord, dayLord];
+    // Omit the weekday role when birth-time or sunrise context is unavailable.
+    const ordered = [
+      lagna.starLord,
+      lagna.signLord,
+      moon.starLord,
+      moon.signLord,
+      ...(dayLord ? [dayLord] : []),
+    ];
     const uniqueOrdered = Array.from(new Set(ordered));
 
     return {
       dayLord,
+      dayLordResolution,
       moonSignLord: moon.signLord,
       moonStarLord: moon.starLord,
       moonSubLord: moon.subLord,
