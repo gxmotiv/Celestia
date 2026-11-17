@@ -824,7 +824,24 @@ export class MultiSystemTransitEngine {
     birthVedic?: VedicChartData,
     currentDate: Date = new Date()
   ) {
-    this.config = config;
+    const effectiveConfig = { ...config };
+    if (
+      config.houseSystem === "placidus" &&
+      typeof birthWestern.latitude === "number" &&
+      typeof birthWestern.longitude === "number"
+    ) {
+      const placidusCheck = swissEphemeris.calculateHouses(
+        birthWestern.julianDay,
+        birthWestern.latitude,
+        birthWestern.longitude,
+        "P"
+      );
+      if (placidusCheck.houseSystemUsed === "E") {
+        effectiveConfig.houseSystem = "equal";
+      }
+    }
+
+    this.config = effectiveConfig;
     this.birthWestern = birthWestern;
     this.birthVedic = birthVedic;
     this.currentDate = currentDate;
@@ -904,8 +921,18 @@ export class MultiSystemTransitEngine {
 
     // 3. PLACIDUS / QUADRANT SYSTEMS
     // Use Western house cusps from birthChart
-    const cusps = this.birthWestern.houses.map((h) => h.longitude);
-    if (!cusps || cusps.length < 12) return 1;
+    const cusps =
+      this.config.houseSystem === "placidus" &&
+      typeof this.birthWestern.latitude === "number" &&
+      typeof this.birthWestern.longitude === "number"
+        ? swissEphemeris.calculateHouses(
+            this.birthWestern.julianDay,
+            this.birthWestern.latitude,
+            this.birthWestern.longitude,
+            "P"
+          ).houseCusps
+        : this.birthWestern.houses.map((h) => h.longitude);
+    if (cusps.length < 12 || !cusps.every(Number.isFinite)) return 1;
 
     for (let i = 0; i < 12; i++) {
       const currentCusp = cusps[i];
