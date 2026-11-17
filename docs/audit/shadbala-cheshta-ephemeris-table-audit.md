@@ -303,3 +303,27 @@ BPHS Chapter 27, verses 1–2, defines Uchcha Bala as the shorter arc from deep 
 The Sthana Bala regression now verifies, for all seven grahas, all three invariants: exact 60 at the deep-exaltation point, exact 0 at the opposite deep-fall point, and exact 30 at the halfway point. This covers points in multiple signs, including the 0°/360° wraparound risk for Venus at 27° Pisces. The constant is explicitly documented as normalized ecliptic longitudes rather than degrees within each sign.
 
 References: [BPHS Chapter 3, verse 50 (Sanskrit / IAST / translation)](https://enjoylearningsanskrit.com/scriptures/parashara/chapter-3/verse-50/); [BPHS Chapter 27, verses 1–2](https://www.siva.sh/brihat-parashara-hora-shastra/27/1-2).
+
+## 7. Runtime validation of source ephemeris inputs
+
+**Review date:** 17 November 2026  
+**Decision:** reject malformed finite longitudes at the chart-facing boundary; retain the strict low-level Chesta Kendra primitive and the unavailable status for missing or invalid source data.
+
+The source formula and source-table decision are unchanged. BPHS 27.24–25 describes the mean/true-longitude midpoint relative to the planet's own movable apogee and divides the reduced Kendra by three. The Sanskrit verse and modern translations differ in how explicitly they render the six-sign reduction; Raman's Chapter VI Articles 105–107 and Examples 49–51 provide a directly reproducible worked convention. The existing benchmark reproduces all five planets in Raman's Standard Horoscope from the published inputs.
+
+A review of the calling boundary exposed an error-handling gap: a finite mean longitude or Seeghrocha outside the normalized zodiac interval could pass the "missing value" check and then throw inside the strict primitive. The chart now checks each source longitude before calling that primitive:
+
+- Superior planets (Mars, Jupiter and Saturn): the planet's own mean longitude and the mean-Sun longitude used as its Seeghrocha.
+- Inferior planets (Mercury and Venus): the mean-Sun longitude used as their mean position and the planet-specific Seeghrocha/apogee.
+- Every supplied mean/true/Seeghrocha longitude must be finite and normalized to [0°, 360°). A finite value outside that interval now yields an explicit unavailable result with zero *available contribution*, rather than throwing or manufacturing a score.
+- The low-level `calculateCheshtaKendra` primitive remains strict and continues to throw on invalid direct calls. This separates developer misuse of the mathematical primitive from malformed data arriving through the chart adapter.
+- The five-planet regression suite now covers out-of-range mean-Sun, superior-planet mean, and Mercury/Venus apogee values, and verifies that full chart calculation remains incomplete without throwing.
+
+**Coordinate-frame limitation:** range checks cannot identify whether an input is tropical or sidereal. The caller must supply the mean longitude, true longitude and Seeghrocha in one declared zodiac frame. The engine now states that requirement in its input contract and returns an unavailable result only for detectable numeric violations; it does not guess an ayanamsa or silently transform one source table into another frame.
+
+**Scope explicitly not completed:** no automatic mean-motion or Mercury/Venus apogee provider has been enabled. Raman's Tables IV–IX still have the discrepancies documented in Sections 2 and 4, and the original Kedarnath Dutt *Book of Fate* tables or a verified erratum are still needed before a historical table implementation can be advertised as source-faithful. Daily apparent speed remains diagnostic only, not a substitute for the missing mean and apogee values.
+
+### References
+
+- BPHS Chapter 27, verses 21–25: [Sanskrit and translation](https://www.siva.sh/brihat-parashara-hora-shastra/27/21-25); [verse 24 Sanskrit, transliteration, and word analysis](https://enjoylearningsanskrit.com/scriptures/parashara/chapter-27/verse-24/); [verse 25](https://enjoylearningsanskrit.com/scriptures/parashara/chapter-27/verse-25/).
+- B. V. Raman, *Graha and Bhava Balas*, Chapter VI, Articles 86–107 and Examples 49–51: [scanned 13th edition](https://dn790000.ca.archive.org/0/items/1050-jyotish-books-with-siderial-zodiac/Bhava%20and%20Graha%20Balas_B.V.Raman%201996.pdf).
