@@ -316,6 +316,7 @@ export function AIReadingView({
           baziData={chinese}
           birthDate={birthDate}
           birthTime={birthTime}
+          timezoneOffset={timezoneOffset}
           cityName={cityName}
           country={country}
           fullName={fullName}
