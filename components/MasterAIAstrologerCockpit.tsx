@@ -40,6 +40,7 @@ interface MasterAIAstrologerCockpitProps {
   fullName?: string;
   seekerName?: string;
   compactMode?: boolean;
+  extendedAIContext?: Record<string, unknown>;
   activeDashas?: any[];
   onClose?: () => void;
 }
@@ -202,6 +203,7 @@ export function MasterAIAstrologerCockpit({
   fullName,
   seekerName,
   compactMode = false,
+  extendedAIContext,
   activeDashas,
   onClose,
 }: MasterAIAstrologerCockpitProps) {
@@ -331,6 +333,7 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
           sender: m.sender,
           text: m.text,
         })),
+        extendedSystems: extendedAIContext,
         context: {
           western: {
             sunSign: sun?.sign || "Aries",
