@@ -1458,7 +1458,7 @@ export function KPSystemPanel({
               Krishnamurti Padhdhati Ruling Planets (RP) &amp; Transit Concurrence
             </h3>
             <p className="text-xs text-slate-400">
-              Reader VI preference order: Lagna star lord → Lagna sign lord → Moon star lord → Moon sign lord → weekday lord. The weekday is currently derived from the UTC civil date, not a local sunrise-to-sunrise boundary.
+              Reader VI preference order: Lagna star lord → Lagna sign lord → Moon star lord → Moon sign lord → weekday lord. The natal weekday lord is resolved from the last local sunrise using longitude-based Local Mean Time (LMT).
             </p>
           </div>
 
