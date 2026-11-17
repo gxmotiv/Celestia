@@ -1,3 +1,5 @@
+import type { KPDayLordResolution } from "./kpDayLord";
+
 /**
  * Krishnamurti Padhdhati (KP) System Types & Interfaces
  */
@@ -180,7 +182,8 @@ export interface KPPrediction {
 }
 
 export interface KPRulingPlanets {
-  dayLord: string;
+  dayLord: string | null;
+  dayLordResolution: KPDayLordResolution;
   moonSignLord: string;
   moonStarLord: string;
   moonSubLord: string;
