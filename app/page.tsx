@@ -67,7 +67,7 @@ export default function HomePage() {
     latitude: 43.7844,
     longitude: 10.9253,
     timezoneOffset: 1,
-    houseSystem: "Placidus",
+    houseSystem: "Auto",
   });
 
   const [activeTab, setActiveTab] = useState<SystemTabId>("western");
@@ -236,7 +236,15 @@ export default function HomePage() {
                 {Math.abs(formData.longitude).toFixed(2)}°{formData.longitude >= 0 ? "E" : "W"}
               </span>
               <span className="text-slate-600">·</span>
-              <span className="text-amber-300/80 font-mono text-[11px]">{formData.houseSystem} Houses</span>
+              <span
+                className="text-amber-300/80 font-mono text-[11px]"
+                title={westernData.houseSystemFallbackReason || `Effective house system: ${westernData.houseSystemUsed || formData.houseSystem}`}
+              >
+                {formData.houseSystem === "Auto"
+                  ? `Auto · ${westernData.houseSystemUsed || "Placidus"}`
+                  : westernData.houseSystemUsed || formData.houseSystem} Houses
+                {westernData.houseSystemFallbackReason ? " · fallback" : ""}
+              </span>
             </div>
 
             <button
