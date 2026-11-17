@@ -18,7 +18,17 @@ const report = orchestrator.generateAllDashas({
   moonNakshatra1Indexed: 10,
   moonDegreeInNakshatra: 3,
   ascendantSign: "Aries",
-  planetsInSigns: {},
+  charaPlanetPositions: [
+    { planet: "Sun", sign: "Aries" },
+    { planet: "Moon", sign: "Taurus" },
+    { planet: "Mars", sign: "Gemini" },
+    { planet: "Mercury", sign: "Cancer" },
+    { planet: "Jupiter", sign: "Leo" },
+    { planet: "Venus", sign: "Virgo" },
+    { planet: "Saturn", sign: "Libra" },
+    { planet: "Rahu", sign: "Scorpio" },
+    { planet: "Ketu", sign: "Aquarius" },
+  ],
   birthDate: new Date("1900-01-01T00:00:00.000Z"),
   referenceDate: new Date("2500-01-01T00:00:00.000Z"),
 });

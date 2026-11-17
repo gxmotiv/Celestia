@@ -124,3 +124,14 @@ Policy: keep changes on isolated branches; do not merge or deploy until the owne
 5. PR #5 — IANA city/geocoding and birth-form timezone integration; open draft, stacked on PR #4.
 
 Do not merge the chain automatically. Review each diff and rerun the full workflow on the final head before merge/deployment.
+
+
+## 17 November 2026 — BPHS/Santhanam Chara Dasha implementation
+
+- [x] Add named profile `bphs-santhanam-1984` with independent global sequence and individual sign-count directions.
+- [x] Replace ninth-sign duration logic with sign-to-lord inclusive counts and remove the nine-year cap.
+- [x] Add Scorpio/Aquarius dual-lord selection and inspectable dignity adjustments.
+- [x] Normalize chart node identifiers and require all nine classical grahas.
+- [x] Make five-level Level 1 consume the same source-calculated Mahadasha periods.
+- [ ] Obtain a clean full build/CI pass after all legacy caller migrations.
+- [ ] Add Rao/Raman profile, sourced Antardasha/lower levels, second cycle and independent worked-chart reconciliation.

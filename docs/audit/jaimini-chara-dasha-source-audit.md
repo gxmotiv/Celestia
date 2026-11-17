@@ -2,7 +2,7 @@
 
 **Review date:** 17 November 2026  
 **Branch:** `deploy/cloudflare-workers-free`  
-**Status:** Confirmed implementation/source mismatch; replacement algorithm not yet enabled.  
+**Status:** BPHS/Santhanam profile implemented in code; initial regression suite passes. Full repository integration and source-lineage reconciliation remain in progress.  
 **Scope:** `CharaDashaCalculator` in `lib/vedic/completeDashaSystems.ts`.
 
 ## Executive finding
@@ -74,3 +74,24 @@ Before the Chara Dasha engine is re-enabled as source-faithful, implement and te
 ## 6. Next work
 
 Implement a BPHS/Santhanam profile and a separately named Jaimini/Rao-Raman profile only after the two direction and dual-lord decision trees have been transcribed and compared. Do not merge their exceptions into a single undocumented hybrid.
+
+
+## Implementation status — 17 November 2026
+
+The runtime now contains a named BPHS/Santhanam base profile, `bphs-santhanam-1984`, with these behaviors:
+
+- Sequence direction starts at Lagna and uses the three-sign pada group of the ninth sign (BPHS 46.167).
+- Individual sign years count from the Dasha sign to its own lord using that sign's three-sign pada direction (BPHS 46.155–156); inclusive counts are not capped at nine.
+- Scorpio/Ketu-Mars and Aquarius/Saturn-Rahu are resolved using the two-lord clauses in vv.158–164. The implementation orders companion occupancy, modality (dual > fixed > movable), co-lord exaltation, then larger count. This is an explicit implementation reading, not a claim that every commentary orders the tests identically.
+- Verse 165 dignity corrections are exposed as `baseYears` and `adjustmentYears`. Classical seven-planet dignity tables are used; node dignity is not assumed.
+- All nine classical grahas are required once. Celestia's `NorthNode`/`SouthNode` names are normalized to Rahu/Ketu; outer planets and other points are excluded.
+- Both Chara Mahadasha output and Level 1 in the five-level view use the same generated periods. The five-level lower sub-period order is still provisional pending a separately sourced lineage specification.
+
+The dedicated source regression suite is `scripts/testJaiminiCharaDashaSourceSuite.ts`. The full type/build/test matrix still needs a clean post-integration pass before deployment.
+
+## Remaining gaps
+
+- Rao/Raman profile and its Sutra 27 / own-sign commentary.
+- Independently reconciled published worked-chart benchmark.
+- Chara Antardasha and lower-level order, second 12-sign cycle and related boundary rules.
+- Surface the chosen profile and direction metadata in all Chara reports.
