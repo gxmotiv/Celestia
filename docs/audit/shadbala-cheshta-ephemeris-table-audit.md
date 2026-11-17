@@ -290,3 +290,16 @@ The selected method is passed into the Shadbala engine and exposed in the panel 
 - B. V. Raman, *Graha and Bhava Balas*, Chapter VII, Article 108 and Example 52: [scanned edition](https://dn790000.ca.archive.org/0/items/1050-jyotish-books-with-siderial-zodiac/Bhava%20and%20Graha%20Balas_B.V.Raman%201996.pdf).
 
 This refinement changes only the Naisargika Bala contribution by the source's rounding/truncation difference. It does not make the overall six-fold Shadbala implementation complete; source-specific Cheshta/Yuddha coverage and whole-chart reconciliation remain outstanding.
+
+
+## 11. Uchcha Bala deep-exaltation reference points
+
+A source-anchored boundary suite has been added for the seven exaltation points used by the Sthana Bala Uchcha calculation.
+
+BPHS Chapter 3, verses 49–50, identifies the exaltation signs and their deep-exaltation degrees; verse 50 uses the traditional numerical-word encoding for the degrees. In absolute zodiac longitudes (Aries 0°), the seven points are Sun 10°, Moon 33° (3° Taurus), Mars 298° (28° Capricorn), Mercury 165° (15° Virgo), Jupiter 95° (5° Cancer), Venus 357° (27° Pisces), and Saturn 200° (20° Libra). The opposite point is the deep-debilitation point.
+
+BPHS Chapter 27, verses 1–2, defines Uchcha Bala as the shorter arc from deep debilitation, converted to degrees and divided by three. Equivalently, the score is the distance from deep exaltation divided by three, with the shortest circular distance capped at 180°: maximum 60 Virupas at deep exaltation, zero at deep debilitation, and 30 at a 90° offset.
+
+The Sthana Bala regression now verifies, for all seven grahas, all three invariants: exact 60 at the deep-exaltation point, exact 0 at the opposite deep-fall point, and exact 30 at the halfway point. This covers points in multiple signs, including the 0°/360° wraparound risk for Venus at 27° Pisces. The constant is explicitly documented as normalized ecliptic longitudes rather than degrees within each sign.
+
+References: [BPHS Chapter 3, verse 50 (Sanskrit / IAST / translation)](https://enjoylearningsanskrit.com/scriptures/parashara/chapter-3/verse-50/); [BPHS Chapter 27, verses 1–2](https://www.siva.sh/brihat-parashara-hora-shastra/27/1-2).
