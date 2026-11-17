@@ -601,7 +601,7 @@ In reviewing your chart, your active **${currentMD?.planet || "Jupiter"} Mahadas
                       <span>{m.timestamp}</span>
                       {m.isAiGenerated && (
                         <span className="px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[9px]">
-                          {m.provider === "freemodel" ? "FreeModel" : m.provider === "gemini" ? "Gemini" : "AI"}
+                          {m.provider === "freemodel" ? "FreeModel" : m.provider === "nararouter" ? "NaraRouter" : m.provider === "gemini" ? "Gemini" : "AI"}
                           {m.model ? ` · ${m.model}` : ""}
                           {m.usageTokens !== undefined ? ` · ${m.usageTokens.toLocaleString()} tokens` : ""}
                         </span>
