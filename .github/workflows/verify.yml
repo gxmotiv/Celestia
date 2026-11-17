@@ -30,6 +30,7 @@ jobs:
           - testWesternAntisciaSuite.ts
           - testWesternHouseSystemPolicySuite.ts
           - testKPSystemSuite.ts
+          - testKPDayLordSuite.ts
           - testParashariVargaSuite.ts
           - testParashariNatalDignitySuite.ts
           - testJaiminiVedicChartIntegrationSuite.ts
