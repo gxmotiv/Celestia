@@ -63,6 +63,7 @@ The repository already had calculation modules for KP, Jaimini, multiple Vedic d
 6. TESTS, CI AND DEPLOYMENT
 
 - GitHub commit/status lookup at the final integration commit returned no status checks.
+- A dedicated `scripts/testAIContextSuite.ts` regression suite was added to the PR workflow. Its result has not yet been observed.
 - No local TypeScript check, ESLint run, production build, unit-test suite or browser test was executed in this session.
 - No live API request was made to the deployed Cloudflare Worker.
 - No deployment was triggered.
