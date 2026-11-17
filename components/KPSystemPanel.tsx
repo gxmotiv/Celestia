@@ -1466,7 +1466,7 @@ export function KPSystemPanel({
             <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-xl space-y-1 text-center">
               <span className="text-[10px] uppercase font-semibold text-slate-400 block">5. Day Lord</span>
               <span className="text-lg font-bold text-amber-300 block">{kpData.rulingPlanets.dayLord ?? "Unavailable"}</span>
-              <span className="text-[10px] text-slate-500">Weekday lord · UTC day currently provisional</span>
+              <span className="text-[10px] text-slate-500">KP Reader VI · local sunrise (LMT)</span>
             </div>
 
             <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-xl space-y-1 text-center">
