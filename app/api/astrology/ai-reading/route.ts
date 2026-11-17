@@ -1,82 +1,99 @@
-import { GoogleGenAI } from "@google/genai";
 import { NextRequest, NextResponse } from "next/server";
+import { generateCelestiaText } from "@/lib/ai/generateText";
 
 export async function POST(req: NextRequest) {
   try {
     const payload = await req.json();
+    // These names match the payload created by components/AIReadingView.tsx.
     const {
-      fullName,
+      name,
       birthData,
-      westernData,
-      vedicData,
-      numerologyData,
-      baziData,
-      readingMode,
-      readingLength,
+      western,
+      vedic,
+      numerology,
+      chinese,
+      readingMode = "holistic",
+      readingLength = "detailed",
       userQuestion,
-    } = payload;
+    } = payload ?? {};
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const fullName = typeof name === "string" && name.trim() ? name.trim() : "Querent";
+    const question = typeof userQuestion === "string" ? userQuestion.slice(0, 2000) : "";
+    const westernPlanets = western?.planets && typeof western.planets === "object"
+      ? Object.entries(western.planets).slice(0, 15).map(([planet, value]) => {
+          const position = value as { sign?: string; degree?: string; house?: number; isRetrograde?: boolean };
+          return `${planet}: ${position.sign ?? "unknown"} ${position.degree ?? ""}, House ${position.house ?? "unknown"}${position.isRetrograde ? " (retrograde)" : ""}`;
+        }).join("; ")
+      : "Not supplied";
+    const westernAspects = Array.isArray(western?.aspects)
+      ? western.aspects.slice(0, 12).map((aspect: { planet1?: string; aspectName?: string; planet2?: string; orb?: number }) =>
+          `${aspect.planet1 ?? "?"} ${aspect.aspectName ?? "aspect"} ${aspect.planet2 ?? "?"} (orb ${aspect.orb ?? "?"}°)`
+        ).join("; ")
+      : "Not supplied";
+    const vedicYogas = Array.isArray(vedic?.yogas) ? vedic.yogas.slice(0, 20).join("; ") : "Not supplied";
 
-    if (apiKey) {
-      try {
-        const ai = new GoogleGenAI({ apiKey });
-        const systemPrompt = `You are Acharya Celestia, a profound astrological synthesizer master of Western Tropical Placidus, Vedic Jyotish (Lahiri Nirayana), Pythagorean Numerology, and Chinese BaZi (Four Pillars).
-Synthesize the querent's multi-system birth signature into an insightful, grounded cosmic reading.
-Format with markdown headers (### and ####). Do not fabricate celestial positions outside the verified data provided.`;
+    const systemPrompt = `You are Acharya Celestia, a careful multi-tradition astrology research assistant.
+Use only the chart values supplied below. Never invent planetary placements, aspects, house positions, dasha dates, or birth details. Clearly distinguish traditional astrological interpretation from verifiable facts and avoid presenting predictions as certainty.
+Respect the named traditions separately: Western Tropical, Vedic Sidereal/Lahiri, numerology, and Chinese BaZi. If a data point is missing, say so instead of guessing.
+Format a useful, structured response with Markdown headings. Do not repeat the entire raw input.`;
 
-        const userPrompt = `Querent: ${fullName || "Querent"}
-Birth Details: Date: ${birthData?.date}, Time: ${birthData?.time}, Place: ${birthData?.place}
-Mode: ${readingMode} (${readingLength || "standard"})
-${userQuestion ? `Question: ${userQuestion}` : ""}
+    const userPrompt = [
+      `Querent: ${fullName}`,
+      `Birth data: ${birthData?.date ?? "not supplied"} ${birthData?.time ?? ""}; ${birthData?.place ?? "place not supplied"}; coordinates ${birthData?.latitude ?? "?"}, ${birthData?.longitude ?? "?"}; UTC offset ${birthData?.timezoneOffsetHours ?? "?"} hours.`,
+      `Requested report: ${readingMode}; length: ${readingLength}.`,
+      question ? `Specific question: ${question}` : "",
+      "",
+      "VERIFIED CHART DATA",
+      `Western: Sun ${western?.sun?.sign ?? "not supplied"} (${western?.sun?.degree ?? "?"}°, House ${western?.sun?.house ?? "?"}); Moon ${western?.moon?.sign ?? "not supplied"} (${western?.moon?.degree ?? "?"}°, House ${western?.moon?.house ?? "?"}); Ascendant ${western?.ascendant ?? "not supplied"}; Midheaven ${western?.midheaven ?? "not supplied"}.`,
+      `Western house system: ${western?.houseSystemUsed ?? western?.houseSystem ?? "not supplied"}${western?.houseSystemFallbackReason ? `; note: ${western.houseSystemFallbackReason}` : ""}.`,
+      `Western planets: ${westernPlanets}`,
+      `Western major aspects: ${westernAspects}`,
+      `Vedic: Lagna ${vedic?.lagna ?? "not supplied"}; Moon Rasi ${vedic?.moonSign ?? "not supplied"}; Nakshatra ${vedic?.nakshatra ?? "not supplied"} Pada ${vedic?.pada ?? "?"}; Nakshatra lord ${vedic?.nakshatraLord ?? "?"}; current Mahadasha ${vedic?.currentDasha?.planet ?? "?"}; Antardasha ${vedic?.currentDasha?.subPlanet ?? "?"}; Navamsa Lagna ${vedic?.navamsa?.lagna ?? "?"}; Moon Navamsa ${vedic?.navamsa?.moonNavamsa ?? "?"}; Yogas: ${vedicYogas}.`,
+      `Numerology: Life Path ${numerology?.lifePath ?? "?"}; Expression ${numerology?.expression ?? "?"}; Soul Urge ${numerology?.soulUrge ?? "?"}; Personality ${numerology?.personality ?? "?"}; Birthday ${numerology?.birthday ?? "?"}; Maturity ${numerology?.maturity ?? "?"}; Personal Year ${numerology?.personalYear ?? "?"}.`,
+      `BaZi: Animal ${chinese?.animal ?? "?"}; Year element ${chinese?.element ?? "?"}; Yin/Yang ${chinese?.yinYang ?? "?"}; Day Master ${chinese?.dayMaster ?? "?"} (strength ${chinese?.dayMasterStrength ?? "?"}); Four pillars ${JSON.stringify(chinese?.bazi ?? {})}; element balance ${JSON.stringify(chinese?.elementsBalance ?? {})}.`,
+      "",
+      "Deliver the requested report using the verified data above."
+    ].filter(Boolean).join("\n");
 
-Astronomical & Astrological Data:
-- Western: Sun ${westernData?.sun}, Moon ${westernData?.moon}, Ascendant ${westernData?.ascendant}, Aspects: ${westernData?.majorAspects?.join(", ")}
-- Vedic: Lagna ${vedicData?.lagna}, Moon Rasi ${vedicData?.moonRasi}, Nakshatra ${vedicData?.birthNakshatra}, Active Mahadasha ${vedicData?.currentMahadasha}, Antardasha ${vedicData?.currentAntardasha}, Yogas: ${vedicData?.keyYogas?.join("; ")}
-- Numerology: Life Path ${numerologyData?.lifePath}, Expression ${numerologyData?.expression}, Soul Urge ${numerologyData?.soulUrge}, Personal Year ${numerologyData?.personalYear}
-- BaZi: Animal ${baziData?.zodiacAnimal}, Year ${baziData?.yearPillar}, Day Master ${baziData?.dayMaster} (${baziData?.dayMasterStrength})
-
-Deliver a thorough multi-tradition synthesis reading.`;
-
-        const response = await ai.models.generateContent({
-          model: "gemini-2.5-flash",
-          contents: `${systemPrompt}\n\n${userPrompt}`,
-        });
-
-        if (response.text) {
-          return NextResponse.json({
-            success: true,
-            reading: response.text,
-            isAiGenerated: true,
-          });
-        }
-      } catch (aiErr) {
-        console.warn("Gemini API call failed, falling back to astronomical synthesizer:", aiErr);
-      }
+    try {
+      const result = await generateCelestiaText({
+        systemPrompt,
+        userPrompt,
+        maxOutputTokens: readingLength === "concise" ? 2048 : 4096,
+      });
+      return NextResponse.json({
+        success: true,
+        reading: result.text,
+        isAiGenerated: true,
+        provider: result.provider,
+        model: result.model,
+      });
+    } catch (aiErr) {
+      console.warn("AI reading provider unavailable; using transparent local fallback:", aiErr);
     }
 
-    // Algorithmic synthesis fallback when Gemini API is unconfigured or unavailable
-    const reading = `### Celestial Synthesis for ${fullName || "Querent"}
+    const reading = `### Celestial Synthesis for ${fullName}
 
 #### I. Western Astrological Blueprint
-Your natal chart features **Sun in ${westernData?.sun || "its station"}**, paired with **Moon in ${westernData?.moon || "its sign"}** and an **Ascendant in ${westernData?.ascendant || "its horizon"}**. This establishes an essential tension and synergy between your conscious vitality and deep instinctual emotional needs.
+Sun: **${western?.sun?.sign ?? "not supplied"}**; Moon: **${western?.moon?.sign ?? "not supplied"}**; Ascendant: **${western?.ascendant ?? "not supplied"}**. The supplied house framework is **${western?.houseSystemUsed ?? western?.houseSystem ?? "not supplied"}**.
 
-#### II. Vedic Jyotish & Dasha Architecture
-Under the Lahiri Nirayana sidereal zodiac, your ascendant is **${vedicData?.lagna || "Nirayana Lagna"}**, anchoring your dharmic life path. Your active planetary clock is currently governed by the **${vedicData?.currentMahadasha || "Major"} Mahadasha** and **${vedicData?.currentAntardasha || "Sub"} Antardasha**. In Jyotish philosophy, this transit window indicates a pivotal period for introspection, karmic resolution, and disciplined pursuit of life objectives.
+#### II. Vedic Jyotish
+Lagna: **${vedic?.lagna ?? "not supplied"}**; Moon Rasi: **${vedic?.moonSign ?? "not supplied"}**; Nakshatra: **${vedic?.nakshatra ?? "not supplied"}**. Current dasha fields: **${vedic?.currentDasha?.planet ?? "not supplied"} / ${vedic?.currentDasha?.subPlanet ?? "not supplied"}**.
 
-#### III. Pythagorean Numerological Vibrations
-Your Life Path Number **${numerologyData?.lifePath || 1}** highlights your core spiritual lessons and evolutionary trajectory, while your Expression Number **${numerologyData?.expression || 1}** reveals natural talents and external communication. In Personal Year **${numerologyData?.personalYear || 1}**, cyclical timing aligns towards consolidation and strategic renewal.
+#### III. Numerology
+Life Path: **${numerology?.lifePath ?? "not supplied"}**; Expression: **${numerology?.expression ?? "not supplied"}**; Personal Year: **${numerology?.personalYear ?? "not supplied"}**.
 
-#### IV. BaZi Four Pillars of Destiny
-Born in the year of the **${baziData?.zodiacAnimal || "Celestial"}**, guided by a **${baziData?.dayMaster || "Central"} Day Master**, your element configuration presents unique thermodynamic balance. Maintaining harmonious interactions between your dominant and supporting elements ensures grounded vitality.
+#### IV. Chinese BaZi
+Animal: **${chinese?.animal ?? "not supplied"}**; Day Master: **${chinese?.dayMaster ?? "not supplied"}**; Element: **${chinese?.element ?? "not supplied"}**.
 
 ---
-*Synthesized via Celestia Multi-System Astronomical Engine.*`;
+*AI provider unavailable. This is a limited, data-only local summary, not an AI-generated interpretation.*`;
 
     return NextResponse.json({
       success: true,
       reading,
       isAiGenerated: false,
+      provider: "local-fallback",
     });
   } catch (err) {
     console.error("AI reading route error:", err);
