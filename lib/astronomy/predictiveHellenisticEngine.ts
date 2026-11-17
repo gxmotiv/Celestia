@@ -266,7 +266,7 @@ export class ZodiacalReleasingEngine {
   private static readonly IDEAL_MONTH_DAYS = 30;
 
   private formatDate(date: Date): string {
-    return date.toISOString().slice(0, 10);
+    return date.toISOString();
   }
 
   private makePeriod(
@@ -326,8 +326,8 @@ export class ZodiacalReleasingEngine {
     }
 
     const currentL1 = periods.find((period) => {
-      const startMs = Date.parse(period.startDate + "T00:00:00.000Z");
-      const endMs = Date.parse(period.endDate + "T00:00:00.000Z");
+      const startMs = Date.parse(period.startDate);
+      const endMs = Date.parse(period.endDate);
       return currentDate.getTime() >= startMs && currentDate.getTime() < endMs;
     });
     if (!currentL1) throw new Error("Unable to locate the active Zodiacal Releasing L1 period.");
@@ -335,8 +335,8 @@ export class ZodiacalReleasingEngine {
     // L2: begin again from the active L1 sign. Each sign receives its minor-year
     // allotment in ideal months (30 days); the final subperiod is truncated at
     // the exact parent L1 boundary. Loosing of the Bond is applied after 12 signs.
-    const parentStart = new Date(Date.parse(currentL1.startDate + "T00:00:00.000Z"));
-    const parentEnd = new Date(Date.parse(currentL1.endDate + "T00:00:00.000Z"));
+    const parentStart = new Date(Date.parse(currentL1.startDate));
+    const parentEnd = new Date(Date.parse(currentL1.endDate));
     const parentSignIdx = ZODIAC_SIGNS.findIndex((item) => item.name === currentL1.sign);
     let l2SignIdx = parentSignIdx;
     let l2Cursor = parentStart;
