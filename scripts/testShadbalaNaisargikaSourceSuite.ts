@@ -71,6 +71,35 @@ for (const [planet, expectedBphs, expectedRaman] of [
   assert.equal(engine.calculateNaisargikaBala(planet, "raman-article-108").points, expectedRaman);
 }
 
+// Prove the selected source flows through calculateShadbala for each of
+// the three differing decimals, not only through the standalone component.
+for (const [planet, expectedBphs, expectedRaman] of [
+  ["Venus", 42.86, 42.85],
+  ["Jupiter", 34.29, 34.28],
+  ["Mercury", 25.71, 25.70],
+] as const) {
+  const input = {
+    ascendant: 0,
+    birthTimeKnown: false,
+    planets: { [planet]: { longitude: 125 } },
+  };
+  const bphsResult = engine.calculateShadbala(planet, input);
+  const ramanResult = engine.calculateShadbala(planet, {
+    ...input,
+    naisargikaBalaMethod: "raman-article-108",
+  });
+  assert.equal(bphsResult.naisargikaBala.points, expectedBphs);
+  assert.equal(ramanResult.naisargikaBala.points, expectedRaman);
+  assert.equal(
+    ramanResult.totalVirupas - bphsResult.totalVirupas,
+    Number((expectedRaman - expectedBphs).toFixed(2)),
+    `${planet} total Virupas must move only by its source-specific Naisargika decimal difference`
+  );
+  assert.equal(ramanResult.isComplete, false);
+  assert.equal(ramanResult.isStrong, false);
+  assert.equal(ramanResult.rank, 0);
+}
+
 assert.throws(
   () => engine.calculateNaisargikaBala("Sun", "unknown" as NaisargikaBalaMethod),
   /Unknown Naisargika Bala method/,
