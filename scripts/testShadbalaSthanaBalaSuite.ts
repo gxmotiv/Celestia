@@ -22,6 +22,28 @@ function sthana(planet: string, longitude: number) {
   });
 }
 
+// BPHS 3.50 gives deep-exaltation degrees Sun 10° Aries, Moon 3° Taurus,
+// Mars 28° Capricorn, Mercury 15° Virgo, Jupiter 5° Cancer,
+// Venus 27° Pisces, Saturn 20° Libra. BPHS 27.1–2 makes the
+// opposite point the deep fall point and divides the reduced arc by 3.
+const deepExaltationLongitudes: Array<[string, number]> = [
+  ["Sun", 10],
+  ["Moon", 30 + 3],
+  ["Mars", 270 + 28],
+  ["Mercury", 150 + 15],
+  ["Jupiter", 90 + 5],
+  ["Venus", 330 + 27],
+  ["Saturn", 180 + 20],
+];
+for (const [planet, deepExaltation] of deepExaltationLongitudes) {
+  assert.equal(sthana(planet, deepExaltation).ucchaBala, 60,
+    `${planet} must receive exactly 60 Uchcha Virupas at its BPHS deep-exaltation point`);
+  assert.equal(sthana(planet, (deepExaltation + 180) % 360).ucchaBala, 0,
+    `${planet} must receive exactly 0 Uchcha Virupas at the opposite deep-debilitation point`);
+  assert.equal(sthana(planet, (deepExaltation + 90) % 360).ucchaBala, 30,
+    `${planet} must receive 30 Uchcha Virupas halfway between deep exaltation and deep fall`);
+}
+
 // BPHS 27.5: Moon and Venus receive 15 Virupas in even signs;
 // every other planet, including Mercury and Saturn, receives 15 in odd signs.
 // The same rule is independently applied to the Navamsa sign.
