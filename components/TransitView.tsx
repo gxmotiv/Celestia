@@ -78,8 +78,26 @@ export function TransitView({
 
   // Custom House System Override (for Western)
   const [selectedHouseSystem, setSelectedHouseSystem] = useState<
-    "placidus" | "whole-sign" | "equal" | "koch"
-  >("placidus");
+    "auto" | "placidus" | "whole-sign" | "equal"
+  >("auto");
+
+  // Auto follows the effective method used by the natal chart, including any
+  // location-based Placidus fallback. Manual choices remain explicit overrides.
+  const natalHouseSystem =
+    westernChart.houseSystemUsed ||
+    (westernChart.houseSystem === "WholeSign"
+      ? "WholeSign"
+      : westernChart.houseSystem === "Equal"
+      ? "Equal"
+      : "Placidus");
+  const effectiveHouseSystem =
+    selectedHouseSystem === "auto"
+      ? natalHouseSystem === "WholeSign"
+        ? "whole-sign"
+        : natalHouseSystem === "Equal"
+        ? "equal"
+        : "placidus"
+      : selectedHouseSystem;
 
   // BaZi Gender (for Da Yun progression direction)
   const [baZiGender, setBaZiGender] = useState<"Male" | "Female">("Male");
@@ -104,10 +122,10 @@ export function TransitView({
     if (systemMode === "comparison") return TRANSIT_SYSTEM_PRESETS.western;
     const base = TRANSIT_SYSTEM_PRESETS[systemMode] || TRANSIT_SYSTEM_PRESETS.western;
     if (systemMode === "western") {
-      return { ...base, houseSystem: selectedHouseSystem };
+      return { ...base, houseSystem: effectiveHouseSystem };
     }
     return base;
-  }, [systemMode, selectedHouseSystem]);
+  }, [systemMode, effectiveHouseSystem]);
 
   // Multi-System Transit Engine Instance
   const multiEngine = useMemo(() => {
@@ -281,10 +299,10 @@ export function TransitView({
                   onChange={(e) => setSelectedHouseSystem(e.target.value as any)}
                   className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-amber-300 text-xs font-medium focus:outline-none focus:border-amber-400 cursor-pointer"
                 >
+                  <option value="auto">Auto — use natal chart's effective system</option>
                   <option value="placidus">Placidus (Time Semi-Arcs)</option>
                   <option value="whole-sign">Whole Sign (Ancient Signs)</option>
                   <option value="equal">Equal House (30° Asc)</option>
-                  <option value="koch">Koch (Ascension Time)</option>
                 </select>
               </div>
             )}
@@ -322,7 +340,7 @@ export function TransitView({
                 {systemMode === "western" && <CheckCircle2 className="w-3.5 h-3.5 text-amber-400" />}
               </div>
               <p className="text-[10px] text-slate-400 mt-1 line-clamp-2">
-                Tropical Zodiac · {selectedHouseSystem.toUpperCase()} · Ptolemaic Orbs · Psychological
+                Tropical Zodiac · {selectedHouseSystem === "auto" ? `AUTO → ${effectiveHouseSystem.toUpperCase()}` : effectiveHouseSystem.toUpperCase()} · Ptolemaic Orbs · Psychological
               </p>
             </button>
 

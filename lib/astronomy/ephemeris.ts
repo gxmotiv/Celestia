@@ -53,6 +53,9 @@ export interface AspectData {
   nature: "Harmonious" | "Challenging" | "Neutral";
 }
 
+export type WesternHouseSystem = "Placidus" | "Equal" | "WholeSign";
+export type WesternHouseSystemPreference = "Auto" | WesternHouseSystem;
+
 export interface WesternChartData {
   planets: PlanetPosition[];
   houses: HouseCusp[];
@@ -65,7 +68,12 @@ export interface WesternChartData {
   julianDay: number;
   siderealTime: number; // RAMC in degrees
   obliquity: number;
-  houseSystem: "Placidus" | "Equal" | "WholeSign";
+  houseSystem: WesternHouseSystemPreference;
+  /** Effective house method used after any location-based fallback. */
+  houseSystemUsed?: WesternHouseSystem;
+  houseSystemFallbackReason?: string;
+  latitude?: number;
+  longitude?: number;
   asteroids?: AsteroidPositions;
   additionalPoints?: AdditionalPoints;
   arabianParts?: ArabianPartsResult;
@@ -631,13 +639,14 @@ export function calculateWesternChart(
   latitude: number,
   longitude: number,
   timezoneOffsetHours: number, // e.g. -5 for EST, 5.5 for IST
-  houseSystem: "Placidus" | "Equal" | "WholeSign" = "Placidus",
+  houseSystem: WesternHouseSystemPreference = "Placidus",
   second: number = 0
 ): WesternChartData {
   // High-precision Swiss Ephemeris calculation (0.001° accuracy)
   // Unambiguously normalizes local birth time and timezone offset to UTC and computes Julian Day
   const jd = swissEphemeris.calculateJulianDay(year, month, day, hour, minute, second, timezoneOffsetHours);
-  const sysCode = houseSystem === "WholeSign" ? "W" : houseSystem === "Equal" ? "E" : "P";
+  const calculationSystem = houseSystem === "Auto" ? "Placidus" : houseSystem;
+  const sysCode = calculationSystem === "WholeSign" ? "W" : calculationSystem === "Equal" ? "E" : "P";
   const swissHouses = swissEphemeris.calculateHouses(jd, latitude, longitude, sysCode);
   const rawCusps = swissHouses.houseCusps;
   const asc = swissHouses.ascendant;
@@ -768,6 +777,15 @@ export function calculateWesternChart(
     siderealTime: ramc,
     obliquity,
     houseSystem,
+    houseSystemUsed:
+      swissHouses.houseSystemUsed === "W"
+        ? "WholeSign"
+        : swissHouses.houseSystemUsed === "E"
+        ? "Equal"
+        : "Placidus",
+    houseSystemFallbackReason: swissHouses.fallbackReason,
+    latitude,
+    longitude,
     asteroids,
     additionalPoints,
     arabianParts,

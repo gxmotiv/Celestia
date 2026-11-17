@@ -537,31 +537,68 @@ assertTest(
   `${elapsed100Charts.toFixed(1)}ms total (${avgPerChartMs.toFixed(2)}ms/chart)`
 );
 
-// 4.3 Error Handling & Extreme Geocentric Cases
+// 4.3 Error Handling, Polar House Fallback & Extreme Coordinates
 let polarTestPassed = true;
+let polarFallbackPassed = true;
+let autoHouseSelectionPassed = true;
 try {
-  // North Pole (90°N)
-  const northPoleChart = calculateWesternChart(2000, 1, 1, 12, 0, 90.0, 0.0, 0, "WholeSign");
-  if (!northPoleChart.planets || northPoleChart.planets.length === 0) polarTestPassed = false;
-  // South Pole (90°S)
-  const southPoleChart = calculateWesternChart(2000, 1, 1, 12, 0, -90.0, 0.0, 0, "WholeSign");
-  if (!southPoleChart.planets || southPoleChart.planets.length === 0) polarTestPassed = false;
-  // Midnight exactly
+  // Both poles request Placidus explicitly: the engine must fall back to Equal.
+  const northPoleChart = calculateWesternChart(2000, 1, 1, 12, 0, 90.0, 0.0, 0, "Placidus");
+  const southPoleChart = calculateWesternChart(2000, 1, 1, 12, 0, -90.0, 0.0, 0, "Placidus");
+  const hasFiniteHouseCusps = (chart: ReturnType<typeof calculateWesternChart>) =>
+    chart.houses.length === 12 && chart.houses.every((house) => Number.isFinite(house.longitude));
+
+  polarFallbackPassed =
+    northPoleChart.houseSystemUsed === "Equal" &&
+    southPoleChart.houseSystemUsed === "Equal" &&
+    hasFiniteHouseCusps(northPoleChart) &&
+    hasFiniteHouseCusps(southPoleChart);
+
+  // Auto should use Placidus at ordinary latitudes and Equal at polar latitudes.
+  const autoMidLatitude = calculateWesternChart(2000, 1, 1, 12, 0, 43.7844, 10.9253, 1, "Auto");
+  const autoPolar = calculateWesternChart(2000, 1, 1, 12, 0, 90.0, 0.0, 0, "Auto");
+  autoHouseSelectionPassed =
+    autoMidLatitude.houseSystemUsed === "Placidus" &&
+    autoPolar.houseSystemUsed === "Equal" &&
+    hasFiniteHouseCusps(autoMidLatitude) &&
+    hasFiniteHouseCusps(autoPolar);
+
+  // Midnight and late-night calculations should remain stable.
   const midnightChart = calculateWesternChart(2000, 1, 1, 0, 0, 51.5074, -0.1278, 0, "Placidus");
-  if (!midnightChart.planets) polarTestPassed = false;
-  // 23:59:59
   const lateChart = calculateWesternChart(2000, 1, 1, 23, 59, 51.5074, -0.1278, 0, "Placidus");
-  if (!lateChart.planets) polarTestPassed = false;
-} catch (e) {
+  polarTestPassed =
+    !!midnightChart.planets?.length &&
+    !!lateChart.planets?.length &&
+    hasFiniteHouseCusps(midnightChart) &&
+    hasFiniteHouseCusps(lateChart);
+} catch {
   polarTestPassed = false;
+  polarFallbackPassed = false;
+  autoHouseSelectionPassed = false;
 }
 
 assertTest(
   "4.3 Edge Cases & Extreme Coordinates",
-  "North Pole (90°N), South Pole (90°S), Midnight 00:00, 23:59:59 stability",
+  "Midnight, late-night and all tested house cusps remain finite",
   polarTestPassed,
-  "All extreme coordinates calculate gracefully without exceptions",
-  polarTestPassed ? "100% Graceful Execution" : "Failed with exception"
+  "Valid planetary output and 12 finite house cusps",
+  polarTestPassed ? "All edge-case checks passed" : "One or more edge-case checks failed"
+);
+
+assertTest(
+  "4.4 Polar House-System Fallback",
+  "Placidus requested at 90°N / 90°S falls back to Equal houses",
+  polarFallbackPassed,
+  "Effective system Equal; 12 finite cusps at both poles",
+  polarFallbackPassed ? "North and South polar fallback verified" : "Polar fallback failed"
+);
+
+assertTest(
+  "4.5 Automatic House-System Selection",
+  "Auto uses Placidus at mid-latitudes and Equal houses at polar latitudes",
+  autoHouseSelectionPassed,
+  "Auto resolves to Placidus at 43.8° and Equal at 90°",
+  autoHouseSelectionPassed ? "Automatic selection verified" : "Automatic selection failed"
 );
 
 // ======================================================================

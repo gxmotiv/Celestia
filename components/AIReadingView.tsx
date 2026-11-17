@@ -30,6 +30,9 @@ interface AIReadingViewProps {
   birthTime: string;
   cityName: string;
   country: string;
+  latitude: number;
+  longitude: number;
+  timezoneOffset: number;
   western: WesternChartData;
   vedic: VedicChartData;
   numerology: NumerologyProfile;
@@ -44,6 +47,9 @@ export function AIReadingView({
   birthTime,
   cityName,
   country,
+  latitude,
+  longitude,
+  timezoneOffset,
   western,
   vedic,
   numerology,
@@ -54,6 +60,9 @@ export function AIReadingView({
   const [isLoading, setIsLoading] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [isAiGenerated, setIsAiGenerated] = useState<boolean | null>(null);
+  const [aiProvider, setAiProvider] = useState<string | null>(null);
+  const [aiModel, setAiModel] = useState<string | null>(null);
+  const [aiUsageTokens, setAiUsageTokens] = useState<number | null>(null);
 
   const [activeMode, setActiveMode] = useState<ReadingMode>("holistic");
   const [readingLength, setReadingLength] = useState<"detailed" | "concise">("detailed");
@@ -69,6 +78,7 @@ export function AIReadingView({
   const generateReading = async (overrideMode?: ReadingMode) => {
     const modeToUse = overrideMode || activeMode;
     setIsLoading(true);
+    setAiUsageTokens(null);
 
     try {
       const sun = western.planets.find((p) => p.name === "Sun");
@@ -92,9 +102,10 @@ export function AIReadingView({
           date: birthDate,
           time: birthTime,
           place: `${cityName}, ${country}`,
-          latitude: western.ascendant.longitude || 0,
-          longitude: western.midheaven.longitude || 0,
-          timezone: `UTC${cityName ? "" : "+0"}`,
+          latitude,
+          longitude,
+          timezoneOffsetHours: timezoneOffset,
+          timezone: `UTC${timezoneOffset >= 0 ? "+" : ""}${timezoneOffset}`,
         },
         western: {
           sun: {
@@ -109,6 +120,9 @@ export function AIReadingView({
           },
           ascendant: western.ascendant.sign,
           midheaven: western.midheaven.sign,
+          houseSystem: western.houseSystem,
+          houseSystemUsed: western.houseSystemUsed,
+          houseSystemFallbackReason: western.houseSystemFallbackReason,
           planets: westernPlanetsMap,
           aspects: western.aspects.slice(0, 8).map((a) => ({
             planet1: a.planet1,
@@ -173,6 +187,9 @@ export function AIReadingView({
       if (data.success && data.reading) {
         setReadingText(data.reading);
         setIsAiGenerated(data.isAiGenerated);
+        setAiProvider(typeof data.provider === "string" ? data.provider : null);
+        setAiModel(typeof data.model === "string" ? data.model : null);
+        setAiUsageTokens(typeof data.usage?.totalTokens === "number" ? data.usage.totalTokens : null);
       }
     } catch (err) {
       console.error("Failed to generate AI reading:", err);
@@ -296,7 +313,7 @@ export function AIReadingView({
               <div>
                 <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-amber-400" />
-                  AI Interpretation Engine (Gemini 3.8 Flash Synthesis)
+                  AI Interpretation Engine (Adaptive AI Model Routing)
                 </h3>
                 <p className="text-xs text-slate-400">
                   Select an interpretive focus area or interrogate the multi-system matrix directly.
@@ -398,7 +415,7 @@ export function AIReadingView({
         {/* Primary Generate Trigger */}
         <div className="flex items-center justify-between pt-2">
           <span className="text-xs text-slate-400">
-            Engineered with Gemini 3.8 Flash & Grounded Mathematical Ephemeris
+            Grounded in verified chart calculations with task-matched AI models
           </span>
 
           <button
@@ -542,7 +559,10 @@ export function AIReadingView({
           <div className="pt-6 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-2">
             <div className="flex items-center gap-2">
               <span className="font-mono text-amber-400/90">
-                {isAiGenerated ? "Generated via Gemini 3.8 Intelligence" : "Calculated via Astronomical Synthesizer"}
+                {isAiGenerated
+                  ? `Generated via ${aiProvider === "freemodel" ? "FreeModel" : aiProvider === "gemini" ? "Gemini" : "AI"}${aiModel ? ` · ${aiModel}` : ""}`
+                  : "Calculated via Astronomical Synthesizer"}
+                {aiUsageTokens !== null ? ` · ${aiUsageTokens.toLocaleString()} tokens` : ""}
               </span>
               <span aria-hidden="true">·</span>
               <span>{readingLength === "detailed" ? "Comprehensive Dossier" : "Executive Brief"}</span>

@@ -1,58 +1,75 @@
-import { GoogleGenAI } from "@google/genai";
 import { NextRequest, NextResponse } from "next/server";
+import { generateCelestiaText } from "@/lib/ai/generateText";
 
 export async function POST(req: NextRequest) {
   try {
     const payload = await req.json();
-    const { question, systemContext, profileData } = payload;
+    // Accept the live cockpit contract and legacy field names during migration.
+    const seekerName = payload?.seekerName ?? payload?.name ?? "Querent";
+    const question = String(payload?.query ?? payload?.question ?? "").slice(0, 2000);
+    const context = payload?.context ?? payload?.profileData ?? {};
+    const history = Array.isArray(payload?.conversationHistory)
+      ? payload.conversationHistory.slice(-4).map((message: { sender?: string; text?: string }) =>
+          `${message.sender ?? "context"}: ${String(message.text ?? "").slice(0, 1200)}`
+        ).join("\n")
+      : "";
 
-    const apiKey = process.env.GEMINI_API_KEY;
-
-    if (apiKey) {
-      try {
-        const ai = new GoogleGenAI({ apiKey });
-        const systemPrompt = `You are Acharya Celestia, Master Astrological Oracle.
-Consult on the querent's question strictly utilizing the verified astronomical and astrological signature provided.
-Tradition Context: ${systemContext || "holistic multi-system"}.
-Provide focused, wise, and grounded astrological guidance. Include active Dasha influence and remedies if relevant.`;
-
-        const userPrompt = `Querent: ${profileData?.name || "Querent"}
-Question: ${question}
-Profile Coordinates & Chart:
-- Lagna: ${profileData?.lagna}, Moon: ${profileData?.moonRasi}, Nakshatra: ${profileData?.nakshatra}
-- Active Dasha: ${profileData?.mahadasha} Mahadasha / ${profileData?.antardasha} Antardasha
-- Western Sun: ${profileData?.westernSun}, Moon: ${profileData?.westernMoon}, Asc: ${profileData?.westernAsc}
-- Numerology Life Path: ${profileData?.numerology?.lifePath}, Personal Year: ${profileData?.numerology?.personalYear}
-- BaZi: Animal ${profileData?.bazi?.zodiacAnimal}, Day Master ${profileData?.bazi?.dayMaster}`;
-
-        const response = await ai.models.generateContent({
-          model: "gemini-2.5-flash",
-          contents: `${systemPrompt}\n\n${userPrompt}`,
-        });
-
-        if (response.text) {
-          return NextResponse.json({
-            success: true,
-            reply: response.text,
-            isAiGenerated: true,
-          });
-        }
-      } catch (aiErr) {
-        console.warn("Master Oracle Gemini API error, using algorithmic fallback:", aiErr);
-      }
+    if (!question.trim()) {
+      return NextResponse.json({ error: "A question is required." }, { status: 400 });
     }
 
-    // Algorithmic astrological response
+    const systemPrompt = `You are Acharya Celestia, a careful multi-tradition astrological research assistant.
+Answer the querent's question using only the chart context supplied. Do not invent planetary positions, dasha dates, or life events. Distinguish traditional beliefs and interpretations from verified calculations, and never state predictions as guaranteed facts.
+Keep the answer focused, practical, respectful, and structured. If essential chart data is missing, say so explicitly.`;
+
+    const userPrompt = [
+      `Querent: ${seekerName}`,
+      `Question: ${question}`,
+      `Birth details: ${payload?.birthDate ?? "not supplied"} ${payload?.birthTime ?? ""}; ${payload?.location ?? "location not supplied"}.`,
+      "",
+      "CHART CONTEXT",
+      `Western: Sun ${context?.western?.sunSign ?? "?"}; Moon ${context?.western?.moonSign ?? "?"}; Ascendant ${context?.western?.ascendantSign ?? "?"}; Midheaven ${context?.western?.midheavenSign ?? "?"}; major aspects: ${(context?.western?.majorAspects ?? []).join("; ")}.`,
+      `Vedic: Lagna ${context?.vedic?.lagnaRasi ?? context?.vedic?.lagna ?? "?"}; Moon Rasi ${context?.vedic?.moonRasi ?? "?"}; Nakshatra ${context?.vedic?.nakshatra ?? "?"} (Pada ${context?.vedic?.pada ?? "?"}; lord ${context?.vedic?.nakshatraLord ?? "?"}); Mahadasha ${context?.vedic?.activeMahadasha ?? context?.vedic?.mahadasha ?? "?"}; Antardasha ${context?.vedic?.activeAntardasha ?? context?.vedic?.antardasha ?? "?"}; yogas: ${(context?.vedic?.yogas ?? []).join("; ")}.`,
+      `Dasha convergence: ${JSON.stringify(context?.dashaConvergence ?? {})}`,
+      `Numerology: Life Path ${context?.numerology?.lifePath ?? "?"}; Expression ${context?.numerology?.expression ?? "?"}; Personal Year ${context?.numerology?.personalYear ?? "?"}.`,
+      `BaZi: Animal ${context?.bazi?.zodiacAnimal ?? "?"}; Day Master ${context?.bazi?.dayMaster ?? "?"}; dominant element ${context?.bazi?.dominantElement ?? "?"}.`,
+      history ? `Recent conversation:\n${history}` : "",
+      "",
+      "Answer the latest question. Avoid repeating old messages unless needed."
+    ].filter(Boolean).join("\n");
+
+    try {
+      const result = await generateCelestiaText({
+        systemPrompt,
+        userPrompt,
+        maxOutputTokens: 2048,
+        modelTier: "reasoning",
+      });
+      return NextResponse.json({
+        success: true,
+        reply: result.text,
+        isAiGenerated: true,
+        provider: result.provider,
+        model: result.model,
+        usage: result.usage,
+      });
+    } catch (aiErr) {
+      console.warn("Master Oracle provider unavailable; using local fallback:", aiErr);
+    }
+
     const reply = `### Guidance from Acharya Celestia
 
-Regarding your inquiry: *"生 ${question} "*
+Your question: *"${question}"*
 
-Under your current **${profileData?.mahadasha || "Jupiter"} Mahadasha** and **${profileData?.antardasha || "Saturn"} Antardasha**, your chart emphasizes conscious discernment and measured action. With your **${profileData?.westernSun || "Sun"}** disposition aligned with **Life Path ${profileData?.numerology?.lifePath || 1}**, maintain patience and prioritize deliberate structural progress rather than hasty initiatives.`;
+The supplied chart context lists **${context?.vedic?.activeMahadasha ?? "no Mahadasha data"} Mahadasha** and **${context?.vedic?.activeAntardasha ?? "no Antardasha data"} Antardasha**, with Western Sun **${context?.western?.sunSign ?? "not supplied"}** and Life Path **${context?.numerology?.lifePath ?? "not supplied"}**.
+
+The AI provider is currently unavailable, so this response is a limited data-only fallback rather than a generated consultation. Please try again when an AI provider is configured.`;
 
     return NextResponse.json({
       success: true,
       reply,
       isAiGenerated: false,
+      provider: "local-fallback",
     });
   } catch (err) {
     console.error("Master oracle route error:", err);

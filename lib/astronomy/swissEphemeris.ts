@@ -37,6 +37,8 @@ export interface SwissHouseResult {
   midheaven: number;
   houseCusps: number[]; // Array of 12 house cusps (1-indexed semantics: [0..11] or 12 items)
   vertex: number;
+  houseSystemUsed: "P" | "W" | "E";
+  fallbackReason?: string;
 }
 
 export interface SwissAspect {
@@ -429,54 +431,73 @@ export class SwissEphemerisEngine {
     if (vertex < 0) vertex += 360.0;
 
     const cusps: number[] = new Array(12);
+    let houseSystemUsed: "P" | "W" | "E" = system;
+    let fallbackReason: string | undefined;
+
+    const setEqualHouseCusps = () => {
+      for (let i = 0; i < 12; i++) {
+        cusps[i] = (asc + i * 30.0) % 360.0;
+      }
+    };
 
     if (system === "W") {
-      // Whole Sign System: House 1 begins at 0° of Ascendant sign
+      // Whole Sign: House 1 begins at 0° of the Ascendant sign.
       const ascSignIdx = Math.floor(asc / 30);
       for (let i = 0; i < 12; i++) {
         cusps[i] = ((ascSignIdx + i) % 12) * 30.0;
       }
     } else if (system === "E") {
-      // Equal House System: 30° divisions starting from ASC
-      for (let i = 0; i < 12; i++) {
-        cusps[i] = (asc + i * 30.0) % 360.0;
-      }
+      // Equal House: 30° divisions starting from the exact Ascendant degree.
+      setEqualHouseCusps();
     } else {
-      // Placidus House System
-      cusps[9] = mc; // 10th house
-      cusps[3] = (mc + 180.0) % 360.0; // 4th house (IC)
-      cusps[0] = asc; // 1st house
-      cusps[6] = (asc + 180.0) % 360.0; // 7th house (DESC)
+      // Placidus is not reliably defined at polar latitudes. Use a documented
+      // Equal-house fallback instead of letting trigonometric results become NaN.
+      if (Math.abs(latitude) >= 66) {
+        houseSystemUsed = "E";
+        fallbackReason =
+          "Placidus is not reliably defined at latitudes of 66° or higher; Equal houses were used.";
+        setEqualHouseCusps();
+      } else {
+        cusps[9] = mc; // 10th house
+        cusps[3] = (mc + 180.0) % 360.0; // 4th house (IC)
+        cusps[0] = asc; // 1st house
+        cusps[6] = (asc + 180.0) % 360.0; // 7th house (DESC)
 
-      // Calculate Placidus semi-arc cusps (11, 12, 2, 3)
-      const calcPlacidusCusp = (f: number, ramcOffset: number): number => {
-        let r = (ramc + ramcOffset) * (Math.PI / 180.0);
-        for (let iter = 0; iter < 10; iter++) {
-          const sinDec = Math.sin(eps) * Math.sin(r);
-          const cosDec = Math.cos(Math.asin(Math.max(-1, Math.min(1, sinDec))));
-          const tanDec = sinDec / (cosDec || 0.0001);
-          const semiArcRatio = Math.asin(Math.max(-1, Math.min(1, Math.tan(phi) * tanDec))) * f;
-          r = (ramc + ramcOffset) * (Math.PI / 180.0) + semiArcRatio;
-        }
-        let cusp = Math.atan2(Math.sin(r), Math.cos(r) * Math.cos(eps)) * (180.0 / Math.PI);
-        if (cusp < 0) cusp += 360.0;
-        return cusp;
-      };
+        const calcPlacidusCusp = (f: number, ramcOffset: number): number => {
+          let r = (ramc + ramcOffset) * (Math.PI / 180.0);
+          for (let iter = 0; iter < 10; iter++) {
+            const sinDec = Math.sin(eps) * Math.sin(r);
+            const cosDec = Math.cos(Math.asin(Math.max(-1, Math.min(1, sinDec))));
+            const tanDec = sinDec / (cosDec || 0.0001);
+            const semiArcRatio = Math.asin(
+              Math.max(-1, Math.min(1, Math.tan(phi) * tanDec))
+            ) * f;
+            r = (ramc + ramcOffset) * (Math.PI / 180.0) + semiArcRatio;
+          }
+          let cusp = Math.atan2(Math.sin(r), Math.cos(r) * Math.cos(eps)) * (180.0 / Math.PI);
+          if (cusp < 0) cusp += 360.0;
+          return cusp;
+        };
 
-      try {
-        cusps[10] = calcPlacidusCusp(1 / 3, 30.0); // 11th house
-        cusps[11] = calcPlacidusCusp(2 / 3, 60.0); // 12th house
-        cusps[1] = calcPlacidusCusp(2 / 3, 120.0); // 2nd house
-        cusps[2] = calcPlacidusCusp(1 / 3, 150.0); // 3rd house
+        try {
+          cusps[10] = calcPlacidusCusp(1 / 3, 30.0); // 11th house
+          cusps[11] = calcPlacidusCusp(2 / 3, 60.0); // 12th house
+          cusps[1] = calcPlacidusCusp(2 / 3, 120.0); // 2nd house
+          cusps[2] = calcPlacidusCusp(1 / 3, 150.0); // 3rd house
 
-        cusps[4] = (cusps[10] + 180.0) % 360.0; // 5th house
-        cusps[5] = (cusps[11] + 180.0) % 360.0; // 6th house
-        cusps[7] = (cusps[1] + 180.0) % 360.0;  // 8th house
-        cusps[8] = (cusps[2] + 180.0) % 360.0;  // 9th house
-      } catch {
-        // Fallback for extreme polar latitudes
-        for (let i = 0; i < 12; i++) {
-          cusps[i] = (asc + i * 30.0) % 360.0;
+          cusps[4] = (cusps[10] + 180.0) % 360.0; // 5th house
+          cusps[5] = (cusps[11] + 180.0) % 360.0; // 6th house
+          cusps[7] = (cusps[1] + 180.0) % 360.0; // 8th house
+          cusps[8] = (cusps[2] + 180.0) % 360.0; // 9th house
+
+          if (!cusps.every((value) => Number.isFinite(value) && value >= 0 && value < 360)) {
+            throw new Error("Placidus produced a non-finite house cusp.");
+          }
+        } catch {
+          houseSystemUsed = "E";
+          fallbackReason =
+            "The Placidus calculation was numerically unstable at this location; Equal houses were used.";
+          setEqualHouseCusps();
         }
       }
     }
@@ -488,6 +509,8 @@ export class SwissEphemerisEngine {
       midheaven: round4(mc),
       houseCusps: cusps.map(round4),
       vertex: round4(vertex),
+      houseSystemUsed,
+      fallbackReason,
     };
   }
 
