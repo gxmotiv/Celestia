@@ -120,6 +120,7 @@ export interface CheshtaBalaResult {
 
 export interface NaisargikaBalaResult {
   points: number;
+  method: NaisargikaBalaMethod;
   description: string;
 }
 
@@ -146,6 +147,9 @@ export type PakshaMoonAccountingRule =
   | "raman-double-in-kala";
 
 export type AyanaBalaMethod = "bphs-khanda" | "raman-kranti";
+
+/** BPHS 27.14 exact sevenths rounded to 2dp or Raman Article 108 printed decimals. */
+export type NaisargikaBalaMethod = "bphs-sevenths-rounded" | "raman-article-108";
 
 /**
  * Drekkana Bala ordering is edition-sensitive:
@@ -262,6 +266,8 @@ export interface ShadbalaChartInput {
   midheaven?: number;
   /** Required total source: BPHS Ch. 27 vv. 32–33 or Raman Article 122. */
   shadbalaRequirementMethod?: ShadbalaRequirementMethod;
+  /** Natural-strength table: BPHS 27.14 rational sevenths or Raman Article 108 decimals. */
+  naisargikaBalaMethod?: NaisargikaBalaMethod;
   /** Source-labelled point scale; defaults to the R. Santhanam BPHS translation. */
   saptavargajaScale?: SaptavargajaScale;
   /** BPHS Sanskrit/Raman or the distinct Santhanam Vol. I English order for Drekkana Bala. */
@@ -1303,12 +1309,24 @@ export class ShadbalaEngine {
     Saturn: 5.0,
   };
 
+  /** BPHS 27.14: 60/7 multiplied by 7, 6, 5, 4, 3, 2 and 1; rounded to 2dp. */
   public static readonly NAISARGIKA_POINTS: Record<string, number> = {
+    Sun: 60.0,
+    Moon: 51.43,
+    Venus: 42.86,
+    Jupiter: 34.29,
+    Mercury: 25.71,
+    Mars: 17.14,
+    Saturn: 8.57,
+  };
+
+  /** Raman, Graha and Bhava Balas, Article 108: preserve the book's printed 2dp values. */
+  public static readonly RAMAN_NAISARGIKA_POINTS: Record<string, number> = {
     Sun: 60.0,
     Moon: 51.43,
     Venus: 42.85,
     Jupiter: 34.28,
-    Mercury: 25.71,
+    Mercury: 25.70,
     Mars: 17.14,
     Saturn: 8.57,
   };
@@ -1350,7 +1368,10 @@ export class ShadbalaEngine {
     const digBala = this.calculateDigBala(planet, input);
     const kalaBala = this.calculateKalaBala(planet, input);
     const cheshtaBala = this.calculateCheshtaBala(planet, input);
-    const naisargikaBala = this.calculateNaisargikaBala(planet);
+    const naisargikaBala = this.calculateNaisargikaBala(
+      planet,
+      input.naisargikaBalaMethod ?? "bphs-sevenths-rounded"
+    );
     const drikBala = this.calculateDrikBala(planet, input);
 
     const totalVirupas =
@@ -1876,11 +1897,28 @@ export class ShadbalaEngine {
         "Apparent daily motion is displayed only as diagnostic metadata and does not determine the score.",
     };
   }
-  public calculateNaisargikaBala(planet: string): NaisargikaBalaResult {
-    const pts = ShadbalaEngine.NAISARGIKA_POINTS[planet] ?? 0;
+  public calculateNaisargikaBala(
+    planet: string,
+    method: NaisargikaBalaMethod = "bphs-sevenths-rounded"
+  ): NaisargikaBalaResult {
+    if (!ShadbalaEngine.PLANETS.includes(planet)) {
+      throw new RangeError("Naisargika Bala is defined here only for the seven classical planets.");
+    }
+    const pointsByMethod = method === "bphs-sevenths-rounded"
+      ? ShadbalaEngine.NAISARGIKA_POINTS
+      : method === "raman-article-108"
+        ? ShadbalaEngine.RAMAN_NAISARGIKA_POINTS
+        : null;
+    if (!pointsByMethod) {
+      throw new RangeError("Unknown Naisargika Bala method: " + String(method));
+    }
+    const pts = pointsByMethod[planet];
     return {
       points: pts,
-      description: `Permanent natural Parashari hierarchy strength: ${pts} Virupas.`,
+      method,
+      description: method === "bphs-sevenths-rounded"
+        ? `BPHS 27.14 natural strength: 60/7 × the planet's rank from Saturn (1) to Sun (7), rounded to two decimals = ${pts} Virupas.`
+        : `Raman, Graha and Bhava Balas, Article 108: printed natural-strength table = ${pts} Virupas (two-decimal source values preserved).`,
     };
   }
 
