@@ -118,7 +118,55 @@ for (const planet of ["Mars", "Mercury", "Jupiter", "Venus", "Saturn"] as const)
   assert.match(mercury.description, /Mercury seeghrocha\/apogee/);
 }
 
-// 6. Circular midpoint must handle the 0°/360° seam rather than averaging
+// 6. Finite but out-of-range source ephemeris values fail closed at the
+// chart-facing boundary instead of throwing from calculateCheshtaKendra.
+{
+  const invalidCases = [
+    {
+      planet: "Mars",
+      mutate: (input: ShadbalaChartInput) => { input.planets.Mars.meanLongitude = 360; },
+      expectedLabel: /Mars mean longitude/,
+    },
+    {
+      planet: "Jupiter",
+      mutate: (input: ShadbalaChartInput) => { input.planets.Jupiter.meanLongitude = -0.01; },
+      expectedLabel: /Jupiter mean longitude/,
+    },
+    {
+      planet: "Saturn",
+      mutate: (input: ShadbalaChartInput) => { input.planets.Saturn.meanLongitude = 720; },
+      expectedLabel: /Saturn mean longitude/,
+    },
+    {
+      planet: "Mercury",
+      mutate: (input: ShadbalaChartInput) => { input.planets.Sun.meanLongitude = -1; },
+      expectedLabel: /mean-Sun longitude/,
+    },
+    {
+      planet: "Venus",
+      mutate: (input: ShadbalaChartInput) => { input.planets.Venus.seeghrochaLongitude = 360; },
+      expectedLabel: /Venus seeghrocha\/apogee/,
+    },
+  ] as const;
+
+  for (const scenario of invalidCases) {
+    const invalidInput = structuredClone(standardInput);
+    scenario.mutate(invalidInput);
+    const result = engine.calculateCheshtaBala(scenario.planet, invalidInput);
+    assert.equal(result.available, false, `${scenario.planet} invalid source longitude must be unavailable`);
+    assert.equal(result.points, 0);
+    assert.equal(result.state, "Unavailable (invalid mean/seeghrocha)");
+    assert.match(result.description, scenario.expectedLabel);
+    assert.match(result.description, /normalized to \[0°, 360°\)/);
+
+    const chartResult = engine.calculateShadbala(scenario.planet, invalidInput);
+    assert.equal(chartResult.isComplete, false,
+      `${scenario.planet} invalid Cheshta inputs must not crash or complete the full chart`);
+    assert.ok(chartResult.unavailableComponents.some((item) => item.includes("Cheshta Bala")));
+  }
+}
+
+// 7. Circular midpoint must handle the 0°/360° seam rather than averaging
 // 359° and 1° to the wrong side of the zodiac.
 {
   const forward = calculateCheshtaKendra(359, 1, 180);
@@ -131,7 +179,7 @@ for (const planet of ["Mars", "Mercury", "Jupiter", "Venus", "Saturn"] as const)
   assert.equal(reverse.points, 60);
 }
 
-// 7. Exact scale endpoints and invalid values.
+// 8. Exact scale endpoints and invalid values.
 {
   assert.equal(calculateCheshtaKendra(90, 90, 90).points, 0);
   assert.equal(calculateCheshtaKendra(0, 0, 180).points, 60);
@@ -141,5 +189,5 @@ for (const planet of ["Mars", "Mercury", "Jupiter", "Venus", "Saturn"] as const)
 }
 
 console.log(
-  "Shadbala Cheshta Kendra suite passed: Raman Examples 49–51 for all five grahas, superior/inferior data routing, unavailable-input policy, circular midpoint and 0/60 endpoints."
+  "Shadbala Cheshta Kendra suite passed: Raman Examples 49–51 for all five grahas, superior/inferior data routing, missing and invalid input guards, circular midpoint and 0/60 endpoints."
 );
