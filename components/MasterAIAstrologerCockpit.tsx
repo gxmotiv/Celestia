@@ -50,6 +50,8 @@ interface ChatMessage {
   text: string;
   timestamp: string;
   isAiGenerated?: boolean;
+  provider?: string;
+  model?: string;
 }
 
 const PLANETARY_REMEDIES: Record<
@@ -384,6 +386,8 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
         text: reply,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         isAiGenerated: data.isAiGenerated,
+        provider: data.provider,
+        model: data.model,
       };
 
       setMessages((prev) => [...prev, oracleMsg]);
@@ -595,7 +599,8 @@ In reviewing your chart, your active **${currentMD?.planet || "Jupiter"} Mahadas
                       <span>{m.timestamp}</span>
                       {m.isAiGenerated && (
                         <span className="px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[9px]">
-                          Gemini 3.8
+                          {m.provider === "freemodel" ? "FreeModel" : m.provider === "gemini" ? "Gemini" : "AI"}
+                          {m.model ? ` · ${m.model}` : ""}
                         </span>
                       )}
                     </div>
