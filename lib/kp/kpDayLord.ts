@@ -31,7 +31,7 @@ export interface KPDayLordResolution {
 }
 
 const WEEKDAY_LORDS = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"] as const;
-const MAX_LOOKBACK_DAYS = 370;
+const MAX_LOOKBACK_DAYS = 2;
 const MS_PER_DEGREE_OF_LONGITUDE = 4 * 60_000;
 
 function unresolved(
@@ -53,10 +53,10 @@ function unresolved(
  * Resolve the KP Reader VI natal weekday lord from the last local sunrise
  * preceding the actual UTC birth instant.
  *
- * The sunrise search looks back up to 370 days so the solver can find the
- * preceding annual sunrise at extreme polar latitudes, where the Sun may not
- * rise on most local dates. If no sunrise is found in that interval, the
- * weekday is left unavailable rather than replaced by a UTC/civil weekday.
+ * The preceding apparent sunrise must be within the previous 48 hours.
+ * If polar day/night or another horizon condition produces no recent sunrise,
+ * the weekday is left unavailable rather than carrying a stale seasonal
+ * sunrise forward across weeks or months.
  *
  * The weekday is derived using longitude-based Local Mean Time (LMT):
  * 4 minutes per degree east of Greenwich. This follows the meridian-based
@@ -115,7 +115,7 @@ export function resolveKPReaderVIDayLord(
     ) {
       return unresolved(
         "sunrise-unavailable",
-        "No preceding apparent sunrise was found in the 370-day search window. The engine does not substitute the UTC civil weekday."
+        "No preceding apparent sunrise was found in the previous 48 hours. The engine does not substitute the UTC civil weekday or reuse an older seasonal sunrise."
       );
     }
 
