@@ -79,6 +79,7 @@ export function KPSystemPanel({
   >("prediction");
 
   const [selectedHouse, setSelectedHouse] = useState<number>(10); // Default to Career (House 10)
+  const [kpBodySet, setKPBodySet] = useState<"classical-nine" | "extended-twelve">("classical-nine");
 
   // 4-Step Theory state
   const [fourStepTarget, setFourStepTarget] = useState<string>("Sun");
@@ -101,8 +102,8 @@ export function KPSystemPanel({
 
   // Master KP Chart Data
   const kpData: KPChartData = useMemo(() => {
-    return kpEngine.generateKPChart(westernData, vedicData, birthDateObj);
-  }, [kpEngine, westernData, vedicData, birthDateObj]);
+    return kpEngine.generateKPChart(westernData, vedicData, birthDateObj, kpBodySet);
+  }, [kpEngine, westernData, vedicData, birthDateObj, kpBodySet]);
 
   // Positional Status (PS)
   const psMap: Record<string, PositionalStatus> = useMemo(() => {
@@ -188,7 +189,7 @@ export function KPSystemPanel({
               KP Astrology Master Console &amp; Predictive Engine
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">
-              Calculated for <strong className="text-slate-200">{fullName}</strong> with Krishnamurti Ayanamsa ({kpData.ayanamsaFormatted})
+              Calculated for <strong className="text-slate-200">{fullName}</strong> with {kpData.cusps.ayanamsaName} ({kpData.ayanamsaFormatted})
             </p>
           </div>
 
@@ -347,12 +348,15 @@ export function KPSystemPanel({
                 </p>
               </div>
 
-              {/* Probability & Verdict Badge */}
+              {/* Rule Score & Verdict Badge */}
               <div className="flex items-center gap-3 self-start sm:self-auto">
                 <div className="text-right">
-                  <span className="text-[10px] text-slate-400 uppercase block font-semibold">KP Probability</span>
+                  <span className="text-[10px] text-slate-400 uppercase block font-semibold">KP Rule Score</span>
                   <span className="text-xl font-bold font-mono text-amber-300">
-                    {currentPrediction.probability}%
+                    {currentPrediction.heuristicScore}%
+                  </span>
+                  <span className="text-[9px] text-slate-500 block max-w-[190px]">
+                    Rule-weighted heuristic, not calibrated against real-world outcomes.
                   </span>
                 </div>
 
@@ -445,12 +449,15 @@ export function KPSystemPanel({
                   KP Timing of Realization (DBAS Synchronization)
                 </span>
                 <span className="text-[11px] text-slate-400 font-mono">
-                  Dasha: {currentPrediction.dashaAnalysis.dashaLord} · Bhukti: {currentPrediction.dashaAnalysis.antardashaLord}
+                  Dasha: {currentPrediction.dashaAnalysis.dashaLord} · Grade {currentPrediction.dashaAnalysis.dashaSignificatorGrade ?? "—"} · Bhukti: {currentPrediction.dashaAnalysis.antardashaLord} · Grade {currentPrediction.dashaAnalysis.antardashaSignificatorGrade ?? "—"}
                 </span>
               </div>
 
               <p className="text-xs text-slate-300 leading-relaxed">
                 {currentPrediction.timing}
+              </p>
+              <p className="text-[10px] text-slate-500">
+                Grade I = strongest; Grade II = occupants; Grade III = planets in the house lord&apos;s star; Grade IV = house lord. Pratyantardasha: {currentPrediction.dashaAnalysis.pratyantardashaLord ?? "not supplied"} · Grade {currentPrediction.dashaAnalysis.pratyantardashaSignificatorGrade ?? "—"}.
               </p>
             </div>
 
@@ -661,13 +668,16 @@ export function KPSystemPanel({
                   <div>Occupies: <strong className="text-slate-200">H{fourStepData.step1.occupiesHouse}</strong></div>
                   <div>Owns: <strong className="text-slate-200">{fourStepData.step1.ownsHouses.join(", ") || "None"}</strong></div>
                   <div className="pt-1 text-amber-300 font-bold">
-                    Effective: [{fourStepData.step1.allHouses.join(", ")}]
+                    Primary: [{fourStepData.step1.primaryHouses.join(", ") || "—"}]
+                  </div>
+                  <div className="text-slate-300 font-semibold">
+                    Secondary: [{fourStepData.step1.secondaryHouses.join(", ") || "—"}]
                   </div>
                 </div>
                 <p className="text-[10px] text-slate-400 pt-1 border-t border-slate-800">
                   {fourStepData.step1.hasPositionalStatus
-                    ? "Strongly triggers source houses due to Positional Status."
-                    : "Acts primarily through Star Lord (Step 2)."}
+                    ? "PS active: residence is primary; owned houses are primary only when empty."
+                    : "PS inactive: residence and owned houses are secondary in Step 1."}
                 </p>
               </div>
 
@@ -689,7 +699,10 @@ export function KPSystemPanel({
                   <div>Occupies: <strong className="text-slate-200">H{fourStepData.step2.occupiesHouse}</strong></div>
                   <div>Owns: <strong className="text-slate-200">{fourStepData.step2.ownsHouses.join(", ") || "None"}</strong></div>
                   <div className="pt-1 text-cyan-300 font-bold">
-                    Effective: [{fourStepData.step2.allHouses.join(", ")}]
+                    Primary: [{fourStepData.step2.primaryHouses.join(", ") || "—"}]
+                  </div>
+                  <div className="text-slate-300 font-semibold">
+                    Secondary: [{fourStepData.step2.secondaryHouses.join(", ") || "—"}]
                   </div>
                 </div>
                 <p className="text-[10px] text-slate-400 pt-1 border-t border-slate-800">
@@ -715,7 +728,10 @@ export function KPSystemPanel({
                   <div>Occupies: <strong className="text-slate-200">H{fourStepData.step3.occupiesHouse}</strong></div>
                   <div>Owns: <strong className="text-slate-200">{fourStepData.step3.ownsHouses.join(", ") || "None"}</strong></div>
                   <div className="pt-1 text-purple-300 font-bold">
-                    Effective: [{fourStepData.step3.allHouses.join(", ")}]
+                    Primary: [{fourStepData.step3.primaryHouses.join(", ") || "—"}]
+                  </div>
+                  <div className="text-slate-300 font-semibold">
+                    Secondary: [{fourStepData.step3.secondaryHouses.join(", ") || "—"}]
                   </div>
                 </div>
                 <p className="text-[10px] text-slate-400 pt-1 border-t border-slate-800">
@@ -741,7 +757,10 @@ export function KPSystemPanel({
                   <div>Occupies: <strong className="text-slate-200">H{fourStepData.step4.occupiesHouse}</strong></div>
                   <div>Owns: <strong className="text-slate-200">{fourStepData.step4.ownsHouses.join(", ") || "None"}</strong></div>
                   <div className="pt-1 text-emerald-300 font-bold">
-                    Effective: [{fourStepData.step4.allHouses.join(", ")}]
+                    Primary: [{fourStepData.step4.primaryHouses.join(", ") || "—"}]
+                  </div>
+                  <div className="text-slate-300 font-semibold">
+                    Secondary: [{fourStepData.step4.secondaryHouses.join(", ") || "—"}]
                   </div>
                 </div>
                 <p className="text-[10px] text-slate-400 pt-1 border-t border-slate-800">
@@ -992,12 +1011,15 @@ export function KPSystemPanel({
                 </h3>
               </div>
 
-              {/* Confidence & Verdict Badge */}
+              {/* Horary Rule Score & Verdict Badge */}
               <div className="flex items-center gap-3">
                 <div className="text-right">
-                  <span className="text-[10px] text-slate-400 uppercase block font-semibold">Confidence</span>
+                  <span className="text-[10px] text-slate-400 uppercase block font-semibold">Horary Rule Score</span>
                   <span className="text-xl font-bold font-mono text-cyan-300">
-                    {horaryResult.confidenceScore}%
+                    {horaryResult.heuristicScore}%
+                  </span>
+                  <span className="text-[9px] text-slate-500 block max-w-[190px]">
+                    Rule-weighted heuristic, not calibrated confidence.
                   </span>
                 </div>
 
@@ -1116,7 +1138,7 @@ export function KPSystemPanel({
               Classical KP 4-Fold Significators (Grades I, II, III, IV)
             </h3>
             <p className="text-xs text-slate-400">
-              In KP, signification is graded strictly by planetary stellar tenancy: Grade I (Planets in Star of Occupants - Strongest) ➔ Grade II (Occupants) ➔ Grade III (Planets in Star of House Lord) ➔ Grade IV (House Lord - Weakest).
+              Base grades remain: I (planets in stars of occupants) → II (occupants) → III (planets in star of house lord) → IV (house lord). The selected KSK Reader VI Rahu/Ketu agent is added to the same grade(s) as its preferred representative; see the Planets tab for the full source chain.
             </p>
           </div>
 
@@ -1185,7 +1207,7 @@ export function KPSystemPanel({
               12 Placidus Cusps &amp; KP Sub-Lord Division
             </h3>
             <p className="text-xs text-slate-400">
-              Accurate Placidus cuspal longitudes computed with Krishnamurti Ayanamsa ({kpData.ayanamsaFormatted}).
+              KP Placidus cuspal longitudes converted with {kpData.cusps.ayanamsaName} ({kpData.ayanamsaFormatted}). The historical KSK table and alternate KP ayanamsa variants are still being reconciled.
             </p>
           </div>
 
@@ -1233,8 +1255,35 @@ export function KPSystemPanel({
               Planetary Longitudes &amp; Sub-Lords
             </h3>
             <p className="text-xs text-slate-400">
-              Each planet&apos;s KP sidereal coordinate, house occupancy, star lord, and sub-lord.
+              Each planet&apos;s KP sidereal coordinate, house occupancy, star lord, sub-lord, and separately graded classical house signification.
             </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] text-slate-500">KP body profile:</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setKPBodySet("classical-nine");
+                  if (["Uranus", "Neptune", "Pluto"].includes(fourStepTarget)) {
+                    setFourStepTarget("Sun");
+                  }
+                }}
+                aria-pressed={kpBodySet === "classical-nine"}
+                className={`rounded-md border px-2.5 py-1 text-[11px] font-semibold ${kpBodySet === "classical-nine" ? "border-cyan-500 bg-cyan-950/60 text-cyan-200" : "border-slate-700 text-slate-400"}`}
+              >
+                Classical nine
+              </button>
+              <button
+                type="button"
+                onClick={() => setKPBodySet("extended-twelve")}
+                aria-pressed={kpBodySet === "extended-twelve"}
+                className={`rounded-md border px-2.5 py-1 text-[11px] font-semibold ${kpBodySet === "extended-twelve" ? "border-cyan-500 bg-cyan-950/60 text-cyan-200" : "border-slate-700 text-slate-400"}`}
+              >
+                Extended twelve
+              </button>
+              <span className="text-[10px] text-slate-500">
+                {kpData.bodySet === "classical-nine" ? "Seven classical planets + mean Rahu/Ketu" : "Adds Uranus, Neptune and Pluto"} · Node model: mean Rahu / opposite Ketu · Chiron placeholder excluded
+              </span>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -1279,6 +1328,105 @@ export function KPSystemPanel({
               </tbody>
             </table>
           </div>
+
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <h4 className="text-sm font-bold text-amber-300 uppercase tracking-wider">
+                Classical KP Planet-Level Fourfold Signification (A–D)
+              </h4>
+              <p className="text-xs text-slate-400">
+                This is the classical planet-to-house strength sequence, not the separate Sunil Gondhalekar 4-Step method. A = star lord&apos;s occupied house, B = planet&apos;s occupied house, C = star lord&apos;s owned houses, D = planet&apos;s owned houses. Planets with no other tenants in their stars use B → A → D → C priority. This classical tenant test is not the modern Gondhalekar own-star PS rule.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+              {kpData.planets.map((p) => {
+                const sig = kpData.planetSignifications[p.name];
+                return (
+                  <div key={p.name} className="p-3.5 bg-slate-900/60 border border-slate-800 rounded-xl space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-sm text-slate-100">{p.name}</span>
+                      <span className="text-[10px] font-mono text-cyan-300">
+                        {sig.hasSelfStrength ? "Self-strength" : "Star-mediated"}
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-slate-400">
+                      Priority: <strong className="text-amber-300">{sig.strengthOrder.join(" → ")}</strong>
+                      {" · "}Star tenants: {sig.starTenants.join(", ") || "None"}
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs font-mono">
+                      <div><span className="text-emerald-300 font-bold">A</span> <span className="text-slate-400">Star-lord occupation:</span> {sig.levels.levelA.join(", ")}</div>
+                      <div><span className="text-cyan-300 font-bold">B</span> <span className="text-slate-400">Planet occupation:</span> {sig.levels.levelB.join(", ")}</div>
+                      <div><span className="text-purple-300 font-bold">C</span> <span className="text-slate-400">Star-lord ownership:</span> {sig.levels.levelC.join(", ") || "—"}</div>
+                      <div><span className="text-slate-300 font-bold">D</span> <span className="text-slate-400">Planet ownership:</span> {sig.levels.levelD.join(", ") || "—"}</div>
+                    </div>
+                    <div className="pt-1 border-t border-slate-800 text-[10px] text-slate-500">
+                      Combined houses: [{sig.signifiedHouses.join(", ")}]
+                    </div>
+                    {sig.nodeAgentHouses && (
+                      <div className="text-[10px] text-rose-300">
+                        Node-agent houses: [{sig.nodeAgentHouses.join(", ")}]
+                      </div>
+                    )}
+                    {sig.starLordNodeAgentHouses && (
+                      <div className="text-[10px] text-cyan-300">
+                        Star-lord node expansion (Level A): [{sig.starLordNodeAgentHouses.join(", ")}]
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="space-y-3 pt-2">
+              <div className="space-y-1">
+                <h4 className="text-sm font-bold text-rose-300 uppercase tracking-wider">
+                  Rahu / Ketu Representative Cascade
+                </h4>
+                <p className="text-xs text-slate-400">
+                  Selected source profile: {kpData.nodeAgentRule === "reader-iii-v" ? "KSK Reader III/V order" : "KSK Reader VI order"}.
+                  Priority: {kpData.nodeRepresentations?.Rahu?.priorityOrder.map((source) => source.replace("-", " ")).join(" → ") || "not available"}.
+                  Node conjunction is currently a provisional same-sidereal-sign convention with no degree orb; aspects use full Parashari sign-based graha drishti from the seven classical planets. This is not a 3°20′ modern 4-Step orb rule.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                {(["Rahu", "Ketu"] as const).map((nodeName) => {
+                  const node = kpData.nodeRepresentations?.[nodeName];
+                  if (!node) return null;
+                  return (
+                    <div key={nodeName} className="p-3.5 bg-slate-900/60 border border-rose-900/40 rounded-xl space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-sm text-rose-200">{nodeName}</span>
+                        <span className="text-[10px] text-slate-400">House {node.occupiedHouse} · {node.sign}</span>
+                      </div>
+                      <div className="text-[10px] text-slate-400">
+                        Star lord: <strong className="text-cyan-300">{node.starLord}</strong>
+                        {" · "}Sign lord: <strong className="text-amber-300">{node.signLord}</strong>
+                      </div>
+                      <div className="space-y-1">
+                        {node.agentTiers.map((tier) => (
+                          <div key={tier.source} className="flex items-start justify-between gap-2 border-t border-slate-800 pt-1.5 text-[10px]">
+                            <span className="text-slate-400 min-w-24">
+                              {tier.priority}. {tier.source.replace("-", " ")}
+                            </span>
+                            <span className="text-slate-200 text-right">
+                              {tier.planets.join(", ") || "None"}
+                              {" · Houses ["}{tier.signifiedHouses.join(", ") || "—"}{"]"}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="pt-1 border-t border-slate-800 text-[10px] text-emerald-300">
+                        Selected agent: {node.preferredAgentPlanets.join(", ") || "none"}
+                        {" · "}Represented houses: [{node.representedHouses.join(", ")}]
+                      </div>
+                      <div className="text-[10px] text-slate-500">
+                        All candidate-agent houses (not all simultaneously selected): [{node.allAgentHouses.join(", ")}]
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1293,37 +1441,37 @@ export function KPSystemPanel({
               Krishnamurti Padhdhati Ruling Planets (RP) &amp; Transit Concurrence
             </h3>
             <p className="text-xs text-slate-400">
-              The cosmic clock of KP: Ruling Planets at any inquiry moment point directly to the fruit of the query.
+              Reader VI preference order: Lagna star lord → Lagna sign lord → Moon star lord → Moon sign lord → weekday lord. The weekday is currently derived from the UTC civil date, not a local sunrise-to-sunrise boundary.
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
             <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-xl space-y-1 text-center">
-              <span className="text-[10px] uppercase font-semibold text-slate-400 block">1. Day Lord</span>
+              <span className="text-[10px] uppercase font-semibold text-slate-400 block">5. Day Lord</span>
               <span className="text-lg font-bold text-amber-300 block">{kpData.rulingPlanets.dayLord}</span>
-              <span className="text-[10px] text-slate-500">Day of Inception</span>
+              <span className="text-[10px] text-slate-500">Weekday lord · UTC day currently provisional</span>
             </div>
 
             <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-xl space-y-1 text-center">
-              <span className="text-[10px] uppercase font-semibold text-slate-400 block">2. Moon Star Lord</span>
+              <span className="text-[10px] uppercase font-semibold text-slate-400 block">3. Moon Star Lord</span>
               <span className="text-lg font-bold text-cyan-300 block">{kpData.rulingPlanets.moonStarLord}</span>
               <span className="text-[10px] text-slate-500">Subconscious Pulse</span>
             </div>
 
             <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-xl space-y-1 text-center">
-              <span className="text-[10px] uppercase font-semibold text-slate-400 block">3. Moon Sign Lord</span>
+              <span className="text-[10px] uppercase font-semibold text-slate-400 block">4. Moon Sign Lord</span>
               <span className="text-lg font-bold text-blue-300 block">{kpData.rulingPlanets.moonSignLord}</span>
               <span className="text-[10px] text-slate-500">Emotional Vessel</span>
             </div>
 
             <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-xl space-y-1 text-center">
-              <span className="text-[10px] uppercase font-semibold text-slate-400 block">4. Lagna Star Lord</span>
+              <span className="text-[10px] uppercase font-semibold text-slate-400 block">1. Lagna Star Lord</span>
               <span className="text-lg font-bold text-emerald-300 block">{kpData.rulingPlanets.lagnaStarLord}</span>
               <span className="text-[10px] text-slate-500">Ascendant Nakshatra</span>
             </div>
 
             <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-xl space-y-1 text-center">
-              <span className="text-[10px] uppercase font-semibold text-slate-400 block">5. Lagna Sign Lord</span>
+              <span className="text-[10px] uppercase font-semibold text-slate-400 block">2. Lagna Sign Lord</span>
               <span className="text-lg font-bold text-purple-300 block">{kpData.rulingPlanets.lagnaSignLord}</span>
               <span className="text-[10px] text-slate-500">Physical Persona</span>
             </div>
@@ -1334,14 +1482,14 @@ export function KPSystemPanel({
             <div className="p-4 bg-slate-900/40 border border-slate-800 rounded-xl space-y-2 text-xs">
               <span className="font-semibold text-amber-300 block">Special Rule 1: Node Representation (Rahu &amp; Ketu)</span>
               <p className="text-slate-300 leading-relaxed">
-                In KP, Rahu and Ketu are the strongest significators. If Rahu or Ketu conjoins, aspects, or occupies the sign or star of any of the above Ruling Planets, the node replaces or represents that planet in the Ruling Planets list with enhanced potency.
+                The Rahu/Ketu representative cascade is displayed in the Planets tab. The base five-ruler calculation does not yet replace a listed RP with a node agent; node-to-RP substitution remains unimplemented.
               </p>
             </div>
 
             <div className="p-4 bg-slate-900/40 border border-slate-800 rounded-xl space-y-2 text-xs">
               <span className="font-semibold text-rose-300 block">Special Rule 2: Retrograde Planet Filtering</span>
               <p className="text-slate-300 leading-relaxed">
-                According to Krishnamurti&apos;s golden rule: A ruling planet that is retrograde, or posited in the star of a retrograde planet, cannot deliver immediate fruition. It denotes delays until the planet turns direct or another strong direct RP takes charge.
+                The chart records retrograde flags, but this RP calculation does not yet automatically exclude retrograde rulers or filter rulers in the stars of retrograde planets. Those rules must be implemented separately for natal, horary and transit contexts.
               </p>
             </div>
           </div>
@@ -1349,7 +1497,7 @@ export function KPSystemPanel({
           <div className="p-4 bg-slate-900/40 border border-slate-800 rounded-xl space-y-2 text-xs text-slate-300">
             <span className="font-semibold text-cyan-300 block">How Master KP Astrologers Use Ruling Planets for Precise Event Timing:</span>
             <p className="leading-relaxed">
-              When predicting the exact date or time of an event (e.g. marriage, contract, job offer), the event can only fructify when the transiting Sun, Moon, and Ascendant pass through the Stars and Subs ruled by these Ruling Planets, and when the active Dasha-Bhukti lords are among these Ruling Planets.
+              Traditional KP timing cross-checks the active Dasha-Bhukti-Antara chain with transiting Sun, Moon and Ascendant in relevant RP stars/subs. This panel currently lists the rulers; it does not yet calculate an exact transit-timestamp trigger.
             </p>
           </div>
         </div>

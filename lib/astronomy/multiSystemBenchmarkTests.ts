@@ -167,7 +167,7 @@ export class MultiSystemBenchmarkRunner {
         system: "Western",
         name: `${pName} Geocentric Longitude Bound`,
         category: "Planetary Positions",
-        classicalAuthority: "Ptolemy (Almagest) & Swiss Ephemeris",
+        classicalAuthority: "Internal structural range check (not an external ephemeris benchmark)",
         expectedFormula: "0° <= Ecliptic Longitude < 360°",
         actualResult: p ? `${p.longitude.toFixed(2)}° (${p.sign})` : "Missing",
         passed: p !== undefined && p.longitude >= 0 && p.longitude < 360,
@@ -220,52 +220,76 @@ export class MultiSystemBenchmarkRunner {
       name: "Lunar Nodal Axis 180° Exact Oppositional Invariant",
       category: "Lunar Points",
       classicalAuthority: "Astronomical Invariant (Caput / Cauda Draconis)",
-      expectedFormula: "|(South Node - North Node) - 180°| < 0.001°",
+      expectedFormula: "Nodal separation = 180° (internal tolerance 0.01°)",
       actualResult: `Nodal axis separation = ${nodeDiff.toFixed(4)}°`,
       passed: Math.abs(nodeDiff - 180.0) < 0.01,
       notes: "True Rahu-Ketu / Nodal axis is mathematically diametric.",
     });
 
-    // 16. Chiron & Lilith Inclusion
+    // 16. Chiron placeholder metadata smoke check — not an ephemeris accuracy test.
     const chiron = chart.planets.find((p) => p.name === "Chiron");
     list.push({
       id: "W-CHI-01",
       system: "Western",
-      name: "Chiron Centaur Coordinate",
+      name: "Chiron Approximate Placeholder Metadata",
       category: "Centaurs & Asteroids",
-      classicalAuthority: "Kowal (1977) / Modern Western Ephemeris",
-      expectedFormula: "Chiron longitude computed (0° to 360°)",
-      actualResult: chiron ? `${chiron.longitude.toFixed(2)}° in ${chiron.sign}` : "Missing",
-      passed: chiron !== undefined && chiron.longitude >= 0 && chiron.longitude < 360,
-      notes: "50.7-year chaotic orbit calculated via orbital perturbation model.",
+      classicalAuthority: "Discovered by Charles T. Kowal (1977); position method is a Celestia placeholder",
+      expectedFormula: "Placeholder longitude in [0°, 360°), explicit accuracy note, and unknown motion",
+      actualResult: chiron ? `${chiron.longitude.toFixed(2)}° in ${chiron.sign}; motion ${chiron.motionStatus ?? "not marked"}` : "Missing",
+      passed: chiron !== undefined && chiron.longitude >= 0 && chiron.longitude < 360 &&
+        chiron.motionStatus === "unknown" && Boolean(chiron.calculationNote),
+      notes: "Smoke test only. The current sine-formula placeholder is not an integrated/perturbed Chiron ephemeris and is not benchmarked for longitude or retrograde accuracy.",
     });
 
-    // 17. 4 Major Asteroids (Ceres, Pallas, Juno, Vesta)
-    const hasAsteroids = chart.asteroids && chart.asteroids.ceres && chart.asteroids.pallas;
+    // 17. Four major asteroid approximation metadata smoke check.
+    const asteroidPositions = chart.asteroids ? Object.values(chart.asteroids) : [];
+    const hasAsteroids = asteroidPositions.length === 4 && asteroidPositions.every((planet) =>
+      Boolean(planet.calculationNote?.includes("fixed J2000-era Keplerian elements"))
+    );
     list.push({
       id: "W-AST-01",
       system: "Western",
-      name: "Four Major Goddess Asteroids (Asteroid Belt)",
+      name: "Four Major Asteroid Approximation Metadata",
       category: "Centaurs & Asteroids",
-      classicalAuthority: "Piazzi, Olbers, Harding (1801-1807)",
-      expectedFormula: "Ceres, Pallas, Juno, and Vesta calculated with houses",
-      actualResult: hasAsteroids ? "All 4 Asteroids verified" : "Incomplete",
-      passed: Boolean(hasAsteroids),
-      notes: "Complete sacred feminine archetype coordinates generated.",
+      classicalAuthority: "Piazzi, Olbers, Harding (1801-1807); current coordinates use a Celestia approximation",
+      expectedFormula: "Four fixed-element approximate positions with an explicit model limitation",
+      actualResult: hasAsteroids ? "4 approximate positions with model notes" : "Incomplete or missing model notes",
+      passed: hasAsteroids,
+      notes: "Smoke check only. This does not validate asteroid longitude accuracy. The model uses fixed J2000-era Keplerian elements and a simplified Earth orbit; it omits N-body perturbations and lacks an independent JPL Horizons benchmark.",
     });
 
-    // 18. Part of Fortune Day/Night Diurnal/Nocturnal Invariant
-    const fortune = chart.arabianParts?.partOfFortune;
+    // 18. Part of Fortune & Spirit common Hellenistic sect-reversed profile
+    const lots = chart.arabianParts;
+    const fortune = lots?.partOfFortune;
+    const spirit = lots?.partOfSpirit;
+    const sun = chart.planets.find((planet) => planet.name === "Sun")?.longitude;
+    const moon = chart.planets.find((planet) => planet.name === "Moon")?.longitude;
+    const chartAscendant = chart.ascendant.longitude;
+    const isDay = lots?.isDayChart;
+    const expectedFortune = isDay ? chartAscendant + (moon ?? 0) - (sun ?? 0) : chartAscendant + (sun ?? 0) - (moon ?? 0);
+    const expectedSpirit = isDay ? chartAscendant + (sun ?? 0) - (moon ?? 0) : chartAscendant + (moon ?? 0) - (sun ?? 0);
+    const normalizedFortune = ((expectedFortune % 360) + 360) % 360;
+    const normalizedSpirit = ((expectedSpirit % 360) + 360) % 360;
+    const formulaTolerance = (actual: number | undefined, expected: number) => {
+      if (!Number.isFinite(actual)) return false;
+      const difference = Math.abs((((actual as number) - expected + 540) % 360) - 180);
+      return difference < 0.001;
+    };
     list.push({
       id: "W-FOR-01",
       system: "Western",
-      name: "Part of Fortune Sect Reversal Invariant",
+      name: "Part of Fortune & Spirit Sect-Reversed Formula",
       category: "Arabian Parts / Hermetic Lots",
-      classicalAuthority: "Ptolemy (Tetrabiblos) & Dorotheus of Sidon",
-      expectedFormula: "Day: ASC + Moon - Sun; Night: ASC + Sun - Moon",
-      actualResult: fortune ? `${fortune.longitude.toFixed(2)}° (${fortune.sign})` : "Missing",
-      passed: fortune !== undefined && fortune.longitude >= 0 && fortune.longitude < 360,
-      notes: "Sect-aware Part of Fortune correctly implemented.",
+      classicalAuthority: "Valens, Anthology II.23 & III.11; Dorotheus I.26; Paulus Alexandrinus. Common sect-reversed profile; Ptolemy's non-reversing Fortune method is a separate variant.",
+      expectedFormula: "Day: Fortune = ASC + Moon - Sun; Spirit = ASC + Sun - Moon. Night: reverse both arcs.",
+      actualResult: lots
+        ? `${lots.formulaProfile}; Fortune ${fortune?.longitude.toFixed(3)}°; Spirit ${spirit?.longitude.toFixed(3)}°`
+        : "Missing",
+      passed: !!lots &&
+        lots.formulaProfile === "common-hellenistic-sect-reversed" &&
+        formulaTolerance(fortune?.longitude, normalizedFortune) &&
+        formulaTolerance(spirit?.longitude, normalizedSpirit),
+      notes: "Numerically checks both Fortune and Spirit against the selected common Hellenistic sect-reversed profile. Ptolemy III.10 is deliberately not cited as the source for the nocturnal reversal.",
     });
 
     // 19. Major Ptolemaic Aspects Consistency
@@ -669,10 +693,10 @@ export class MultiSystemBenchmarkRunner {
         system: "KP",
         name: `KP Event Promise: ${ev.name}`,
         category: "Event Prediction",
-        classicalAuthority: "KP Reader 3 & 4 (Event Timing)",
-        expectedFormula: "CSL houses evaluated against primary/supporting/detrimental houses",
-        actualResult: `Status: ${pred.verdict} (${pred.probability}% probability)`,
-        passed: pred.verdict !== undefined && pred.probability >= 0,
+        classicalAuthority: "KP Reader 3 & 4 (rule application; internal check)",
+        expectedFormula: "CSL houses evaluated against rule-defined favorable and negation houses",
+        actualResult: `Status: ${pred.verdict} (rule score: ${pred.heuristicScore}%)`,
+        passed: pred.verdict !== undefined && Number.isFinite(pred.heuristicScore) && pred.heuristicScore >= 15 && pred.heuristicScore <= 95,
         notes: `House ${ev.house} CSL (${pred.primaryCuspalSubLord}) examined for event promise.`,
       });
     });

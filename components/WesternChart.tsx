@@ -40,6 +40,7 @@ interface WesternChartProps {
   latitude?: number;
   longitude?: number;
   timezoneOffset?: number;
+  birthUtcInstant?: string;
 }
 
 export function WesternChart({
@@ -50,6 +51,7 @@ export function WesternChart({
   latitude = 43.7844,
   longitude = 10.9253,
   timezoneOffset = 1,
+  birthUtcInstant,
 }: WesternChartProps) {
   // Construct comprehensive list of all celestial bodies and points available
   const allAvailableBodies: PlanetPosition[] = React.useMemo(() => {
@@ -411,6 +413,7 @@ export function WesternChart({
               latitude={latitude}
               longitude={longitude}
               timezoneOffset={timezoneOffset}
+              birthUtcInstant={birthUtcInstant}
             />
           )}
 
@@ -423,6 +426,8 @@ export function WesternChart({
               person1Time={birthTime}
               person1Lat={latitude}
               person1Lon={longitude}
+              person1TimezoneOffset={timezoneOffset}
+              person1UtcInstant={birthUtcInstant}
             />
           )}
 
@@ -436,6 +441,11 @@ export function WesternChart({
                 onSelectAllGroup={selectAllGroup}
                 onDeselectAllGroup={deselectAllGroup}
               />
+              {allAvailableBodies.some((body) => body.calculationNote) && (
+                <p className="text-[11px] text-amber-200/80 bg-amber-950/20 border border-amber-700/30 rounded-lg p-3">
+                  Approximate optional positions: {allAvailableBodies.filter((body) => body.calculationNote).map((body) => body.name).join(", ")}. Their coordinates inherit the model limitations shown in each placement. Unvalidated points are not included in aspect or midpoint calculations.
+                </p>
+              )}
 
       {/* Main Wheel & Planet Detail Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -818,6 +828,12 @@ export function WesternChart({
                   )}
                 </div>
                 <p className="text-xs text-amber-300/80 mt-0.5">{selectedPlanetInfo.archetype}</p>
+                {selectedPlanet.calculationNote && (
+                  <p className="text-[11px] text-amber-200/80 mt-2 leading-relaxed">{selectedPlanet.calculationNote}</p>
+                )}
+                {selectedPlanet.motionStatus === "unknown" && (
+                  <span className="text-[10px] text-slate-400 border border-slate-700 rounded px-1.5 py-0.5 mt-2 inline-block">Motion unknown</span>
+                )}
               </div>
 
               <div className="text-right">
@@ -1008,7 +1024,7 @@ export function WesternChart({
                   <span className="font-semibold text-amber-300">
                     {selectedAspect.planet1} {selectedAspect.aspectName} {selectedAspect.planet2} ({selectedAspect.symbol} {selectedAspect.angle}°)
                   </span>
-                  <span className="text-slate-400">Orb: {selectedAspect.orb}° ({selectedAspect.isApplying ? "Applying" : "Separating"})</span>
+                  <span className="text-slate-400">Orb: {selectedAspect.orb}° ({selectedAspect.isApplying === null ? "Direction unavailable" : selectedAspect.isApplying ? "Applying" : "Separating"})</span>
                 </div>
                 <p className="text-slate-300">
                   {ASPECT_INTERPRETATIONS[selectedAspect.aspectName]}
@@ -1016,7 +1032,7 @@ export function WesternChart({
               </div>
             )}
 
-            <div className="overflow-x-auto">
+            <div className="max-h-[560px] overflow-auto">
               <table className="w-full text-left text-xs text-slate-300">
                 <thead className="bg-slate-950/60 text-slate-400 border-b border-slate-800 text-[11px]">
                   <tr>
@@ -1028,7 +1044,7 @@ export function WesternChart({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60 font-mono">
-                  {chartData.aspects.slice(0, 12).map((asp, idx) => (
+                  {chartData.aspects.map((asp, idx) => (
                     <tr
                       key={idx}
                       onClick={() => setSelectedAspect(asp)}
@@ -1048,7 +1064,9 @@ export function WesternChart({
                       </td>
                       <td className="py-2 px-3 tabular-nums">{asp.orb}°</td>
                       <td className="py-2 px-3 font-sans">
-                        {asp.isApplying ? (
+                        {asp.isApplying === null ? (
+                          <span className="text-slate-500">N/A</span>
+                        ) : asp.isApplying ? (
                           <span className="text-amber-400/90">Applying</span>
                         ) : (
                           <span className="text-slate-400">Separating</span>

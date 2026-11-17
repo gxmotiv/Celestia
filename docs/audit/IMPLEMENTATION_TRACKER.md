@@ -1,8 +1,18 @@
 # Celestia master implementation tracker
 
-Last reviewed: 2026-11-06  
+Last reviewed: 2026-11-15  
 Source of scope: `docs/audit/2026-10-31-master-audit-spec.md` and the current GitHub source tree.  
 Policy: keep changes on isolated branches; do not merge or deploy until the owner reviews the PR chain. Passing internal tests is not proof of astronomical correctness.
+
+## 2026-11-15 bottom-up audit update
+
+- New cross-system audit map: `docs/audit/2026-11-15-bottom-up-multi-system-coverage.md`. It defines L0 numeric primitives through L8 independent acceptance and applies the sequence separately to Western, Parashari, Jaimini, KP, BaZi, numerology, relationship charts and product/export.
+- Jaimini micro-layer correction: `lib/vedic/jaiminiKarakas.ts` now rejects fractional houses, out-of-range sidereal longitudes and sign labels inconsistent with the longitude; the Ascendant must be in [0°, 360°).
+- Jaimini Rashi Drishti correction: `getJaiminiAspectedSigns` rejects non-integer or out-of-zodiac sign indices.
+- New dedicated suite: `scripts/testJaiminiKarakasSuite.ts` covers the seven- and eight-karaka schemes, Rahu's reversed ranking degree, 0° Rahu, exact/sub-arcsecond ties, missing/duplicate/invalid inputs, Karakamsa calculation and all twelve Rashi Drishti maps. It has been added to `.github/workflows/verify.yml`.
+- **CI status:** the suite is newly added and must be judged only on the Actions run for the commit that contains both the test file and workflow matrix update. No pass is claimed here. Existing Jaimini integration coverage is not a substitute for direct 7/8-karaka tests.
+- **Important scope limit:** this update validates the calculation contract and selected 7/8-karaka and Rashi Drishti rules. It does not complete Jaimini Chara Dasha, Arudha, Upapada, Argala, special Lagnas or every commentarial lineage.
+
 
 ## Status vocabulary
 
@@ -16,7 +26,7 @@ Policy: keep changes on isolated branches; do not merge or deploy until the owne
 
 | Item | Current status | Evidence / next acceptance gate |
 |---|---|---|
-| Historical local-time resolver | Partial | Resolver distinguishes resolved, ambiguous, nonexistent, unsupported. Runtime IANA/ICU output is not independent historical proof. Verify short-lived offset regimes, sampling performance, and authoritative historical sources. |
+| Historical local-time resolver | Partial | Resolver distinguishes resolved, ambiguous, nonexistent, unsupported. Runtime IANA/ICU output is not independent historical proof. IANA warns that pre-1970 coverage is incomplete and not authoritative everywhere. Verify short-lived offset regimes, sampling performance, and primary civil-time sources. |
 | Built-in city IANA identifiers | Implemented on branch | All 133 built-in city records now carry explicit IANA IDs; CI validates IDs in the runner runtime. Verify every city-to-zone assignment against authoritative timezone geography, especially border/multi-zone regions. |
 | Geoapify timezone identity | Implemented on branch | Preserve provider IANA zone and remove longitude/15 offset guessing. Test provider failure, missing zone, reverse geocode, and offline-only mode. |
 | Primary birth-form timezone state | Partial | Automatic IANA and explicit manual-lock modes; ambiguous-time selection and unsupported/nonexistent warnings. Browser-level form testing remains. |
@@ -28,24 +38,41 @@ Policy: keep changes on isolated branches; do not merge or deploy until the owne
 | BaZi year/month pillars | Partial | Existing longitude interval branch correction plus new crossing solver. The live year/month engine still needs to consume validated crossing instants and exact boundary tests. |
 | BaZi day-pillar epoch anchor | Audit required | Existing anchor is preserved; verify cycle epoch and calendrical convention from primary/authoritative references. |
 | Early/Late Zi hour/day semantics | Partial | Explicit option and unit tests exist. Verify traditional source convention and ensure all BaZi views/transits use the same policy. |
+| Invalid/missing birth-time handling | Implemented on audit branch; CI pending | Parser reports `usedFallback`; known times with invalid/missing values are rejected. An explicitly unknown time uses 12:00 only as a warned placeholder. Browser-level testing and all saved-profile paths still need review. |
 
 ## Workstream 2 — Astronomical engine and chart correctness
 
 | Item | Current status | Evidence / next acceptance gate |
 |---|---|---|
-| Actual ephemeris identity | Corrected disclosure | Compatibility class name remains, but implementation calls `astronomy-engine`, not native Swiss Ephemeris/libswe. Audit all claims, documentation and dependencies. |
-| Independent planetary benchmarks | Not started | Build a reproducible comparison set against a trustworthy ephemeris source for Sun, Moon and planets across dates, latitudes and boundary cases. Record time scale, coordinate frame, apparent/true settings and tolerances. |
-| Julian Day and UTC conversions | Partial / audit required | Existing suite passes; validate leap dates, seconds, pre-1972 UTC assumptions, historical offsets with seconds, and time-scale conversions. |
-| Tropical/sidereal and ayanamsa | Audit required | Verify settings, precession model, epoch, and consistency across Western/Vedic calculations. |
-| Houses and high latitudes | Known concern / audit required | Determine Placidus failure/fallback behavior, expose actual house system used, warn users, and test high-latitude boundaries. |
+| Actual ephemeris identity | Corrected disclosure on audit branch | The compatibility facade calls `astronomy-engine`, not native Swiss Ephemeris/libswe. Reviewed chart, transit, benchmark and PDF labels now disclose this. Upstream documents an approximately ±1 arcminute design target; this is not a Celestia-wide accuracy certificate. |
+| Independent planetary benchmarks | 60 JPL observer + 18 INPOP19 apparent + 18 matched astrometric J2000 vector pairs captured; interpretation remains REVIEW | JPL Horizons quantity 31 covers ten bodies × six epochs (60 observations); Miriade INPOP19 apparent-of-date covers Saturn/Uranus/Neptune × six (18); matched astrometric J2000 captures add 18 Miriade/JPL LT vector pairs. All raw provider responses are SHA-256 archived and reverified. Apparent-of-date INPOP–JPL latitude residuals reach 9.55″ and fit a date-dependent common rotation with ≤0.21″ max remainder (diagnostic frame convention issue). In the matched fixed J2000 ecliptic, INPOP19–JPL DE441 angular separation is ≤0.2552″, while Astronomy Engine GeoVector (light-time, no stellar aberration) differs from both by 2.8–19.5″ in this sample. These residuals are within Astronomy Engine upstream's stated ±1 arcminute design target; this is finite model precision, not a demonstrated code defect. No arbitrary per-body correction or pass thresholds are added. The 2035 sample remains a stress case because JPL labels it UT~ beyond known leap-second/EOP prediction support. |
+| Julian Day and UTC conversions | Partial / audit required | Existing suite covers selected UTC/JD and date rollover cases. Validate leap dates, seconds, pre-1972 civil-time assumptions, historical offsets with seconds, and explicit UTC/UT1/TT/Delta-T handling. |
+| Almuten Figuris scoring and interpretation labels | Disclosure correction on PR #28 branch; CI pending | The pre-natal syzygy event calculation is corrected on PR #27. A separate audit found that the visible “Lord of Soul” and “Lord of Temperament” labels were only aliases for rank 1 and rank 2, not independent technical calculations. PR #28 changes the UI to show rank/runner-up, labels the 12-to-1 house and +7/+6 day/hour additions as Celestia-specific weights, and exposes the full hybrid method note. The dignity/point scheme still needs source-by-source validation before being attributed as exact Ibn Ezra/Lilly doctrine. |
+| Almuten Figuris prenatal syzygy | Corrected on PR #27 branch; CI pending | Previous implementation approximated the pre-natal syzygy Sun longitude with a fixed 0.08 phase-angle multiplier. It now searches the actual prior apparent geocentric Moon–Sun 0°/180° phase crossing over a 35-day window and bisects the event time. Exact event Julian Day/UTC and elapsed days are exposed. Regression fixtures cover both New and Full Moon, selection before/after a lunation boundary, and NASA Sky Calendar event-time references for 8 April 2024 18:21 UTC and 25 March 2024 07:00 UTC with a 0.02-day tolerance. Accuracy remains bounded by Astronomy Engine; no native Swiss Ephemeris accuracy is claimed. |
+| Chiron and major-asteroid position quality | Approximation disclosures and phase gating on PR #31 branch; CI pending | Chiron's legacy sine-formula placeholder was previously assigned a fixed +0.05°/day speed and presented as direct, although no integrated or perturbed small-body ephemeris existed. It now has no invented speed, is marked motion-unknown, and is excluded from major/minor aspect and midpoint calculations until suitable coordinates exist. The four major asteroids disclose their fixed-J2000 Keplerian/simplified-Earth approximation, which omits N-body perturbations and has not been independently benchmarked against JPL Horizons. UI, PDF and regression checks communicate these limitations; tests validate disclosure/guarding, not ephemeris accuracy. |
+| Tropical/sidereal and ayanamsa | Shared model implemented on audit branch; independent validation pending | Western and Vedic paths now call one J2000-anchored Lahiri-style precession polynomial; the prior opposite-sign quadratic discrepancy is removed. This is not native Swiss Ephemeris `SE_SIDM_LAHIRI`. Regression tests verify path consistency, not absolute accuracy. Benchmark named epochs against authoritative Lahiri tables / Swiss Ephemeris with explicit time-scale and nutation conventions. |
+| Houses and high latitudes | Partial / fallback metadata and ordinary-latitude fixtures present | Placidus, Equal, Whole Sign and Porphyry are implemented through Celestia formulas over Astronomy Engine sidereal time/obliquity. `calculateWesternChart` reports the actual system used and documents the conservative ≥66.5622° polar Porphyry policy and numerical Placidus fallback. Independent Swiss Ephemeris fixtures cover one ordinary-latitude chart; dedicated high-latitude cusp comparisons and broad solver-boundary fixtures remain required. |
+| Advanced Western 90° midpoint chart integration | Corrected on PR #24 branch; CI pending | The Advanced Western midpoint UI now calls `calculateNatalMidpoints`, which supplies all natal planets plus Ascendant and Midheaven. Regression tests exercise the same chart-level entry point. The method remains a selected Cosmobiology/Uranian-style midpoint implementation, not a complete Hamburg Uranian system. |
+| Exact-aspect phase state | Corrected on PR #30 branch; CI pending | The shared angular-aspect helper previously returned `false` at exactitude, causing exact partile aspects to be displayed as “Separating”. It now returns `null` when the phase is indeterminate at the exact instant, for stationary relative speed, or invalid input. Natal and transit callers already accept a nullable phase. Regression checks cover exact, applying and separating sextiles plus a natal exact-aspect row. |
+| Natal major-aspect phase with missing speed | Corrected on PR #29 branch; CI pending | The main five-aspect calculator previously used `speed ?? 0`, which silently treated an unknown instantaneous velocity as a stationary point and could fabricate applying/separating status. It now reports phase unavailable if either speed is missing/non-finite, while retaining a genuine numeric zero as a valid stationary speed. Tests cover both missing-speed and stationary-vs-moving cases. |
+| Western planetary hours at polar latitudes | Corrected on PR #33 branch; CI pending | The NOAA-style sunrise/sunset approximation previously returned a full-day or zero-day interval at polar conditions, and the caller still generated 24 planetary hours, including zero-minute hours and a fabricated current ruler. Polar day/night now retains diurnal/nocturnal sect, but exposes no planetary day/hour ruler, no birth-hour number and no 24-hour schedule when a normal sunrise/sunset pair does not exist. Almuten skips day/hour bonuses when those rulers are unavailable. Regression tests cover polar day, polar night and an ordinary-latitude 24-hour schedule. This remains an approximate NOAA-style sunrise/sunset model with fixed-offset timezone input, not a precision rise/set ephemeris.
+| Natal Western aspect taxonomy and display | Corrected on PR #25; minor aspect phase correction on PR #26 branch | Main natal aspect calculation emits only the five Ptolemaic aspects; Semisextile and Quincunx are in the minor engine, and all major rows are accessible. Minor applying/separating phase now derives from the instantaneous relative angular speed without guessed averages or a long finite projection; stationary relative motion and unavailable speed display as unavailable. Regression tests cover stationary, missing-speed, equal-speed and near-exact cases. School-specific orbs still need comparative traditional-source review. |
+| Lunar node pair consistency | Implemented on audit branch; CI pending | `calculateAllPlanets` now defaults to a mean-node pair and supports explicit mean/true selection; Ketu is 180° opposite the same selected Rahu. Regression tests cover tropical/sidereal and several dates. Independent longitude/speed accuracy for mean and true node models remains unverified. |
 | D1–D60 divisional charts | Audit required | Inspect each implemented formula, sign assignment, boundary rule, tradition, and independent examples. Do not infer correctness from D9-only tests. |
 | Vimshottari and other dashas | Partial / audit required | Existing antardasha suite passes. Verify balance at birth, year-length convention, rounding, pratyantardasha and remaining systems. |
+
+## 2026-11-17 Jaimini Chara Dasha source-fidelity finding
+
+- Added `docs/audit/jaimini-chara-dasha-source-audit.md`.
+- Code inspection found the legacy `CharaDashaCalculator` selects sequence direction from Ascendant parity, derives sign duration from the ninth sign/ninth lord, caps counts at nine, and silently substitutes Aries for an invalid Ascendant. These behaviors do not match the cited BPHS/Santhanam sign-to-lord and ninth-sign direction rules as transcribed in the audit.
+- **Status: BPHS/Santhanam profile implemented and deployed.** Do not advertise all Chara Dasha traditions as complete; Rao/Raman, lower sub-period rules and independent worked-chart reconciliation remain open.
+- Keep the 7/8 Chara Karaka selection separate from Dasha duration logic; the former does not resolve the latter.
 
 ## Workstream 3 — KP and interpretive output
 
 | Item | Current status | Evidence / next acceptance gate |
 |---|---|---|
-| KP sub-lord calculations | Audit required | Verify star/sub division sequence, cusp/planet sub-lords, ayanamsa and boundary behavior. |
+| KP sub-lord calculations | Partial — KP 1–2193 table corrected; broader audit remains | KP 1–249 remains 249 rows; later 1–2193 extension now derives 2,187 sub-sub intervals from the 243 unsplit parent intervals and applies six sign-edge splits, correcting the prior 2,241-row defect. Regression fixtures check published AstroNeemo rows 1–2, 192–193 and equivalent seeds 1/732/1463, full coverage and point-lookup lord agreement. The provisional KP linear profile now has correct Gregorian date interpolation and input validation; its historical epoch value and alternate KP ayanamsa variants remain unverified. Full cusp/planet boundary coverage, 4-Step/CIL source rules and predictive scoring still need independent reconciliation. |
 | KP percentages | Known concern | Trace actual formulas and classify every score as deterministic, heuristic, empirical or display-only. Do not label unvalidated scores as probability. |
 | Interpretations | Audit required | Trace each text/score to calculated inputs and clearly separate traditional interpretation from factual calculation. |
 
@@ -53,9 +80,9 @@ Policy: keep changes on isolated branches; do not merge or deploy until the owne
 
 | Item | Current status | Evidence / next acceptance gate |
 |---|---|---|
-| Synastry | Audit required | Verify aspect orbs, weights, house overlays, duplicated transformations and interpretation labels. |
-| Composite chart | Audit required | Independently verify midpoint conventions, circular longitude handling, time/date handling and house calculations. |
-| Davison chart | Priority audit | Verify exact UTC instants, temporal midpoint, geographic midpoint, longitude wrap, antipodal/near-antipodal handling and timezone seconds. Compare against independent examples. |
+| Synastry | Partial / approximate-point gating on PR #35 branch | Cross-chart aspects now exclude any point carrying an explicit calculationNote, so Chiron's sine-formula placeholder cannot create an apparently exact Synastry contact. House overlays remain intentionally limited to Sun, Moon, Venus, Mars, Jupiter and Saturn. Aspect orbs/weights and the interpretation layer remain heuristic and school-specific; compare against traditional sources and independent fixtures before expanding the method. |
+| Composite chart | Partial / antipodal longitude tie-break corrected on follow-on branch | Circular midpoint now uses normalized endpoints and a deterministic, chart-order-independent convention for exactly antipodal longitudes; non-finite longitudes are rejected. Regression coverage added for antipodal Sun/Ascendant, 0° wraparound and chart reversal. Composite equal-house assignments remain an explicit approximation; independent fixtures are still needed for midpoint conventions, full chart coverage and house methodology. |
+| Davison chart | Partial / UTC integration and LMT offset formatting corrected on follow-on branch | Engine accepts exact resolver-supplied UTC instants and the relationship screen passes them when available; legacy fixed-offset conversion remains for older callers. Strict local date/time and coordinate validation added. LMT offset labels now round total minutes before splitting hours/minutes, avoiding invalid values such as UTC+05:60; a regression fixture covers the carry boundary. Independent fixtures for temporal/geographic midpoint, longitude wrap, antipodal handling and historical timezone seconds are still required. |
 | Numerology | Audit required | Verify name normalization, master-number rules, date conventions, and explain interpretive/non-empirical status. |
 | PDFs | Audit required | Compare every printed value with on-screen calculations; verify privacy, locale, fonts and missing-data behavior. |
 
@@ -84,9 +111,9 @@ Policy: keep changes on isolated branches; do not merge or deploy until the owne
 |---|---|---|
 | TypeScript archived snapshots exclusion | Implemented on PR #3 | Archive remains; inspect every excluded path to ensure no active module was excluded. |
 | Duplicate/unused modules | Audit required | Identify duplicates before cleanup; do not delete historical files during audit. |
-| Production build | Partial / CI-gated | PR chain has a green build at earlier commits; rerun on latest head after all integration changes. |
-| Browser deployment | Not started | Choose GitHub Pages only if the app can be exported without server routes. Otherwise use a zero-cost GitHub-triggered deployment target with server/API support. Never expose API secrets in static client bundles. |
-| Public link | Not created | Publish only after full calculation, privacy and UI acceptance gates; provide the exact verified deployment URL. |
+| Production build | Passed | Production build, ESLint and configured verification matrix passed on `06c8e7b`; Android ARM32/ARM64 APK build passed. |
+| Browser deployment | Deployed | Cloudflare Worker deployment, NaraRouter secret configuration and public HTML smoke test passed on 17 November 2026. |
+| Public link | Live | https://celestia.gagandeep-hwr.workers.dev/ — verified by the post-deployment HTTP/HTML smoke check. |
 
 ## Current PR chain
 
@@ -97,3 +124,14 @@ Policy: keep changes on isolated branches; do not merge or deploy until the owne
 5. PR #5 — IANA city/geocoding and birth-form timezone integration; open draft, stacked on PR #4.
 
 Do not merge the chain automatically. Review each diff and rerun the full workflow on the final head before merge/deployment.
+
+
+## 17 November 2026 — BPHS/Santhanam Chara Dasha implementation
+
+- [x] Add named profile `bphs-santhanam-1984` with independent global sequence and individual sign-count directions.
+- [x] Replace ninth-sign duration logic with sign-to-lord inclusive counts and remove the nine-year cap.
+- [x] Add Scorpio/Aquarius dual-lord selection and inspectable dignity adjustments.
+- [x] Normalize chart node identifiers and require all nine classical grahas.
+- [x] Make five-level Level 1 consume the same source-calculated Mahadasha periods.
+- [x] Migrate legacy orchestrator callers and pass the production build, ESLint, configured verification matrix and offline Android ARM32/ARM64 build.
+- [ ] Add Rao/Raman profile, sourced Antardasha/lower levels, second cycle and independent worked-chart reconciliation.

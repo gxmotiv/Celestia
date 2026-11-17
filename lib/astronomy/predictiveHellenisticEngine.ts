@@ -17,6 +17,7 @@ import {
   ZODIAC_SIGNS,
 } from "./ephemeris";
 import { swissEphemeris } from "./swissEphemeris";
+import { isSunAboveHorizonInChart } from "./horizon";
 
 // ---------------------------------------------------------------------------
 // 1. SECONDARY PROGRESSIONS
@@ -24,6 +25,7 @@ import { swissEphemeris } from "./swissEphemeris";
 
 export interface MoonSignChangeEvent {
   age: number;
+  /** UTC calendar year in which this secondary-progressed life-year begins (birth year + age). */
   year: number;
   fromSign: string;
   toSign: string;
@@ -51,12 +53,18 @@ export class ProgressionsEngine {
     birthDate: Date,
     currentDate: Date,
     lat: number,
-    lon: number,
-    timezoneOffset: number
+    lon: number
   ): ProgressedChartResult {
+    if (!Number.isFinite(birthDate.getTime()) || !Number.isFinite(currentDate.getTime()) ||
+        currentDate.getTime() < birthDate.getTime()) {
+      throw new RangeError("Secondary progressions require valid dates with currentDate on or after birthDate.");
+    }
+    if (![lat, lon].every(Number.isFinite) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+      throw new RangeError("Secondary progressions require latitude ±90° and east-positive longitude ±180°.");
+    }
     const diffMs = currentDate.getTime() - birthDate.getTime();
     const ageYears = diffMs / (365.2422 * 86400000);
-    const age = Math.max(0, Math.floor(ageYears));
+    const age = Math.floor(ageYears);
 
     // Secondary progression: 1 day after birth = 1 year of life
     const progressedTimeMs = birthDate.getTime() + ageYears * 86400000;
@@ -71,7 +79,8 @@ export class ProgressionsEngine {
       lat,
       lon,
       0,
-      "Placidus"
+      "Placidus",
+      progDateObj.getUTCSeconds()
     );
 
     const progSun = progChart.planets.find((p) => p.name === "Sun") || progChart.planets[0];
@@ -107,18 +116,17 @@ export class ProgressionsEngine {
 
     // Moon changes signs roughly every 2.3 to 2.5 years
     const moonSignChanges: MoonSignChangeEvent[] = [];
-    const currentYear = currentDate.getFullYear();
-
     for (let delta = -2; delta <= 10; delta++) {
       const checkAge = age + delta;
+      if (checkAge < 0) continue;
       const checkTimeMs = birthDate.getTime() + checkAge * 86400000;
       const nextTimeMs = birthDate.getTime() + (checkAge + 1) * 86400000;
 
       const d1 = new Date(checkTimeMs);
       const d2 = new Date(nextTimeMs);
 
-      const jd1 = swissEphemeris.calculateJulianDay(d1.getUTCFullYear(), d1.getUTCMonth() + 1, d1.getUTCDate(), d1.getUTCHours(), d1.getUTCMinutes());
-      const jd2 = swissEphemeris.calculateJulianDay(d2.getUTCFullYear(), d2.getUTCMonth() + 1, d2.getUTCDate(), d2.getUTCHours(), d2.getUTCMinutes());
+      const jd1 = swissEphemeris.calculateJulianDay(d1.getUTCFullYear(), d1.getUTCMonth() + 1, d1.getUTCDate(), d1.getUTCHours(), d1.getUTCMinutes(), d1.getUTCSeconds(), 0);
+      const jd2 = swissEphemeris.calculateJulianDay(d2.getUTCFullYear(), d2.getUTCMonth() + 1, d2.getUTCDate(), d2.getUTCHours(), d2.getUTCMinutes(), d2.getUTCSeconds(), 0);
 
       const moonPos1 = swissEphemeris.calculatePlanetPosition(swissEphemeris.MOON, jd1);
       const moonPos2 = swissEphemeris.calculatePlanetPosition(swissEphemeris.MOON, jd2);
@@ -126,7 +134,9 @@ export class ProgressionsEngine {
       if (moonPos1.sign !== moonPos2.sign) {
         moonSignChanges.push({
           age: checkAge,
-          year: currentYear + delta,
+          // A secondary-progression day corresponds to a life-year beginning
+          // on this age birthday; avoid deriving it from the current local year.
+          year: birthDate.getUTCFullYear() + checkAge,
           fromSign: moonPos1.sign,
           toSign: moonPos2.sign,
           interpretation: `Progressed Moon shifts into ${moonPos2.sign}: A 2.5-year chapter focusing emotional focus, lifestyle habits, and instincts into ${moonPos2.sign} themes.`,
@@ -136,7 +146,7 @@ export class ProgressionsEngine {
 
     return {
       age,
-      progressedDate: progDateObj.toLocaleDateString(),
+      progressedDate: progDateObj.toISOString(),
       progressedPlanets: progChart.planets,
       progressedSun: progSun,
       progressedMoon: progMoon,
@@ -243,6 +253,11 @@ export interface ReleasingPeriod {
   endDate: string;
   isPeak: boolean;
   ruler: string;
+  /** True on the L2 period where the sequence jumps opposite the L1 sign. */
+  isLoosingOfBond?: boolean;
+  /** Inclusive house count from the Lot of Fortune. */
+  angleFromFortune?: number;
+  peakRank?: "Major" | "Strong" | "Moderate" | "Weak" | null;
 }
 
 export interface ZodiacalReleasingReport {
@@ -251,75 +266,156 @@ export interface ZodiacalReleasingReport {
   currentL1Period: ReleasingPeriod;
   currentL2Period: ReleasingPeriod;
   allL1Periods: ReleasingPeriod[];
+  allL2Periods: ReleasingPeriod[];
   peakPeriodsCount: number;
   interpretation: string;
+  methodNote: string;
 }
 
 export class ZodiacalReleasingEngine {
-  // Planetary period allotments in years for each zodiac sign
+  // Planetary minor years used by the Valens/Brennan 360-day-year convention.
   public static readonly SIGN_PERIODS: Record<string, number> = {
-    Aries: 15,       // Mars
-    Taurus: 8,       // Venus
-    Gemini: 20,      // Mercury
-    Cancer: 25,      // Moon
-    Leo: 19,         // Sun
-    Virgo: 20,       // Mercury
-    Libra: 8,        // Venus
-    Scorpio: 15,     // Mars
-    Sagittarius: 12, // Jupiter
-    Capricorn: 27,   // Saturn
-    Aquarius: 30,    // Saturn
-    Pisces: 12,      // Jupiter
+    Aries: 15, Taurus: 8, Gemini: 20, Cancer: 25,
+    Leo: 19, Virgo: 20, Libra: 8, Scorpio: 15,
+    Sagittarius: 12, Capricorn: 27, Aquarius: 30, Pisces: 12,
   };
 
+  private static readonly SIGN_NAMES = ZODIAC_SIGNS.map((sign) => sign.name);
+  private static readonly TOTAL_SIGN_PERIOD_UNITS = Object.values(ZodiacalReleasingEngine.SIGN_PERIODS)
+    .reduce((sum, years) => sum + years, 0);
+  private static readonly YEAR_DAYS = 360;
+  private static readonly DAY_MS = 86400000;
+
+  private makePeriod(
+    level: "L1" | "L2",
+    signIndex: number,
+    startMs: number,
+    endMs: number,
+    fortuneSignIndex: number,
+    isLoosingOfBond = false
+  ): ReleasingPeriod {
+    const sign = ZodiacalReleasingEngine.SIGN_NAMES[signIndex];
+    const angleFromFortune = ((signIndex - fortuneSignIndex + 12) % 12) + 1;
+    const peakRank: ReleasingPeriod["peakRank"] =
+      angleFromFortune === 10 ? "Major" :
+      angleFromFortune === 1 ? "Strong" :
+      angleFromFortune === 7 ? "Moderate" :
+      angleFromFortune === 4 ? "Weak" : null;
+    return {
+      level,
+      sign,
+      durationYears: (endMs - startMs) / (ZodiacalReleasingEngine.YEAR_DAYS * ZodiacalReleasingEngine.DAY_MS),
+      startDate: new Date(startMs).toISOString(),
+      endDate: new Date(endMs).toISOString(),
+      isPeak: peakRank !== null,
+      ruler: ProfectionsEngine.SIGN_RULERS[sign]?.ruler || "Sun",
+      angleFromFortune,
+      peakRank,
+      isLoosingOfBond,
+    };
+  }
+
+  /**
+   * Calculate active L1/L2 periods from the selected Lot.
+   *
+   * Valens/Brennan convention: sign minor years, 360-day releasing years,
+   * 30-day L2 months, angularity measured from the Lot of Fortune, and the
+   * Loosing-of-the-Bond jump for L1 chapters that exceed one 211-month L2 lap.
+   */
   public calculateReleasing(
     birthDate: Date,
     lotLongitude: number,
-    lotName: "Spirit (Career & Purpose)" | "Fortune (Physical Health & Material Fortune)"
+    lotName: "Spirit (Career & Purpose)" | "Fortune (Body & Circumstances)",
+    referenceDate: Date = new Date(),
+    lotOfFortuneLongitude: number = lotLongitude
   ): ZodiacalReleasingReport {
-    const startSignIdx = Math.floor(lotLongitude / 30);
-    const lotSign = ZODIAC_SIGNS[startSignIdx]?.name || "Aries";
-
-    const l1Periods: ReleasingPeriod[] = [];
-    let curDate = new Date(birthDate);
-
-    for (let i = 0; i < 12; i++) {
-      const signIdx = (startSignIdx + i) % 12;
-      const signName = ZODIAC_SIGNS[signIdx]?.name || "Aries";
-      const duration = ZodiacalReleasingEngine.SIGN_PERIODS[signName] || 15;
-
-      const startDateStr = curDate.toLocaleDateString();
-      const nextDate = new Date(curDate);
-      nextDate.setFullYear(nextDate.getFullYear() + duration);
-      const endDateStr = nextDate.toLocaleDateString();
-
-      // Peak period: if sign is angular (1st, 4th, 7th, 10th from Lot)
-      const isPeak = i === 0 || i === 3 || i === 6 || i === 9;
-      const ruler = ProfectionsEngine.SIGN_RULERS[signName]?.ruler || "Sun";
-
-      l1Periods.push({
-        level: "L1",
-        sign: signName,
-        durationYears: duration,
-        startDate: startDateStr,
-        endDate: endDateStr,
-        isPeak,
-        ruler,
-      });
-
-      curDate = nextDate;
+    if (!Number.isFinite(birthDate.getTime()) || !Number.isFinite(referenceDate.getTime())) {
+      throw new RangeError("Zodiacal Releasing requires valid birth and reference dates.");
+    }
+    if (!Number.isFinite(lotLongitude) || !Number.isFinite(lotOfFortuneLongitude)) {
+      throw new RangeError("Zodiacal Releasing requires finite Lot longitudes.");
+    }
+    if (referenceDate.getTime() < birthDate.getTime()) {
+      throw new RangeError("The Zodiacal Releasing reference date cannot precede birth.");
     }
 
-    const currentL1 = l1Periods[0];
-    const currentL2: ReleasingPeriod = {
-      level: "L2",
-      sign: lotSign,
-      durationYears: Math.round((currentL1.durationYears / 12) * 10) / 10,
-      startDate: birthDate.toLocaleDateString(),
-      endDate: "Active Sub-phase",
-      isPeak: true,
-      ruler: currentL1.ruler,
-    };
+    const startSignIdx = Math.floor(normalizeDegrees(lotLongitude) / 30);
+    const fortuneSignIdx = Math.floor(normalizeDegrees(lotOfFortuneLongitude) / 30);
+    const lotSign = ZodiacalReleasingEngine.SIGN_NAMES[startSignIdx];
+    const birthMs = birthDate.getTime();
+    const nowMs = referenceDate.getTime();
+    const yearMs = ZodiacalReleasingEngine.YEAR_DAYS * ZodiacalReleasingEngine.DAY_MS;
+
+    const l1Periods: ReleasingPeriod[] = [];
+    let l1Start = birthMs;
+    let signIndex = startSignIdx;
+    let currentL1: ReleasingPeriod | undefined;
+
+    // Keep every elapsed L1 chapter plus twelve future chapters for context.
+    for (let guard = 0; guard < 512; guard++) {
+      const sign = ZodiacalReleasingEngine.SIGN_NAMES[signIndex];
+      const durationYears = ZodiacalReleasingEngine.SIGN_PERIODS[sign];
+      const l1End = l1Start + durationYears * yearMs;
+      const period = this.makePeriod("L1", signIndex, l1Start, l1End, fortuneSignIdx);
+      l1Periods.push(period);
+      if (nowMs >= l1Start && nowMs < l1End) currentL1 = period;
+      l1Start = l1End;
+      signIndex = (signIndex + 1) % 12;
+
+      if (currentL1 && l1Periods.length >= l1Periods.indexOf(currentL1) + 13) break;
+      if (!currentL1 && l1Start > nowMs && l1Periods.length >= 12) break;
+    }
+
+    if (!currentL1) {
+      throw new RangeError("Unable to locate the current L1 Zodiacal Releasing period.");
+    }
+
+    const currentL1Start = new Date(currentL1.startDate).getTime();
+    const currentL1End = new Date(currentL1.endDate).getTime();
+    const totalL2Months = (currentL1End - currentL1Start) / (30 * ZodiacalReleasingEngine.DAY_MS);
+    const allL2Periods: ReleasingPeriod[] = [];
+    let elapsedMonths = 0;
+    const currentL1SignIndex = ZodiacalReleasingEngine.SIGN_NAMES.findIndex((name) => name === currentL1.sign);
+    if (currentL1SignIndex < 0) {
+      throw new RangeError("The active Zodiacal Releasing sign is not a recognized zodiac sign.");
+    }
+    let l2SignIndex = currentL1SignIndex;
+    let loosingOfBondApplied = false;
+
+    for (let guard = 0; elapsedMonths < totalL2Months - 1e-9 && guard < 36; guard++) {
+      let isLoosingOfBond = false;
+      if (guard === 12 && totalL2Months > ZodiacalReleasingEngine.TOTAL_SIGN_PERIOD_UNITS) {
+        // After the first complete 12-sign L2 circuit, jump to the sign
+        // opposite the parent L1 sign instead of repeating the parent sign.
+        l2SignIndex = (currentL1SignIndex + 6) % 12;
+        isLoosingOfBond = true;
+        loosingOfBondApplied = true;
+      }
+
+      const subSign = ZodiacalReleasingEngine.SIGN_NAMES[l2SignIndex];
+      const allottedMonths = ZodiacalReleasingEngine.SIGN_PERIODS[subSign];
+      const actualMonths = Math.min(allottedMonths, totalL2Months - elapsedMonths);
+      const subStart = currentL1Start + elapsedMonths * 30 * ZodiacalReleasingEngine.DAY_MS;
+      const subEnd = Math.min(currentL1End, subStart + actualMonths * 30 * ZodiacalReleasingEngine.DAY_MS);
+      allL2Periods.push(this.makePeriod("L2", l2SignIndex, subStart, subEnd, fortuneSignIdx, isLoosingOfBond));
+      elapsedMonths += actualMonths;
+      l2SignIndex = (l2SignIndex + 1) % 12;
+    }
+
+    const currentL2 = allL2Periods.find((period) => {
+      const start = new Date(period.startDate).getTime();
+      const end = new Date(period.endDate).getTime();
+      return nowMs >= start && nowMs < end;
+    });
+    if (!currentL2) {
+      throw new RangeError("Unable to locate the current L2 Zodiacal Releasing period.");
+    }
+
+    const peakPeriodsCount = l1Periods.filter((period) => period.isPeak).length;
+    const interpretation =
+      `Zodiacal Releasing from ${lotName} (${lotSign}) uses 360-day years. Current L1: ${currentL1.sign} (${currentL1.startDate.slice(0, 10)} to ${currentL1.endDate.slice(0, 10)}); current L2: ${currentL2.sign}. ` +
+      (currentL1.peakRank ? `This L1 sign is ${currentL1.peakRank.toLowerCase()} and angular to the Lot of Fortune.` : "This L1 sign is not angular to the Lot of Fortune.") +
+      (currentL2.isLoosingOfBond || loosingOfBondApplied ? " A Loosing-of-the-Bond transition occurs in this L1 chapter." : "");
 
     return {
       lotName,
@@ -327,8 +423,10 @@ export class ZodiacalReleasingEngine {
       currentL1Period: currentL1,
       currentL2Period: currentL2,
       allL1Periods: l1Periods,
-      peakPeriodsCount: l1Periods.filter((p) => p.isPeak).length,
-      interpretation: `Zodiacal Releasing unfolds the chapters of your life from the sign of the Part of ${lotName} (${lotSign}). The current L1 chapter spans ${currentL1.durationYears} years under ${currentL1.sign} (ruled by ${currentL1.ruler})${currentL1.isPeak ? " [PEAK CHAPTER: Angular manifestation of major destiny milestones]" : ""}.`,
+      allL2Periods,
+      peakPeriodsCount,
+      interpretation,
+      methodNote: "Valens/Brennan-style reconstruction: 360-day releasing year, 30-day L2 month, sign minor years, angularity from the Lot of Fortune, and Loosing of the Bond after a full 211-month L2 circuit. This is one documented convention; other reconstructions differ.",
     };
   }
 }
@@ -346,8 +444,11 @@ export interface FirdariaPeriod {
   subPeriods: Array<{ subLord: string; startAge: number; endAge: number }>;
 }
 
+export type FirdariaNightOrder = "nodes-after-planets" | "nodes-after-mars";
+
 export interface FirdariaReport {
   isDiurnal: boolean;
+  nightOrder: FirdariaNightOrder;
   activeMajorLord: string;
   activeSubLord: string;
   activeYearsRange: string;
@@ -369,7 +470,8 @@ export class FirdariaEngine {
     { planet: "SouthNode", symbol: "☋", years: 2 },
   ];
 
-  // Nocturnal Order: Moon (9), Saturn (11), Jupiter (12), Mars (7), Sun (10), Venus (8), Mercury (13), North Node (3), South Node (2)
+  // Traditional nocturnal order: Moon, Saturn, Jupiter, Mars, Sun, Venus,
+  // Mercury, then the two nodes.
   private static readonly NOCTURNAL_LORDS = [
     { planet: "Moon", symbol: "☽", years: 9 },
     { planet: "Saturn", symbol: "♄", years: 11 },
@@ -382,60 +484,100 @@ export class FirdariaEngine {
     { planet: "SouthNode", symbol: "☋", years: 2 },
   ];
 
-  public calculateFirdaria(chart: WesternChartData, currentAge: number): FirdariaReport {
-    // Diurnal if Sun is in Houses 7 through 12
-    const sunHouse = chart.planets.find((p) => p.name === "Sun")?.house || 1;
-    const isDiurnal = sunHouse >= 7 && sunHouse <= 12;
+  // Some medieval presentations place the two node periods immediately
+  // after Mars in the nocturnal sequence.
+  private static readonly NOCTURNAL_NODES_AFTER_MARS = [
+    { planet: "Moon", symbol: "☽", years: 9 },
+    { planet: "Saturn", symbol: "♄", years: 11 },
+    { planet: "Jupiter", symbol: "♃", years: 12 },
+    { planet: "Mars", symbol: "♂", years: 7 },
+    { planet: "NorthNode", symbol: "☊", years: 3 },
+    { planet: "SouthNode", symbol: "☋", years: 2 },
+    { planet: "Sun", symbol: "☉", years: 10 },
+    { planet: "Venus", symbol: "♀", years: 8 },
+    { planet: "Mercury", symbol: "☿", years: 13 },
+  ];
 
-    const sequence = isDiurnal ? FirdariaEngine.DIURNAL_LORDS : FirdariaEngine.NOCTURNAL_LORDS;
+  private static readonly CHALDEAN_SUBPERIOD_ORDER = [
+    "Saturn", "Jupiter", "Mars", "Sun", "Venus", "Mercury", "Moon",
+  ];
+
+  public calculateFirdaria(
+    chart: WesternChartData,
+    currentAge: number,
+    nightOrder: FirdariaNightOrder = "nodes-after-planets"
+  ): FirdariaReport {
+    if (!Number.isFinite(currentAge) || currentAge < 0) {
+      throw new RangeError("Firdaria age must be a finite non-negative number of tropical years.");
+    }
+    // Sect is based on actual solar altitude, not whichever house system the
+    // user selected for the displayed Western wheel.
+    const isDiurnal = isSunAboveHorizonInChart(chart);
+    const sequence = isDiurnal
+      ? FirdariaEngine.DIURNAL_LORDS
+      : nightOrder === "nodes-after-mars"
+        ? FirdariaEngine.NOCTURNAL_NODES_AFTER_MARS
+        : FirdariaEngine.NOCTURNAL_LORDS;
     const periods: FirdariaPeriod[] = [];
+    const cycleNumber = Math.floor(currentAge / 75);
+    const ageWithinCycle = currentAge - cycleNumber * 75;
+    const cycleStartAge = cycleNumber * 75;
 
-    let cumAge = 0;
+    let cumulativeYears = 0;
     let activeMajor = sequence[0].planet;
-    let activeSub = sequence[0].planet;
+    let activeSub = "No active sub-period";
     let activeRange = "";
 
     sequence.forEach((item) => {
-      const start = cumAge;
-      const end = cumAge + item.years;
-      const subYears = item.years / 7;
-
+      const localStart = cumulativeYears;
+      const localEnd = cumulativeYears + item.years;
+      const startAge = cycleStartAge + localStart;
+      const endAge = cycleStartAge + localEnd;
       const subPeriods: FirdariaPeriod["subPeriods"] = [];
-      for (let s = 0; s < 7; s++) {
-        const subStart = Math.round((start + s * subYears) * 10) / 10;
-        const subEnd = Math.round((start + (s + 1) * subYears) * 10) / 10;
-        const subLord = sequence[s % 7].planet;
-        subPeriods.push({ subLord, startAge: subStart, endAge: subEnd });
 
-        if (currentAge >= subStart && currentAge < subEnd) {
-          activeSub = subLord;
+      // The seven classical planetary major periods are divided into seven
+      // sub-periods, beginning with that major ruler and continuing in the
+      // same sect-specific Chaldean sequence. Node majors have no sub-periods.
+      if (FirdariaEngine.CHALDEAN_SUBPERIOD_ORDER.includes(item.planet)) {
+        const majorPosition = FirdariaEngine.CHALDEAN_SUBPERIOD_ORDER.indexOf(item.planet);
+        const subYears = item.years / 7;
+        for (let subIndex = 0; subIndex < 7; subIndex++) {
+          const subLord = FirdariaEngine.CHALDEAN_SUBPERIOD_ORDER[(majorPosition + subIndex) % 7];
+          const subStart = startAge + subIndex * subYears;
+          const subEnd = subIndex === 6 ? endAge : startAge + (subIndex + 1) * subYears;
+          subPeriods.push({ subLord, startAge: subStart, endAge: subEnd });
+          if (ageWithinCycle >= localStart && ageWithinCycle < localEnd &&
+              currentAge >= subStart && currentAge < subEnd) {
+            activeSub = subLord;
+          }
         }
       }
 
-      if (currentAge >= start && currentAge < end) {
+      if (ageWithinCycle >= localStart && ageWithinCycle < localEnd) {
         activeMajor = item.planet;
-        activeRange = `Age ${start} to ${end}`;
+        activeRange = `Age ${startAge.toFixed(2)} to ${endAge.toFixed(2)}`;
+        if (!FirdariaEngine.CHALDEAN_SUBPERIOD_ORDER.includes(item.planet)) activeSub = "No sub-period for lunar-node major periods";
       }
 
       periods.push({
         planet: item.planet,
         symbol: item.symbol,
         years: item.years,
-        startAge: start,
-        endAge: end,
+        startAge,
+        endAge,
         subPeriods,
       });
-
-      cumAge = end;
+      cumulativeYears = localEnd;
     });
 
     return {
       isDiurnal,
+      nightOrder,
       activeMajorLord: activeMajor,
       activeSubLord: activeSub,
       activeYearsRange: activeRange,
       allPeriods: periods,
-      interpretation: `Under the medieval ${isDiurnal ? "Day (Diurnal)" : "Night (Nocturnal)"} Firdaria cycle, your current life master is ${activeMajor} (${activeRange}), with the active sub-ruler ${activeSub} shaping daily events and opportunities.`,
+      interpretation: `Under the medieval ${isDiurnal ? "day" : "night"} Firdaria sequence (${isDiurnal ? "nodes after the seven planetary periods" : nightOrder}), cycle ${cycleNumber + 1} is active. Current major ruler: ${activeMajor} (${activeRange}); sub-ruler: ${activeSub}. Planetary sub-periods rotate from the major ruler in Chaldean order; lunar-node majors have no seven-planet sub-periods.`,
     };
   }
 }

@@ -21,7 +21,8 @@ export function AlmutenHoursPanel({ chartData }: AlmutenHoursPanelProps) {
     );
   }
 
-  const topPlanet = almuten.scores[0];
+  const topPlanet = almuten.scores[0] ?? null;
+  const runnerUpPlanet = almuten.scores[1] ?? null;
 
   return (
     <div className="space-y-6">
@@ -63,7 +64,7 @@ export function AlmutenHoursPanel({ chartData }: AlmutenHoursPanelProps) {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
-                      Sovereign Ruler of Chart (Almuten Figuris)
+                      Top-ranked planet · Celestia Almuten
                     </span>
                     <span className="text-xs text-slate-400">Rank #1</span>
                   </div>
@@ -71,40 +72,44 @@ export function AlmutenHoursPanel({ chartData }: AlmutenHoursPanelProps) {
                     {almuten.almutenFiguris}
                   </h3>
                   <p className="text-xs text-amber-200/80">
-                    Highest Cumulative Essential & Accidental Dignity ({almuten.almutenScore} pts)
+                    Celestia weighted total: {almuten.almutenScore} pts
                   </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-3">
                 <div className="p-3 bg-slate-950/70 border border-slate-800 rounded-xl text-right">
-                  <span className="text-[10px] text-slate-400 block">Lord of Soul</span>
-                  <span className="text-sm font-bold text-amber-300">{almuten.lordOfSoul}</span>
+                  <span className="text-[10px] text-slate-400 block">Rank 1 · Almuten score</span>
+                  <span className="text-sm font-bold text-amber-300">{topPlanet?.planet ?? "—"}</span>
+                  <span className="text-[10px] text-slate-500 block">{topPlanet?.totalScore ?? 0} pts</span>
                 </div>
                 <div className="p-3 bg-slate-950/70 border border-slate-800 rounded-xl text-right">
-                  <span className="text-[10px] text-slate-400 block">Lord of Temperament</span>
-                  <span className="text-sm font-bold text-cyan-300">{almuten.lordOfTemperament}</span>
+                  <span className="text-[10px] text-slate-400 block">Rank 2 · Runner-up</span>
+                  <span className="text-sm font-bold text-cyan-300">{runnerUpPlanet?.planet ?? "—"}</span>
+                  <span className="text-[10px] text-slate-500 block">{runnerUpPlanet?.totalScore ?? 0} pts</span>
                 </div>
               </div>
             </div>
 
-            <p className="text-xs text-slate-300 leading-relaxed border-t border-slate-800/80 pt-3">
-              {almuten.significance}
-            </p>
+            <div className="space-y-2 border-t border-slate-800/80 pt-3">
+              <p className="text-xs text-slate-300 leading-relaxed">{almuten.significance}</p>
+              <p className="text-[11px] text-slate-400 leading-relaxed">{almuten.methodNote}</p>
+            </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2">
               <div className="p-2.5 bg-slate-950/50 border border-slate-800/80 rounded-lg">
                 <span className="text-[10px] text-slate-400 block">Pre-Natal Syzygy (SAN)</span>
                 <span className="text-xs font-semibold text-slate-200">{almuten.sanFormatted}</span>
-                <span className="text-[10px] text-amber-400/90 block">({almuten.sanType})</span>
+                <span className="text-[10px] text-amber-400/90 block">({almuten.sanType}) · {almuten.sanDaysBeforeBirth.toFixed(2)} days before birth</span>
+                <span className="text-[9px] text-slate-500 block">UTC: {almuten.sanUtcInstant}</span>
               </div>
               <div className="p-2.5 bg-slate-950/50 border border-slate-800/80 rounded-lg">
-                <span className="text-[10px] text-slate-400 block">Day Ruler (+7 pts)</span>
-                <span className="text-xs font-semibold text-slate-200">{almuten.dayRuler}</span>
+                <span className="text-[10px] text-slate-400 block">Day ruler · +7 custom pts</span>
+                <span className="text-xs font-semibold text-slate-200">{almuten.dayRuler ?? "Unavailable (polar conditions)"}</span>
               </div>
               <div className="p-2.5 bg-slate-950/50 border border-slate-800/80 rounded-lg">
-                <span className="text-[10px] text-slate-400 block">Hour Ruler (+6 pts)</span>
-                <span className="text-xs font-semibold text-slate-200">{almuten.hourRuler}</span>
+                <span className="text-[10px] text-slate-400 block">Hour ruler · +6 custom pts</span>
+                <span className="text-xs font-semibold text-slate-200">{almuten.hourRuler ?? "Unavailable (polar conditions)"}</span>
               </div>
               <div className="p-2.5 bg-slate-950/50 border border-slate-800/80 rounded-lg">
                 <span className="text-[10px] text-slate-400 block">Sect Determination</span>
@@ -121,10 +126,10 @@ export function AlmutenHoursPanel({ chartData }: AlmutenHoursPanelProps) {
               <div>
                 <h4 className="text-sm font-bold text-slate-100 flex items-center gap-2">
                   <Star className="w-4 h-4 text-amber-400" />
-                  The 5 Hylegical Foundation Points (Ibn Ezra Doctrine)
+                  Five Almuten Candidate Points
                 </h4>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Rulers assessed for each point: Domicile (+5), Exaltation (+4), Dorothean Triplicity (+3), Egyptian Term (+2), Chaldean Face (+1)
+                  Selected point rulers: domicile (+5), exaltation (+4), active Dorothean triplicity (+3), Egyptian term (+2), Chaldean face (+1). House and temporal additions use Celestia-specific weights.
                 </p>
               </div>
             </div>
@@ -247,14 +252,14 @@ export function AlmutenHoursPanel({ chartData }: AlmutenHoursPanelProps) {
                 <span className="text-[10px] text-slate-400 block">Day Ruler</span>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className="text-amber-400 text-sm font-bold">{hours.dayRulerSymbol}</span>
-                  <span className="text-sm font-bold text-slate-100">{hours.dayRuler}</span>
+                  <span className="text-sm font-bold text-slate-100">{hours.dayRuler ?? "Unavailable"}</span>
                 </div>
               </div>
               <div className="p-3 bg-slate-950/70 border border-slate-800 rounded-xl">
                 <span className="text-[10px] text-slate-400 block">Current Hour Ruler at Birth</span>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className="text-cyan-400 text-sm font-bold">{hours.currentHourRulerSymbol}</span>
-                  <span className="text-sm font-bold text-slate-100">{hours.currentHourRuler}</span>
+                  <span className="text-sm font-bold text-slate-100">{hours.currentHourRuler ?? "Unavailable"}</span>
                 </div>
               </div>
               <div className="p-3 bg-slate-950/70 border border-slate-800 rounded-xl">
@@ -266,91 +271,99 @@ export function AlmutenHoursPanel({ chartData }: AlmutenHoursPanelProps) {
               <div className="p-3 bg-slate-950/70 border border-slate-800 rounded-xl">
                 <span className="text-[10px] text-slate-400 block">Hour Duration (Day / Night)</span>
                 <span className="text-xs font-semibold text-slate-200 block mt-0.5 font-mono">
-                  {hours.dayHourDurationMinutes}m / {hours.nightHourDurationMinutes}m
+                  {hours.dayHourDurationMinutes === null || hours.nightHourDurationMinutes === null
+                    ? "Unavailable"
+                    : `${hours.dayHourDurationMinutes}m / ${hours.nightHourDurationMinutes}m`}
                 </span>
               </div>
             </div>
 
             <p className="text-xs text-slate-400 leading-relaxed">
               Classical planetary hours follow the descending Chaldean sequence: Saturn → Jupiter → Mars → Sun → Venus → Mercury → Moon.
-              Each day has 12 unequal diurnal hours (sunrise to sunset) and 12 nocturnal hours (sunset to sunrise).
+              On ordinary dates, each day has 12 unequal diurnal hours (sunrise to sunset) and 12 nocturnal hours (sunset to sunrise). Polar dates without a sunrise/sunset pair are disclosed below rather than assigned zero-length hours.
             </p>
           </div>
 
-          {/* 24 Unequal Hours Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Diurnal Hours */}
-            <div className="p-4 bg-slate-900/50 border border-slate-800 rounded-xl space-y-2.5">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-                <Sun className="w-3.5 h-3.5" />
-                12 Diurnal Hours (Daytime)
-              </h4>
-              <div className="space-y-1">
-                {hours.hours
-                  .filter((h) => h.isDayHour)
-                  .map((h) => (
-                    <div
-                      key={h.hourNumber}
-                      className={`flex items-center justify-between p-2 rounded text-xs transition-colors ${
-                        h.isCurrentBirthHour
-                          ? "bg-amber-500/20 border border-amber-500/40 text-amber-200 font-bold"
-                          : "hover:bg-slate-800/40 text-slate-300"
-                      }`}
-                    >
-                      <span className="text-slate-400 font-mono">Hour {h.hourNumber}</span>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-amber-400 font-semibold">{h.rulerSymbol}</span>
-                        <span>{h.ruler}</span>
-                        {h.isCurrentBirthHour && (
-                          <span className="text-[9px] bg-amber-500/30 text-amber-300 px-1 py-0.2 rounded font-normal">
-                            Birth Hour
-                          </span>
-                        )}
+          {hours.hoursAvailable ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Diurnal Hours */}
+              <div className="p-4 bg-slate-900/50 border border-slate-800 rounded-xl space-y-2.5">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                  <Sun className="w-3.5 h-3.5" />
+                  12 Diurnal Hours (Daytime)
+                </h4>
+                <div className="space-y-1">
+                  {hours.hours
+                    .filter((h) => h.isDayHour)
+                    .map((h) => (
+                      <div
+                        key={h.hourNumber}
+                        className={`flex items-center justify-between p-2 rounded text-xs transition-colors ${
+                          h.isCurrentBirthHour
+                            ? "bg-amber-500/20 border border-amber-500/40 text-amber-200 font-bold"
+                            : "hover:bg-slate-800/40 text-slate-300"
+                        }`}
+                      >
+                        <span className="text-slate-400 font-mono">Hour {h.hourNumber}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-amber-400 font-semibold">{h.rulerSymbol}</span>
+                          <span>{h.ruler}</span>
+                          {h.isCurrentBirthHour && (
+                            <span className="text-[9px] bg-amber-500/30 text-amber-300 px-1 py-0.2 rounded font-normal">
+                              Birth Hour
+                            </span>
+                          )}
+                        </div>
+                        <span className="font-mono text-slate-400 text-[11px]">
+                          {h.startTime} – {h.endTime}
+                        </span>
                       </div>
-                      <span className="font-mono text-slate-400 text-[11px]">
-                        {h.startTime} – {h.endTime}
-                      </span>
-                    </div>
-                  ))}
+                    ))}
+                </div>
+              </div>
+  
+              {/* Nocturnal Hours */}
+              <div className="p-4 bg-slate-900/50 border border-slate-800 rounded-xl space-y-2.5">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
+                  <Moon className="w-3.5 h-3.5" />
+                  12 Nocturnal Hours (Nighttime)
+                </h4>
+                <div className="space-y-1">
+                  {hours.hours
+                    .filter((h) => !h.isDayHour)
+                    .map((h) => (
+                      <div
+                        key={h.hourNumber}
+                        className={`flex items-center justify-between p-2 rounded text-xs transition-colors ${
+                          h.isCurrentBirthHour
+                            ? "bg-cyan-500/20 border border-cyan-500/40 text-cyan-200 font-bold"
+                            : "hover:bg-slate-800/40 text-slate-300"
+                        }`}
+                      >
+                        <span className="text-slate-400 font-mono">Hour {h.hourNumber}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-cyan-400 font-semibold">{h.rulerSymbol}</span>
+                          <span>{h.ruler}</span>
+                          {h.isCurrentBirthHour && (
+                            <span className="text-[9px] bg-cyan-500/30 text-cyan-300 px-1 py-0.2 rounded font-normal">
+                              Birth Hour
+                            </span>
+                          )}
+                        </div>
+                        <span className="font-mono text-slate-400 text-[11px]">
+                          {h.startTime} – {h.endTime}
+                        </span>
+                      </div>
+                    ))}
+                </div>
               </div>
             </div>
-
-            {/* Nocturnal Hours */}
-            <div className="p-4 bg-slate-900/50 border border-slate-800 rounded-xl space-y-2.5">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
-                <Moon className="w-3.5 h-3.5" />
-                12 Nocturnal Hours (Nighttime)
-              </h4>
-              <div className="space-y-1">
-                {hours.hours
-                  .filter((h) => !h.isDayHour)
-                  .map((h) => (
-                    <div
-                      key={h.hourNumber}
-                      className={`flex items-center justify-between p-2 rounded text-xs transition-colors ${
-                        h.isCurrentBirthHour
-                          ? "bg-cyan-500/20 border border-cyan-500/40 text-cyan-200 font-bold"
-                          : "hover:bg-slate-800/40 text-slate-300"
-                      }`}
-                    >
-                      <span className="text-slate-400 font-mono">Hour {h.hourNumber}</span>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-cyan-400 font-semibold">{h.rulerSymbol}</span>
-                        <span>{h.ruler}</span>
-                        {h.isCurrentBirthHour && (
-                          <span className="text-[9px] bg-cyan-500/30 text-cyan-300 px-1 py-0.2 rounded font-normal">
-                            Birth Hour
-                          </span>
-                        )}
-                      </div>
-                      <span className="font-mono text-slate-400 text-[11px]">
-                        {h.startTime} – {h.endTime}
-                      </span>
-                    </div>
-                  ))}
-              </div>
+          ) : (
+            <div role="status" className="rounded-xl border border-amber-700/30 bg-amber-950/20 p-4 text-xs text-amber-100/90">
+              {hours.availabilityNote}
+              <span className="block text-slate-400 mt-2">No day/hour ruler or 24 unequal-hour schedule has been invented for this date.</span>
             </div>
-          </div>
+          )}
         </div>
       )}
     </div>

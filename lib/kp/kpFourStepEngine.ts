@@ -1,11 +1,12 @@
 /**
- * Modern Krishnamurti Padhdhati (KP) 4-Step Theory & Cuspal Interlinks (CIL) Engine
+ * Modern KP extensions: Gondhalekar 4-Step and later CIL variants.
+ * These are kept distinct from the classical KP four-fold house-significator hierarchy.
  * 
  * Includes:
  * 1. Automatic Positional Status (PS) Engine
  *    - In own star OR no tenants in star.
  *    - Node (Rahu/Ketu) special representation.
- * 2. Sunil Gondhalekar 4-Step Theory:
+ * 2. Later Sunil Gondhalekar 4-Step method (not the classical four-fold hierarchy):
  *    - Step 1 (Source): Planet itself (Active if PS, else secondary)
  *    - Step 2 (The Offer): Star Lord of the Planet
  *    - Step 3 (The Fruit / Decision): Sub Lord of the Planet
@@ -115,10 +116,18 @@ export class KPFourStepEngine {
     planetName: string,
     cusps: KPCusps,
     planets: KPPlanet[],
-    psMap: Record<string, PositionalStatus>
+    psMap: Record<string, PositionalStatus>,
+    strengthRule: KPStepDetail["strengthRule"]
   ): KPStepDetail {
     const planetObj = planets.find((p) => p.name === planetName);
-    const occupies = planetObj ? planetObj.house : 1;
+    if (!planetObj) throw new Error(`KP 4-Step requires planet data for ${planetName}; refusing to substitute a synthetic house.`);
+    if (!Array.isArray(cusps.houseLords) || cusps.houseLords.length !== 12) {
+      throw new Error("KP 4-Step requires twelve valid house lords.");
+    }
+    if (!Number.isInteger(planetObj.house) || planetObj.house < 1 || planetObj.house > 12) {
+      throw new Error(`KP 4-Step requires a valid occupied house (1–12) for ${planetName}.`);
+    }
+    const occupies = planetObj.house;
     const owns: number[] = [];
 
     cusps.houseLords.forEach((lord, idx) => {
@@ -139,14 +148,53 @@ export class KPFourStepEngine {
       }
     }
 
-    const allHouses = Array.from(new Set([occupies, ...owns])).sort((a, b) => a - b);
-    const ps = psMap[planetName]?.hasPositionalStatus || false;
+    const positionalStatus = psMap[planetName];
+    if (!positionalStatus) throw new Error(`KP 4-Step requires positional-status data for ${planetName}.`);
+    const ps = positionalStatus.hasPositionalStatus;
+    const isHouseEmpty = (house: number) => !planets.some((planet) => planet.house === house);
+    const primaryHouses = new Set<number>();
+    const secondaryHouses = new Set<number>();
+
+    if (strengthRule === "planet-positional-status") {
+      // Gondhalekar Steps 1 and 3: PS makes the planet principal for
+      // residence. Owned houses are principal only when empty.
+      if (ps) primaryHouses.add(occupies);
+      else secondaryHouses.add(occupies);
+
+      owns.forEach((house) => {
+        // An occupied house that is also owned is already covered by the
+        // residence rule above; never downgrade that primary result.
+        if (primaryHouses.has(house)) return;
+        if (ps && isHouseEmpty(house)) primaryHouses.add(house);
+        else secondaryHouses.add(house);
+      });
+    } else {
+      // Steps 2 and 4: the star lord is principal for residence;
+      // owned houses are principal only when empty.
+      primaryHouses.add(occupies);
+      owns.forEach((house) => {
+        // If the star lord occupies a house it also owns, residence remains
+        // principal rather than being overwritten by ownership status.
+        if (primaryHouses.has(house)) return;
+        if (isHouseEmpty(house)) primaryHouses.add(house);
+        else secondaryHouses.add(house);
+      });
+    }
+
+    // A house cannot be primary and secondary at the same tier.
+    secondaryHouses.forEach((house) => primaryHouses.delete(house));
+    const primary = Array.from(primaryHouses).sort((a, b) => a - b);
+    const secondary = Array.from(secondaryHouses).sort((a, b) => a - b);
+    const allHouses = Array.from(new Set([...primary, ...secondary])).sort((a, b) => a - b);
 
     return {
       planet: planetName,
       occupiesHouse: occupies,
       ownsHouses: owns,
+      primaryHouses: primary,
+      secondaryHouses: secondary,
       allHouses,
+      strengthRule,
       isRetrograde: planetObj?.isRetrograde || false,
       hasPositionalStatus: ps,
     };
@@ -162,18 +210,24 @@ export class KPFourStepEngine {
     psMap: Record<string, PositionalStatus>,
     targetHouse?: number
   ): KPFourStepData {
+    if (targetHouse !== undefined && (!Number.isInteger(targetHouse) || targetHouse < 1 || targetHouse > 12)) {
+      throw new Error(`KP 4-Step target house must be between 1 and 12; received ${targetHouse}.`);
+    }
     const pObj = planets.find((p) => p.name === planetName);
-    const starLord = pObj ? pObj.starLord : "Sun";
-    const subLord = pObj ? pObj.subLord : "Moon";
+    if (!pObj) throw new Error(`KP 4-Step cannot evaluate missing planet ${planetName}.`);
+    const starLord = pObj.starLord;
+    const subLord = pObj.subLord;
+    if (!starLord || !subLord) throw new Error(`KP 4-Step requires both star lord and sub lord for ${planetName}.`);
 
     // Sub Lord's Star Lord
     const subObj = planets.find((p) => p.name === subLord);
-    const subStarLord = subObj ? subObj.starLord : "Mars";
+    if (!subObj?.starLord) throw new Error(`KP 4-Step cannot resolve the star lord of ${subLord}.`);
+    const subStarLord = subObj.starLord;
 
-    const step1 = this.buildStepDetail(planetName, cusps, planets, psMap);
-    const step2 = this.buildStepDetail(starLord, cusps, planets, psMap);
-    const step3 = this.buildStepDetail(subLord, cusps, planets, psMap);
-    const step4 = this.buildStepDetail(subStarLord, cusps, planets, psMap);
+    const step1 = this.buildStepDetail(planetName, cusps, planets, psMap, "planet-positional-status");
+    const step2 = this.buildStepDetail(starLord, cusps, planets, psMap, "star-lord-principal");
+    const step3 = this.buildStepDetail(subLord, cusps, planets, psMap, "planet-positional-status");
+    const step4 = this.buildStepDetail(subStarLord, cusps, planets, psMap, "star-lord-principal");
 
     // Combine signified houses according to 4-Step principles:
     // If Planet has PS: Step 1 houses are primary.
@@ -189,12 +243,12 @@ export class KPFourStepEngine {
       ])
     ).sort((a, b) => a - b);
 
-    // Event determination if targetHouse is provided
-    const rule = targetHouse ? KP_EVENT_RULES[targetHouse] : undefined;
+    // Event determination if a validated target house is provided.
+    const rule = targetHouse === undefined ? undefined : KP_EVENT_RULES[targetHouse];
     const favorable = rule ? rule.favorableHouses : [];
     const detrimental = rule ? rule.negationHouses : [];
 
-    let stepVerdict: KPFourStepData["stepVerdict"] = "Favorable";
+    let stepVerdict: KPFourStepData["stepVerdict"] = "Delayed / Mixed";
     let analysisText = "";
     let gondhalekarRule = "";
 
@@ -219,7 +273,9 @@ export class KPFourStepEngine {
         analysisText = `Mixed significations across 4 tiers. Step 2 & 3 provide moderate alignment, indicating fruition after persistent effort or during supportive transit.`;
       }
 
-      gondhalekarRule = `4-Step Principle: Source (Step 1 ${step1.hasPositionalStatus ? "★PS Active" : "Weak"} = ${step1.allHouses.join(",")}) → Offer (Step 2 ${starLord} = ${step2.allHouses.join(",")}) → Decision (Step 3 ${subLord} = ${step3.allHouses.join(",")}) → Final End (Step 4 ${subStarLord} = ${step4.allHouses.join(",")}).`;
+      const describeStrength = (step: KPStepDetail) =>
+        `P[${step.primaryHouses.join(",") || "—"}] / S[${step.secondaryHouses.join(",") || "—"}]`;
+      gondhalekarRule = `4-Step (P=primary, S=secondary): Source Step 1 ${step1.hasPositionalStatus ? "PS active" : "PS inactive"} ${describeStrength(step1)} → Offer Step 2 ${starLord} ${describeStrength(step2)} → Decision Step 3 ${subLord} ${describeStrength(step3)} → Final End Step 4 ${subStarLord} ${describeStrength(step4)}. Verdict still uses combined houses; primary/secondary status is displayed but not yet applied as a complete adjudication algorithm.`;
     } else {
       analysisText = `Planet ${planetName} acts through Star-Lord ${starLord} and is qualified by Sub-Lord ${subLord} and Sub's Star ${subStarLord}. Signifies houses: ${allSig.join(", ")}.`;
       gondhalekarRule = `Gondhalekar 4-Step Chain for ${planetName}: [${step1.planet}] → [${step2.planet}] → [${step3.planet}] → [${step4.planet}].`;
@@ -251,7 +307,9 @@ export class KPFourStepEngine {
     planets: KPPlanet[],
     psMap: Record<string, PositionalStatus>
   ): KPFourStepData {
+    if (!Number.isInteger(houseNum) || houseNum < 1 || houseNum > 12) throw new Error(`KP 4-Step cusp house must be between 1 and 12; received ${houseNum}.`);
     const cusp = cusps.houseDetails[houseNum - 1];
+    if (!cusp?.subLord) throw new Error(`KP 4-Step requires cusp ${houseNum} sub-lord data.`);
     const csl = cusp.subLord;
     const result = this.evaluatePlanetFourStep(csl, cusps, planets, psMap, houseNum);
 
@@ -273,33 +331,33 @@ export class KPFourStepEngine {
 
     for (let h = 1; h <= 12; h++) {
       const cusp = cusps.houseDetails[h - 1];
+      if (!cusp?.signLord || !cusp.starLord || !cusp.subLord || !cusp.subSubLord) {
+        throw new Error(`KP CIL requires complete sign, star, sub, and sub-sub lord data for cusp ${h}.`);
+      }
       const signLord = cusp.signLord;
       const starLord = cusp.starLord;
       const csl = cusp.subLord;
-      const cssl = cusp.subSubLord || cusp.subLord;
+      const cssl = cusp.subSubLord;
 
-      const rule = KP_EVENT_RULES[h] || {
-        house: h,
-        eventName: `House ${h} Affairs`,
-        primaryHouses: [h],
-        favorableHouses: [h, (h + 10) % 12 || 12],
-        negationHouses: [(h + 10) % 12 || 12],
-      };
+      const rule = KP_EVENT_RULES[h];
+      if (!rule) throw new Error(`KP CIL has no declared event rule for cusp ${h}.`);
 
       // CSL planet & its connections
       const cslObj = planets.find((p) => p.name === csl);
-      const cslStarLord = cslObj ? cslObj.starLord : "Sun";
-      const cslSubLord = cslObj ? cslObj.subLord : "Moon";
+      if (!cslObj?.starLord || !cslObj.subLord) throw new Error(`KP CIL cannot resolve complete planet data for cusp ${h} CSL ${csl}.`);
+      const cslStarLord = cslObj.starLord;
+      const cslSubLord = cslObj.subLord;
 
       // CSSL planet & its connections
       const csslObj = planets.find((p) => p.name === cssl);
-      const csslStarLord = csslObj ? csslObj.starLord : "Mars";
+      if (!csslObj?.starLord) throw new Error(`KP CIL cannot resolve the star lord of cusp ${h} CSSL ${cssl}.`);
+      const csslStarLord = csslObj.starLord;
 
       // Houses linked by CSL & CSSL
-      const cslStep = this.buildStepDetail(csl, cusps, planets, psMap);
-      const cslStarStep = this.buildStepDetail(cslStarLord, cusps, planets, psMap);
-      const csslStep = this.buildStepDetail(cssl, cusps, planets, psMap);
-      const csslStarStep = this.buildStepDetail(csslStarLord, cusps, planets, psMap);
+      const cslStep = this.buildStepDetail(csl, cusps, planets, psMap, "planet-positional-status");
+      const cslStarStep = this.buildStepDetail(cslStarLord, cusps, planets, psMap, "star-lord-principal");
+      const csslStep = this.buildStepDetail(cssl, cusps, planets, psMap, "planet-positional-status");
+      const csslStarStep = this.buildStepDetail(csslStarLord, cusps, planets, psMap, "star-lord-principal");
 
       const linkedHouses = Array.from(
         new Set([

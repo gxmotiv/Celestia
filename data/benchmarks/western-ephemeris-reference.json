@@ -1,0 +1,715 @@
+{
+  "schemaVersion": 1,
+  "datasetStatus": "captured-from-jpl-horizons",
+  "source": {
+    "provider": "NASA/JPL Horizons",
+    "apiEndpoint": "https://ssd.jpl.nasa.gov/api/horizons.api",
+    "apiDocumentationVersion": "1.3 (2025 June)",
+    "observedResponseSignatureVersion": "1.2 (returned by all ten captured JSON payloads)",
+    "horizonsSystemVersion": "4.98e (2026-08-25, as reported by current manual)",
+    "currentPlanetaryEphemerisFamily": "DE441 (Horizons manual states DE441 is used for planetary-system barycenter motion; target-center availability/solutions may differ)",
+    "retrievalTool": "scripts/fetchJplWesternEphemerisReference.ts",
+    "retrievalCommand": "bun run scripts/fetchJplWesternEphemerisReference.ts --fetch",
+    "note": "Contains 60 externally captured JPL Horizons quantity-31 observations. Every fixture points to a raw response JSON and its SHA-256 digest; raw response payloads identify DE441 as the source for these requested targets. The API documentation version and response signature version are recorded separately."
+  },
+  "query": {
+    "ephemerisType": "OBSERVER",
+    "targetCenter": "planet center where available",
+    "observerCenter": "500@399 (Earth geocenter)",
+    "quantity": "31 (observer-centered apparent ecliptic longitude and latitude)",
+    "angularUnits": "degrees",
+    "timeScale": "UT",
+    "timeInput": "CAL / Gregorian UTC labels",
+    "timeDigits": "FRACSEC",
+    "refSystem": "ICRF",
+    "apparentCorrection": "AIRLESS (no atmospheric refraction)",
+    "refraction": "disabled",
+    "referenceCoordinateFrame": "Earth ecliptic-of-date, IAU76/80 as defined by Horizons quantity 31"
+  },
+  "celestiaCoordinateConvention": {
+    "implementation": "astronomy-engine through SwissEphemerisEngine compatibility facade",
+    "vector": "geocentric GeoVector with light-time and aberration correction enabled",
+    "eclipticFrame": "Astronomy Engine true ecliptic of date",
+    "knownDifferences": "Horizons quantity 31 additionally models gravitational light deflection and uses its IAU76/80 ecliptic-of-date realization; Celestia does not claim these are identical pipelines. Residuals must be interpreted with this model difference and a documented tolerance."
+  },
+  "eopCaptureHeaderNote": "Captured response headers report EOP file eop.261112.p270208 with data-based coverage through 2026-11-12 and predictions through 2027-02-07. The 2035-07-01 long-range sample is beyond that prediction interval; Horizons holds the last predicted EOP values constant outside available coverage, so treat this sample as a separate extrapolation stress case rather than mixing it into near-term acceptance limits.",
+  "epochClassification": {
+    "2035-07-01T06:30:00.000Z": "long-range stress sample beyond the EOP prediction interval observed in the captured response headers"
+  },
+  "epochsUtc": [
+    "1987-03-14T12:00:00.000Z",
+    "2000-01-01T12:00:00.000Z",
+    "2024-02-29T00:00:00.000Z",
+    "2026-11-12T23:59:59.000Z",
+    "2026-11-13T00:00:00.000Z",
+    "2035-07-01T06:30:00.000Z"
+  ],
+  "bodies": [
+    {
+      "name": "Sun",
+      "targetId": "10"
+    },
+    {
+      "name": "Moon",
+      "targetId": "301"
+    },
+    {
+      "name": "Mercury",
+      "targetId": "199"
+    },
+    {
+      "name": "Venus",
+      "targetId": "299"
+    },
+    {
+      "name": "Mars",
+      "targetId": "499"
+    },
+    {
+      "name": "Jupiter",
+      "targetId": "599"
+    },
+    {
+      "name": "Saturn",
+      "targetId": "699"
+    },
+    {
+      "name": "Uranus",
+      "targetId": "799"
+    },
+    {
+      "name": "Neptune",
+      "targetId": "899"
+    },
+    {
+      "name": "Pluto",
+      "targetId": "999"
+    }
+  ],
+  "acceptanceThresholdsArcseconds": {},
+  "fixtures": [
+    {
+      "body": "Sun",
+      "targetId": "10",
+      "epochUtc": "1987-03-14T12:00:00.000Z",
+      "longitudeDegrees": 353.3725571,
+      "latitudeDegrees": 0.0000894,
+      "rawResponseFile": "data/benchmarks/raw/horizons-sun.json",
+      "responseSha256": "d6302849a3230780c8b74556fa258864d831e5f6ac4fc325ca0fefcaf5c9380d"
+    },
+    {
+      "body": "Sun",
+      "targetId": "10",
+      "epochUtc": "2000-01-01T12:00:00.000Z",
+      "longitudeDegrees": 280.3689092,
+      "latitudeDegrees": 0.0002381,
+      "rawResponseFile": "data/benchmarks/raw/horizons-sun.json",
+      "responseSha256": "d6302849a3230780c8b74556fa258864d831e5f6ac4fc325ca0fefcaf5c9380d"
+    },
+    {
+      "body": "Sun",
+      "targetId": "10",
+      "epochUtc": "2024-02-29T00:00:00.000Z",
+      "longitudeDegrees": 339.8856571,
+      "latitudeDegrees": -0.0000703,
+      "rawResponseFile": "data/benchmarks/raw/horizons-sun.json",
+      "responseSha256": "d6302849a3230780c8b74556fa258864d831e5f6ac4fc325ca0fefcaf5c9380d"
+    },
+    {
+      "body": "Sun",
+      "targetId": "10",
+      "epochUtc": "2026-11-12T23:59:59.000Z",
+      "longitudeDegrees": 230.6170603,
+      "latitudeDegrees": -0.0000772,
+      "rawResponseFile": "data/benchmarks/raw/horizons-sun.json",
+      "responseSha256": "d6302849a3230780c8b74556fa258864d831e5f6ac4fc325ca0fefcaf5c9380d"
+    },
+    {
+      "body": "Sun",
+      "targetId": "10",
+      "epochUtc": "2026-11-13T00:00:00.000Z",
+      "longitudeDegrees": 230.6170719,
+      "latitudeDegrees": -0.0000772,
+      "rawResponseFile": "data/benchmarks/raw/horizons-sun.json",
+      "responseSha256": "d6302849a3230780c8b74556fa258864d831e5f6ac4fc325ca0fefcaf5c9380d"
+    },
+    {
+      "body": "Sun",
+      "targetId": "10",
+      "epochUtc": "2035-07-01T06:30:00.000Z",
+      "longitudeDegrees": 99.2963738,
+      "latitudeDegrees": -0.0002394,
+      "rawResponseFile": "data/benchmarks/raw/horizons-sun.json",
+      "responseSha256": "d6302849a3230780c8b74556fa258864d831e5f6ac4fc325ca0fefcaf5c9380d"
+    },
+    {
+      "body": "Moon",
+      "targetId": "301",
+      "epochUtc": "1987-03-14T12:00:00.000Z",
+      "longitudeDegrees": 161.0139771,
+      "latitudeDegrees": 2.6693281,
+      "rawResponseFile": "data/benchmarks/raw/horizons-moon.json",
+      "responseSha256": "ba4eb891c45c2eb0400b2a4b68bfdd89f54bfcaaa8576460668f9658d80522aa"
+    },
+    {
+      "body": "Moon",
+      "targetId": "301",
+      "epochUtc": "2000-01-01T12:00:00.000Z",
+      "longitudeDegrees": 223.323786,
+      "latitudeDegrees": 5.1707422,
+      "rawResponseFile": "data/benchmarks/raw/horizons-moon.json",
+      "responseSha256": "ba4eb891c45c2eb0400b2a4b68bfdd89f54bfcaaa8576460668f9658d80522aa"
+    },
+    {
+      "body": "Moon",
+      "targetId": "301",
+      "epochUtc": "2024-02-29T00:00:00.000Z",
+      "longitudeDegrees": 208.4259861,
+      "latitudeDegrees": -1.1256297,
+      "rawResponseFile": "data/benchmarks/raw/horizons-moon.json",
+      "responseSha256": "ba4eb891c45c2eb0400b2a4b68bfdd89f54bfcaaa8576460668f9658d80522aa"
+    },
+    {
+      "body": "Moon",
+      "targetId": "301",
+      "epochUtc": "2026-11-12T23:59:59.000Z",
+      "longitudeDegrees": 271.7526638,
+      "latitudeDegrees": -4.0398111,
+      "rawResponseFile": "data/benchmarks/raw/horizons-moon.json",
+      "responseSha256": "ba4eb891c45c2eb0400b2a4b68bfdd89f54bfcaaa8576460668f9658d80522aa"
+    },
+    {
+      "body": "Moon",
+      "targetId": "301",
+      "epochUtc": "2026-11-13T00:00:00.000Z",
+      "longitudeDegrees": 271.752801,
+      "latitudeDegrees": -4.039804,
+      "rawResponseFile": "data/benchmarks/raw/horizons-moon.json",
+      "responseSha256": "ba4eb891c45c2eb0400b2a4b68bfdd89f54bfcaaa8576460668f9658d80522aa"
+    },
+    {
+      "body": "Moon",
+      "targetId": "301",
+      "epochUtc": "2035-07-01T06:30:00.000Z",
+      "longitudeDegrees": 41.1784956,
+      "latitudeDegrees": -4.5775546,
+      "rawResponseFile": "data/benchmarks/raw/horizons-moon.json",
+      "responseSha256": "ba4eb891c45c2eb0400b2a4b68bfdd89f54bfcaaa8576460668f9658d80522aa"
+    },
+    {
+      "body": "Mercury",
+      "targetId": "199",
+      "epochUtc": "1987-03-14T12:00:00.000Z",
+      "longitudeDegrees": 330.0805024,
+      "latitudeDegrees": 1.0103046,
+      "rawResponseFile": "data/benchmarks/raw/horizons-mercury.json",
+      "responseSha256": "b0b2f9c0ff8669b85aeda466898a9ddeb441f8862e34adda1e81cffa31e6126d"
+    },
+    {
+      "body": "Mercury",
+      "targetId": "199",
+      "epochUtc": "2000-01-01T12:00:00.000Z",
+      "longitudeDegrees": 271.8892699,
+      "latitudeDegrees": -0.994819,
+      "rawResponseFile": "data/benchmarks/raw/horizons-mercury.json",
+      "responseSha256": "b0b2f9c0ff8669b85aeda466898a9ddeb441f8862e34adda1e81cffa31e6126d"
+    },
+    {
+      "body": "Mercury",
+      "targetId": "199",
+      "epochUtc": "2024-02-29T00:00:00.000Z",
+      "longitudeDegrees": 340.4393729,
+      "latitudeDegrees": -1.7811094,
+      "rawResponseFile": "data/benchmarks/raw/horizons-mercury.json",
+      "responseSha256": "b0b2f9c0ff8669b85aeda466898a9ddeb441f8862e34adda1e81cffa31e6126d"
+    },
+    {
+      "body": "Mercury",
+      "targetId": "199",
+      "epochUtc": "2026-11-12T23:59:59.000Z",
+      "longitudeDegrees": 215.074764,
+      "latitudeDegrees": 1.9523528,
+      "rawResponseFile": "data/benchmarks/raw/horizons-mercury.json",
+      "responseSha256": "b0b2f9c0ff8669b85aeda466898a9ddeb441f8862e34adda1e81cffa31e6126d"
+    },
+    {
+      "body": "Mercury",
+      "targetId": "199",
+      "epochUtc": "2026-11-13T00:00:00.000Z",
+      "longitudeDegrees": 215.0747625,
+      "latitudeDegrees": 1.9523546,
+      "rawResponseFile": "data/benchmarks/raw/horizons-mercury.json",
+      "responseSha256": "b0b2f9c0ff8669b85aeda466898a9ddeb441f8862e34adda1e81cffa31e6126d"
+    },
+    {
+      "body": "Mercury",
+      "targetId": "199",
+      "epochUtc": "2035-07-01T06:30:00.000Z",
+      "longitudeDegrees": 80.438692,
+      "latitudeDegrees": -1.4771643,
+      "rawResponseFile": "data/benchmarks/raw/horizons-mercury.json",
+      "responseSha256": "b0b2f9c0ff8669b85aeda466898a9ddeb441f8862e34adda1e81cffa31e6126d"
+    },
+    {
+      "body": "Venus",
+      "targetId": "299",
+      "epochUtc": "1987-03-14T12:00:00.000Z",
+      "longitudeDegrees": 313.1396708,
+      "latitudeDegrees": 0.2214074,
+      "rawResponseFile": "data/benchmarks/raw/horizons-venus.json",
+      "responseSha256": "84af7beafe1dae38cf8d775d87a4f9b0ff2c3df663185e50ac2cc35d30028990"
+    },
+    {
+      "body": "Venus",
+      "targetId": "299",
+      "epochUtc": "2000-01-01T12:00:00.000Z",
+      "longitudeDegrees": 241.5657794,
+      "latitudeDegrees": 2.0663548,
+      "rawResponseFile": "data/benchmarks/raw/horizons-venus.json",
+      "responseSha256": "84af7beafe1dae38cf8d775d87a4f9b0ff2c3df663185e50ac2cc35d30028990"
+    },
+    {
+      "body": "Venus",
+      "targetId": "299",
+      "epochUtc": "2024-02-29T00:00:00.000Z",
+      "longitudeDegrees": 315.2552314,
+      "latitudeDegrees": -0.664759,
+      "rawResponseFile": "data/benchmarks/raw/horizons-venus.json",
+      "responseSha256": "84af7beafe1dae38cf8d775d87a4f9b0ff2c3df663185e50ac2cc35d30028990"
+    },
+    {
+      "body": "Venus",
+      "targetId": "299",
+      "epochUtc": "2026-11-12T23:59:59.000Z",
+      "longitudeDegrees": 202.8846064,
+      "latitudeDegrees": -1.8962622,
+      "rawResponseFile": "data/benchmarks/raw/horizons-venus.json",
+      "responseSha256": "84af7beafe1dae38cf8d775d87a4f9b0ff2c3df663185e50ac2cc35d30028990"
+    },
+    {
+      "body": "Venus",
+      "targetId": "299",
+      "epochUtc": "2026-11-13T00:00:00.000Z",
+      "longitudeDegrees": 202.884606,
+      "latitudeDegrees": -1.8962595,
+      "rawResponseFile": "data/benchmarks/raw/horizons-venus.json",
+      "responseSha256": "84af7beafe1dae38cf8d775d87a4f9b0ff2c3df663185e50ac2cc35d30028990"
+    },
+    {
+      "body": "Venus",
+      "targetId": "299",
+      "epochUtc": "2035-07-01T06:30:00.000Z",
+      "longitudeDegrees": 88.4492563,
+      "latitudeDegrees": -0.099404,
+      "rawResponseFile": "data/benchmarks/raw/horizons-venus.json",
+      "responseSha256": "84af7beafe1dae38cf8d775d87a4f9b0ff2c3df663185e50ac2cc35d30028990"
+    },
+    {
+      "body": "Mars",
+      "targetId": "499",
+      "epochUtc": "1987-03-14T12:00:00.000Z",
+      "longitudeDegrees": 45.0064625,
+      "latitudeDegrees": 0.6438787,
+      "rawResponseFile": "data/benchmarks/raw/horizons-mars.json",
+      "responseSha256": "2531c2db1cc21cd12cb2e2199b1afaf908996750661ba871f62fe54ae0e6ef02"
+    },
+    {
+      "body": "Mars",
+      "targetId": "499",
+      "epochUtc": "2000-01-01T12:00:00.000Z",
+      "longitudeDegrees": 327.9632921,
+      "latitudeDegrees": -1.0677752,
+      "rawResponseFile": "data/benchmarks/raw/horizons-mars.json",
+      "responseSha256": "2531c2db1cc21cd12cb2e2199b1afaf908996750661ba871f62fe54ae0e6ef02"
+    },
+    {
+      "body": "Mars",
+      "targetId": "499",
+      "epochUtc": "2024-02-29T00:00:00.000Z",
+      "longitudeDegrees": 312.1429398,
+      "latitudeDegrees": -1.0564654,
+      "rawResponseFile": "data/benchmarks/raw/horizons-mars.json",
+      "responseSha256": "2531c2db1cc21cd12cb2e2199b1afaf908996750661ba871f62fe54ae0e6ef02"
+    },
+    {
+      "body": "Mars",
+      "targetId": "499",
+      "epochUtc": "2026-11-12T23:59:59.000Z",
+      "longitudeDegrees": 144.4108476,
+      "latitudeDegrees": 1.8636154,
+      "rawResponseFile": "data/benchmarks/raw/horizons-mars.json",
+      "responseSha256": "2531c2db1cc21cd12cb2e2199b1afaf908996750661ba871f62fe54ae0e6ef02"
+    },
+    {
+      "body": "Mars",
+      "targetId": "499",
+      "epochUtc": "2026-11-13T00:00:00.000Z",
+      "longitudeDegrees": 144.4108529,
+      "latitudeDegrees": 1.8636157,
+      "rawResponseFile": "data/benchmarks/raw/horizons-mars.json",
+      "responseSha256": "2531c2db1cc21cd12cb2e2199b1afaf908996750661ba871f62fe54ae0e6ef02"
+    },
+    {
+      "body": "Mars",
+      "targetId": "499",
+      "epochUtc": "2035-07-01T06:30:00.000Z",
+      "longitudeDegrees": 346.6187756,
+      "latitudeDegrees": -3.8590841,
+      "rawResponseFile": "data/benchmarks/raw/horizons-mars.json",
+      "responseSha256": "2531c2db1cc21cd12cb2e2199b1afaf908996750661ba871f62fe54ae0e6ef02"
+    },
+    {
+      "body": "Jupiter",
+      "targetId": "599",
+      "epochUtc": "1987-03-14T12:00:00.000Z",
+      "longitudeDegrees": 2.7990894,
+      "latitudeDegrees": -1.0847342,
+      "rawResponseFile": "data/benchmarks/raw/horizons-jupiter.json",
+      "responseSha256": "3e9b06af081f5eb6a291e1ee912570a2b7d7e206e04e378033dc731b2a539fa8"
+    },
+    {
+      "body": "Jupiter",
+      "targetId": "599",
+      "epochUtc": "2000-01-01T12:00:00.000Z",
+      "longitudeDegrees": 25.2530685,
+      "latitudeDegrees": -1.2621868,
+      "rawResponseFile": "data/benchmarks/raw/horizons-jupiter.json",
+      "responseSha256": "3e9b06af081f5eb6a291e1ee912570a2b7d7e206e04e378033dc731b2a539fa8"
+    },
+    {
+      "body": "Jupiter",
+      "targetId": "599",
+      "epochUtc": "2024-02-29T00:00:00.000Z",
+      "longitudeDegrees": 41.1445062,
+      "latitudeDegrees": -0.9181499,
+      "rawResponseFile": "data/benchmarks/raw/horizons-jupiter.json",
+      "responseSha256": "3e9b06af081f5eb6a291e1ee912570a2b7d7e206e04e378033dc731b2a539fa8"
+    },
+    {
+      "body": "Jupiter",
+      "targetId": "599",
+      "epochUtc": "2026-11-12T23:59:59.000Z",
+      "longitudeDegrees": 145.6051865,
+      "latitudeDegrees": 0.7326351,
+      "rawResponseFile": "data/benchmarks/raw/horizons-jupiter.json",
+      "responseSha256": "3e9b06af081f5eb6a291e1ee912570a2b7d7e206e04e378033dc731b2a539fa8"
+    },
+    {
+      "body": "Jupiter",
+      "targetId": "599",
+      "epochUtc": "2026-11-13T00:00:00.000Z",
+      "longitudeDegrees": 145.6051875,
+      "latitudeDegrees": 0.7326351,
+      "rawResponseFile": "data/benchmarks/raw/horizons-jupiter.json",
+      "responseSha256": "3e9b06af081f5eb6a291e1ee912570a2b7d7e206e04e378033dc731b2a539fa8"
+    },
+    {
+      "body": "Jupiter",
+      "targetId": "599",
+      "epochUtc": "2035-07-01T06:30:00.000Z",
+      "longitudeDegrees": 43.5710926,
+      "latitudeDegrees": -1.0888278,
+      "rawResponseFile": "data/benchmarks/raw/horizons-jupiter.json",
+      "responseSha256": "3e9b06af081f5eb6a291e1ee912570a2b7d7e206e04e378033dc731b2a539fa8"
+    },
+    {
+      "body": "Saturn",
+      "targetId": "699",
+      "epochUtc": "1987-03-14T12:00:00.000Z",
+      "longitudeDegrees": 260.9298294,
+      "latitudeDegrees": 1.5559357,
+      "rawResponseFile": "data/benchmarks/raw/horizons-saturn.json",
+      "responseSha256": "38ef7af983d3a71f8452082954b57e71a9facfc5633c17cd464f9639b703be8b"
+    },
+    {
+      "body": "Saturn",
+      "targetId": "699",
+      "epochUtc": "2000-01-01T12:00:00.000Z",
+      "longitudeDegrees": 40.3956366,
+      "latitudeDegrees": -2.4448533,
+      "rawResponseFile": "data/benchmarks/raw/horizons-saturn.json",
+      "responseSha256": "38ef7af983d3a71f8452082954b57e71a9facfc5633c17cd464f9639b703be8b"
+    },
+    {
+      "body": "Saturn",
+      "targetId": "699",
+      "epochUtc": "2024-02-29T00:00:00.000Z",
+      "longitudeDegrees": 339.7910415,
+      "latitudeDegrees": -1.620689,
+      "rawResponseFile": "data/benchmarks/raw/horizons-saturn.json",
+      "responseSha256": "38ef7af983d3a71f8452082954b57e71a9facfc5633c17cd464f9639b703be8b"
+    },
+    {
+      "body": "Saturn",
+      "targetId": "699",
+      "epochUtc": "2026-11-12T23:59:59.000Z",
+      "longitudeDegrees": 8.6192939,
+      "latitudeDegrees": -2.6518577,
+      "rawResponseFile": "data/benchmarks/raw/horizons-saturn.json",
+      "responseSha256": "38ef7af983d3a71f8452082954b57e71a9facfc5633c17cd464f9639b703be8b"
+    },
+    {
+      "body": "Saturn",
+      "targetId": "699",
+      "epochUtc": "2026-11-13T00:00:00.000Z",
+      "longitudeDegrees": 8.6192933,
+      "latitudeDegrees": -2.6518576,
+      "rawResponseFile": "data/benchmarks/raw/horizons-saturn.json",
+      "responseSha256": "38ef7af983d3a71f8452082954b57e71a9facfc5633c17cd464f9639b703be8b"
+    },
+    {
+      "body": "Saturn",
+      "targetId": "699",
+      "epochUtc": "2035-07-01T06:30:00.000Z",
+      "longitudeDegrees": 125.0223225,
+      "latitudeDegrees": 0.5408461,
+      "rawResponseFile": "data/benchmarks/raw/horizons-saturn.json",
+      "responseSha256": "38ef7af983d3a71f8452082954b57e71a9facfc5633c17cd464f9639b703be8b"
+    },
+    {
+      "body": "Uranus",
+      "targetId": "799",
+      "epochUtc": "1987-03-14T12:00:00.000Z",
+      "longitudeDegrees": 266.5906036,
+      "latitudeDegrees": -0.1292905,
+      "rawResponseFile": "data/benchmarks/raw/horizons-uranus.json",
+      "responseSha256": "5dbb762246c737eb18ea79f422e2c50142955bd8a08a381fada2b6ac3d5ac440"
+    },
+    {
+      "body": "Uranus",
+      "targetId": "799",
+      "epochUtc": "2000-01-01T12:00:00.000Z",
+      "longitudeDegrees": 314.809168,
+      "latitudeDegrees": -0.658324,
+      "rawResponseFile": "data/benchmarks/raw/horizons-uranus.json",
+      "responseSha256": "5dbb762246c737eb18ea79f422e2c50142955bd8a08a381fada2b6ac3d5ac440"
+    },
+    {
+      "body": "Uranus",
+      "targetId": "799",
+      "epochUtc": "2024-02-29T00:00:00.000Z",
+      "longitudeDegrees": 49.551164,
+      "latitudeDegrees": -0.2832232,
+      "rawResponseFile": "data/benchmarks/raw/horizons-uranus.json",
+      "responseSha256": "5dbb762246c737eb18ea79f422e2c50142955bd8a08a381fada2b6ac3d5ac440"
+    },
+    {
+      "body": "Uranus",
+      "targetId": "799",
+      "epochUtc": "2026-11-12T23:59:59.000Z",
+      "longitudeDegrees": 64.2125528,
+      "latitudeDegrees": -0.1499392,
+      "rawResponseFile": "data/benchmarks/raw/horizons-uranus.json",
+      "responseSha256": "5dbb762246c737eb18ea79f422e2c50142955bd8a08a381fada2b6ac3d5ac440"
+    },
+    {
+      "body": "Uranus",
+      "targetId": "799",
+      "epochUtc": "2026-11-13T00:00:00.000Z",
+      "longitudeDegrees": 64.2125523,
+      "latitudeDegrees": -0.1499392,
+      "rawResponseFile": "data/benchmarks/raw/horizons-uranus.json",
+      "responseSha256": "5dbb762246c737eb18ea79f422e2c50142955bd8a08a381fada2b6ac3d5ac440"
+    },
+    {
+      "body": "Uranus",
+      "targetId": "799",
+      "epochUtc": "2035-07-01T06:30:00.000Z",
+      "longitudeDegrees": 100.6738606,
+      "latitudeDegrees": 0.3279439,
+      "rawResponseFile": "data/benchmarks/raw/horizons-uranus.json",
+      "responseSha256": "5dbb762246c737eb18ea79f422e2c50142955bd8a08a381fada2b6ac3d5ac440"
+    },
+    {
+      "body": "Neptune",
+      "targetId": "899",
+      "epochUtc": "1987-03-14T12:00:00.000Z",
+      "longitudeDegrees": 277.8075895,
+      "latitudeDegrees": 1.024755,
+      "rawResponseFile": "data/benchmarks/raw/horizons-neptune.json",
+      "responseSha256": "0bcf499b31d86254b526c8561f3da910384cc8e486675dbb2eb8a7ea081a4e0a"
+    },
+    {
+      "body": "Neptune",
+      "targetId": "899",
+      "epochUtc": "2000-01-01T12:00:00.000Z",
+      "longitudeDegrees": 303.1930007,
+      "latitudeDegrees": 0.2350026,
+      "rawResponseFile": "data/benchmarks/raw/horizons-neptune.json",
+      "responseSha256": "0bcf499b31d86254b526c8561f3da910384cc8e486675dbb2eb8a7ea081a4e0a"
+    },
+    {
+      "body": "Neptune",
+      "targetId": "899",
+      "epochUtc": "2024-02-29T00:00:00.000Z",
+      "longitudeDegrees": 356.7038902,
+      "latitudeDegrees": -1.2163266,
+      "rawResponseFile": "data/benchmarks/raw/horizons-neptune.json",
+      "responseSha256": "0bcf499b31d86254b526c8561f3da910384cc8e486675dbb2eb8a7ea081a4e0a"
+    },
+    {
+      "body": "Neptune",
+      "targetId": "899",
+      "epochUtc": "2026-11-12T23:59:59.000Z",
+      "longitudeDegrees": 1.8610964,
+      "latitudeDegrees": -1.4090725,
+      "rawResponseFile": "data/benchmarks/raw/horizons-neptune.json",
+      "responseSha256": "0bcf499b31d86254b526c8561f3da910384cc8e486675dbb2eb8a7ea081a4e0a"
+    },
+    {
+      "body": "Neptune",
+      "targetId": "899",
+      "epochUtc": "2026-11-13T00:00:00.000Z",
+      "longitudeDegrees": 1.8610962,
+      "latitudeDegrees": -1.4090725,
+      "rawResponseFile": "data/benchmarks/raw/horizons-neptune.json",
+      "responseSha256": "0bcf499b31d86254b526c8561f3da910384cc8e486675dbb2eb8a7ea081a4e0a"
+    },
+    {
+      "body": "Neptune",
+      "targetId": "899",
+      "epochUtc": "2035-07-01T06:30:00.000Z",
+      "longitudeDegrees": 24.421317,
+      "latitudeDegrees": -1.6500456,
+      "rawResponseFile": "data/benchmarks/raw/horizons-neptune.json",
+      "responseSha256": "0bcf499b31d86254b526c8561f3da910384cc8e486675dbb2eb8a7ea081a4e0a"
+    },
+    {
+      "body": "Pluto",
+      "targetId": "999",
+      "epochUtc": "1987-03-14T12:00:00.000Z",
+      "longitudeDegrees": 219.704113,
+      "latitudeDegrees": 16.7231258,
+      "rawResponseFile": "data/benchmarks/raw/horizons-pluto.json",
+      "responseSha256": "e2c9a184e738b04c5a61c742f9ffc824a36283333866ef98d77f37c41dfc1c30"
+    },
+    {
+      "body": "Pluto",
+      "targetId": "999",
+      "epochUtc": "2000-01-01T12:00:00.000Z",
+      "longitudeDegrees": 251.4547644,
+      "latitudeDegrees": 10.8552605,
+      "rawResponseFile": "data/benchmarks/raw/horizons-pluto.json",
+      "responseSha256": "e2c9a184e738b04c5a61c742f9ffc824a36283333866ef98d77f37c41dfc1c30"
+    },
+    {
+      "body": "Pluto",
+      "targetId": "999",
+      "epochUtc": "2024-02-29T00:00:00.000Z",
+      "longitudeDegrees": 301.1895082,
+      "latitudeDegrees": -2.8620336,
+      "rawResponseFile": "data/benchmarks/raw/horizons-pluto.json",
+      "responseSha256": "e2c9a184e738b04c5a61c742f9ffc824a36283333866ef98d77f37c41dfc1c30"
+    },
+    {
+      "body": "Pluto",
+      "targetId": "999",
+      "epochUtc": "2026-11-12T23:59:59.000Z",
+      "longitudeDegrees": 303.2527354,
+      "latitudeDegrees": -4.264651,
+      "rawResponseFile": "data/benchmarks/raw/horizons-pluto.json",
+      "responseSha256": "e2c9a184e738b04c5a61c742f9ffc824a36283333866ef98d77f37c41dfc1c30"
+    },
+    {
+      "body": "Pluto",
+      "targetId": "999",
+      "epochUtc": "2026-11-13T00:00:00.000Z",
+      "longitudeDegrees": 303.2527355,
+      "latitudeDegrees": -4.2646509,
+      "rawResponseFile": "data/benchmarks/raw/horizons-pluto.json",
+      "responseSha256": "e2c9a184e738b04c5a61c742f9ffc824a36283333866ef98d77f37c41dfc1c30"
+    },
+    {
+      "body": "Pluto",
+      "targetId": "999",
+      "epochUtc": "2035-07-01T06:30:00.000Z",
+      "longitudeDegrees": 319.4732564,
+      "latitudeDegrees": -8.3220623,
+      "rawResponseFile": "data/benchmarks/raw/horizons-pluto.json",
+      "responseSha256": "e2c9a184e738b04c5a61c742f9ffc824a36283333866ef98d77f37c41dfc1c30"
+    }
+  ],
+  "retrievedAtUtc": "2026-11-13T04:44:07.565Z",
+  "responseMetadata": [
+    {
+      "body": "Sun",
+      "signature": {
+        "version": "1.2",
+        "source": "NASA/JPL Horizons API"
+      },
+      "responseFile": "data/benchmarks/raw/horizons-sun.json"
+    },
+    {
+      "body": "Moon",
+      "signature": {
+        "source": "NASA/JPL Horizons API",
+        "version": "1.2"
+      },
+      "responseFile": "data/benchmarks/raw/horizons-moon.json"
+    },
+    {
+      "body": "Mercury",
+      "signature": {
+        "source": "NASA/JPL Horizons API",
+        "version": "1.2"
+      },
+      "responseFile": "data/benchmarks/raw/horizons-mercury.json"
+    },
+    {
+      "body": "Venus",
+      "signature": {
+        "source": "NASA/JPL Horizons API",
+        "version": "1.2"
+      },
+      "responseFile": "data/benchmarks/raw/horizons-venus.json"
+    },
+    {
+      "body": "Mars",
+      "signature": {
+        "source": "NASA/JPL Horizons API",
+        "version": "1.2"
+      },
+      "responseFile": "data/benchmarks/raw/horizons-mars.json"
+    },
+    {
+      "body": "Jupiter",
+      "signature": {
+        "version": "1.2",
+        "source": "NASA/JPL Horizons API"
+      },
+      "responseFile": "data/benchmarks/raw/horizons-jupiter.json"
+    },
+    {
+      "body": "Saturn",
+      "signature": {
+        "version": "1.2",
+        "source": "NASA/JPL Horizons API"
+      },
+      "responseFile": "data/benchmarks/raw/horizons-saturn.json"
+    },
+    {
+      "body": "Uranus",
+      "signature": {
+        "version": "1.2",
+        "source": "NASA/JPL Horizons API"
+      },
+      "responseFile": "data/benchmarks/raw/horizons-uranus.json"
+    },
+    {
+      "body": "Neptune",
+      "signature": {
+        "source": "NASA/JPL Horizons API",
+        "version": "1.2"
+      },
+      "responseFile": "data/benchmarks/raw/horizons-neptune.json"
+    },
+    {
+      "body": "Pluto",
+      "signature": {
+        "source": "NASA/JPL Horizons API",
+        "version": "1.2"
+      },
+      "responseFile": "data/benchmarks/raw/horizons-pluto.json"
+    }
+  ]
+}

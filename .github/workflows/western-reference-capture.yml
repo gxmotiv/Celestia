@@ -1,0 +1,55 @@
+name: Western JPL Horizons reference capture
+
+on:
+  push:
+    branches:
+      - research/jpl-western-ephemeris-benchmarks
+    paths:
+      - .github/workflows/western-reference-capture.yml
+      - scripts/fetchJplWesternEphemerisReference.ts
+      - scripts/compareJplWesternEphemeris.ts
+      - lib/astronomy/westernEphemerisBenchmarks.ts
+      - data/benchmarks/western-ephemeris-reference.json
+
+permissions:
+  contents: write
+
+concurrency:
+  group: western-jpl-reference-capture
+  cancel-in-progress: false
+
+jobs:
+  capture:
+    name: Capture external Horizons reference responses
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Bun
+        run: |
+          npm install --global bun@1.4.4
+          test "$(bun --version)" = "1.4.4"
+      - name: Install locked dependencies
+        run: bun install --frozen-lockfile
+      - name: Query JPL Horizons and archive raw responses
+        run: bun run scripts/fetchJplWesternEphemerisReference.ts --fetch
+      - name: Upload source responses and normalized fixtures
+        uses: actions/upload-artifact@v4
+        with:
+          name: western-jpl-horizons-reference-${{ github.sha }}
+          path: |
+            data/benchmarks/western-ephemeris-reference.json
+            data/benchmarks/raw/*.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Compare captured JPL references with Celestia
+        run: bun run scripts/compareJplWesternEphemeris.ts
+      - name: Commit captured reference data to the isolated benchmark branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/benchmarks/western-ephemeris-reference.json data/benchmarks/raw/*.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Capture checksummed JPL Horizons planetary references"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi

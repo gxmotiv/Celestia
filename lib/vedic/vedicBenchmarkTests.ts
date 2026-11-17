@@ -242,8 +242,8 @@ export class VedicBenchmarkRunner {
     const naisargikaCorrect =
       naisargikaPoints["Sun"] === 60.0 &&
       naisargikaPoints["Moon"] === 51.43 &&
-      naisargikaPoints["Venus"] === 42.85 &&
-      naisargikaPoints["Jupiter"] === 34.28 &&
+      naisargikaPoints["Venus"] === 42.86 &&
+      naisargikaPoints["Jupiter"] === 34.29 &&
       naisargikaPoints["Mercury"] === 25.71 &&
       naisargikaPoints["Mars"] === 17.14 &&
       naisargikaPoints["Saturn"] === 8.57;
@@ -252,17 +252,18 @@ export class VedicBenchmarkRunner {
       id: "SB-01",
       name: "Naisargika Bala Fixed Virupas (Sun to Saturn)",
       category: "Shadbala",
-      shastraReference: "BPHS Ch. 27, Sloka 19-20",
-      expected: "Sun: 60, Moon: 51.43, Venus: 42.85, Jupiter: 34.28, Mercury: 25.71, Mars: 17.14, Saturn: 8.57",
+      shastraReference: "BPHS Ch. 27, Sloka 14",
+      expected: "BPHS 27.14: Sun: 60, Moon: 51.43, Venus: 42.86, Jupiter: 34.29, Mercury: 25.71, Mars: 17.14, Saturn: 8.57",
       actual: `Sun: ${naisargikaPoints["Sun"]}, Moon: ${naisargikaPoints["Moon"]}, Venus: ${naisargikaPoints["Venus"]}, Saturn: ${naisargikaPoints["Saturn"]}`,
       passed: naisargikaCorrect,
-      notes: "Naisargika (natural) strength reflects relative luminosity and optical visibility.",
+      notes: "BPHS 27.14 assigns 60/7 multiplied by ranks 7 through 1, rounded to two decimals; Raman Article 108's separately selectable printed decimals are not mixed into this benchmark.",
     });
 
     // Test 2.2: Dig Bala Maximum at Cardinal Points
     // Jupiter peaks in 1st House (0° from Ascendant = 60 Virupas)
     const jupiterAtLagnaInput: ShadbalaChartInput = {
       ascendant: 90,
+      birthTimeKnown: true,
       planets: {
         Jupiter: { longitude: 90 }, // exactly at Lagna
       },
@@ -272,18 +273,20 @@ export class VedicBenchmarkRunner {
       id: "SB-02",
       name: "Jupiter Dig Bala Peak at Lagna (1st House)",
       category: "Shadbala",
-      shastraReference: "BPHS Ch. 27, Sloka 13-14",
+      shastraReference: "BPHS Ch. 27, Sloka 7-8",
       expected: "60.0 Virupas",
-      actual: `${jupDig.points} Virupas`,
-      passed: jupDig.points >= 59.9,
+      actual: jupDig.available && jupDig.points !== null ? `${jupDig.points} Virupas` : "Unavailable",
+      passed: jupDig.available && jupDig.points !== null && jupDig.points >= 59.9,
       notes: "Jupiter and Mercury achieve peak directional strength (60 Virupas) in the 1st House (East).",
     });
 
     // Test 2.3: Mars Dig Bala Peak at 10th House
     const marsAt10thInput: ShadbalaChartInput = {
       ascendant: 0,
+      midheaven: 270,
+      birthTimeKnown: true,
       planets: {
-        Mars: { longitude: 270 }, // 10th house cusp (South)
+        Mars: { longitude: 270 }, // chart-derived meridian (South)
       },
     };
     const marsDig = this.shadbalaEngine.calculateDigBala("Mars", marsAt10thInput);
@@ -291,18 +294,19 @@ export class VedicBenchmarkRunner {
       id: "SB-03",
       name: "Mars Dig Bala Peak at Midheaven (10th House)",
       category: "Shadbala",
-      shastraReference: "BPHS Ch. 27, Sloka 13-14",
+      shastraReference: "BPHS Ch. 27, Sloka 7-8",
       expected: "60.0 Virupas",
-      actual: `${marsDig.points} Virupas`,
-      passed: marsDig.points >= 59.9,
+      actual: marsDig.available && marsDig.points !== null ? `${marsDig.points} Virupas` : "Unavailable",
+      passed: marsDig.available && marsDig.points !== null && marsDig.points >= 59.9,
       notes: "Sun and Mars achieve peak directional strength (60 Virupas) at the South point (10th House).",
     });
 
     // Test 2.4: Saturn Dig Bala Peak at 7th House
     const saturnAt7thInput: ShadbalaChartInput = {
       ascendant: 0,
+      birthTimeKnown: true,
       planets: {
-        Saturn: { longitude: 180 }, // 7th house cusp (West)
+        Saturn: { longitude: 180 }, // descendant (West)
       },
     };
     const satDig = this.shadbalaEngine.calculateDigBala("Saturn", saturnAt7thInput);
@@ -310,10 +314,10 @@ export class VedicBenchmarkRunner {
       id: "SB-04",
       name: "Saturn Dig Bala Peak at Descendant (7th House)",
       category: "Shadbala",
-      shastraReference: "BPHS Ch. 27, Sloka 13-14",
+      shastraReference: "BPHS Ch. 27, Sloka 7-8",
       expected: "60.0 Virupas",
-      actual: `${satDig.points} Virupas`,
-      passed: satDig.points >= 59.9,
+      actual: satDig.available && satDig.points !== null ? `${satDig.points} Virupas` : "Unavailable",
+      passed: satDig.available && satDig.points !== null && satDig.points >= 59.9,
       notes: "Saturn achieves peak directional strength (60 Virupas) in the West (7th House).",
     });
 
@@ -321,7 +325,7 @@ export class VedicBenchmarkRunner {
     const retroJupiterInput: ShadbalaChartInput = {
       ascendant: 0,
       planets: {
-        Jupiter: { longitude: 100, isRetrograde: true },
+        Jupiter: { longitude: 100, isRetrograde: true, dailyMotion: -0.1 },
       },
     };
     const retroCheshta = this.shadbalaEngine.calculateCheshtaBala("Jupiter", retroJupiterInput);
@@ -332,7 +336,7 @@ export class VedicBenchmarkRunner {
       shastraReference: "BPHS Ch. 27, Sloka 21-22",
       expected: "60.0 Virupas (Vakra max potency)",
       actual: `${retroCheshta.points} Virupas (${retroCheshta.state})`,
-      passed: retroCheshta.points === 60.0,
+      passed: retroCheshta.available && retroCheshta.points === 60.0,
       notes: "A retrograde planet receives maximum Cheshta Bala (60 Virupas) due to proximity to Earth.",
     });
 
@@ -520,7 +524,12 @@ export class VedicBenchmarkRunner {
       ascendant: 95.0,
       planets: {
         Sun: { longitude: 10.0 }, // Exalted Aries 10°
+        Moon: { longitude: 40.0 }, // Taurus
+        Mars: { longitude: 70.0 }, // Gemini
+        Mercury: { longitude: 190.0 }, // Libra
         Jupiter: { longitude: 95.0 }, // Exalted Cancer 5°
+        Venus: { longitude: 340.0 }, // Pisces
+        Saturn: { longitude: 280.0 }, // Capricorn
       },
     };
     const sunSthana = this.shadbalaEngine.calculateSthanaBala("Sun", shadAvatarInput);

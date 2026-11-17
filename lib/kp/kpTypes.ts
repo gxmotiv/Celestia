@@ -80,6 +80,49 @@ export interface KPHouseSignificators {
   allSignificators: string[];
 }
 
+export interface KPPlanetSignificationLevels {
+  /** Level A: house occupied by the planet's star lord. */
+  levelA: number[];
+  /** Level B: house occupied by the planet itself. */
+  levelB: number[];
+  /** Level C: houses owned by the planet's star lord. */
+  levelC: number[];
+  /** Level D: houses owned by the planet itself. */
+  levelD: number[];
+}
+
+export type KPPlanetSignificationGrade = "A" | "B" | "C" | "D";
+
+export type KPNodeAgentSource = "conjunction" | "star-lord" | "aspect" | "sign-lord";
+export type KPNodeAgentRule = "reader-vi" | "reader-iii-v";
+
+export interface KPNodeAgentTier {
+  source: KPNodeAgentSource;
+  priority: number;
+  planets: string[];
+  levels: KPPlanetSignificationLevels;
+  signifiedHouses: number[];
+}
+
+export interface KPNodeRepresentation {
+  node: "Rahu" | "Ketu";
+  occupiedHouse: number;
+  sign: string;
+  signLord: string;
+  starLord: string;
+  rule: KPNodeAgentRule;
+  /** Explicit software convention; not asserted to be a universal KSK orb rule. */
+  conjunctionPolicy: "same-sidereal-sign-provisional";
+  aspectPolicy: "parashari-full-sign-drishti-classical-seven";
+  priorityOrder: KPNodeAgentSource[];
+  agentTiers: KPNodeAgentTier[];
+  preferredAgentSource?: KPNodeAgentSource;
+  preferredAgentPlanets: string[];
+  preferredAgentHouses: number[];
+  allAgentHouses: number[];
+  representedHouses: number[];
+}
+
 export interface KPPlanetSignification {
   planet: string;
   occupiesHouse: number;
@@ -90,8 +133,22 @@ export interface KPPlanetSignification {
   subLord: string;
   subLordOccupiesHouse: number;
   subLordOwnsHouses: number[];
+  /** Distinct classical planet-level four-fold signification grades. */
+  levels: KPPlanetSignificationLevels;
+  /** Higher-priority grade to lower-priority grade for the selected KP strength variant. */
+  strengthOrder: KPPlanetSignificationGrade[];
+  /** Other planets occupying one of this planet's stars. */
+  starTenants: string[];
+  /** Houses inherited when this planet itself is a node through its preferred agent. */
+  nodeAgentHouses?: number[];
+  /** Houses inherited when this planet's star lord is Rahu or Ketu. */
+  starLordNodeAgentHouses?: number[];
+  /** A planet with no other tenants in its stars uses B-A-D-C strength order. */
+  hasSelfStrength: boolean;
   signifiedHouses: number[]; // Unique ordered list of all signified houses
 }
+
+export type KPHouseSignificatorGrade = "I" | "II" | "III" | "IV";
 
 export interface KPPrediction {
   house: number;
@@ -104,15 +161,18 @@ export interface KPPrediction {
   cslSignifiedHouses: number[];
   isPromiseFavorable: boolean;
   timing: string;
-  probability: number;
+  heuristicScore: number; // Rule-weighted display heuristic; not an event probability.
   details: string;
   dashaAnalysis: {
     dashaLord: string;
     isDashaSignificator: boolean;
+    dashaSignificatorGrade?: KPHouseSignificatorGrade;
     antardashaLord: string;
     isAntardashaSignificator: boolean;
+    antardashaSignificatorGrade?: KPHouseSignificatorGrade;
     pratyantardashaLord?: string;
     isPratyantarSignificator?: boolean;
+    pratyantardashaSignificatorGrade?: KPHouseSignificatorGrade;
     verdict: string;
   };
   verdict: "Highly Favorable" | "Favorable" | "Mixed / Moderate" | "Unfavorable";
@@ -131,6 +191,16 @@ export interface KPRulingPlanets {
 }
 
 export interface KPChartData {
+  /** Selected traditional nine-graha or optional extended-twelve body profile. */
+  bodySet?: "classical-nine" | "extended-twelve";
+  /** Shared ephemeris currently supplies mean Rahu and exactly opposite Ketu. */
+  nodeConvention?: "mean" | "true";
+  /** Selects which KSK reader-era node-agent priority is applied. */
+  nodeAgentRule?: KPNodeAgentRule;
+  /** Separate disclosed node-agent conjunction and aspect conventions. */
+  nodeConjunctionPolicy?: "same-sidereal-sign-provisional";
+  nodeAspectPolicy?: "parashari-full-sign-drishti-classical-seven";
+  nodeRepresentations?: Partial<Record<"Rahu" | "Ketu", KPNodeRepresentation>>;
   ayanamsa: number;
   ayanamsaFormatted: string;
   cusps: KPCusps;
@@ -158,7 +228,13 @@ export interface KPStepDetail {
   planet: string;
   occupiesHouse: number;
   ownsHouses: number[];
+  /** Houses assigned primary strength by the selected 4-Step rule. */
+  primaryHouses: number[];
+  /** Houses assigned secondary strength by the selected 4-Step rule. */
+  secondaryHouses: number[];
+  /** Union retained for compatibility; does not imply equal strength. */
   allHouses: number[];
+  strengthRule: "planet-positional-status" | "star-lord-principal";
   isRetrograde?: boolean;
   hasPositionalStatus?: boolean;
 }
@@ -223,7 +299,7 @@ export interface KPHoraryResult {
     isMoonCslAligned: boolean;
   };
   verdict: "YES - Strongly Promised" | "YES - Delayed / After Effort" | "NO - Denied / Not Feasible";
-  confidenceScore: number; // 0 to 100
+  heuristicScore: number; // Rule-weighted display heuristic; not calibrated confidence.
   detailedJudgment: string[];
   recommendedAction: string;
 }

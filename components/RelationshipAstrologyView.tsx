@@ -20,7 +20,7 @@ import { KundliMilanEngine, KundliMilanReport } from "@/lib/vedic/kundliMilanEng
 import { MasterKundliMilanOrchestrator, MasterKundliReport } from "@/lib/vedic/masterKundliMilan";
 import { VedicKundliMilanDashboard } from "@/components/VedicKundliMilanDashboard";
 import { searchCities } from "@/lib/astronomy/cities";
-import { parseBirthClockTime } from "@/lib/astronomy/timeInput";
+import { isRelationshipChartTimeReady, parseBirthClockTime } from "@/lib/astronomy/timeInput";
 import { resolveLocalDateTime } from "@/lib/astronomy/historicalTimezone";
 import { swissEphemeris } from "@/lib/astronomy/swissEphemeris";
 import {
@@ -164,11 +164,11 @@ const RELATIONSHIP_CATEGORIES: {
   },
   {
     id: "karmic",
-    label: "Karmic Soul Bond / Spiritual Connection",
+    label: "Karmic-theme symbolism",
     shortLabel: "Karmic",
     icon: "🔮",
     badgeColor: "border-purple-500/40 text-purple-300 bg-purple-500/10",
-    description: "Soul contracts, past-life resonance, destiny timing, and evolutionary growth",
+    description: "Modern astrological symbolism around nodal contacts and themes of meaning; not evidence of past lives or destiny",
   },
   {
     id: "stranger",
@@ -176,7 +176,7 @@ const RELATIONSHIP_CATEGORIES: {
     shortLabel: "Stranger / Random",
     icon: "⚡",
     badgeColor: "border-cyan-500/40 text-cyan-300 bg-cyan-500/10",
-    description: "Instant resonance, fated synchronicity, curiosity, and passing crossroads",
+    description: "Symbolic reflection on brief encounters and curiosity; not evidence that an encounter was fated",
   },
 ];
 
@@ -344,19 +344,28 @@ export function RelationshipAstrologyView({
     ? partnerResolvedCandidate.offsetSeconds / 3600
     : partnerProfile.timezoneOffset;
 
+  const partnerTimeReady = isRelationshipChartTimeReady({
+    birthDate: partnerProfile.birthDate,
+    birthTime: partnerProfile.birthTime,
+    timezoneMode: partnerProfile.timezoneMode,
+    hasResolvedInstant: Boolean(partnerResolvedCandidate),
+    manualOffsetConfirmed: partnerProfile.manualOffsetConfirmed,
+    timezoneOffset: partnerProfile.timezoneOffset,
+  });
+
   const partnerTimezoneWarning = partnerProfile.timezoneMode === "automatic"
     ? partnerTimeResolution?.status === "nonexistent"
-      ? "This local birth time did not occur in the selected IANA timezone. The partner chart currently falls back to the saved numeric offset."
+      ? "This local clock time did not occur in the selected timezone. Correct it or choose Manual UTC Offset and confirm the offset; relationship reports are on hold."
       : partnerTimeResolution?.status === "ambiguous" && !partnerResolvedCandidate
-        ? "This local time occurs twice. Select the intended UTC instant; until then the chart uses the saved numeric offset."
+        ? "This local time occurs twice. Select the intended UTC instant; relationship reports are on hold until you choose one."
         : partnerTimeResolution?.status === "unsupported"
-          ? (partnerTimeResolution.reason + " The partner chart uses the saved numeric offset until corrected.")
-          : !partnerTimeResolution
-            ? "Select a supported IANA timezone to resolve this local time."
+          ? (partnerTimeResolution.reason + " Relationship reports are on hold until you select and confirm a manual offset.")
+          : !partnerResolvedCandidate
+            ? "A valid IANA-resolved UTC instant is required before relationship reports can be shown."
             : "IANA/ICU database-resolved; historical rules still require independent verification."
     : partnerProfile.manualOffsetConfirmed
       ? "Using an explicitly user-confirmed manual UTC offset; not independently historically verified."
-      : "Manual offset is not confirmed. The current partner chart is provisional.";
+      : "Confirm the manual UTC offset to display relationship reports.";
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -500,6 +509,7 @@ export function RelationshipAstrologyView({
         latitude: person1Lat,
         longitude: person1Lon,
         timezoneOffset: person1TimezoneOffset,
+        utcInstant: person1UtcInstant,
       },
       {
         birthDate: partnerProfile.birthDate,
@@ -507,9 +517,10 @@ export function RelationshipAstrologyView({
         latitude: partnerProfile.latitude,
         longitude: partnerProfile.longitude,
         timezoneOffset: partnerResolvedOffsetHours,
+        utcInstant: partnerUtcInstant.toISOString(),
       }
     );
-  }, [person1Date, person1Time, person1Lat, person1Lon, person1TimezoneOffset, partnerProfile, partnerResolvedOffsetHours]);
+  }, [person1Date, person1Time, person1Lat, person1Lon, person1TimezoneOffset, person1UtcInstant, partnerProfile, partnerResolvedOffsetHours, partnerUtcInstant]);
 
   // Vedic Jyotish Charts & Kundli Milan Engine
   const person1VedicChart = useMemo(() => {
@@ -537,7 +548,7 @@ export function RelationshipAstrologyView({
   }, [partnerChart, partnerUtcInstant]);
 
   const kundliMilanReport: KundliMilanReport | null = useMemo(() => {
-    if (!person1VedicChart || !partnerVedicChart) return null;
+    if (relationshipType !== "romantic" || !person1VedicChart || !partnerVedicChart) return null;
     try {
       return KundliMilanEngine.calculateMilan(
         person1VedicChart,
@@ -558,10 +569,11 @@ export function RelationshipAstrologyView({
     partnerProfile.name,
     person1Gender,
     partnerProfile.gender,
+    relationshipType,
   ]);
 
   const masterKundliReport: MasterKundliReport | null = useMemo(() => {
-    if (!person1VedicChart || !partnerVedicChart) return null;
+    if (relationshipType !== "romantic" || !person1VedicChart || !partnerVedicChart) return null;
     try {
       return MasterKundliMilanOrchestrator.evaluateMaster(
         person1VedicChart,
@@ -582,6 +594,7 @@ export function RelationshipAstrologyView({
     partnerProfile.name,
     person1Gender,
     partnerProfile.gender,
+    relationshipType,
   ]);
 
   // Filtered synastry aspects
@@ -626,14 +639,16 @@ export function RelationshipAstrologyView({
           </p>
         </div>
 
-        {/* View Tabs */}
+        <p className="text-[11px] text-slate-400 bg-slate-950/50 border border-slate-800 rounded-lg p-3">Synastry, composite and Davison charts are astrological interpretation frameworks. Their labels, heuristic scores and karmic/soulmate themes are not scientific measures of compatibility, probability of success, destiny or past-life connection. Vedic Milan points are also tradition-specific rules, not a measured probability. Use these systems as prompts for reflection and communication, not as decision rules for relationships.</p>
+
+      {/* View Tabs */}
         <div className="flex items-center gap-1.5 flex-wrap">
           {[
             { id: "synastry", label: "Synastry & Affinity", icon: "⚯" },
             { id: "vedic", label: "Master Vedic Kundli Milan", icon: "🕉️" },
             { id: "composite", label: "Composite Midpoint Chart", icon: "⊕" },
             { id: "davison", label: "Davison Time-Space Chart", icon: "⏳" },
-          ].map((tab) => (
+          ].filter((tab) => tab.id !== "vedic" || relationshipType === "romantic").map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveRelTab(tab.id as any)}
@@ -692,7 +707,10 @@ export function RelationshipAstrologyView({
                 return (
                   <button
                     key={cat.id}
-                    onClick={() => setRelationshipType(cat.id)}
+                    onClick={() => {
+                      setRelationshipType(cat.id);
+                      if (cat.id !== "romantic" && activeRelTab === "vedic") setActiveRelTab("synastry");
+                    }}
                     className={`p-2 rounded-lg text-left transition-all flex flex-col justify-between border cursor-pointer ${
                       isSelected
                         ? "bg-rose-500/20 border-rose-500/50 shadow-sm"
@@ -1069,6 +1087,8 @@ export function RelationshipAstrologyView({
         </div>
       )}
 
+      {partnerTimeReady ? (
+        <>
       {/* RELATIONSHIP CONTEXT INTRO BANNER */}
       <div className="p-4 bg-gradient-to-r from-rose-950/30 via-slate-950/60 to-purple-950/30 border border-rose-500/20 rounded-xl flex items-start gap-3">
         <span className="text-2xl pt-0.5">{currentRelMeta.icon}</span>
@@ -1119,6 +1139,8 @@ export function RelationshipAstrologyView({
             </div>
           )}
 
+          <p className="text-[11px] text-slate-400 bg-slate-950/50 border border-slate-800 rounded-lg p-3">These values are a hand-designed astrology index, not a compatibility probability, psychometric test or measured relationship outcome. Each dimension starts at 70 and is adjusted by selected planetary aspects, aspect type and orb using fixed heuristic weights. They are symbolic prompts only, not a basis for deciding whether a relationship is suitable.</p>
+
           {/* Compatibility Radar Scores */}
           <div className="p-4 sm:p-5 bg-slate-950/80 border border-slate-800 rounded-xl space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-2">
@@ -1130,10 +1152,10 @@ export function RelationshipAstrologyView({
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-3xl font-bold font-mono text-rose-400">
-                  {synastryReport.scores.overall}%
+                  {synastryReport.scores.overall}
                 </span>
                 <span className="text-[10px] text-slate-400 block leading-tight">
-                  Overall Composite<br />Compatibility Score
+                  Weighted astrology index<br />(25–99 heuristic points)
                 </span>
               </div>
             </div>
@@ -1149,10 +1171,10 @@ export function RelationshipAstrologyView({
                     <span className="text-slate-300 font-medium truncate" title={dim.label}>
                       {dim.label}
                     </span>
-                    <span className="font-mono font-bold text-slate-100">{dim.val}%</span>
+                    <span className="font-mono font-bold text-slate-100">{dim.val}</span>
                   </div>
                   <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                    <div className={`h-full ${dim.color}`} style={{ width: `${dim.val}%` }} />
+                    <div className={`h-full ${dim.color}`} style={{ width: `${(dim.val / 99) * 100}%` }} />
                   </div>
                   <p className="text-[10px] text-slate-400 line-clamp-2 leading-tight">
                     {dim.description}
@@ -1168,7 +1190,7 @@ export function RelationshipAstrologyView({
               <div className="p-4 bg-purple-950/30 border border-purple-500/30 rounded-xl space-y-2">
                 <h5 className="text-xs font-bold text-purple-300 flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-                  Karmic Connections &amp; Soul Contracts ({synastryReport.karmicConnections.length})
+                  Traditional karmic-theme markers ({synastryReport.karmicConnections.length})
                 </h5>
                 <div className="space-y-1.5">
                   {synastryReport.karmicConnections.map((k, i) => (
@@ -1185,7 +1207,7 @@ export function RelationshipAstrologyView({
               <div className="p-4 bg-rose-950/30 border border-rose-500/30 rounded-xl space-y-2">
                 <h5 className="text-xs font-bold text-rose-300 flex items-center gap-1.5">
                   <Heart className="w-3.5 h-3.5 text-rose-400" />
-                  Key Evolutionary Markers ({synastryReport.soulmateIndicators.length})
+                  Selected synastry markers ({synastryReport.soulmateIndicators.length})
                 </h5>
                 <div className="space-y-1.5">
                   {synastryReport.soulmateIndicators.map((s, i) => (
@@ -1196,7 +1218,7 @@ export function RelationshipAstrologyView({
                   ))}
                   {synastryReport.soulmateIndicators.length === 0 && (
                     <p className="text-xs text-slate-400">
-                      Standard affinity dynamics without rare Soli-Lunar conjunction exactitudes.
+                      No entries for the currently selected nodal and Sun–Moon marker rules.
                     </p>
                   )}
                 </div>
@@ -1270,7 +1292,7 @@ export function RelationshipAstrologyView({
                               : "bg-purple-500/10 text-purple-400 border-purple-500/30"
                           }`}
                         >
-                          {asp.nature} ({asp.score}/10)
+                          {asp.nature} · interpretive weight {asp.score}/10
                         </span>
                       </div>
                     </div>
@@ -1401,11 +1423,20 @@ export function RelationshipAstrologyView({
       )}
 
       {/* 4. MASTER VEDIC KUNDLI MILAN VIEW */}
-      {activeRelTab === "vedic" && (
+      {relationshipType === "romantic" && activeRelTab === "vedic" && (
         <VedicKundliMilanDashboard
           masterReport={masterKundliReport}
           milanReport={kundliMilanReport}
         />
+      )}
+          </>
+      ) : (
+        <div role="status" className="p-5 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+          <h4 className="text-sm font-semibold text-amber-200">Relationship charts are on hold</h4>
+          <p className="text-xs text-slate-300 leading-relaxed">
+            Complete Person 2&apos;s birth details in Settings. Choose a valid automatic IANA-resolved time, select the intended UTC instant when the local time is ambiguous, or switch to Manual UTC Offset and confirm a valid offset. Synastry, Composite, Davison and Vedic relationship reports stay hidden until the time is resolved or explicitly confirmed.
+          </p>
+        </div>
       )}
     </div>
   );

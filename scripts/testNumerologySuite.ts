@@ -14,6 +14,7 @@
 
 import {
   calculateCompleteNumerologyReport,
+  calculateChaldeanComponent,
   calculatePinnacles,
   calculateChallenges,
   calculateExpressionPlanes,
@@ -25,6 +26,7 @@ import {
   ALL_KABBALAH_PATHS,
   LATIN_TO_HEBREW_MAP,
   TAMIL_GRAHA_PROFILES,
+  calculateTamilNumerology,
 } from "../lib/numerology";
 
 let passedCount = 0;
@@ -214,6 +216,23 @@ assert("Path 32 is The World", ALL_KABBALAH_PATHS[21].tarotCard === "The World")
 assert("Hebrew alphabet mapping converts Latin characters", LATIN_TO_HEBREW_MAP["A"].value === 1 && LATIN_TO_HEBREW_MAP["M"].value === 40);
 assert("Einstein Kabbalah profile has Soul Sephirah and Outer Sephirah", einsteinReport.kabbalah.soulSephirah.number >= 1 && einsteinReport.kabbalah.outerLifeSephirah.number <= 10);
 
+const lowCompoundName = calculateChaldeanComponent("A");
+assert("Single-digit Chaldean totals do not receive an invented compound meaning",
+  lowCompoundName.compoundNumber === 1 && lowCompoundName.compoundMeaning.fortuneCategory === "Neutral" &&
+  lowCompoundName.compoundMeaning.title === "No compound-number interpretation");
+const validCompoundName = calculateChaldeanComponent("JJJJJJJJJJ");
+assert("Chaldean compound totals in the 10–52 range retain their database meaning",
+  validCompoundName.compoundNumber === 10 && validCompoundName.compoundMeaning.title === CHALDEAN_COMPOUND_DATABASE[10].title);
+const maxCheiroCompound = calculateChaldeanComponent("J".repeat(52));
+assert("The upper published Cheiro compound bound (52) retains its table meaning",
+  maxCheiroCompound.compoundNumber === 52 &&
+  maxCheiroCompound.compoundMeaning.title === CHALDEAN_COMPOUND_DATABASE[52].title);
+const outsideCheiroCompound = calculateChaldeanComponent("J".repeat(53));
+assert("A raw total above 52 is not digit-folded into an unrelated Cheiro entry",
+  outsideCheiroCompound.compoundNumber === 53 && outsideCheiroCompound.singleRoot === 8 &&
+  outsideCheiroCompound.compoundMeaning.title === "No compound-number interpretation" &&
+  outsideCheiroCompound.compoundMeaning.fortuneCategory === "Neutral");
+
 // -----------------------------------------------------------------------------
 // 6. TAMIL EN KANIYAM TESTS
 // -----------------------------------------------------------------------------
@@ -223,6 +242,19 @@ assert("Tamil Navagrahas defined for all 9 numbers", Object.keys(TAMIL_GRAHA_PRO
 assert("Einstein Janma En is 5 (14 -> 5)", einsteinReport.tamil.janmaEn === 5);
 assert("Tamil Graha profile has proverb guidance", einsteinReport.tamil.tamilProverbGuidance.length > 0);
 assert("Auspicious days, gems, and colors populated", einsteinReport.tamil.auspiciousDays.length > 0 && einsteinReport.tamil.auspiciousColors.length > 0);
+assert("Latin transliteration explicitly uses the Chaldean-Indian A-Z method",
+  einsteinReport.tamil.peyarEnMethod === "Chaldean-Indian Latin A-Z mapping" &&
+  einsteinReport.tamil.peyarEn !== null);
+const nativeTamilName = calculateTamilNumerology("அருண் குமார்", 1990, 1, 1);
+assert("Tamil-script names do not receive a fabricated Peyar En value",
+  nativeTamilName.peyarEn === null &&
+  nativeTamilName.peyarEnNote.includes("Latin A–Z transliteration only"));
+const mixedScriptName = calculateTamilNumerology("Arun குமார்", 1990, 1, 1);
+assert("Mixed-script names are not partially calculated after dropping unsupported characters",
+  mixedScriptName.peyarEn === null);
+const transliteratedTamilName = calculateTamilNumerology("Arun Kumar", 1990, 1, 1);
+assert("A supported Latin transliteration still returns a real mapped name number",
+  transliteratedTamilName.peyarEn === 2);
 
 // -----------------------------------------------------------------------------
 // 7. CROSS-SYSTEM SYNTHESIS TESTS

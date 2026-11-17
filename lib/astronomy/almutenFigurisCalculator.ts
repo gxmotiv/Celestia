@@ -12,6 +12,7 @@
  */
 
 import { normalizeDegrees } from "./ephemeris";
+import { swissEphemeris } from "./swissEphemeris";
 
 export interface AlmutenCandidateScore {
   planet: string;
@@ -47,13 +48,19 @@ export interface AlmutenFigurisResult {
   almutenFiguris: string;
   almutenSymbol: string;
   almutenScore: number;
+  /** @deprecated Compatibility alias for almutenFiguris; this is not a separate soul-ruler calculation. */
   lordOfSoul: string;
+  /** @deprecated Compatibility alias for runnerUpPlanet; this is not a separate temperament calculation. */
   lordOfTemperament: string;
+  runnerUpPlanet: string | null;
+  methodNote: string;
   sanDegree: number;
   sanType: "New Moon" | "Full Moon";
   sanFormatted: string;
-  dayRuler: string;
-  hourRuler: string;
+  sanUtcInstant: string;
+  sanDaysBeforeBirth: number;
+  dayRuler: string | null;
+  hourRuler: string | null;
   points: AlmutenPointAnalysis[];
   scores: AlmutenCandidateScore[];
   significance: string;
@@ -160,18 +167,122 @@ const PLANET_SYMBOLS: Record<string, string> = {
 
 export class AlmutenFigurisCalculator {
   /**
-   * Approximate Pre-natal Syzygy (SAN: New Moon or Full Moon before birth).
+   * Find the most recent astronomical syzygy (New or Full Moon) before birth.
+   *
+   * The former implementation estimated the Sun's longitude with a fixed
+   * phase-angle multiplier. That is not a time solution: relative lunar motion
+   * varies through the lunation, so it could displace one of the five Almuten
+   * points and change the dignity totals. This implementation brackets the
+   * previous 0°/180° geocentric apparent ecliptic phase crossing and bisects it.
+   *
+   * The result is only as accurate as the repository's Astronomy Engine-backed
+   * apparent geocentric Sun/Moon model; it is not a claim of native Swiss
+   * Ephemeris accuracy or an independently certified historical ephemeris.
    */
-  public calculatePreNatalSyzygy(sunLon: number, moonLon: number): { degree: number; type: "New Moon" | "Full Moon" } {
-    const diff = normalizeDegrees(moonLon - sunLon);
-    if (diff < 180) {
-      // Waning towards or waxing from New Moon; last syzygy was New Moon
-      return { degree: normalizeDegrees(sunLon - diff * 0.08), type: "New Moon" };
-    } else {
-      // Full Moon occurred when diff was 180
-      const diffFromFull = diff - 180;
-      return { degree: normalizeDegrees(sunLon - diffFromFull * 0.08), type: "Full Moon" };
+  public calculatePreNatalSyzygy(birthJulianDay: number): {
+    degree: number;
+    type: "New Moon" | "Full Moon";
+    julianDay: number;
+    daysBeforeBirth: number;
+  } {
+    if (!Number.isFinite(birthJulianDay)) {
+      throw new RangeError("Pre-natal syzygy search requires a finite birth Julian Day.");
     }
+
+    const phaseAngle = (julianDay: number): number =>
+      normalizeDegrees(
+        swissEphemeris.getApparentMoonLongitude(julianDay) -
+        swissEphemeris.getApparentSunLongitude(julianDay)
+      );
+    const signedAngleDifference = (angle: number, target: number): number => {
+      const difference = normalizeDegrees(angle - target);
+      return difference > 180 ? difference - 360 : difference;
+    };
+
+    // A 35-day lookback safely spans more than one complete synodic month.
+    // Half-day samples keep each phase increment well below 180°, making the
+    // unwrapped phase crossing unambiguous before the local bisection.
+    const searchStart = birthJulianDay - 35;
+    const stepDays = 1;
+    let previousJd = searchStart;
+    let previousPhase = phaseAngle(previousJd);
+    let previousUnwrappedPhase = previousPhase;
+    let latestSyzygy: { julianDay: number; type: "New Moon" | "Full Moon" } | null = null;
+
+    for (let nextJd = searchStart + stepDays; nextJd <= birthJulianDay + 1e-10; nextJd += stepDays) {
+      const currentJd = Math.min(nextJd, birthJulianDay);
+      const currentPhase = phaseAngle(currentJd);
+      const phaseAdvance = signedAngleDifference(currentPhase, previousPhase);
+
+      // The geocentric lunar phase advances prograde. Reject a non-monotonic
+      // or invalid sample rather than fabricating a syzygy from it.
+      if (!Number.isFinite(phaseAdvance) || phaseAdvance < -1e-8 || phaseAdvance >= 180) {
+        throw new RangeError("Apparent Sun/Moon phase did not advance consistently during syzygy search.");
+      }
+
+      const currentUnwrappedPhase = previousUnwrappedPhase + phaseAdvance;
+      let targetPhase = (Math.floor((previousUnwrappedPhase + 1e-10) / 180) + 1) * 180;
+
+      while (targetPhase <= currentUnwrappedPhase + 1e-10) {
+        const targetNormalized = normalizeDegrees(targetPhase);
+        const phaseError = (jd: number) => signedAngleDifference(phaseAngle(jd), targetNormalized);
+        let low = previousJd;
+        let high = currentJd;
+        let lowError = phaseError(low);
+        let highError = phaseError(high);
+
+        // For a forward phase crossing, the signed error must move from
+        // negative to positive (or land exactly on the target endpoint).
+        if (Math.abs(lowError) <= 1e-10) {
+          high = low;
+        } else if (Math.abs(highError) <= 1e-10) {
+          low = high;
+        } else {
+          if (!(lowError < 0 && highError > 0)) {
+            throw new RangeError("Could not bracket the pre-natal syzygy phase crossing.");
+          }
+          for (let iteration = 0; iteration < 32 && high - low > 1e-7; iteration++) {
+            const middle = low + (high - low) / 2;
+            const middleError = phaseError(middle);
+            if (middleError < 0) {
+              low = middle;
+            } else {
+              high = middle;
+            }
+          }
+        }
+
+        const crossingJd = high;
+        if (crossingJd <= birthJulianDay + 1e-10) {
+          latestSyzygy = {
+            julianDay: crossingJd,
+            type: Math.abs(targetPhase / 180 % 2) < 1e-9 ? "New Moon" : "Full Moon",
+          };
+        }
+        targetPhase += 180;
+      }
+
+      previousJd = currentJd;
+      previousPhase = currentPhase;
+      previousUnwrappedPhase = currentUnwrappedPhase;
+      if (currentJd >= birthJulianDay) break;
+    }
+
+    if (!latestSyzygy) {
+      throw new RangeError("No previous New Moon or Full Moon was found in the 35-day search window.");
+    }
+
+    const daysBeforeBirth = birthJulianDay - latestSyzygy.julianDay;
+    if (!Number.isFinite(daysBeforeBirth) || daysBeforeBirth < -1e-8 || daysBeforeBirth > 35) {
+      throw new RangeError("Resolved pre-natal syzygy falls outside the valid lookback interval.");
+    }
+
+    return {
+      degree: swissEphemeris.getApparentSunLongitude(latestSyzygy.julianDay),
+      type: latestSyzygy.type,
+      julianDay: latestSyzygy.julianDay,
+      daysBeforeBirth: Math.max(0, daysBeforeBirth),
+    };
   }
 
   public calculate(params: {
@@ -181,13 +292,14 @@ export class AlmutenFigurisCalculator {
     partOfFortune: number;
     planets: { name: string; longitude: number; house: number }[];
     isDayChart: boolean;
-    dayRuler: string;
-    hourRuler: string;
+    dayRuler: string | null;
+    hourRuler: string | null;
+    julianDay: number;
   }): AlmutenFigurisResult {
-    const { ascendant, sun, moon, partOfFortune, planets, isDayChart, dayRuler, hourRuler } = params;
+    const { ascendant, sun, moon, partOfFortune, planets, isDayChart, dayRuler, hourRuler, julianDay } = params;
 
-    // 1. Determine SAN
-    const san = this.calculatePreNatalSyzygy(sun, moon);
+    // 1. Determine the exact prior New/Full Moon from the natal UTC Julian Day.
+    const san = this.calculatePreNatalSyzygy(julianDay);
 
     const candidatePoints = [
       { name: "Ascendant", lon: ascendant },
@@ -292,10 +404,10 @@ export class AlmutenFigurisCalculator {
       scoresMap[pName].accidental = hScore;
 
       // 4. Day and Hour Ruler Bonuses
-      if (pName === dayRuler) {
+      if (dayRuler !== null && pName === dayRuler) {
         scoresMap[pName].dayHourBonus += 7;
       }
-      if (pName === hourRuler) {
+      if (hourRuler !== null && pName === hourRuler) {
         scoresMap[pName].dayHourBonus += 6;
       }
     });
@@ -342,14 +454,18 @@ export class AlmutenFigurisCalculator {
       almutenScore: winner.totalScore,
       lordOfSoul: winner.planet,
       lordOfTemperament: runnerUp ? runnerUp.planet : winner.planet,
+      runnerUpPlanet: runnerUp?.planet ?? null,
+      methodNote: "Celestia-specific hybrid weighting: the Ascendant, Sun, Moon, Part of Fortune and previous syzygy are scored using domicile +5, exaltation +4, the active Dorothean triplicity ruler +3, Egyptian term +2 and Chaldean face +1. Additional accidental points use Celestia’s custom 12-to-1 house ranking, plus custom +7 day-ruler and +6 hour-ruler bonuses only when ordinary planetary day/hour rulers are available; these temporal additions are omitted where polar conditions prevent a classical sunrise/sunset schedule. This combination is not an exact reproduction of one historical author’s complete scoring method. The labels Lord of Soul and Lord of Temperament are not separately calculated by this engine; the legacy fields are aliases for rank 1 and rank 2.",
       sanDegree: san.degree,
       sanType: san.type,
       sanFormatted,
+      sanUtcInstant: new Date((san.julianDay - 2440587.5) * 86400000).toISOString(),
+      sanDaysBeforeBirth: san.daysBeforeBirth,
       dayRuler,
       hourRuler,
       points: pointAnalyses,
       scores,
-      significance: `According to Ibn Ezra's classical doctrine, ${winner.planet} holds supreme sovereignty over this geniture with ${winner.totalScore} dignity points (${winner.essentialScore} essential, ${winner.accidentalScore} house, ${winner.dayHourBonus} temporal).`,
+      significance: `Under Celestia’s configured weighted method, ${winner.planet} ranks first with ${winner.totalScore} total points (${winner.essentialScore} essential, ${winner.accidentalScore} house, ${winner.dayHourBonus} temporal). The ranking is method-dependent and should not be treated as a canonical result shared by all traditional schools.`,
     };
   }
 }

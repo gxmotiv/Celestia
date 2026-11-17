@@ -5,7 +5,7 @@ import { VedicChartData } from "@/lib/astronomy/vedic";
 import { WesternChartData } from "@/lib/astronomy/ephemeris";
 import { NumerologyProfile } from "@/lib/astronomy/numerology";
 import { BaZiProfile } from "@/lib/astronomy/chinese";
-import { CompleteDashaOrchestrator, AllDashaSystems } from "@/lib/vedic/completeDashaSystems";
+import { CompleteDashaOrchestrator, AllDashaSystems, CharaDashaCalculator } from "@/lib/vedic/completeDashaSystems";
 import {
   Sparkles,
   MessageSquare,
@@ -27,6 +27,7 @@ import {
   TrendingUp,
   BookOpen,
 } from "lucide-react";
+import { compressNaraImage } from "@/lib/ai/imageCompression";
 
 interface MasterAIAstrologerCockpitProps {
   vedicData: VedicChartData;
@@ -35,6 +36,12 @@ interface MasterAIAstrologerCockpitProps {
   baziData?: BaZiProfile;
   birthDate: string;
   birthTime: string;
+  birthUtcInstant?: string;
+  birthLongitude?: number;
+  birthLatitude?: number;
+  birthIanaTimezone?: string;
+  birthUtcOffsetSeconds?: number;
+  isBirthTimeUnknown?: boolean;
   cityName?: string;
   country?: string;
   fullName?: string;
@@ -50,6 +57,8 @@ interface ChatMessage {
   text: string;
   timestamp: string;
   isAiGenerated?: boolean;
+  provider?: string;
+  model?: string;
 }
 
 const PLANETARY_REMEDIES: Record<
@@ -194,6 +203,12 @@ export function MasterAIAstrologerCockpit({
   baziData,
   birthDate,
   birthTime,
+  birthUtcInstant,
+  birthLongitude,
+  birthLatitude,
+  birthIanaTimezone,
+  birthUtcOffsetSeconds,
+  isBirthTimeUnknown = false,
   cityName = "City of Birth",
   country = "Earth",
   fullName,
@@ -226,17 +241,10 @@ export function MasterAIAstrologerCockpit({
       rasiDegree: 10,
     };
 
-    const planetsInSigns: Record<string, string> = {};
-    vedicData.planets.forEach((p) => {
-      planetsInSigns[p.rasiName] = p.name;
-    });
+    const charaPlanetPositions = CharaDashaCalculator.toPlanetPositions(vedicData.planets);
 
-    const currentMD =
-      vedicData.vimshottariDashas.find((d) => d.isCurrent) ||
-      vedicData.vimshottariDashas[0];
-    const currentAD =
-      currentMD?.subPeriods?.find((s) => s.isCurrent) ||
-      currentMD?.subPeriods?.[0];
+    const currentMD = vedicData.vimshottariDashas.find((d) => d.isCurrent);
+    const currentAD = currentMD?.subPeriods?.find((s) => s.isCurrent);
 
     const moonNakshatra1Indexed = (moonPlanet.nakshatraIndex ?? 13) + 1;
     const moonDegreeInNakshatra = (moonPlanet.siderealLongitude || 180) % (360 / 27);
@@ -248,24 +256,20 @@ export function MasterAIAstrologerCockpit({
       moonNakshatra1Indexed,
       moonDegreeInNakshatra,
       ascendantSign: vedicData.lagna.rasiName,
-      planetsInSigns,
+      charaPlanetPositions,
     });
   }, [vedicData, birthDate, birthTime, orchestrator]);
 
   // Active Mahadasha and Antardasha
-  const currentMD = useMemo(() => {
-    return (
-      vedicData.vimshottariDashas.find((d) => d.isCurrent) ||
-      vedicData.vimshottariDashas[0]
-    );
-  }, [vedicData]);
+  const currentMD = useMemo(
+    () => vedicData.vimshottariDashas.find((d) => d.isCurrent),
+    [vedicData]
+  );
 
-  const currentAD = useMemo(() => {
-    return (
-      currentMD?.subPeriods?.find((s) => s.isCurrent) ||
-      currentMD?.subPeriods?.[0]
-    );
-  }, [currentMD]);
+  const currentAD = useMemo(
+    () => currentMD?.subPeriods?.find((s) => s.isCurrent),
+    [currentMD]
+  );
 
   // Active remedy profile based on Mahadasha lord
   const activeRemedyLord = currentMD?.planet || "Jupiter";
@@ -278,7 +282,7 @@ export function MasterAIAstrologerCockpit({
       sender: "oracle",
       text: `Namaste, revered ${effectiveName}. I am **Acharya Celestia**, your Master Esoteric Astrologer and Celestial Synthesizer. 
 
-I am currently reading your **10-System Classical Dasha convergence** synchronized with your **${vedicData.lagna.rasiName} Ascendant**, **${vedicData.birthNakshatra} Nakshatra** (Lord: **${vedicData.birthNakshatraLord}**), and the active **${currentMD?.planet || "Jupiter"} Mahadasha** / **${currentAD?.planet || "Saturn"} Antardasha**.
+I am currently reading your **10-System Classical Dasha convergence** synchronized with your **${vedicData.lagna.rasiName} Ascendant**, **${vedicData.birthNakshatra} Nakshatra** (Lord: **${vedicData.birthNakshatraLord}**), and the active **${currentMD?.planet || "not currently identified"} Mahadasha** / **${currentAD?.planet || "not currently identified"} Antardasha**.
 
 Ask me any specific inquiry regarding your predictive timing, career milestones, relationship fruition, or sacred Vedic remedies.`,
       timestamp: "Live Oracle Synchronized",
@@ -286,6 +290,8 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
   ]);
 
   const [inputQuery, setInputQuery] = useState("");
+  const [modelOverride, setModelOverride] = useState<"auto" | "fast" | "reasoning" | "coding">("auto");
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [isConsulting, setIsConsulting] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState<"consultation" | "timingConvergence" | "classicalRemedies" | "yogas">("consultation");
@@ -300,7 +306,7 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
   ];
 
   const handleSendQuery = async (queryText?: string) => {
-    const textToSend = queryText || inputQuery;
+    const textToSend = queryText || inputQuery || (imageFile ? "Please analyze the attached screenshot and explain the relevant details." : "");
     if (!textToSend.trim() || isConsulting) return;
 
     const userMsg: ChatMessage = {
@@ -329,75 +335,171 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
           text: m.text,
         })),
         context: {
-          western: {
-            sunSign: sun?.sign || "Aries",
-            moonSign: moon?.sign || "Taurus",
-            ascendantSign: westernData?.ascendant.sign || "Aries",
-            midheavenSign: westernData?.midheaven.sign || "Capricorn",
-            majorAspects: westernData?.aspects.slice(0, 5).map((a) => `${a.planet1} ${a.aspectName} ${a.planet2}`),
+          birthTimeMetadata: {
+            date: birthDate,
+            civilTime: birthTime,
+            utcInstant: birthUtcInstant ?? null,
+            ianaTimezone: birthIanaTimezone ?? null,
+            utcOffsetSeconds: birthUtcOffsetSeconds ?? null,
+            latitude: birthLatitude ?? westernData?.birthLatitude ?? null,
+            longitude: birthLongitude ?? westernData?.birthLongitude ?? null,
+            timeKnown: !isBirthTimeUnknown,
+            place: `${cityName}, ${country}`,
           },
+          western: westernData ? {
+            sunSign: sun?.sign ?? null,
+            moonSign: moon?.sign ?? null,
+            ascendantSign: westernData.ascendant?.sign ?? null,
+            midheavenSign: westernData.midheaven?.sign ?? null,
+            houseSystem: westernData.houseSystem,
+            requestedHouseSystem: westernData.requestedHouseSystem ?? null,
+            houseSystemNote: westernData.houseSystemNote ?? null,
+            planets: westernData.planets,
+            houses: westernData.houses,
+            majorAspects: westernData.aspects,
+            minorAspects: westernData.minorAspects ?? [],
+            additionalPoints: westernData.additionalPoints ?? null,
+            arabianParts: westernData.arabianParts ?? null,
+            planetaryHours: westernData.planetaryHours ?? null,
+            almutenFiguris: westernData.almutenFiguris ?? null,
+          } : null,
           vedic: {
             moonRasi: vedicData.moonSignRasi,
             lagnaRasi: vedicData.lagna.rasiName,
             nakshatra: vedicData.birthNakshatra,
             pada: vedicData.birthPada,
             nakshatraLord: vedicData.birthNakshatraLord,
-            activeMahadasha: currentMD?.planet || "Jupiter",
-            activeAntardasha: currentAD?.planet || "Saturn",
-            yogas: vedicData.yogas.map((y) => y.name),
-            sadeSatiStatus: "Standard Transit",
+            activeMahadasha: currentMD?.planet ?? vedicData.currentMahadasha ?? null,
+            activeAntardasha: currentAD?.planet ?? vedicData.currentAntardasha ?? null,
+            planets: vedicData.planets,
+            houses: vedicData.houses,
+            navamsaHouses: vedicData.navamsaHouses,
+            vimshottariDashas: vedicData.vimshottariDashas,
+            yogas: vedicData.yogas,
+            d9Chart: vedicData.d9Chart ?? null,
+            jaiminiKarakas: vedicData.jaiminiKarakas ?? null,
+            taraBala: vedicData.taraBala ?? null,
+            gocharVedha: vedicData.gocharVedha ?? null,
           },
           dashaConvergence: {
             activeSystemsCount: dashaSystems.convergence.length,
-            dominantTone: dashaSystems.convergence[0]?.tone || "positive",
+            dominantTone: dashaSystems.convergence[0]?.tone ?? null,
             systemSummaries: dashaSystems.convergence.map((p) => ({
               system: p.system,
               lord: p.lordOrSign,
               tone: p.tone,
+              durationRemaining: p.durationRemaining,
+              coreTheme: p.coreTheme,
             })),
+            completeDashaResults: dashaSystems,
+            suppliedActiveDashas: Array.isArray(activeDashas) ? activeDashas : null,
           },
-          numerology: {
-            lifePath: numerologyData?.lifePathNumber || 1,
-            expression: numerologyData?.expressionNumber || 1,
-            personalYear: numerologyData?.personalYearNumber || 1,
-          },
-          bazi: {
-            zodiacAnimal: baziData?.zodiacAnimal || "Dragon",
-            dayMaster: baziData?.dayMaster.symbol || "Jia",
-            dominantElement: baziData?.dayMaster.stem?.element || "Wood",
-          },
+          numerology: numerologyData ?? null,
+          bazi: baziData ?? null,
         },
       };
 
+      const imageDataUrl = imageFile ? await compressNaraImage(imageFile) : undefined;
       const res = await fetch("/api/astrology/master-oracle", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, modelOverride, imageDataUrl, stream: true }),
       });
 
-      const data = await res.json();
-      const reply = data.reply || "The stars illuminate your path. Focus on grounding your current planetary energies.";
+      if (!res.ok) {
+        let message = "The AI gateway could not complete this request. Please try again.";
+        try {
+          const errorData = await res.json();
+          if (typeof errorData?.error === "string") message = errorData.error;
+          else if (typeof errorData?.error?.message === "string") message = errorData.error.message;
+        } catch { /* Keep the safe generic message. */ }
+        throw new Error(message);
+      }
 
-      const oracleMsg: ChatMessage = {
-        id: "oracle-" + Date.now(),
-        sender: "oracle",
-        text: reply,
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        isAiGenerated: data.isAiGenerated,
-      };
+      const oracleMessageId = "oracle-" + Date.now();
+      const messageTimestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const selectedModel = res.headers.get("x-celestia-ai-model") || undefined;
+      const selectedProvider = res.headers.get("x-celestia-ai-provider") || "AI provider";
+      const contentType = res.headers.get("content-type") || "";
 
-      setMessages((prev) => [...prev, oracleMsg]);
+      if (contentType.includes("text/event-stream")) {
+        setMessages((prev) => [...prev, {
+          id: oracleMessageId,
+          sender: "oracle",
+          text: "",
+          timestamp: messageTimestamp,
+          isAiGenerated: true,
+          provider: selectedProvider,
+          model: selectedModel,
+        }]);
+
+        const reader = res.body?.getReader();
+        if (!reader) throw new Error("The AI stream could not be opened.");
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let streamedText = "";
+        let streamFinished = false;
+
+        const consumeSseLine = (line: string) => {
+          if (!line.startsWith("data:")) return;
+          const dataLine = line.slice(5).trim();
+          if (!dataLine) return;
+          if (dataLine === "[DONE]") { streamFinished = true; return; }
+          try {
+            const event = JSON.parse(dataLine);
+            const delta = event?.choices?.[0]?.delta?.content;
+            if (typeof delta === "string" && delta.length > 0) {
+              streamedText += delta;
+              setMessages((prev) => prev.map((message) =>
+                message.id === oracleMessageId ? { ...message, text: streamedText } : message
+              ));
+            } else if (typeof event?.error?.message === "string") {
+              throw new Error(event.error.message);
+            }
+          } catch (parseError) {
+            if (parseError instanceof Error && parseError.message !== "Unexpected end of JSON input") {
+              throw parseError;
+            }
+          }
+        };
+
+        while (!streamFinished) {
+          const chunk = await reader.read();
+          if (chunk.done) break;
+          buffer += decoder.decode(chunk.value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+          for (const line of lines) consumeSseLine(line.replace(/\r$/, ""));
+        }
+        buffer += decoder.decode();
+        if (buffer.trim()) consumeSseLine(buffer.replace(/\r$/, ""));
+        if (!streamedText.trim()) throw new Error("The AI provider returned an empty response.");
+      } else {
+        const data = await res.json();
+        const reply = data.reply || "The AI provider returned no reading.";
+        setMessages((prev) => [...prev, {
+          id: oracleMessageId,
+          sender: "oracle",
+          text: reply,
+          timestamp: messageTimestamp,
+          isAiGenerated: data.isAiGenerated,
+          provider: data.provider || (data.isAiGenerated ? "Gemini fallback" : "Local fallback"),
+          model: data.model,
+        }]);
+      }
+      setImageFile(null);
     } catch (err) {
-      console.error("Master Oracle consultation failed:", err);
-      const fallbackMsg: ChatMessage = {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error."; 
+      console.error("Master Oracle consultation failed:", err instanceof Error ? err.name : "unknown_error");
+      const errorMsg: ChatMessage = {
         id: "oracle-" + Date.now(),
         sender: "oracle",
-        text: `### Guidance from Acharya Celestia
-In reviewing your chart, your active **${currentMD?.planet || "Jupiter"} Mahadasha** and **${currentAD?.planet || "Saturn"} Antardasha** demand mindful discipline. Propitiate your active Dasha lord by chanting **${activeRemedy.beejaMantra}** 108 times daily and offering charitable daan of **${activeRemedy.charity}** on ${activeRemedy.fastingDay}s.`,
+        text: "### AI request not completed\n" + errorMessage + "\n\nYour saved chart data has not been changed.",
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         isAiGenerated: false,
+        provider: "Gateway status",
       };
-      setMessages((prev) => [...prev, fallbackMsg]);
+      setMessages((prev) => [...prev, errorMsg]);
     } finally {
       setIsConsulting(false);
     }
@@ -595,7 +697,7 @@ In reviewing your chart, your active **${currentMD?.planet || "Jupiter"} Mahadas
                       <span>{m.timestamp}</span>
                       {m.isAiGenerated && (
                         <span className="px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[9px]">
-                          Gemini 3.8
+                          {m.provider || "AI generated"}{m.model ? " · " + m.model : ""}
                         </span>
                       )}
                     </div>
@@ -644,23 +746,65 @@ In reviewing your chart, your active **${currentMD?.planet || "Jupiter"} Mahadas
               </div>
 
               {/* Chat Input Bar */}
-              <div className="mt-3 pt-3 border-t border-slate-800/80 flex items-center gap-2">
-                <input
-                  type="text"
-                  value={inputQuery}
-                  onChange={(e) => setInputQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSendQuery()}
-                  placeholder="Ask Acharya Celestia anything about your chart, dasha timing, or remedies..."
-                  className="flex-1 px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-500 transition-colors"
-                />
-                <button
-                  type="button"
-                  onClick={() => handleSendQuery()}
-                  disabled={isConsulting || !inputQuery.trim()}
-                  className="p-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20 disabled:opacity-50 transition-all cursor-pointer shrink-0"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
+              <div className="mt-3 pt-3 border-t border-slate-800/80 space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <label htmlFor="nara-model" className="text-[10px] text-slate-400">AI model</label>
+                  <select
+                    id="nara-model"
+                    value={modelOverride}
+                    onChange={(event) => setModelOverride(event.target.value as "auto" | "fast" | "reasoning" | "coding")}
+                    disabled={isConsulting}
+                    className="min-h-9 rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-[11px] text-slate-200"
+                    aria-label="Choose AI model"
+                  >
+                    <option value="auto">Auto · balanced</option>
+                    <option value="fast">Fast · low token use</option>
+                    <option value="reasoning">Deep reasoning · expert</option>
+                    <option value="coding">Coding · tools + reasoning</option>
+                  </select>
+                  <label className="inline-flex min-h-9 cursor-pointer items-center rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-[11px] text-slate-300 hover:border-amber-500/50">
+                    Attach screenshot
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="sr-only"
+                      disabled={isConsulting}
+                      onChange={(event) => setImageFile(event.target.files?.[0] || null)}
+                      aria-label="Attach an image or screenshot"
+                    />
+                  </label>
+                  {imageFile && (
+                    <span className="max-w-[170px] truncate text-[10px] text-amber-300" title={imageFile.name}>
+                      {imageFile.name}
+                    </span>
+                  )}
+                  {imageFile && (
+                    <button type="button" onClick={() => setImageFile(null)} disabled={isConsulting} className="text-[10px] text-slate-400 underline underline-offset-2">
+                      Remove image
+                    </button>
+                  )}
+                </div>
+                <p className="text-[10px] leading-relaxed text-slate-500">
+                  Auto routes screenshots to Agnes and code/debugging tasks to Laguna. Images are compressed on this device before upload.
+                </p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={inputQuery}
+                    onChange={(e) => setInputQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSendQuery()}
+                    placeholder="Ask Acharya Celestia about your chart or attach a screenshot..."
+                    className="flex-1 px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-500 transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleSendQuery()}
+                    disabled={isConsulting || (!inputQuery.trim() && !imageFile)}
+                    className="p-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20 disabled:opacity-50 transition-all cursor-pointer shrink-0"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>

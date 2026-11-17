@@ -68,6 +68,83 @@ function normalizeDeg(deg: number): number {
   return d;
 }
 
+function assertDivisionalInput(siderealLon: number, divisionCode: string): void {
+  if (!Number.isFinite(siderealLon)) {
+    throw new RangeError("A divisional chart requires a finite sidereal longitude.");
+  }
+  if (!Object.prototype.hasOwnProperty.call(DIVISIONAL_CHARTS_CONFIG, divisionCode)) {
+    throw new RangeError("Unsupported Parashari divisional chart: " + divisionCode);
+  }
+}
+
+/** Floating-point normalization can leave an exact mathematical cusp a few
+ * ulps below its boundary. This sub-microarcsecond tolerance preserves the
+ * conventional half-open [start, end) assignment at exact varga boundaries.
+ */
+const VARGA_BOUNDARY_EPSILON = 1e-10;
+
+function equalVargaPart(degreeInSign: number, partWidth: number, partCount: number): number {
+  return Math.min(
+    partCount - 1,
+    Math.max(0, Math.floor((degreeInSign + VARGA_BOUNDARY_EPSILON) / partWidth))
+  );
+}
+
+function unequalVargaPart(
+  degreeInSign: number,
+  widths: readonly number[]
+): { index: number; start: number; width: number } {
+  let start = 0;
+  for (let index = 0; index < widths.length; index += 1) {
+    const width = widths[index];
+    if (degreeInSign < start + width - VARGA_BOUNDARY_EPSILON) {
+      return { index, start, width };
+    }
+    start += width;
+  }
+  return {
+    index: widths.length - 1,
+    start: 30 - widths[widths.length - 1],
+    width: widths[widths.length - 1],
+  };
+}
+
+
+/**
+ * Degree within the selected divisional sign. Equal-width vargas map each
+ * subdivision linearly to 0°–30°. D30 uses its traditional unequal segments.
+ */
+export function calculateDivisionalDegreeInSign(
+  siderealLon: number,
+  divisionCode: string
+): number {
+  assertDivisionalInput(siderealLon, divisionCode);
+  const normalized = normalizeDeg(siderealLon);
+  const signIndex = Math.floor(normalized / 30);
+  const degreeInRasi = normalized - signIndex * 30;
+
+  if (divisionCode === "D30") {
+    const isOddSign = signIndex % 2 === 0;
+    const widths = isOddSign ? [5, 5, 8, 7, 5] : [5, 7, 8, 5, 5];
+    const part = unequalVargaPart(degreeInRasi, widths);
+    const localDegree = Math.max(0, Math.min(part.width, degreeInRasi - part.start));
+    return Math.min(29.999999999, (localDegree / part.width) * 30);
+  }
+
+  const harmonic = DIVISIONAL_CHARTS_CONFIG[divisionCode].harmonic;
+  const width = 30 / harmonic;
+  const part = equalVargaPart(degreeInRasi, width, harmonic);
+  const localDegree = Math.max(0, Math.min(width, degreeInRasi - part * width));
+  return Math.min(29.999999999, (localDegree / width) * 30);
+}
+
+function formatDivisionalDegree(degree: number): string {
+  const safeDegree = Math.min(29.999999999, Math.max(0, degree));
+  const wholeDegrees = Math.floor(safeDegree);
+  const minutes = Math.floor((safeDegree - wholeDegrees) * 60);
+  return `${wholeDegrees}°${minutes.toString().padStart(2, "0")}′`;
+}
+
 /**
  * Calculates the divisional sign index (0-11) for a given sidereal longitude.
  */
@@ -75,6 +152,7 @@ export function calculateDivisionalSignIndex(
   siderealLon: number,
   divisionCode: string
 ): number {
+  assertDivisionalInput(siderealLon, divisionCode);
   const normLon = normalizeDeg(siderealLon);
   const rasiIdx = Math.floor(normLon / 30);
   const degInRasi = normLon - rasiIdx * 30;
@@ -87,7 +165,7 @@ export function calculateDivisionalSignIndex(
     case "D2": { // Hora (15° each)
       // Odd signs: 0-15° Leo (4), 15-30° Cancer (3)
       // Even signs: 0-15° Cancer (3), 15-30° Leo (4)
-      const firstHalf = degInRasi < 15;
+      const firstHalf = degInRasi < 15 - VARGA_BOUNDARY_EPSILON;
       if (isOddSign) {
         return firstHalf ? 4 : 3;
       } else {
@@ -99,7 +177,7 @@ export function calculateDivisionalSignIndex(
       // 0-10°: Same sign
       // 10-20°: 5th from it
       // 20-30°: 9th from it
-      const part = Math.floor(degInRasi / 10);
+      const part = equalVargaPart(degInRasi, 10, 3);
       if (part === 0) return rasiIdx;
       if (part === 1) return (rasiIdx + 4) % 12;
       return (rasiIdx + 8) % 12;
@@ -110,18 +188,18 @@ export function calculateDivisionalSignIndex(
       // Part 1 (7.5-15°): 4th from it
       // Part 2 (15-22.5°): 7th from it
       // Part 3 (22.5-30°): 10th from it
-      const part = Math.floor(degInRasi / 7.5);
+      const part = equalVargaPart(degInRasi, 7.5, 4);
       return (rasiIdx + part * 3) % 12;
     }
 
     case "D7": { // Saptamsa (30/7 = 4.2857° each)
-      const part = Math.floor(degInRasi / (30 / 7));
+      const part = equalVargaPart(degInRasi, 30 / 7, 7);
       const startSign = isOddSign ? rasiIdx : (rasiIdx + 6) % 12;
       return (startSign + part) % 12;
     }
 
     case "D9": { // Navamsa (3°20' = 3.3333° each)
-      const navPart = Math.floor(degInRasi / (30 / 9));
+      const navPart = equalVargaPart(degInRasi, 30 / 9, 9);
       // Movable (Chara: Aries, Cancer, Libra, Cap) -> starts from sign itself
       // Fixed (Sthira: Taurus, Leo, Scorpio, Aqu) -> starts from 9th from it
       // Dual (Dwisvabhava: Gemini, Virgo, Sag, Pis) -> starts from 5th from it
@@ -134,19 +212,19 @@ export function calculateDivisionalSignIndex(
     }
 
     case "D10": { // Dasamsa (3° each)
-      const part = Math.floor(degInRasi / 3);
+      const part = equalVargaPart(degInRasi, 3, 10);
       // Odd signs: from sign itself. Even signs: from 9th sign.
       const startSign = isOddSign ? rasiIdx : (rasiIdx + 8) % 12;
       return (startSign + part) % 12;
     }
 
     case "D12": { // Dwadasamsa (2°30' = 2.5° each)
-      const part = Math.floor(degInRasi / 2.5);
+      const part = equalVargaPart(degInRasi, 2.5, 12);
       return (rasiIdx + part) % 12;
     }
 
     case "D16": { // Shodashamsa (1°52'30" = 1.875° each)
-      const part = Math.floor(degInRasi / 1.875);
+      const part = equalVargaPart(degInRasi, 1.875, 16);
       // Movable: from Aries (0). Fixed: from Leo (4). Dual: from Sagittarius (8).
       const modality = rasiIdx % 3;
       const startSign = modality === 0 ? 0 : modality === 1 ? 4 : 8;
@@ -154,7 +232,7 @@ export function calculateDivisionalSignIndex(
     }
 
     case "D20": { // Vimsamsa (1.5° each)
-      const part = Math.floor(degInRasi / 1.5);
+      const part = equalVargaPart(degInRasi, 1.5, 20);
       // Movable: from Aries. Fixed: from Sag. Dual: from Leo.
       const modality = rasiIdx % 3;
       const startSign = modality === 0 ? 0 : modality === 1 ? 8 : 4;
@@ -162,14 +240,14 @@ export function calculateDivisionalSignIndex(
     }
 
     case "D24": { // Chaturvimsamsa (1.25° each)
-      const part = Math.floor(degInRasi / 1.25);
+      const part = equalVargaPart(degInRasi, 1.25, 24);
       // Odd: from Leo (4). Even: from Cancer (3).
       const startSign = isOddSign ? 4 : 3;
       return (startSign + part) % 12;
     }
 
     case "D27": { // Saptavimsamsa / Nakshatramsa (1°06'40" = 1.1111° each)
-      const part = Math.floor(degInRasi / (30 / 27));
+      const part = equalVargaPart(degInRasi, 30 / 27, 27);
       // Fire: Aries (0). Earth: Cancer (3). Air: Libra (6). Water: Capricorn (9).
       const element = rasiIdx % 4;
       const startSign = element === 0 ? 0 : element === 1 ? 3 : element === 2 ? 6 : 9;
@@ -177,40 +255,37 @@ export function calculateDivisionalSignIndex(
     }
 
     case "D30": { // Trimsamsa
-      // Odd signs: Mars (Aries=0, 0-5°), Saturn (Aquarius=10, 5-10°), Jupiter (Sagittarius=8, 10-18°), Mercury (Gemini=2, 18-25°), Venus (Taurus=1, 25-30°)
-      // Even signs: Venus (Taurus=1, 0-5°), Mercury (Virgo=5, 5-12°), Jupiter (Pisces=11, 12-20°), Saturn (Capricorn=9, 20-25°), Mars (Scorpio=7, 25-30°)
-      if (isOddSign) {
-        if (degInRasi < 5) return 0; // Aries
-        if (degInRasi < 10) return 10; // Aquarius
-        if (degInRasi < 18) return 8; // Sagittarius
-        if (degInRasi < 25) return 2; // Gemini
-        return 1; // Taurus
-      } else {
-        if (degInRasi < 5) return 1; // Taurus
-        if (degInRasi < 12) return 5; // Virgo
-        if (degInRasi < 20) return 11; // Pisces
-        if (degInRasi < 25) return 9; // Capricorn
-        return 7; // Scorpio
-      }
+      // BPHS 6.27 gives the unequal segment widths and planetary lords.
+      // This declared Parashari D30 chart variant maps each segment lord to
+      // its odd-sign domicile in odd rasis and even-sign domicile in even rasis.
+      // Odd: Mars/Aries, Saturn/Aquarius, Jupiter/Sagittarius, Mercury/Gemini, Venus/Libra.
+      // Even: Venus/Taurus, Mercury/Virgo, Jupiter/Pisces, Saturn/Capricorn, Mars/Scorpio.
+      const parts = unequalVargaPart(
+        degInRasi,
+        isOddSign ? [5, 5, 8, 7, 5] : [5, 7, 8, 5, 5]
+      );
+      const oddSignDestinations = [0, 10, 8, 2, 6]; // Aries, Aquarius, Sagittarius, Gemini, Libra
+      const evenSignDestinations = [1, 5, 11, 9, 7]; // Taurus, Virgo, Pisces, Capricorn, Scorpio
+      return (isOddSign ? oddSignDestinations : evenSignDestinations)[parts.index];
     }
 
     case "D40": { // Khavedamsa (45' = 0.75° each)
       // Odd signs: from Aries (0). Even signs: from Libra (6).
-      const part = Math.floor(degInRasi / 0.75);
+      const part = equalVargaPart(degInRasi, 0.75, 40);
       const startSign = isOddSign ? 0 : 6;
       return (startSign + part) % 12;
     }
 
     case "D45": { // Akshavedamsa (40' = 0.6667° each)
       // Movable (Chara): Aries (0). Fixed (Sthira): Leo (4). Dual: Sagittarius (8).
-      const part = Math.floor(degInRasi / (30 / 45));
+      const part = equalVargaPart(degInRasi, 30 / 45, 45);
       const modality = rasiIdx % 3;
       const startSign = modality === 0 ? 0 : modality === 1 ? 4 : 8;
       return (startSign + part) % 12;
     }
 
     case "D60": { // Shashtiamsa (0.5° each)
-      const part = Math.floor(degInRasi / 0.5);
+      const part = equalVargaPart(degInRasi, 0.5, 60);
       const startSign = isOddSign ? rasiIdx : (rasiIdx + 6) % 12;
       return (startSign + part) % 12;
     }
@@ -228,7 +303,8 @@ export function calculateDivisionalChart(
   ascendantSiderealLon: number,
   divisionCode: string
 ): DivisionalChartResult {
-  const config = DIVISIONAL_CHARTS_CONFIG[divisionCode] || DIVISIONAL_CHARTS_CONFIG.D1;
+  assertDivisionalInput(ascendantSiderealLon, divisionCode);
+  const config = DIVISIONAL_CHARTS_CONFIG[divisionCode];
 
   // 1. Ascendant in Division
   const ascSignIdx = calculateDivisionalSignIndex(ascendantSiderealLon, divisionCode);
@@ -249,7 +325,7 @@ export function calculateDivisionalChart(
       if (signIdx === 0) dignity = "Exalted";
       else if (signIdx === 6) dignity = "Debilitated";
       else if (signIdx === 4) dignity = "Own Sign";
-      else if ([8, 0, 7].includes(signIdx)) dignity = "Friendly";
+      else if ([3, 8, 0, 7, 11].includes(signIdx)) dignity = "Friendly";
     } else if (p.name === "Moon") {
       if (signIdx === 1) dignity = "Exalted";
       else if (signIdx === 7) dignity = "Debilitated";
@@ -282,9 +358,7 @@ export function calculateDivisionalChart(
       else if ([1, 2, 5].includes(signIdx)) dignity = "Friendly";
     }
 
-    const degInSign = (p.siderealLongitude * config.harmonic) % 30;
-    const dInt = Math.floor(degInSign);
-    const mInt = Math.floor((degInSign - dInt) * 60);
+    const degInSign = calculateDivisionalDegreeInSign(p.siderealLongitude, divisionCode);
 
     divisionalPlanets.push({
       name: p.name,
@@ -293,7 +367,7 @@ export function calculateDivisionalChart(
       sign: signName,
       signIndex: signIdx,
       degreeInSign: degInSign,
-      degreeFormatted: `${dInt}°${mInt.toString().padStart(2, "0")}'`,
+      degreeFormatted: formatDivisionalDegree(degInSign),
       house,
       dignity,
       isRetrograde: p.isRetrograde,
@@ -324,7 +398,7 @@ export function calculateDivisionalChart(
     ascendant: {
       sign: ascSignName,
       signIndex: ascSignIdx,
-      degreeFormatted: `${Math.floor(ascendantSiderealLon % 30)}°`,
+      degreeFormatted: formatDivisionalDegree(calculateDivisionalDegreeInSign(ascendantSiderealLon, divisionCode)),
     },
     planets: divisionalPlanets,
     houses,

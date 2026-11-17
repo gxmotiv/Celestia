@@ -1,11 +1,14 @@
 /**
- * Krishnamurti Padhdhati (KP) Cusps Calculator
- * Calculates Placidus cusps with Krishnamurti Ayanamsa & KP boundary rules.
+ * Krishnamurti Padhdhati (KP) Cusps Calculator.
+ * Uses KP's Placidus cusp framework and the explicitly provisional Celestia
+ * linear ayanamsa profile documented below; the historical KSK table and
+ * later KP ayanamsa variants remain under source reconciliation.
  */
 
 import { KPCusp, KPCusps } from "./kpTypes";
 import { SubLordCalculator } from "./subLordEngine";
 import { WesternChartData, normalizeDegrees } from "../astronomy/ephemeris";
+import { swissEphemeris } from "../astronomy/swissEphemeris";
 
 export interface BirthData {
   year: number;
@@ -22,13 +25,55 @@ export class KPCuspsCalculator {
   private subLordCalc = new SubLordCalculator();
 
   /**
-   * Krishnamurti Ayanamsa:
-   * Value at 1900.0 is 22° 22' 14" (22.370555°)
-   * Annual precession rate = 50.2388475 arcseconds/year
+   * Celestia's legacy linear KP ayanamsa approximation.
+   *
+   * This compatibility profile is anchored at 22°22′14″ at nominal 1900.0
+   * and advances at 50.2388475 arcseconds/year. It is NOT certified as an
+   * exact reproduction of K.S. Krishnamurti's printed 1840–2001 table,
+   * Swiss Ephemeris SIDM_KRISHNAMURTI (table-derived), or the later
+   * Krishnamurti/Senthilathiban equinox-291 mode. Keep the formula named
+   * explicitly until those distinct source variants are reconciled.
    */
   public static calculateKPAyanamsa(year: number, month: number, day: number): number {
-    const fractionOfYear = (month - 1) / 12 + day / 365.25;
-    const decimalYear = year + fractionOfYear;
+    if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+      throw new RangeError("KP ayanamsa date must use integer Gregorian year, month, and day values.");
+    }
+    if (month < 1 || month > 12) {
+      throw new RangeError("KP ayanamsa month must be between 1 and 12.");
+    }
+
+    const isLeapYear =
+      year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+    const monthLengths = [
+      31,
+      isLeapYear ? 29 : 28,
+      31,
+      30,
+      31,
+      30,
+      31,
+      31,
+      30,
+      31,
+      30,
+      31,
+    ];
+    const daysInYear = isLeapYear ? 366 : 365;
+    const daysInPreviousMonths = monthLengths
+      .slice(0, month - 1)
+      .reduce((total, length) => total + length, 0);
+
+    if (day < 1 || day > monthLengths[month - 1]) {
+      throw new RangeError("KP ayanamsa day is outside the selected Gregorian month.");
+    }
+
+    // The API accepts a civil date rather than a timestamp, so use the start
+    // of that Gregorian date as the interpolation point. This makes 1 Jan
+    // 1900 exactly the declared 1900.0 anchor and advances one full stated
+    // year between consecutive New Years. This is still the provisional
+    // straight-line Celestia profile, not a claim to reproduce the KSK table.
+    const elapsedDays = daysInPreviousMonths + day - 1;
+    const decimalYear = year + elapsedDays / daysInYear;
     const diffYears = decimalYear - 1900.0;
     const ayanamsaSeconds = 22 * 3600 + 22 * 60 + 14 + diffYears * 50.2388475;
     return ayanamsaSeconds / 3600;
@@ -45,27 +90,59 @@ export class KPCuspsCalculator {
   ): KPCusps {
     const kpAyanamsa = KPCuspsCalculator.calculateKPAyanamsa(birthYear, birthMonth, birthDay);
 
-    // 1. Convert Western Tropical Placidus Cusps to KP Sidereal
-    const siderealPlacidusCusps = westernData.houses.map((h) => {
-      return normalizeDegrees(h.longitude - kpAyanamsa);
-    });
+    // 1. KP uses Placidus cusps regardless of the user's separate Western
+    // natal house preference. Recalculate tropical Placidus from the chart's
+    // own UTC Julian Day and birthplace before applying KP ayanamsa.
+    // Reusing westernData.houses directly would silently import Whole Sign,
+    // Morinus, Meridian, etc. into KP when the user selected another system.
+    let tropicalPlacidusCusps: number[];
+    const hasBirthGeometry =
+      Number.isFinite(westernData.julianDay) &&
+      Number.isFinite(westernData.birthLatitude) &&
+      Number.isFinite(westernData.birthLongitude);
 
-    // 2. Apply KP Cusp Corrections (as requested in KP specification:
-    // If cusp falls in last 3°20' (26°40' or 26.6667°) of sign, move to next sign)
-    const correctedCusps = siderealPlacidusCusps.map((cusp) => {
-      const signIndex = Math.floor(cusp / 30);
-      const degreeInSign = cusp % 30;
-
-      if (degreeInSign >= 26.6667) {
-        return normalizeDegrees((signIndex + 1) * 30);
+    if (hasBirthGeometry) {
+      const placidus = swissEphemeris.calculateHouses(
+        westernData.julianDay,
+        westernData.birthLatitude as number,
+        westernData.birthLongitude as number,
+        "P"
+      );
+      if (placidus.houseSystemUsed !== "P") {
+        throw new RangeError(
+          "KP requires Placidus house cusps. Placidus is undefined for this birthplace/epoch in the current calculation, so KP cusps were not silently replaced by another house system."
+        );
       }
-      return cusp;
-    });
+      tropicalPlacidusCusps = placidus.houseCusps;
+    } else if (westernData.houseSystem === "Placidus") {
+      // Backward-compatible path for callers that supply a verified Placidus
+      // chart without its original birthplace geometry.
+      tropicalPlacidusCusps = westernData.houses.map((house) => house.longitude);
+    } else {
+      throw new RangeError(
+        "KP requires Placidus cusps and the original birth latitude/longitude. The supplied Western chart uses " +
+        westernData.houseSystem +
+        " and cannot be reused as KP house geometry."
+      );
+    }
 
+    if (tropicalPlacidusCusps.length !== 12 || !tropicalPlacidusCusps.every(Number.isFinite)) {
+      throw new RangeError("KP Placidus cusp calculation must produce twelve finite cusps.");
+    }
+
+    // Convert only the KP-required tropical Placidus cusps to the KP sidereal frame.
+    const siderealPlacidusCusps = tropicalPlacidusCusps.map((cusp) =>
+      normalizeDegrees(cusp - kpAyanamsa)
+    );
+
+    // 2. Preserve the exact KP sidereal cusp longitude. Determine its sign,
+    // star and sub at that precise point; never snap a late-sign cusp to 0°
+    // of the next sign. That would change the cusp's sign lord and can change
+    // its star/sub lord, contradicting minute-accurate KP cusp work.
     // 3. Assemble detailed KPCusp objects
-    const houseDetails: KPCusp[] = correctedCusps.map((cuspLon, index) => {
+    const houseDetails: KPCusp[] = siderealPlacidusCusps.map((cuspLon, index) => {
       const houseNum = index + 1;
-      const nextCuspLon = correctedCusps[index === 11 ? 0 : index + 1];
+      const nextCuspLon = siderealPlacidusCusps[index === 11 ? 0 : index + 1];
       const signIndex = Math.floor(cuspLon / 30);
       const signName = SubLordCalculator.getSignName(signIndex);
       const signLord = SubLordCalculator.getSignLord(signIndex);
@@ -92,12 +169,12 @@ export class KPCuspsCalculator {
     });
 
     return {
-      cusps: correctedCusps,
+      cusps: siderealPlacidusCusps,
       houseDetails,
       houseSigns: houseDetails.map((h) => h.signName),
       houseLords: houseDetails.map((h) => h.signLord),
       ayanamsa: kpAyanamsa,
-      ayanamsaName: "KP (Krishnamurti) Standard",
+      ayanamsaName: "Celestia KP linear (provisional)",
     };
   }
 }

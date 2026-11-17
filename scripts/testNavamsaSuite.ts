@@ -7,6 +7,7 @@ import {
 } from "../lib/vedic/d9NavamsaEngine";
 import { calculateWesternChart } from "../lib/astronomy/ephemeris";
 import { calculateVedicChart } from "../lib/astronomy/vedic";
+import { calculateDivisionalDegreeInSign } from "../lib/vedic/divisionalCalc";
 
 interface TestResult {
   category: string;
@@ -43,6 +44,21 @@ const engine = new D9ChartEngine();
 console.log("================================================================================");
 console.log("STARTING D9 NAVAMSA (JYOTISH) ACCURACY TEST SUITE");
 console.log("================================================================================");
+
+// The chart selector uses this engine for D1–D60; verify transformed degrees,
+// including the unequal Trimsamsa (D30) segment widths.
+const d9VargaMidpoint = calculateDivisionalDegreeInSign(1.6666666667, "D9");
+assertTest("Varga Degree", "D9 midpoint maps to 15° within the transformed sign",
+  Math.abs(d9VargaMidpoint - 15) < 0.001, "15°", d9VargaMidpoint.toFixed(4) + "°");
+const d30OddFirstMidpoint = calculateDivisionalDegreeInSign(2.5, "D30");
+assertTest("Varga Degree", "D30 odd-sign first 5° segment maps proportionally to 15°",
+  Math.abs(d30OddFirstMidpoint - 15) < 0.001, "15°", d30OddFirstMidpoint.toFixed(4) + "°");
+const d30OddBoundary = calculateDivisionalDegreeInSign(5, "D30");
+assertTest("Varga Degree", "D30 exact odd-sign segment boundary starts at 0°",
+  Math.abs(d30OddBoundary) < 0.001, "0°", d30OddBoundary.toFixed(4) + "°");
+const d30EvenFirstMidpoint = calculateDivisionalDegreeInSign(33.5, "D30");
+assertTest("Varga Degree", "D30 even-sign first segment maps proportionally to 21°",
+  Math.abs(d30EvenFirstMidpoint - 21) < 0.001, "21°", d30EvenFirstMidpoint.toFixed(4) + "°");
 
 // --------------------------------------------------------------------------------
 // GROUP 1: MOVABLE, FIXED, AND DUAL SIGN STARTING SIGN MAPPINGS

@@ -106,6 +106,10 @@ async function runGeocodeTests() {
     const dataEmpty = await resEmpty.json();
     assert(dataEmpty.results?.length > 0 && dataEmpty.results[0].source === "built-in", "2.4 Blank query returns default built-in major cities");
 
+    const longQuery = "x".repeat(161);
+    const longQueryResponse = await GET(new NextRequest("http://localhost:3000/api/geocode?q=" + longQuery));
+    assert(longQueryResponse.status === 400, "2.5 Rejects forward geocoding queries longer than 160 characters");
+
     // ---------------------------------------------------------
     // TEST 3: Key Absent - Reverse Geocoding
     // ---------------------------------------------------------
@@ -133,6 +137,19 @@ async function runGeocodeTests() {
     const dataInvalid = await resInvalid.json();
     assert(resInvalid.status === 400, "3.3.1 HTTP 400 for invalid coordinates");
     assert(dataInvalid.error === "Invalid coordinates", "3.3.2 Clear error response for invalid coordinates");
+
+    // 3.4 parseFloat previously accepted numeric prefixes with invalid suffixes.
+    const reqMalformedCoordinate = new NextRequest("http://localhost:3000/api/geocode?lat=48.8566north&lon=2.3522");
+    const resMalformedCoordinate = await GET(reqMalformedCoordinate);
+    assert(resMalformedCoordinate.status === 400, "3.4 Rejects malformed coordinate strings instead of parsing numeric prefixes");
+
+    const reqPartialCoordinates = new NextRequest("http://localhost:3000/api/geocode?lat=48.8566");
+    const resPartialCoordinates = await GET(reqPartialCoordinates);
+    assert(resPartialCoordinates.status === 400, "3.5 Rejects a partial latitude/longitude pair");
+
+    const reqHexCoordinates = new NextRequest("http://localhost:3000/api/geocode?lat=0x10&lon=0x10");
+    const resHexCoordinates = await GET(reqHexCoordinates);
+    assert(resHexCoordinates.status === 400, "3.6 Rejects hexadecimal coordinate strings");
 
     // ---------------------------------------------------------
     // TEST 4: Key Configured - Forward Autocomplete
@@ -205,6 +222,29 @@ async function runGeocodeTests() {
     const noZone = dataNoZone.results?.find((r: any) => r.city === "No Zone Test" && r.source === "geoapify");
     assert(!!noZone, "4B.1 Provider result without timezone is retained");
     assert(noZone?.tz === undefined && noZone?.ianaTimezone === undefined, "4B.2 No UTC offset or IANA zone is fabricated from longitude");
+
+    // 4C: Invalid provider coordinates are discarded, not rewritten as 0,0.
+    global.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+      const urlStr = input.toString();
+      if (urlStr.includes("api.geoapify.com/v1/geocode/autocomplete")) {
+        return new Response(JSON.stringify({
+          features: [
+            { properties: { city: "Missing Coordinates", country: "Nowhere" } },
+            { properties: { city: "Out Of Range", country: "Nowhere", lat: 91, lon: 181 } },
+            { properties: { city: "String Coordinates", country: "Nowhere", lat: "12.5", lon: "13.5" } },
+          ],
+        }), { status: 200, headers: { "Content-Type": "application/json" } });
+      }
+      return originalFetch(input, init);
+    };
+    const reqInvalidProvider = new NextRequest("http://localhost:3000/api/geocode?q=InvalidProviderCoordinates");
+    const resInvalidProvider = await GET(reqInvalidProvider);
+    const dataInvalidProvider = await resInvalidProvider.json();
+    assert(resInvalidProvider.status === 200, "4C.1 Invalid provider coordinates do not fail the autocomplete response");
+    assert(
+      !dataInvalidProvider.results?.some((r: any) => r.source === "geoapify" || (r.lat === 0 && r.lng === 0)),
+      "4C.2 Missing, non-numeric, or out-of-range provider coordinates are not returned as fabricated 0,0"
+    );
 
     // ---------------------------------------------------------
     // TEST 5: Key Configured - Reverse Geocoding

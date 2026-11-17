@@ -14,6 +14,7 @@ import {
   normalizeDegrees,
   formatDegreeMinute,
   ZODIAC_SIGNS,
+  filterCalculationReadyPoints,
 } from "./ephemeris";
 import { swissEphemeris } from "./swissEphemeris";
 
@@ -58,8 +59,9 @@ export interface SynastryAspect {
   symbol: string;
   angle: number;
   orb: number;
-  isApplying: boolean;
-  score: number; // 1 to 10
+  /** Cross-chart natal aspects compare two static birth snapshots; applying/separating is not defined here. */
+  isApplying: boolean | null;
+  score: number; // Interpretive heuristic weight, not measured compatibility
   nature: "Harmonious" | "Challenging" | "Dynamic" | "Karmic";
   category: string;
   title: string;
@@ -81,7 +83,7 @@ export interface CompatibilityScores {
   communication: number; // Mercury/Moon contacts
   valuesAlignment: number;// Venus/Jupiter contacts
   longTermPotential: number;// Saturn contacts
-  overall: number;       // Weighted composite affinity (0-100)
+  overall: number;       // Heuristic weighted astrology index (25-99), not a probability
   verdict: string;
   dimensions: AffinityDimension[];
   relationshipContextSummary: string;
@@ -90,7 +92,7 @@ export interface CompatibilityScores {
 export interface KarmicIndicator {
   type: "Node Contact" | "Vertex Contact" | "Saturnian Bond" | "Chironic Healing";
   description: string;
-  intensity: "Mild" | "Moderate" | "Profound" | "Life-Altering";
+  intensity: "Tight orb" | "Moderate orb";
 }
 
 export interface SynastryReport {
@@ -293,28 +295,28 @@ export const SYNASTRY_INTERPRETATIONS: Record<
     advice: "Tackle ambitious long-range milestones, home building, or fitness goals as a team.",
   },
   "Sun-NorthNode-Conjunction": {
-    title: "Fated Evolutionary Catalyst",
+    title: "Nodal Growth Theme",
     score: 9.7,
     category: "Growth & Purpose",
     nature: "Karmic",
-    description: "A potent destiny contact. Person 1's core presence acts as a direct beacon pulling Person 2 toward their future soul purpose.",
+    description: "Some modern astrology traditions interpret this close Sun–Node contact as a symbolic growth or life-direction theme. It does not establish destiny or determine either person's future.",
     advice: "Embrace the accelerated personal growth that this union triggers in both lives.",
   },
   "Moon-NorthNode-Conjunction": {
-    title: "Soulmate Nodal Embrace",
+    title: "Nodal Emotional Resonance",
     score: 9.8,
     category: "Growth & Purpose",
     nature: "Karmic",
-    description: "Immediate uncanny familiarity, as though your souls scheduled this meeting before incarnation. Emotional evolution is accelerated.",
+    description: "Some modern astrology traditions interpret this Moon–Node contact as symbolic emotional familiarity or shared growth themes. It is not evidence of a pre-incarnation agreement.",
     advice: "Honor this deep psychic connection with gratitude and emotional authenticity.",
   },
   "Venus-NorthNode-Conjunction": {
-    title: "Karmic Lovers & Destined Affection",
+    title: "Venus–Node Affection Theme",
     score: 9.6,
     category: "Romance & Chemistry",
     nature: "Karmic",
-    description: "Meeting feels planned by the cosmos. Love acts as the central vehicle through which both souls fulfill their destiny.",
-    advice: "A classic sign of soulmates meeting to learn higher love, artistic expression, or mutual devotion.",
+    description: "Some astrology traditions read this Venus–Node contact as a symbolic affection or relationship-growth theme. It does not show that a meeting was destined or guarantee a relationship.",
+    advice: "Use this symbolism as a prompt to discuss affection, shared values and expectations; it does not identify soulmates.",
   },
   "Sun-Saturn-Trine": {
     title: "Pillar of Respect & Endurance",
@@ -342,8 +344,11 @@ export class SynastryEngine {
    */
   public calculateAllInterAspects(): SynastryAspect[] {
     const aspects: SynastryAspect[] = [];
-    const planets1 = this.chart1.planets;
-    const planets2 = this.chart2.planets;
+    // Explicitly approximate/symbolic placeholders must not create
+    // apparently valid cross-chart aspects. Keep them visible in natal charts,
+    // but exclude them from synastry geometry until a suitable ephemeris exists.
+    const planets1 = filterCalculationReadyPoints(this.chart1.planets);
+    const planets2 = filterCalculationReadyPoints(this.chart2.planets);
 
     const ASPECTS_DEF = [
       { name: "Conjunction" as const, symbol: "☌", angle: 0, orb: 7.5 },
@@ -393,7 +398,7 @@ export class SynastryEngine {
       }
       if (this.relType === "stranger") {
         if (rawCategory === "Romance & Chemistry") return "Instant Vibe & Spark";
-        if (rawCategory === "Commitment & Longevity") return "Destined Crossroad";
+        if (rawCategory === "Commitment & Longevity") return "Unexpected Encounters";
         return rawCategory;
       }
       if (this.relType === "mentor") {
@@ -479,7 +484,7 @@ export class SynastryEngine {
               symbol: def.symbol,
               angle: def.angle,
               orb: Math.round(orbDiff * 100) / 100,
-              isApplying: true,
+              isApplying: null,
               score: interp.score,
               nature: interp.nature,
               category: adjustedCategory,
@@ -598,7 +603,7 @@ export class SynastryEngine {
             : "Shared progressive visions, social communities, community impact, and future hopes.";
         case 12:
           return isStranger
-            ? "Uncanny deja-vu feeling. A fleeting or sudden encounter carrying subconscious or past-life reverberations."
+            ? "A sudden or familiar-feeling encounter; some astrologers associate this with past-life symbolism, but it is not evidence of a prior connection."
             : "Subconscious soul-merging, dream telepathy, unspoken empathy, and spiritual transcendence.";
         default:
           return "Active astrological house overlay.";
@@ -631,6 +636,11 @@ export class SynastryEngine {
     let valuesTotal = 70;
     let saturnTotal = 70;
 
+    // Synastry is a cross-chart relationship: swapping chart 1 and chart 2
+    // must not remove a contribution simply because its planet order reversed.
+    const hasPlanetPair = (left: string, right: string, a: string, b: string): boolean =>
+      (left === a && right === b) || (left === b && right === a);
+
     aspects.forEach((asp) => {
       const isHarmonious = asp.nature === "Harmonious";
       const isChallenging = asp.nature === "Challenging";
@@ -645,20 +655,18 @@ export class SynastryEngine {
         mentalTotal += isHarmonious ? weight * 2.2 : isChallenging ? -weight * 1.4 : 0;
         communicationTotal += isHarmonious ? weight * 2.0 : isChallenging ? -weight * 1.5 : 0;
       }
-      // Venus / Mars / Sun contacts
+      // Venus / Mars / Sun contacts (order-independent across the two charts)
       if (
-        (asp.planet1 === "Venus" && asp.planet2 === "Mars") ||
-        (asp.planet1 === "Mars" && asp.planet2 === "Venus") ||
-        (asp.planet1 === "Sun" && asp.planet2 === "Venus") ||
-        (asp.planet1 === "Sun" && asp.planet2 === "Mars")
+        hasPlanetPair(asp.planet1, asp.planet2, "Venus", "Mars") ||
+        hasPlanetPair(asp.planet1, asp.planet2, "Sun", "Venus") ||
+        hasPlanetPair(asp.planet1, asp.planet2, "Sun", "Mars")
       ) {
         physicalTotal += isHarmonious ? weight * 2.6 : isChallenging ? weight * 0.8 : 0;
       }
-      // Venus / Jupiter contacts
+      // Venus / Jupiter / Sun contacts (order-independent across the two charts)
       if (
-        (asp.planet1 === "Venus" && asp.planet2 === "Jupiter") ||
-        (asp.planet1 === "Jupiter" && asp.planet2 === "Venus") ||
-        (asp.planet1 === "Sun" && asp.planet2 === "Jupiter")
+        hasPlanetPair(asp.planet1, asp.planet2, "Venus", "Jupiter") ||
+        hasPlanetPair(asp.planet1, asp.planet2, "Sun", "Jupiter")
       ) {
         valuesTotal += isHarmonious ? weight * 2.4 : isChallenging ? -weight * 0.8 : 0;
       }
@@ -710,7 +718,7 @@ export class SynastryEngine {
       overall = Math.round(em * 0.28 + sat * 0.20 + comm * 0.20 + val * 0.16 + men * 0.10 + phys * 0.06);
       dimensions = [
         { key: "nurturing", label: "Parental Warmth & Holding (Moon)", val: em, color: "bg-blue-500", description: "Providing emotional safety, unconditional love, and comforting presence" },
-        { key: "growth", label: "Self-Actualization & Talents (Sun/Jupiter)", val: val, color: "bg-emerald-500", description: "Encouraging the child's authentic destiny, talents, and joy" },
+        { key: "growth", label: "Self-Actualization & Talents (Sun/Jupiter)", val: val, color: "bg-emerald-500", description: "Encouraging the child's interests, talents, autonomy and joy" },
         { key: "comm", label: "Openhearted Listening (Mercury)", val: comm, color: "bg-cyan-500", description: "Creating a safe space where the child expresses feelings without fear" },
         { key: "anchor", label: "Steadfast Anchor & Structure (Saturn)", val: sat, color: "bg-purple-500", description: "Consistent rules and loving boundaries that provide psychological security" },
         { key: "learning", label: "Curiosity & Wonder (Mercury)", val: men, color: "bg-amber-500", description: "Encouraging exploration, education, and lively intellectual curiosity" },
@@ -774,10 +782,10 @@ export class SynastryEngine {
         { key: "spark", label: "Energetic Magnetism (Mars/Sun)", val: phys, color: "bg-rose-500", description: "The sudden spark that makes this passing encounter memorable" },
         { key: "curiosity", label: "Intellectual Intrigue (Mercury)", val: men, color: "bg-amber-500", description: "Curiosity to learn who this person is and what they represent" },
         { key: "flow", label: "Effortless Dialogue", val: comm, color: "bg-cyan-500", description: "Talking as if you already know each other from another lifetime" },
-        { key: "karmic", label: "Synchronicity Node (Saturn)", val: sat, color: "bg-purple-500", description: "A meaningful crossroads encounter engineered by planetary timing" },
+        { key: "karmic", label: "Synchronicity Node (Saturn)", val: sat, color: "bg-purple-500", description: "A timing or responsibility theme sometimes explored through Saturn symbolism; it is not evidence that an encounter was engineered or fated." },
         { key: "worldview", label: "Philosophical Mirror (Jupiter)", val: val, color: "bg-emerald-500", description: "A serendipitous conversation that offers a fresh perspective on life" },
       ];
-      verdict = overall >= 85 ? "Fated Synchronistic Encounter with Instant Resonance" : overall >= 72 ? "Intriguing Passing Mirror with Fresh Insights" : "Brief Celestial Intersection with Curious Dynamics";
+      verdict = overall >= 85 ? "Strong Symbolic Resonance & Mutual Curiosity" : overall >= 72 ? "Interesting Encounter with Fresh Perspectives" : "Brief Connection with Different Rhythms";
       relationshipContextSummary = `Meeting as strangers or acquaintances, this synastry shows why the universe brought your paths together. Even a brief interaction can act as a catalyst for new self-awareness.`;
     } else if (this.relType === "mentor") {
       overall = Math.round(men * 0.28 + val * 0.22 + comm * 0.2 + sat * 0.16 + em * 0.08 + phys * 0.06);
@@ -801,7 +809,7 @@ export class SynastryEngine {
         { key: "values", label: "Value Harmony & Vision (Jupiter)", val: val, color: "bg-emerald-500", description: "Shared life ideals, moral alignment, and mutual expansion" },
         { key: "longevity", label: "Marital Longevity (Saturn)", val: sat, color: "bg-purple-500", description: "Enduring commitment, shared responsibility, and devotion" },
       ];
-      verdict = overall >= 88 ? "Extraordinary Soulmate Affinity & Enduring Resonance" : overall >= 78 ? "Strong Natural Compatibility & Deep Chemistry" : overall >= 68 ? "Balanced Dynamic Attraction with Growth Edges" : "High-Growth Karmic Crucible Requiring Conscious Communication";
+      verdict = overall >= 88 ? "Strong Romantic Affinity Themes" : overall >= 78 ? "Prominent Chemistry & Shared Themes" : overall >= 68 ? "Mixed Attraction and Growth Themes" : "Contrasting Patterns Calling for Clear Communication";
       relationshipContextSummary = `This romantic synastry reveals powerful attraction and emotional depth. Planetary alignments offer both thrilling chemistry and the grounding required for enduring partnership.`;
     }
 
@@ -853,8 +861,8 @@ export class SynastryEngine {
       if (a.nature === "Karmic" || a.planet1.includes("Node") || a.planet2.includes("Node")) {
         karmicConnections.push({
           type: "Node Contact",
-          description: `${a.planet1} aspecting ${a.planet2} (${a.aspectName}): Soul evolutionary contract.`,
-          intensity: a.orb < 2.0 ? "Life-Altering" : "Profound",
+          description: `${a.planet1} ${a.aspectName} ${a.planet2}: a close nodal contact sometimes interpreted as a karmic theme in modern astrology. This is not evidence of a soul contract or past-life bond.`,
+          intensity: a.orb < 2.0 ? "Tight orb" : "Moderate orb",
         });
       }
 
@@ -863,7 +871,7 @@ export class SynastryEngine {
         (a.planet1 === "Moon" && a.planet2 === "Sun") ||
         (a.planet1 === "Venus" && a.planet2 === "Mars" && a.aspectName === "Conjunction")
       ) {
-        soulmateIndicators.push(`${a.title}: Archetypal soul contact.`);
+        soulmateIndicators.push(`${a.title}: A Sun–Moon or Venus–Mars contact sometimes read as a symbolic affinity theme; it does not establish a soulmate bond.`);
       }
     });
 
@@ -905,10 +913,25 @@ export interface CompositeChart {
 
 export class CompositeChartEngine {
   private calculateMidpoint(lon1: number, lon2: number): number {
-    let diff = lon2 - lon1;
+    if (!Number.isFinite(lon1) || !Number.isFinite(lon2)) {
+      throw new RangeError("Composite chart longitudes must be finite numbers.");
+    }
+
+    const a = normalizeDegrees(lon1);
+    const b = normalizeDegrees(lon2);
+    const rawDiff = b - a;
+
+    // Exactly antipodal points have two equally short arcs and no unique
+    // geometric midpoint. Choose a stable convention by sorting the normalized
+    // endpoints, so swapping chart order cannot flip the composite point by 180°.
+    if (Math.abs(Math.abs(rawDiff) - 180) < 1e-10) {
+      return normalizeDegrees(Math.min(a, b) + 90);
+    }
+
+    let diff = rawDiff;
     if (diff > 180) diff -= 360;
     if (diff < -180) diff += 360;
-    return normalizeDegrees(lon1 + diff / 2);
+    return normalizeDegrees(a + diff / 2);
   }
 
   public calculateComposite(
@@ -1032,11 +1055,14 @@ export class CompositeChartEngine {
 // ---------------------------------------------------------------------------
 
 export interface DavisonPersonInput {
-  birthDate: string; // YYYY-MM-DD
-  birthTime: string; // HH:MM or HH:MM:SS
+  birthDate: string; // YYYY-MM-DD; used when utcInstant is absent
+  birthTime: string; // HH:MM, HH:MM:SS, or HH:MM:SS.sss; used when utcInstant is absent
   latitude: number;
   longitude: number;
-  timezoneOffset?: number; // Numeric UTC offset in decimal hours (e.g. -5 for EST, +5.5 for IST). Defaults to 0 if undefined.
+  /** Exact, already-resolved UTC instant. Takes precedence over local date/time and numeric offset. */
+  utcInstant?: string;
+  /** Fixed numeric UTC offset in decimal hours for legacy callers only; defaults to 0. */
+  timezoneOffset?: number;
 }
 
 export interface DavisonChartResult {
@@ -1050,19 +1076,68 @@ export interface DavisonChartResult {
 }
 
 /**
- * Converts a person's local birth date, time, and timezone offset to a precise UTC timestamp (in milliseconds).
- * Accounts for date rollovers, month/year boundaries, leap years, and fractional offsets.
+ * Converts a Davison input to a UTC timestamp.
+ * Prefer the exact UTC instant already resolved by the birth-time timezone flow.
+ * The numeric-offset path remains for legacy callers and validates all civil fields
+ * before the normalizer is allowed to perform date rollover arithmetic.
  */
-function parsePersonToUtcMs(
-  birthDate: string,
-  birthTime: string,
-  timezoneOffsetHours: number = 0
-): number {
-  const [year, month, day] = birthDate.split("-").map(Number);
-  const timeParts = birthTime.split(":").map(Number);
-  const hour = timeParts[0] || 0;
-  const minute = timeParts[1] || 0;
-  const second = timeParts[2] || 0;
+function parsePersonToUtcMs(person: DavisonPersonInput, label: string): number {
+  // Validate the displayed local civil fields even when an exact UTC instant is
+  // supplied. This prevents the UI's provisional fallback Date from masking an
+  // invalid or impossible calendar date/time.
+  const dateMatch = typeof person.birthDate === "string"
+    ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(person.birthDate)
+    : null;
+  if (!dateMatch) {
+    throw new RangeError(`${label} birth date must use YYYY-MM-DD.`);
+  }
+  const year = Number(dateMatch[1]);
+  const month = Number(dateMatch[2]);
+  const day = Number(dateMatch[3]);
+  if (year < 1 || year > 9999 || month < 1 || month > 12 || day < 1 || day > 31) {
+    throw new RangeError(`${label} birth date is outside the supported calendar range.`);
+  }
+
+  const calendarDate = new Date(0);
+  calendarDate.setUTCHours(0, 0, 0, 0);
+  calendarDate.setUTCFullYear(year, month - 1, day);
+  if (
+    calendarDate.getUTCFullYear() !== year ||
+    calendarDate.getUTCMonth() !== month - 1 ||
+    calendarDate.getUTCDate() !== day
+  ) {
+    throw new RangeError(`${label} birth date is not a valid Gregorian calendar date.`);
+  }
+
+  const timeMatch = typeof person.birthTime === "string"
+    ? /^(?:([01]\d|2[0-3])):([0-5]\d)(?::([0-5]\d)(?:\.(\d{1,3}))?)?$/.exec(person.birthTime)
+    : null;
+  if (!timeMatch) {
+    throw new RangeError(`${label} birth time must use HH:MM, HH:MM:SS, or HH:MM:SS.sss (24-hour time).`);
+  }
+  const hour = Number(timeMatch[1]);
+  const minute = Number(timeMatch[2]);
+  const wholeSecond = Number(timeMatch[3] ?? 0);
+  const fractionMs = Number((timeMatch[4] ?? "").padEnd(3, "0"));
+  const second = wholeSecond + fractionMs / 1000;
+
+  // Exact instants from the historical timezone resolver are authoritative.
+  // Canonical ISO formatting makes precision and UTC ("Z") explicit.
+  if (person.utcInstant !== undefined) {
+    if (typeof person.utcInstant !== "string") {
+      throw new TypeError(`${label} UTC instant must be an ISO-8601 UTC string.`);
+    }
+    const instant = new Date(person.utcInstant);
+    if (!Number.isFinite(instant.getTime()) || instant.toISOString() !== person.utcInstant) {
+      throw new RangeError(`${label} UTC instant must be a valid canonical ISO-8601 timestamp ending in Z.`);
+    }
+    return instant.getTime();
+  }
+
+  const timezoneOffsetHours = person.timezoneOffset ?? 0;
+  if (!Number.isFinite(timezoneOffsetHours) || Math.abs(timezoneOffsetHours) > 24) {
+    throw new RangeError(`${label} numeric UTC offset must be finite and within -24 to +24 hours.`);
+  }
 
   const { utcYear, utcMonth, utcDay, utcDecimalHour } = swissEphemeris.normalizeLocalToUTC(
     year,
@@ -1074,13 +1149,22 @@ function parsePersonToUtcMs(
     timezoneOffsetHours
   );
 
-  const baseDate = new Date(Date.UTC(utcYear, utcMonth - 1, utcDay, 0, 0, 0, 0));
-  if (utcYear >= 0 && utcYear <= 99) {
-    baseDate.setUTCFullYear(utcYear);
+  const baseDate = new Date(0);
+  baseDate.setUTCHours(0, 0, 0, 0);
+  baseDate.setUTCFullYear(utcYear, utcMonth - 1, utcDay);
+  const utcMilliseconds = baseDate.getTime() + Math.round(utcDecimalHour * 3600 * 1000);
+  if (!Number.isFinite(utcMilliseconds)) {
+    throw new RangeError(`${label} birth date/time is outside the supported timestamp range.`);
   }
-
-  const msInDay = Math.round(utcDecimalHour * 3600 * 1000);
-  return baseDate.getTime() + msInDay;
+  return utcMilliseconds;
+}
+function validateDavisonCoordinates(person: DavisonPersonInput, label: string): void {
+  if (!Number.isFinite(person.latitude) || person.latitude < -90 || person.latitude > 90) {
+    throw new RangeError(`${label} latitude must be a finite value from -90 to +90 degrees.`);
+  }
+  if (!Number.isFinite(person.longitude) || person.longitude < -180 || person.longitude > 180) {
+    throw new RangeError(`${label} longitude must be a finite value from -180 to +180 degrees.`);
+  }
 }
 
 export class DavisonChartEngine {
@@ -1088,11 +1172,12 @@ export class DavisonChartEngine {
     person1: DavisonPersonInput,
     person2: DavisonPersonInput
   ): DavisonChartResult {
-    // 1. Timezone-normalized UTC birth instants (in ms)
-    const tz1 = person1.timezoneOffset ?? 0;
-    const tz2 = person2.timezoneOffset ?? 0;
-    const time1 = parsePersonToUtcMs(person1.birthDate, person1.birthTime, tz1);
-    const time2 = parsePersonToUtcMs(person2.birthDate, person2.birthTime, tz2);
+    // 1. Preserve the same resolved UTC instants used by the natal and Vedic chart paths.
+    // Legacy numeric-offset conversion is used only when an exact instant was not supplied.
+    validateDavisonCoordinates(person1, "Person 1");
+    validateDavisonCoordinates(person2, "Person 2");
+    const time1 = parsePersonToUtcMs(person1, "Person 1");
+    const time2 = parsePersonToUtcMs(person2, "Person 2");
 
     // 2. Exact Time Midpoint
     const midTimeMs = (time1 + time2) / 2;
@@ -1140,8 +1225,11 @@ export class DavisonChartEngine {
 
     const sign = lmtOffsetHours >= 0 ? "+" : "-";
     const absOffset = Math.abs(lmtOffsetHours);
-    const offH = Math.floor(absOffset);
-    const offM = Math.round((absOffset - offH) * 60);
+    // Round the complete offset to minutes before splitting it into hours and
+    // minutes. Rounding the fractional part separately can produce UTC+05:60.
+    const totalOffsetMinutes = Math.round(absOffset * 60);
+    const offH = Math.floor(totalOffsetMinutes / 60);
+    const offM = totalOffsetMinutes % 60;
     const offStr = `${sign}${String(offH).padStart(2, "0")}:${String(offM).padStart(2, "0")}`;
     const midpointLmt = `${lmtYear}-${lmtMonth}-${lmtDay} ${lmtHour}:${lmtMinute}:${lmtSecond} LMT (UTC${offStr})`;
 

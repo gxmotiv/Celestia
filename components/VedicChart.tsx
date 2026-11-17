@@ -45,6 +45,12 @@ interface VedicChartProps {
   vedicData: VedicChartData;
   birthDate?: string;
   birthTime?: string;
+  birthUtcInstant?: string;
+  birthLongitude?: number;
+  birthLatitude?: number;
+  birthIanaTimezone?: string;
+  birthUtcOffsetSeconds?: number;
+  isBirthTimeUnknown?: boolean;
   westernData?: WesternChartData;
   numerologyData?: NumerologyProfile;
   baziData?: BaZiProfile;
@@ -57,6 +63,12 @@ export function VedicChart({
   vedicData,
   birthDate = "1990-01-01",
   birthTime = "12:00",
+  birthUtcInstant,
+  birthLongitude,
+  birthLatitude,
+  birthIanaTimezone,
+  birthUtcOffsetSeconds,
+  isBirthTimeUnknown = false,
   westernData,
   numerologyData,
   baziData,
@@ -363,8 +375,15 @@ export function VedicChart({
       {vedicMasterView === "shadbala" && (
         <ShadbalaPanel
           vedicData={vedicData}
+          westernData={westernData}
           birthDate={birthDate}
           birthTime={birthTime}
+          birthUtcInstant={birthUtcInstant}
+          birthLongitude={birthLongitude}
+          birthLatitude={birthLatitude}
+          birthIanaTimezone={birthIanaTimezone}
+          birthUtcOffsetSeconds={birthUtcOffsetSeconds}
+          birthTimeKnown={!isBirthTimeUnknown}
         />
       )}
 
@@ -436,6 +455,9 @@ export function VedicChart({
                 ))}
               </select>
             </div>
+            <p className="text-[10px] leading-relaxed text-slate-500 sm:max-w-[220px]">
+              This selector contains the 16 classical Shodashavarga charts. It is not every possible numbered division from D1 to D60.
+            </p>
           </div>
 
           {/* Top Banner: Lahiri Ayanamsa & Core Vedic Pillars (Dynamically changes with D1 vs D9) */}
@@ -1083,6 +1105,7 @@ export function VedicChart({
             vedicData={vedicData}
             birthDate={birthDate}
             birthTime={birthTime}
+            birthUtcInstant={birthUtcInstant}
           />
         )}
 
@@ -1095,6 +1118,12 @@ export function VedicChart({
             baziData={baziData}
             birthDate={birthDate}
             birthTime={birthTime}
+            birthUtcInstant={birthUtcInstant}
+            birthLongitude={birthLongitude}
+            birthLatitude={birthLatitude}
+            birthIanaTimezone={birthIanaTimezone}
+            birthUtcOffsetSeconds={birthUtcOffsetSeconds}
+            isBirthTimeUnknown={isBirthTimeUnknown}
             cityName={cityName}
             country={country}
             fullName={fullName}

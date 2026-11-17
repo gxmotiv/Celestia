@@ -137,32 +137,74 @@ export class KPPredictionEngine {
     house: number,
     cusps: KPCusps,
     planets: KPPlanet[],
-    dashaLord = "Jupiter",
-    antardashaLord = "Venus",
+    dashaLord: string,
+    antardashaLord: string,
     pratyantardashaLord?: string
   ): KPPrediction {
-    const rule = KP_EVENT_RULES[house] || KP_EVENT_RULES[1];
+    if (!Number.isInteger(house) || house < 1 || house > 12) {
+      throw new Error(`KP prediction house must be between 1 and 12; received ${house}.`);
+    }
+    if (!Array.isArray(cusps.cusps) || cusps.cusps.length !== 12 ||
+        cusps.cusps.some((value) => !Number.isFinite(value))) {
+      throw new Error("KP prediction requires twelve finite cusp longitudes.");
+    }
+    if (!Array.isArray(cusps.houseLords) || cusps.houseLords.length !== 12 ||
+        cusps.houseLords.some((lord) => typeof lord !== "string" || !lord.trim())) {
+      throw new Error("KP prediction requires twelve valid cusp sign lords.");
+    }
+    if (!Array.isArray(cusps.houseDetails) || cusps.houseDetails.length !== 12) {
+      throw new Error("KP prediction requires twelve complete cusp records.");
+    }
+    if (!Array.isArray(planets)) {
+      throw new Error("KP prediction requires a planetary position array.");
+    }
+
+    const rule = KP_EVENT_RULES[house];
+    if (!rule) throw new Error(`KP prediction has no declared event rule for house ${house}.`);
     const cusp = cusps.houseDetails[house - 1];
-    const csl = cusp.subLord; // Cuspal Sub Lord
-    const cslPlanet = planets.find((p) => p.name === csl) || planets[0];
+    if (!cusp?.subLord) throw new Error(`KP prediction requires cusp ${house} sub-lord data.`);
+    const csl = cusp.subLord;
+    const cslPlanet = planets.find((p) => p.name === csl);
+    if (!cslPlanet) throw new Error(`KP prediction cannot resolve CSL planet ${csl} for house ${house}.`);
+    if (!cslPlanet.starLord || !cslPlanet.subLord) {
+      throw new Error(`KP prediction requires star-lord and sub-lord data for CSL planet ${csl}.`);
+    }
+    if (!dashaLord?.trim() || !antardashaLord?.trim()) {
+      throw new Error("KP prediction requires explicit Mahadasha and Antardasha lords.");
+    }
+    if (!planets.some((planet) => planet.name === dashaLord)) {
+      throw new Error(`KP prediction cannot resolve Mahadasha lord ${dashaLord} in the chart.`);
+    }
+    if (!planets.some((planet) => planet.name === antardashaLord)) {
+      throw new Error(`KP prediction cannot resolve Antardasha lord ${antardashaLord} in the chart.`);
+    }
+    if (pratyantardashaLord && !planets.some((planet) => planet.name === pratyantardashaLord)) {
+      throw new Error(`KP prediction cannot resolve Pratyantardasha lord ${pratyantardashaLord} in the chart.`);
+    }
 
     // Calculate Significators across chart
-    const houseSignificators = this.significatorsEngine.calculateAllHouseSignificators(cusps, planets);
-    const planetSignifications = this.significatorsEngine.calculateAllPlanetSignifications(cusps, planets);
+    const baseHouseSignificators = this.significatorsEngine.calculateAllHouseSignificators(cusps, planets);
+    const basePlanetSignifications = this.significatorsEngine.calculateAllPlanetSignifications(cusps, planets);
+    const nodeRepresentations = this.significatorsEngine.calculateNodeRepresentations(
+      planets,
+      basePlanetSignifications,
+      "reader-vi"
+    );
+    const planetSignifications = this.significatorsEngine.applyNodeAgentSignifications(
+      planets,
+      basePlanetSignifications,
+      nodeRepresentations
+    );
+    const houseSignificators = this.significatorsEngine.applyNodeAgentsToHouseSignificators(
+      baseHouseSignificators,
+      nodeRepresentations
+    );
 
     // Get CSL signification
-    const cslSignification = planetSignifications[csl] || {
-      planet: csl,
-      occupiesHouse: 1,
-      ownsHouses: [],
-      starLord: "Ketu",
-      starLordOccupiesHouse: 1,
-      starLordOwnsHouses: [],
-      subLord: "Ketu",
-      subLordOccupiesHouse: 1,
-      subLordOwnsHouses: [],
-      signifiedHouses: [1],
-    };
+    const cslSignification = planetSignifications[csl];
+    if (!cslSignification) {
+      throw new Error(`KP prediction could not calculate house signification for CSL planet ${csl}.`);
+    }
 
     const cslSignifiedHouses = cslSignification.signifiedHouses;
 
@@ -185,40 +227,58 @@ export class KPPredictionEngine {
       }
     });
 
-    const isDashaSignificator = allFavorableSignificators.has(dashaLord);
-    const isAntardashaSignificator = allFavorableSignificators.has(antardashaLord);
+    const dashaSignificatorGrade = this.significatorsEngine.getStrongestHouseSignificatorGrade(
+      dashaLord,
+      rule.favorableHouses,
+      houseSignificators
+    );
+    const antardashaSignificatorGrade = this.significatorsEngine.getStrongestHouseSignificatorGrade(
+      antardashaLord,
+      rule.favorableHouses,
+      houseSignificators
+    );
+    const pratyantardashaSignificatorGrade = pratyantardashaLord
+      ? this.significatorsEngine.getStrongestHouseSignificatorGrade(
+          pratyantardashaLord,
+          rule.favorableHouses,
+          houseSignificators
+        )
+      : undefined;
+
+    const isDashaSignificator = dashaSignificatorGrade !== undefined;
+    const isAntardashaSignificator = antardashaSignificatorGrade !== undefined;
     const isPratyantarSignificator = pratyantardashaLord
-      ? allFavorableSignificators.has(pratyantardashaLord)
+      ? pratyantardashaSignificatorGrade !== undefined
       : undefined;
 
     // Timing analysis string
     let timing = "";
     if (isDashaSignificator && isAntardashaSignificator) {
-      timing = `Conjoint activation: Both Mahadasha lord (${dashaLord}) and Antardasha lord (${antardashaLord}) are potent significators of houses ${rule.favorableHouses.join(", ")}. Event fruition is primed in this period.`;
+      timing = "Conjoint activation: Mahadasha lord (" + dashaLord + ") reaches Grade " + dashaSignificatorGrade + "; Antardasha lord (" + antardashaLord + ") reaches Grade " + antardashaSignificatorGrade + ". Grade I is strongest, followed by II, III and IV. Both periods connect to favorable houses [" + rule.favorableHouses.join(", ") + "].";
     } else if (isAntardashaSignificator) {
-      timing = `Sub-period active: Antardasha lord (${antardashaLord}) signifies favorable houses ${rule.favorableHouses.join(", ")}, facilitating event fruition during favorable transit triggers.`;
+      timing = "Sub-period active: Antardasha lord (" + antardashaLord + ") reaches Grade " + antardashaSignificatorGrade + " among favorable houses [" + rule.favorableHouses.join(", ") + "]. Mahadasha lord (" + dashaLord + ") has no direct match in those house grades.";
     } else if (isDashaSignificator) {
-      timing = `Macro climate ready: Mahadasha lord (${dashaLord}) provides foundational support, awaiting supportive Antardasha or Pratyantardasha sub-lords.`;
+      timing = "Macro period active: Mahadasha lord (" + dashaLord + ") reaches Grade " + dashaSignificatorGrade + " among favorable houses [" + rule.favorableHouses.join(", ") + "], awaiting a matching Antardasha or Pratyantardasha.";
     } else {
-      timing = `Latent timing: Neither current Mahadasha (${dashaLord}) nor Antardasha (${antardashaLord}) directly activate houses ${rule.favorableHouses.join(", ")}. Event awaits periods of ${Array.from(allFavorableSignificators).slice(0, 3).join(", ")}.`;
+      timing = "Latent timing: neither Mahadasha (" + dashaLord + ") nor Antardasha (" + antardashaLord + ") appears in Grades I-IV for favorable houses [" + rule.favorableHouses.join(", ") + "]. Other house significators include " + Array.from(allFavorableSignificators).slice(0, 3).join(", ") + ".";
     }
 
-    // Probability calculation
-    let probability = 35;
-    if (isPromiseFavorable) probability += 30;
-    if (favorableMatches.length >= 2) probability += 10;
-    if (isDashaSignificator) probability += 12;
-    if (isAntardashaSignificator) probability += 13;
-    if (negationMatches.length > 0) probability -= negationMatches.length * 8;
-    probability = Math.min(95, Math.max(15, probability));
+    // Rule-weighted heuristic score; not calibrated against observed events.
+    let heuristicScore = 35;
+    if (isPromiseFavorable) heuristicScore += 30;
+    if (favorableMatches.length >= 2) heuristicScore += 10;
+    if (isDashaSignificator) heuristicScore += 12;
+    if (isAntardashaSignificator) heuristicScore += 13;
+    if (negationMatches.length > 0) heuristicScore -= negationMatches.length * 8;
+    heuristicScore = Math.min(95, Math.max(15, heuristicScore));
 
     // Verdict
     let verdict: KPPrediction["verdict"] = "Mixed / Moderate";
-    if (probability >= 78) {
+    if (heuristicScore >= 78) {
       verdict = "Highly Favorable";
-    } else if (probability >= 60) {
+    } else if (heuristicScore >= 60) {
       verdict = "Favorable";
-    } else if (probability <= 38) {
+    } else if (heuristicScore <= 38) {
       verdict = "Unfavorable";
     }
 
@@ -227,7 +287,8 @@ export class KPPredictionEngine {
       `1. Primary Cuspal Sub Lord (CSL) of House ${house}: ${csl} (at ${cusp.degreeFormatted} ${cusp.signName}).`,
       `2. CSL's Star Lord: ${cslPlanet.starLord} (residing in House ${cslSignification.starLordOccupiesHouse}, owning ${cslSignification.starLordOwnsHouses.join(", ") || "none"}).`,
       `3. CSL Signification: Signifies houses [${cslSignifiedHouses.join(", ")}]. Favorable: [${favorableMatches.join(", ") || "none"}], Negation: [${negationMatches.join(", ") || "none"}].`,
-      `4. Current Dasha Concurrence: Dasha Lord ${dashaLord} (${isDashaSignificator ? "Significator ✓" : "Not direct"}) · Antardasha Lord ${antardashaLord} (${isAntardashaSignificator ? "Significator ✓" : "Not direct"}).`,
+      `4. Current Dasha Concurrence: Dasha Lord ${dashaLord} (${dashaSignificatorGrade ? "Grade " + dashaSignificatorGrade : "Not direct"}) · Antardasha Lord ${antardashaLord} (${antardashaSignificatorGrade ? "Grade " + antardashaSignificatorGrade : "Not direct"}).`,
+      `5. Pratyantardasha: ${pratyantardashaLord ?? "Not supplied"} (${pratyantardashaSignificatorGrade ? "Grade " + pratyantardashaSignificatorGrade : pratyantardashaLord ? "Not direct" : "not evaluated"}).`,
     ];
 
     const details = isPromiseFavorable
@@ -245,15 +306,18 @@ export class KPPredictionEngine {
       cslSignifiedHouses,
       isPromiseFavorable,
       timing,
-      probability,
+      heuristicScore,
       details,
       dashaAnalysis: {
         dashaLord,
         isDashaSignificator,
+        dashaSignificatorGrade,
         antardashaLord,
         isAntardashaSignificator,
+        antardashaSignificatorGrade,
         pratyantardashaLord,
         isPratyantarSignificator,
+        pratyantardashaSignificatorGrade,
         verdict: timing,
       },
       verdict,
@@ -262,25 +326,40 @@ export class KPPredictionEngine {
   }
 
   /**
-   * Calculate KP Ruling Planets (RP)
-   * 1. Day Lord
-   * 2. Moon Sign Lord
+   * Calculate the five KP Ruling Planets in the Reader VI preference order:
+   * 1. Lagna Star Lord
+   * 2. Lagna Sign Lord
    * 3. Moon Star Lord
-   * 4. Lagna Sign Lord
-   * 5. Lagna Star Lord
+   * 4. Moon Sign Lord
+   * 5. Day Lord
+   *
+   * Limitation: weekday currently uses the UTC civil date, not local sunrise.
    */
   public calculateRulingPlanets(
     cusps: KPCusps,
     planets: KPPlanet[],
     birthDate: Date
   ): KPRulingPlanets {
+    if (!(birthDate instanceof Date) || !Number.isFinite(birthDate.getTime())) {
+      throw new Error("KP ruling planets require a valid birth/judgment Date.");
+    }
     const dayNames = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"];
     const dayLord = dayNames[birthDate.getUTCDay()];
+    const moon = planets.find((p) => p.name === "Moon");
+    if (!moon) throw new Error("KP ruling planets require Moon position data; no substitute is permitted.");
+    if (!moon.signLord || !moon.starLord || !moon.subLord) {
+      throw new Error("KP ruling planets require Moon sign, star, and sub-lord data.");
+    }
+    const lagna = cusps.houseDetails?.[0];
+    if (!lagna?.signLord || !lagna.starLord || !lagna.subLord) {
+      throw new Error("KP ruling planets require complete first-cusp sign, star, and sub-lord data.");
+    }
 
-    const moon = planets.find((p) => p.name === "Moon") || planets[0];
-    const lagna = cusps.houseDetails[0];
-
-    const ordered = [dayLord, moon.signLord, moon.starLord, lagna.signLord, lagna.starLord];
+    // KP Reader VI's five-ruler preference order: Lagna star, Lagna sign,
+    // Moon star, Moon sign, then weekday lord. The weekday below currently
+    // uses the UTC civil date; a local sunrise-to-sunrise boundary is a
+    // separately disclosed limitation until birth-place sunrise data is wired.
+    const ordered = [lagna.starLord, lagna.signLord, moon.starLord, moon.signLord, dayLord];
     const uniqueOrdered = Array.from(new Set(ordered));
 
     return {

@@ -1554,10 +1554,10 @@ export function NumerologyView({ numerologyData, fullName }: NumerologyViewProps
                 Peyar En (பெயர் எண்)
               </div>
               <div className="text-4xl font-serif-celestial font-bold text-slate-100 mb-2">
-                {report.tamil.peyarEn}
+                {report.tamil.peyarEn ?? "Not calculated"}
               </div>
               <p className="text-xs text-slate-300 mb-2">
-                Active social and commercial name frequency.
+                {report.tamil.peyarEnNote}
               </p>
             </div>
           </div>

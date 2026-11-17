@@ -183,10 +183,10 @@ export const LILITH_HOUSE_INTERPRETATIONS: Record<number, string> = {
 // -------------------------------------------------------------
 
 export const ADDITIONAL_POINTS_INTERPRETATIONS: Record<string, string> = {
-  Vertex: "The Vertex acts as the 'electric axis of destiny' in the western hemisphere. Encounters, relationships, and sudden turning points occurring at this degree feel fated, irresistible, and spiritually compulsory, permanently altering your evolutionary life path.",
-  AntiVertex: "The polarity point of the Vertex in the eastern hemisphere; reflects personal initiative, internal catalysts, and conscious choices that spark fated meetings.",
-  WhiteMoon: "White Moon Selena represents the guardian angel and pure reservoir of karmic light in your chart. Where Selena sits, you experience divine protection, instinctive moral clarity, innocence, and blessings when you act from selfless integrity.",
-  EastPoint: "The East Point (Equatorial Ascendant) acts as a secondary, mental Ascendant on the celestial equator. It highlights how you instinctively formulate ideas and how your conscious mind projects itself into immediate surroundings.",
-  Proserpine: "Symbolic archetype of the soul surviving the underworld; governs deep cellular regeneration, total metamorphosis after crisis, and spiritual immortality.",
-  Hypnos: "Symbolic archetype of the dream architect; connects waking consciousness to liminal states, lucid dreaming, hypnagogic inspiration, and archetypal memory.",
+  Vertex: "In some modern Western astrology traditions, the Vertex is interpreted as a symbolic point associated with encounters and turning points. This is an interpretive convention, not evidence that events are fated or guaranteed.",
+  AntiVertex: "The geometric opposition of the Vertex, sometimes interpreted symbolically as personal initiative or conscious participation in encounters. This is not a predictive guarantee.",
+  WhiteMoon: "Some modern esoteric astrology traditions interpret White Moon/Selena as a symbolic point associated with ideals, altruism or protection. Its astronomical status, cycle and calculation are not standardized; it is not a physical body and does not establish divine protection.",
+  EastPoint: "The astrological East Point is the ecliptic point whose right ascension is RAMC + 90°. It is distinct from the equatorial point on the eastern horizon. Interpretations as a secondary Ascendant are symbolic conventions.",
+  Proserpine: "A hypothetical symbolic point used by some modern astrologers. No verified physical body or standardized astronomical orbit is represented by this value; meanings are archetypal rather than measured effects.",
+  Hypnos: "A hypothetical symbolic point used by some modern astrologers. No verified physical body or standardized astronomical orbit is represented by this value; meanings are archetypal rather than measured effects.",
 };

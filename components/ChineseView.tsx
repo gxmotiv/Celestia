@@ -105,7 +105,7 @@ export function ChineseView({ baziData }: ChineseViewProps) {
         <div className="p-3.5 bg-slate-900/60 border border-slate-800 rounded-lg">
           <span className="text-[11px] font-medium text-slate-400 block mb-0.5">Day Master Strength</span>
           <span className="text-sm font-semibold text-slate-100 block">{baziData.dayMaster.strength}</span>
-          <span className="text-[11px] text-amber-400/90">Balanced by Wu Xing</span>
+          <span className="text-[11px] text-amber-400/90">Provisional weighted model</span>
         </div>
 
         <div className="p-3.5 bg-slate-900/60 border border-slate-800 rounded-lg">
@@ -154,18 +154,21 @@ export function ChineseView({ baziData }: ChineseViewProps) {
               </h3>
             </div>
             <span className="text-xs font-bold text-slate-300 bg-slate-800 px-2 py-1 rounded">
-              {baziData.dayMaster.strength} Day Master
+              {baziData.dayMaster.strength} (estimate)
             </span>
           </div>
 
           <p className="text-xs text-slate-300 leading-relaxed">
             {baziData.dayMaster.nature}
           </p>
+          <p className="text-[11px] text-amber-200/80 leading-relaxed">
+            Provisional model: this strength estimate uses seasonal element and weighted chart-element counts. The suggested elements are not a complete classical Yong Shen or pattern-selection analysis.
+          </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-slate-800">
             <div className="p-3 bg-slate-950/70 border border-slate-800 rounded-lg">
               <span className="text-[11px] font-semibold text-emerald-400 block mb-1">
-                Favorable Elements (Yong Shen)
+                Model-Suggested Supportive Elements
               </span>
               <ul className="text-xs text-slate-300 space-y-1">
                 {baziData.dayMaster.favorableElements.map((el, i) => (
@@ -178,7 +181,7 @@ export function ChineseView({ baziData }: ChineseViewProps) {
 
             <div className="p-3 bg-slate-950/70 border border-slate-800 rounded-lg">
               <span className="text-[11px] font-semibold text-rose-400 block mb-1">
-                Cautionary Excess
+                Model-Suggested Balancing Elements
               </span>
               <ul className="text-xs text-slate-300 space-y-1">
                 {baziData.dayMaster.unfavorableElements.map((el, i) => (
@@ -199,7 +202,7 @@ export function ChineseView({ baziData }: ChineseViewProps) {
               Five Elements (Wu Xing 五行) Distribution
             </h3>
             <p className="text-xs text-slate-400">
-              Harmonic balance weighted across Stems and Earthly Branches
+              Weighted element distribution across visible stems, branch elements and hidden stems. This is a chart summary, not a complete strength or Useful-God calculation.
             </p>
           </div>
 

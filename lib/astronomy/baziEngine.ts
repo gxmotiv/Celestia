@@ -1,7 +1,7 @@
 /**
  * Comprehensive Chinese BaZi (Four Pillars of Destiny - 八字) & 24 Solar Terms Engine
  * Implements:
- * 1. Solar Calendar & 24 Solar Terms Calculation via Swiss Ephemeris
+ * 1. Solar Calendar & 24 Solar Terms using a numerical solver with astronomy-engine Sun longitude
  * 2. 10 Heavenly Stems (Tian Gan) & 12 Earthly Branches (Di Zhi) with Hidden Stems (Cang Gan)
  * 3. 60 Jia Zi Sexagenary Cycle
  * 4. Four Pillars: Year (Lichun), Month (Solar Terms), Day (60-day cycle), Hour (2-hour branches)
@@ -475,7 +475,7 @@ export function getSolarMonthPosition(sunLongitude: number): {
 
 export class SolarTermCalculator {
   /**
-   * Get Sun's geocentric tropical longitude for any given Date using Swiss Ephemeris
+   * Get the modelled geocentric tropical Sun longitude from the astronomy-engine-backed facade
    */
   public getSunLongitude(date: Date): number {
     const jd = date.getTime() / 86400000.0 + 2440587.5;
@@ -582,7 +582,9 @@ export class SolarTermCalculator {
   public calculateMonthPillar(date: Date, yearStemIndex: number): Pillar {
     const sunLon = this.getSunLongitude(date);
 
-    // The 12 Solar Months start at the 12 Major Solar Nodes (Jie):
+    // The 12 BaZi solar months begin at the twelve Jie (節) month-start
+    // terms, 30° apart. The alternating Qi (氣) terms at 15° midpoints do
+    // not advance the Month Branch.
     // 1. Lichun (315°) = Yin (Tiger, index 2)
     // 2. Jingzhe (345°) = Mao (Rabbit, index 3)
     // 3. Qingming (15°) = Chen (Dragon, index 4)
@@ -794,7 +796,11 @@ export class FiveElementAnalysisEngine {
   }
 
   /**
-   * Evaluate Day Master strength based on Seasonal Support & Resource/Output balance
+   * Provisional Day Master strength estimate.
+   *
+   * This weighted heuristic considers the month-branch element and aggregate
+   * chart element counts. It is not a complete classical Yong Shen / pattern
+   * selection method; the UI must label its output as an estimate.
    */
   private evaluateDayMaster(
     stem: HeavenlyStem,

@@ -1,6 +1,6 @@
 /**
  * Celestia - Phase 1B Relationship Astrology Test Suite
- * Validates the Davison Time-Space Relationship Chart calculation engine:
+ * Validates relationship-chart calculation integrity:
  * 1. Timezone-normalized UTC birth instant conversion (with date/month rollovers).
  * 2. Fractional timezone offsets (e.g. India +5.5, Nepal +5.75, Newfoundland -3.5).
  * 3. Exact time midpoint calculation with sub-minute / second-level precision.
@@ -10,10 +10,12 @@
  * 7. Standard arithmetic mean latitude convention and terrestrial boundary clamping.
  * 8. Julian Day sub-minute precision propagation into ephemeris calculations.
  * 9. Backward compatibility when timezoneOffset is omitted.
- * 10. Robust process exit behavior (exits with non-zero on failure).
+ * 10. Synastry compatibility score invariance when the two charts are reversed.
+ * 11. Strict Davison local civil-time, coordinate and exact UTC instant validation.
+ * 12. Robust process exit behavior (exits with non-zero on failure).
  */
 
-import { DavisonChartEngine, DavisonPersonInput } from "../lib/astronomy/relationshipEngine";
+import { DavisonChartEngine, DavisonPersonInput, SynastryEngine, SynastryAspect, CompositeChartEngine } from "../lib/astronomy/relationshipEngine";
 import { swissEphemeris } from "../lib/astronomy/swissEphemeris";
 import { calculateWesternChart } from "../lib/astronomy/ephemeris";
 
@@ -362,6 +364,272 @@ console.log("\n[TEST GROUP 8] Backward Compatibility");
   );
 }
 
+// ---------------------------------------------------------------------------
+// TEST 9: Exact resolved UTC instants take precedence over numeric offsets
+// ---------------------------------------------------------------------------
+console.log("\n[TEST GROUP 9] Resolved UTC Instant Preservation");
+{
+  const instant = "2024-03-14T20:00:30.250Z";
+  const p1: DavisonPersonInput = {
+    birthDate: "2000-01-01",
+    birthTime: "12:00",
+    latitude: 28.6139,
+    longitude: 77.209,
+    timezoneOffset: 5.5,
+    utcInstant: instant,
+  };
+  const p2: DavisonPersonInput = {
+    birthDate: "2000-01-01",
+    birthTime: "12:00",
+    latitude: 28.6139,
+    longitude: 77.209,
+    timezoneOffset: -8,
+    utcInstant: instant,
+  };
+  const result = engine.calculateDavison(p1, p2);
+  assert(
+    result.midpointDateUtc === instant,
+    "9.1 Explicit UTC instants override conflicting legacy local clocks and offsets",
+    `Actual: ${result.midpointDateUtc}`
+  );
+  assert(
+    result.midpointDateUtc.endsWith(".250Z"),
+    "9.2 Explicit UTC instant preserves millisecond precision",
+    `Actual: ${result.midpointDateUtc}`
+  );
+}
+
+// ---------------------------------------------------------------------------
+// TEST 10: Strict validation prevents invalid civil times and coordinates
+// ---------------------------------------------------------------------------
+console.log("\n[TEST GROUP 10] Davison Input Validation");
+{
+  const valid: DavisonPersonInput = {
+    birthDate: "2024-01-01",
+    birthTime: "12:00",
+    latitude: 0,
+    longitude: 0,
+    timezoneOffset: 0,
+  };
+  const rejects = (action: () => unknown): boolean => {
+    try {
+      action();
+      return false;
+    } catch {
+      return true;
+    }
+  };
+
+  assert(
+    rejects(() => engine.calculateDavison({ ...valid, birthDate: "2024-02-30" }, valid)),
+    "10.1 Invalid Gregorian dates are rejected instead of normalized"
+  );
+  assert(
+    rejects(() => engine.calculateDavison({ ...valid, birthTime: "24:00" }, valid)),
+    "10.2 Out-of-range clock hours are rejected"
+  );
+  assert(
+    rejects(() => engine.calculateDavison({ ...valid, birthTime: "12:60" }, valid)),
+    "10.3 Out-of-range clock minutes are rejected"
+  );
+  assert(
+    rejects(() => engine.calculateDavison({ ...valid, birthTime: "12:00:60" }, valid)),
+    "10.4 Leap-second-style values are not silently normalized as civil birth times"
+  );
+  assert(
+    rejects(() => engine.calculateDavison({ ...valid, timezoneOffset: Number.NaN }, valid)),
+    "10.5 Non-finite numeric UTC offsets are rejected"
+  );
+  assert(
+    rejects(() => engine.calculateDavison({ ...valid, timezoneOffset: 24.5 }, valid)),
+    "10.6 Numeric UTC offsets outside the supported range are rejected"
+  );
+  assert(
+    rejects(() => engine.calculateDavison({ ...valid, latitude: 90.1 }, valid)),
+    "10.7 Latitude outside the terrestrial range is rejected"
+  );
+  assert(
+    rejects(() => engine.calculateDavison({ ...valid, longitude: 180.1 }, valid)),
+    "10.8 Longitude outside the accepted range is rejected"
+  );
+  assert(
+    rejects(() => engine.calculateDavison({ ...valid, utcInstant: "2024-02-30T00:00:00.000Z" }, valid)),
+    "10.9 Invalid ISO UTC instants are rejected"
+  );
+  assert(
+    rejects(() => engine.calculateDavison({ ...valid, birthDate: "2024-02-30", utcInstant: "2024-03-01T00:00:00.000Z" }, valid)),
+    "10.10 Invalid local civil dates are still rejected when a fallback/resolved UTC instant is present"
+  );
+}
+
+// ---------------------------------------------------------------------------
+// TEST 11: Strict legacy offset path still preserves fractional local seconds
+// ---------------------------------------------------------------------------
+console.log("\n[TEST GROUP 11] Legacy Fractional-Second Compatibility");
+{
+  const p1: DavisonPersonInput = {
+    birthDate: "2024-03-15",
+    birthTime: "01:30:10.500",
+    latitude: 28.6139,
+    longitude: 77.209,
+    timezoneOffset: 5.5,
+  };
+  const p2: DavisonPersonInput = { ...p1 };
+  const result = engine.calculateDavison(p1, p2);
+  assert(
+    result.midpointDateUtc === "2024-03-14T20:00:10.500Z",
+    "11.1 Legacy offset conversion accepts precise seconds and retains milliseconds",
+    `Actual: ${result.midpointDateUtc}`
+  );
+}
+
+// ---------------------------------------------------------------------------
+// TEST 12: Synastry compatibility scoring is invariant to chart order
+// ---------------------------------------------------------------------------
+console.log("\n[TEST GROUP 12] Synastry Chart-Order Invariance");
+{
+  const chartFixture = calculateWesternChart(2000, 1, 1, 12, 0, 0, 0, 0, "Placidus");
+  const synastryEngine = new SynastryEngine(chartFixture, chartFixture, "Person A", "Person B");
+  const makeAspect = (planet1: string, planet2: string): SynastryAspect => ({
+    planet1,
+    planet2,
+    symbol1: "A",
+    symbol2: "B",
+    aspectName: "Conjunction",
+    symbol: "☌",
+    angle: 0,
+    orb: 1,
+    isApplying: null,
+    score: 8,
+    nature: "Harmonious",
+    category: "Growth & Purpose",
+    title: "Order symmetry fixture",
+    description: "Synthetic deterministic scoring fixture.",
+    advice: "No interpretive claim.",
+  });
+
+  const cases: Array<{ left: string; right: string; dimension: "physical" | "valuesAlignment" }> = [
+    { left: "Sun", right: "Venus", dimension: "physical" },
+    { left: "Sun", right: "Mars", dimension: "physical" },
+    { left: "Sun", right: "Jupiter", dimension: "valuesAlignment" },
+  ];
+
+  cases.forEach(({ left, right, dimension }, index) => {
+    const forward = synastryEngine.computeCompatibilityScores([makeAspect(left, right)]);
+    const reversed = synastryEngine.computeCompatibilityScores([makeAspect(right, left)]);
+    assert(
+      forward[dimension] > 70 && reversed[dimension] > 70,
+      `12.${index + 1} ${left}-${right} contributes in both chart orders`,
+      `Forward: ${forward[dimension]}, reversed: ${reversed[dimension]}`
+    );
+    assert(
+      forward[dimension] === reversed[dimension] && forward.overall === reversed.overall,
+      `12.${index + 4} ${left}-${right} compatibility is identical when chart order is reversed`,
+      `Forward: ${forward[dimension]}/${forward.overall}, reversed: ${reversed[dimension]}/${reversed.overall}`
+    );
+  });
+
+  // A placeholder can be made to coincide exactly with a real planet. It must
+  // still be rejected by the relationship engine based on provenance metadata.
+  const sunPosition = chartFixture.planets.find((planet) => planet.name === "Sun")!;
+  const chartWithPlaceholder = {
+    ...chartFixture,
+    planets: chartFixture.planets.map((planet) => planet.name === "Chiron"
+      ? { ...planet, longitude: sunPosition.longitude }
+      : planet),
+  };
+  const placeholder = chartWithPlaceholder.planets.find((planet) => planet.name === "Chiron");
+  assert(
+    Boolean(placeholder?.calculationNote),
+    "12.7 Synastry placeholder fixture retains its explicit calculation-quality note"
+  );
+  const placeholderSynastry = new SynastryEngine(
+    chartWithPlaceholder, chartFixture, "Placeholder Person", "Reference Person"
+  );
+  const placeholderAspects = placeholderSynastry.calculateAllInterAspects();
+  assert(
+    !placeholderAspects.some((aspect) => aspect.planet1 === "Chiron" || aspect.planet2 === "Chiron"),
+    "12.8 Synastry excludes Chiron's approximate placeholder even at exact Sun conjunction"
+  );
+}
+
+// ---------------------------------------------------------------------------
+// TEST 13: Composite antipodal midpoint is deterministic and chart-order invariant
+// ---------------------------------------------------------------------------
+console.log("\n[TEST GROUP 13] Composite Antipodal Midpoint Integrity");
+{
+  const base = calculateWesternChart(2000, 1, 1, 12, 0, 0, 0, 0, "Placidus");
+  const makeChart = (sunLongitude: number, ascLongitude: number, mcLongitude: number) => ({
+    ...base,
+    planets: base.planets.map((p) => p.name === "Sun" ? { ...p, longitude: sunLongitude } : p),
+    ascendant: { ...base.ascendant, longitude: ascLongitude },
+    midheaven: { ...base.midheaven, longitude: mcLongitude },
+  });
+  const engine = new CompositeChartEngine();
+  const chartA = makeChart(0, 0, 350);
+  const chartB = makeChart(180, 180, 10);
+  const forward = engine.calculateComposite(chartA, chartB);
+  const reversed = engine.calculateComposite(chartB, chartA);
+  const forwardSun = forward.planets.find((p) => p.name === "Sun");
+  const reversedSun = reversed.planets.find((p) => p.name === "Sun");
+
+  assert(
+    forwardSun?.longitude === 90 && reversedSun?.longitude === 90,
+    "13.1 Exactly antipodal Sun longitudes use the same deterministic midpoint in either chart order",
+    `Forward: ${forwardSun?.longitude}, reversed: ${reversedSun?.longitude}`
+  );
+  assert(
+    forward.ascendant.longitude === reversed.ascendant.longitude &&
+      forward.midheaven.longitude === reversed.midheaven.longitude,
+    "13.2 Exactly antipodal Ascendant and Midheaven midpoints are invariant under chart reversal",
+    `Forward: AC ${forward.ascendant.longitude}/MC ${forward.midheaven.longitude}; reversed: AC ${reversed.ascendant.longitude}/MC ${reversed.midheaven.longitude}`
+  );
+
+  const antiA = makeChart(350, 350, 350);
+  const antiB = makeChart(10, 10, 10);
+  const acrossZero = engine.calculateComposite(antiA, antiB);
+  const acrossZeroReversed = engine.calculateComposite(antiB, antiA);
+  assert(
+    acrossZero.planets.find((p) => p.name === "Sun")?.longitude === 0 &&
+      acrossZeroReversed.planets.find((p) => p.name === "Sun")?.longitude === 0,
+    "13.3 Shortest-arc midpoint across 0° remains correct and order invariant",
+    `Forward: ${acrossZero.planets.find((p) => p.name === "Sun")?.longitude}, reversed: ${acrossZeroReversed.planets.find((p) => p.name === "Sun")?.longitude}`
+  );
+
+  const invalid = makeChart(Number.NaN, 0, 0);
+  let rejected = false;
+  try {
+    engine.calculateComposite(invalid, chartB);
+  } catch {
+    rejected = true;
+  }
+  assert(rejected, "13.4 Non-finite composite planetary longitudes are rejected");
+}
+
+// ---------------------------------------------------------------------------
+// TEST 14: Local Mean Time offset formatting carries rounded minutes into hours
+// ---------------------------------------------------------------------------
+console.log("\n[TEST GROUP 14] LMT Offset Minute Carry");
+{
+  const nearSixHourOffset: DavisonPersonInput = {
+    birthDate: "2024-01-01",
+    birthTime: "12:00",
+    latitude: 0,
+    longitude: 89.999,
+    utcInstant: "2024-01-01T00:00:00.000Z",
+  };
+  const result = engine.calculateDavison(nearSixHourOffset, nearSixHourOffset);
+  assert(
+    result.midpointLmt.includes("UTC+06:00"),
+    "14.1 Offset rounding carries 60 minutes into the next hour",
+    `Actual: ${result.midpointLmt}`
+  );
+  assert(
+    !result.midpointLmt.includes("UTC+05:60"),
+    "14.2 LMT output never emits an invalid 60-minute offset field",
+    `Actual: ${result.midpointLmt}`
+  );
+}
 console.log("\n===============================================================================");
 console.log(`SUMMARY: ${passedCount} PASSED, ${failedCount} FAILED`);
 console.log("===============================================================================");

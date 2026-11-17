@@ -226,6 +226,23 @@ assertTest(
   asp30[0] ? `${asp30[0].aspectType.name} (orb ${asp30[0].orb}°)` : "None"
 );
 
+// Explicitly approximate chart points must not create minor aspects.
+const approximateProbe = {
+  ...createMockPlanet("Chiron", 0, 0),
+  calculationNote: "Synthetic approximation fixture; not a physical ephemeris position.",
+};
+const approximateMinor = engine.calculateMinorAspects([
+  createMockPlanet("Sun", 0),
+  approximateProbe,
+], { ...DEFAULT_ASPECT_SETTINGS, showWeakAspects: true });
+assertTest(
+  "Calculation provenance filter",
+  "Approximate/symbolic points are excluded from minor-aspect geometry",
+  approximateMinor.length === 0,
+  "0 aspects",
+  `${approximateMinor.length} aspect(s)`
+);
+
 // --------------------------------------------------------------------------------
 // GROUP 3: APPLYING VS SEPARATING ACCURACY
 // --------------------------------------------------------------------------------
@@ -254,6 +271,52 @@ assertTest(
   isSep === false,
   "false (Separating)",
   `${isSep}`
+);
+
+// Missing speed is not a licence to substitute an average; zero is a valid
+// instantaneous speed and a stationary relative pair has no applying phase.
+const stationaryVenus = createMockPlanet("Venus", 0, 0);
+const stationaryMoon = createMockPlanet("Moon", 43, 0);
+const stationaryPhase = engine.isAspectApplying(stationaryVenus, stationaryMoon, 45);
+assertTest(
+  "Stationary Aspect Direction",
+  "Two bodies with explicitly zero relative speed are not guessed to be applying or separating",
+  stationaryPhase === null,
+  "null (Direction unavailable)",
+  String(stationaryPhase)
+);
+
+const unavailableSpeedMoon = { ...createMockPlanet("Moon", 43), speed: undefined };
+const unavailablePhase = engine.isAspectApplying(venDirect, unavailableSpeedMoon, 45);
+assertTest(
+  "Missing Speed Direction",
+  "A missing instantaneous speed is reported as unavailable instead of using a default average",
+  unavailablePhase === null,
+  "null (Direction unavailable)",
+  String(unavailablePhase)
+);
+
+// A 0.2-day projection can jump past exactitude when the Moon is already very
+// close. Instantaneous relative motion correctly reports this 0.5° orb as applying.
+const closeApplyingMoon = createMockPlanet("Moon", 44.5, 13.0);
+const closeApplying = engine.isAspectApplying(stationaryVenus, closeApplyingMoon, 45);
+assertTest(
+  "Near-Exact Applying Direction",
+  "A 0.5° orb with the Moon moving toward exactitude remains applying",
+  closeApplying === true,
+  "true (Applying)",
+  String(closeApplying)
+);
+
+const equalSpeedVenus = createMockPlanet("Venus", 0, 1.0);
+const equalSpeedMoon = createMockPlanet("Moon", 43, 1.0);
+const equalSpeedPhase = engine.isAspectApplying(equalSpeedVenus, equalSpeedMoon, 45);
+assertTest(
+  "Equal Relative Speed Direction",
+  "Equal angular speeds preserve the separation and leave the phase unavailable",
+  equalSpeedPhase === null,
+  "null (Direction unavailable)",
+  String(equalSpeedPhase)
 );
 
 // --------------------------------------------------------------------------------
@@ -434,5 +497,5 @@ results.forEach((r, idx) => {
 if (failed > 0) {
   process.exit(1);
 } else {
-  console.log("\nALL 20 MINOR ASPECTS SUITE TESTS PASSED WITH 100% ACCURACY!");
+  console.log("\nALL " + total + " MINOR ASPECTS SUITE TESTS PASSED. A green software suite does not certify astronomical accuracy.");
 }

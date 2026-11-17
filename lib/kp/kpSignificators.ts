@@ -15,38 +15,70 @@ import {
   KPPlanet,
   KPHouseSignificators,
   KPPlanetSignification,
+  KPPlanetSignificationGrade,
+  KPPlanetSignificationLevels,
+  KPNodeAgentRule,
+  KPNodeAgentSource,
+  KPNodeAgentTier,
+  KPNodeRepresentation,
+  KPHouseSignificatorGrade,
   SignificatorLevels,
 } from "./kpTypes";
 import { normalizeDegrees } from "../astronomy/ephemeris";
 
 export class KPSignificators {
-  /**
-   * Determine which house a planet occupies based on KP cuspal boundaries
-   */
-  public static isPlanetInHouse(planetLon: number, houseNum: number, cusps: KPCusps): boolean {
-    const idx = houseNum - 1;
-    const c1 = cusps.cusps[idx];
-    const c2 = cusps.cusps[(idx + 1) % 12];
-    const norm = normalizeDegrees(planetLon);
+  private static validateCusps(cusps: KPCusps): void {
+    if (!Array.isArray(cusps?.cusps) || cusps.cusps.length !== 12 ||
+        cusps.cusps.some((cusp) => !Number.isFinite(cusp))) {
+      throw new Error("KP house assignment requires twelve finite cusp longitudes.");
+    }
 
-    if (c1 <= c2) {
-      return norm >= c1 && norm < c2;
-    } else {
-      // Crosses 0° Aries
-      return norm >= c1 || norm < c2;
+    const normalized = cusps.cusps.map(normalizeDegrees);
+    const spans = normalized.map((cusp, index) =>
+      (normalized[(index + 1) % 12] - cusp + 360) % 360
+    );
+    if (spans.some((span) => span <= 1e-10) ||
+        Math.abs(spans.reduce((sum, span) => sum + span, 0) - 360) > 1e-7) {
+      throw new Error("KP house assignment requires twelve distinct, cyclically ordered cusps covering 360 degrees exactly once.");
     }
   }
 
+  private static isPlanetInHouseUnchecked(planetLon: number, houseNum: number, cusps: KPCusps): boolean {
+    if (!Number.isInteger(houseNum) || houseNum < 1 || houseNum > 12) {
+      throw new Error(`KP house number must be between 1 and 12; received ${houseNum}.`);
+    }
+    const idx = houseNum - 1;
+    const c1 = normalizeDegrees(cusps.cusps[idx]);
+    const c2 = normalizeDegrees(cusps.cusps[(idx + 1) % 12]);
+    const norm = normalizeDegrees(planetLon);
+
+    if (c1 < c2) return norm >= c1 && norm < c2;
+    return norm >= c1 || norm < c2;
+  }
+
   /**
-   * Find house index (1-12) for a given longitude
+   * Determine which house a planet occupies based on validated KP cuspal boundaries.
+   */
+  public static isPlanetInHouse(planetLon: number, houseNum: number, cusps: KPCusps): boolean {
+    if (!Number.isFinite(planetLon)) {
+      throw new Error("KP house assignment requires a finite planetary longitude.");
+    }
+    KPSignificators.validateCusps(cusps);
+    return this.isPlanetInHouseUnchecked(planetLon, houseNum, cusps);
+  }
+
+  /**
+   * Find house index (1-12) for a given longitude.
    */
   public static getPlanetHouse(planetLon: number, cusps: KPCusps): number {
-    for (let h = 1; h <= 12; h++) {
-      if (this.isPlanetInHouse(planetLon, h, cusps)) {
-        return h;
-      }
+    if (!Number.isFinite(planetLon)) {
+      throw new Error("KP house assignment requires a finite planetary longitude.");
     }
-    return 1;
+    KPSignificators.validateCusps(cusps);
+    for (let h = 1; h <= 12; h++) {
+      if (this.isPlanetInHouseUnchecked(planetLon, h, cusps)) return h;
+    }
+    throw new Error(`KP could not assign longitude ${planetLon} to any house; refusing to default to house 1.`);
   }
 
   /**
@@ -57,6 +89,14 @@ export class KPSignificators {
     cusps: KPCusps,
     planets: KPPlanet[]
   ): KPHouseSignificators {
+    KPSignificators.validateCusps(cusps);
+    if (!Number.isInteger(house) || house < 1 || house > 12) {
+      throw new Error(`KP significator house must be between 1 and 12; received ${house}.`);
+    }
+    if (!Array.isArray(cusps.houseLords) || cusps.houseLords.length !== 12 ||
+        cusps.houseLords.some((lord) => typeof lord !== "string" || !lord.trim())) {
+      throw new Error("KP house significators require twelve valid cusp sign lords.");
+    }
     const houseLord = cusps.houseLords[house - 1];
     const occupants: string[] = [];
     const planetsInStar: string[] = [];
@@ -64,7 +104,7 @@ export class KPSignificators {
 
     // 1. Find Occupants (Grade II / Level B)
     planets.forEach((p) => {
-      if (KPSignificators.isPlanetInHouse(p.siderealLon, house, cusps)) {
+      if (KPSignificators.isPlanetInHouseUnchecked(p.siderealLon, house, cusps)) {
         occupants.push(p.name);
       }
     });
@@ -129,6 +169,305 @@ export class KPSignificators {
   }
 
   /**
+   * Return the strongest Grade I-IV house signification for a planet across
+   * the requested houses. Grade I outranks II, III and IV; no result means no
+   * direct significator match in the requested set.
+   */
+  public getStrongestHouseSignificatorGrade(
+    planetName: string,
+    houses: number[],
+    houseSignificators: Record<number, KPHouseSignificators>
+  ): KPHouseSignificatorGrade | undefined {
+    const grades: Array<[keyof SignificatorLevels, KPHouseSignificatorGrade]> = [
+      ["levelA", "I"],
+      ["levelB", "II"],
+      ["levelC", "III"],
+      ["levelD", "IV"],
+    ];
+
+    for (const [levelKey, grade] of grades) {
+      if (houses.some((houseNumber) =>
+        houseSignificators[houseNumber]?.levels[levelKey].includes(planetName)
+      )) {
+        return grade;
+      }
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Resolve Rahu/Ketu as agents using an explicitly selected KSK Reader variant.
+   * Reader VI places the node's star lord before aspecting planets; Reader III/V
+   * places aspecting planets before the star lord. This method never treats the
+   * nodes as sign owners or as aspect-casting planets.
+   */
+  public calculateNodeRepresentations(
+    planets: KPPlanet[],
+    planetSignifications: Record<string, KPPlanetSignification>,
+    rule: KPNodeAgentRule = "reader-vi"
+  ): Partial<Record<"Rahu" | "Ketu", KPNodeRepresentation>> {
+    const result: Partial<Record<"Rahu" | "Ketu", KPNodeRepresentation>> = {};
+    const nodeNames = ["Rahu", "Ketu"] as const;
+    const classicalAspectors = new Set(["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"]);
+    const offsetsFor = (name: string): number[] => {
+      if (name === "Mars") return [4, 7, 8];
+      if (name === "Jupiter") return [5, 7, 9];
+      if (name === "Saturn") return [3, 7, 10];
+      return [7];
+    };
+
+    planets.forEach((planet) => {
+      if (!Number.isInteger(planet.signIndex) || planet.signIndex < 0 || planet.signIndex > 11) {
+        throw new Error(`KP node representation requires a valid sidereal sign index for ${planet.name}.`);
+      }
+      if (!Number.isInteger(planet.house) || planet.house < 1 || planet.house > 12) {
+        throw new Error(`KP node representation requires a valid occupied house for ${planet.name}.`);
+      }
+    });
+
+    nodeNames.forEach((nodeName) => {
+      const node = planets.find((planet) => planet.name === nodeName);
+      if (!node) return;
+      if (!node.starLord?.trim() || !node.signLord?.trim()) {
+        throw new Error(`KP node representation requires star lord and sign lord data for ${nodeName}.`);
+      }
+
+      const conjoined = planets
+        .filter((planet) =>
+          classicalAspectors.has(planet.name) &&
+          planet.name !== nodeName &&
+          planet.signIndex === node.signIndex
+        )
+        .map((planet) => planet.name);
+
+      const starAgent =
+        node.starLord && node.starLord !== nodeName &&
+        node.starLord !== "Rahu" && node.starLord !== "Ketu" &&
+        planets.some((planet) => planet.name === node.starLord)
+          ? [node.starLord]
+          : [];
+
+      const aspecting = planets
+        .filter((planet) => {
+          if (!classicalAspectors.has(planet.name)) return false;
+          const offset = ((node.signIndex - planet.signIndex + 12) % 12) + 1;
+          return offsetsFor(planet.name).includes(offset);
+        })
+        .map((planet) => planet.name);
+
+      const signAgent =
+        node.signLord && node.signLord !== nodeName &&
+        node.signLord !== "Rahu" && node.signLord !== "Ketu" &&
+        planets.some((planet) => planet.name === node.signLord)
+          ? [node.signLord]
+          : [];
+
+      const priorityOrder: KPNodeAgentSource[] = rule === "reader-vi"
+        ? ["conjunction", "star-lord", "aspect", "sign-lord"]
+        : ["conjunction", "aspect", "star-lord", "sign-lord"];
+      const agentPlanets: Record<KPNodeAgentSource, string[]> = {
+        conjunction: conjoined,
+        "star-lord": starAgent,
+        aspect: aspecting,
+        "sign-lord": signAgent,
+      };
+      const agentTiers: KPNodeAgentTier[] = priorityOrder.map((source, index) => {
+        const names = agentPlanets[source];
+        const levelSets = {
+          levelA: new Set<number>(),
+          levelB: new Set<number>(),
+          levelC: new Set<number>(),
+          levelD: new Set<number>(),
+        };
+        const houses = new Set<number>();
+        names.forEach((name) => {
+          const agentSignification = planetSignifications[name];
+          if (!agentSignification) {
+            throw new Error(`KP node agent ${name} has no calculated house signification.`);
+          }
+          (Object.keys(levelSets) as Array<keyof typeof levelSets>).forEach((grade) => {
+            agentSignification.levels[grade].forEach((house) => {
+              levelSets[grade].add(house);
+              houses.add(house);
+            });
+          });
+        });
+        const levels = {
+          levelA: Array.from(levelSets.levelA).sort((a, b) => a - b),
+          levelB: Array.from(levelSets.levelB).sort((a, b) => a - b),
+          levelC: Array.from(levelSets.levelC).sort((a, b) => a - b),
+          levelD: Array.from(levelSets.levelD).sort((a, b) => a - b),
+        };
+        return {
+          source,
+          priority: index + 1,
+          planets: names,
+          levels,
+          signifiedHouses: Array.from(houses).sort((a, b) => a - b),
+        };
+      });
+
+      // KSK material gives the node's occupied house as a direct signification,
+      // then the most prominent available representative as the practical agent.
+      const preferredTier = agentTiers.find((tier) => tier.planets.length > 0);
+      const preferredAgentHouses = preferredTier?.signifiedHouses ?? [];
+      const allAgentHouses = Array.from(new Set(
+        agentTiers.flatMap((tier) => tier.signifiedHouses)
+      )).sort((a, b) => a - b);
+      const representedHouses = Array.from(new Set([
+        node.house,
+        ...preferredAgentHouses,
+      ])).sort((a, b) => a - b);
+
+      result[nodeName] = {
+        node: nodeName,
+        occupiedHouse: node.house,
+        sign: node.sign,
+        signLord: node.signLord,
+        starLord: node.starLord,
+        rule,
+        conjunctionPolicy: "same-sidereal-sign-provisional",
+        aspectPolicy: "parashari-full-sign-drishti-classical-seven",
+        priorityOrder,
+        agentTiers,
+        preferredAgentSource: preferredTier?.source,
+        preferredAgentPlanets: preferredTier?.planets ?? [],
+        preferredAgentHouses,
+        allAgentHouses,
+        representedHouses,
+      };
+    });
+
+    return result;
+  }
+
+  /**
+   * Promote a selected node agent into the same house-level Grade I/II/III/IV
+   * in which its represented planet occurs. These house grades are distinct
+   * from the agent planet's separate A/B/C/D house-signification grades.
+   * Raw source occupants/star tenants remain unchanged.
+   */
+  public applyNodeAgentsToHouseSignificators(
+    baseHouseSignificators: Record<number, KPHouseSignificators>,
+    nodeRepresentations: Partial<Record<"Rahu" | "Ketu", KPNodeRepresentation>>
+  ): Record<number, KPHouseSignificators> {
+    const result: Record<number, KPHouseSignificators> = {};
+    Object.entries(baseHouseSignificators).forEach(([houseKey, house]) => {
+      result[Number(houseKey)] = {
+        ...house,
+        levels: {
+          levelA: [...house.levels.levelA],
+          levelB: [...house.levels.levelB],
+          levelC: [...house.levels.levelC],
+          levelD: [...house.levels.levelD],
+        },
+        allSignificators: [...house.allSignificators],
+      };
+    });
+
+    const gradeKeys: Array<keyof SignificatorLevels> = ["levelA", "levelB", "levelC", "levelD"];
+    (["Rahu", "Ketu"] as const).forEach((nodeName) => {
+      const representation = nodeRepresentations[nodeName];
+      if (!representation) return;
+      const preferredTier = representation.agentTiers.find(
+        (tier) => tier.source === representation.preferredAgentSource
+      );
+      if (!preferredTier) return;
+
+      preferredTier.planets.forEach((agentPlanet) => {
+        Object.values(baseHouseSignificators).forEach((baseHouse) => {
+          const derivedHouse = result[baseHouse.house];
+          if (!derivedHouse) {
+            throw new Error(`KP node agent ${nodeName} references missing house ${baseHouse.house}.`);
+          }
+          gradeKeys.forEach((grade) => {
+            // The node inherits the representative's *house-to-planet* grade,
+            // not the representative's independent planet-to-house A/B/C/D grade.
+            if (baseHouse.levels[grade].includes(agentPlanet) &&
+                !derivedHouse.levels[grade].includes(nodeName)) {
+              derivedHouse.levels[grade].push(nodeName);
+            }
+          });
+        });
+      });
+    });
+
+    Object.values(result).forEach((house) => {
+      house.allSignificators = Array.from(new Set([
+        ...house.levels.levelA,
+        ...house.levels.levelB,
+        ...house.levels.levelC,
+        ...house.levels.levelD,
+      ]));
+    });
+
+    return result;
+  }
+
+  /**
+   * Apply the selected node-agent chain to the otherwise classical A-D table.
+   * Only the preferred Reader tier is injected into the main A-D result;
+   * alternate tiers remain visible in the node cascade for auditability.
+   */
+  public applyNodeAgentSignifications(
+    planets: KPPlanet[],
+    baseSignifications: Record<string, KPPlanetSignification>,
+    nodeRepresentations: Partial<Record<"Rahu" | "Ketu", KPNodeRepresentation>>
+  ): Record<string, KPPlanetSignification> {
+    const expanded: Record<string, KPPlanetSignification> = {};
+
+    planets.forEach((planet) => {
+      const base = baseSignifications[planet.name];
+      if (!base) throw new Error(`KP node integration is missing base signification for ${planet.name}.`);
+
+      const isNode = planet.name === "Rahu" || planet.name === "Ketu";
+      const nodeForStarLord = planet.starLord === "Rahu" || planet.starLord === "Ketu"
+        ? planet.starLord
+        : undefined;
+      const nodeRepresentation = isNode
+        ? nodeRepresentations[planet.name as "Rahu" | "Ketu"]
+        : nodeForStarLord
+        ? nodeRepresentations[nodeForStarLord]
+        : undefined;
+
+      if ((isNode || nodeForStarLord) && !nodeRepresentation) {
+        throw new Error(`KP node integration cannot resolve the representative cascade for ${isNode ? planet.name : nodeForStarLord}.`);
+      }
+
+      const nodeAgentHouses = isNode
+        ? [...(nodeRepresentation?.representedHouses ?? [])]
+        : undefined;
+      const starLordNodeAgentHouses = nodeForStarLord
+        ? [...(nodeRepresentation?.representedHouses ?? [])]
+        : undefined;
+
+      const levelA = Array.from(new Set([
+        ...base.levels.levelA,
+        ...(starLordNodeAgentHouses ?? []),
+      ])).sort((a, b) => a - b);
+      const signifiedHouses = Array.from(new Set([
+        ...base.signifiedHouses,
+        ...(nodeAgentHouses ?? []),
+        ...(starLordNodeAgentHouses ?? []),
+      ])).sort((a, b) => a - b);
+
+      expanded[planet.name] = {
+        ...base,
+        levels: {
+          ...base.levels,
+          levelA,
+        },
+        nodeAgentHouses,
+        starLordNodeAgentHouses,
+        signifiedHouses,
+      };
+    });
+
+    return expanded;
+  }
+
+  /**
    * Calculate all 12 houses significators
    */
   public calculateAllHouseSignificators(
@@ -163,16 +502,40 @@ export class KPSignificators {
     });
 
     planets.forEach((p) => {
-      const selfInfo = planetMap[p.name] || { occupies: 1, owns: [] };
-      const starInfo = planetMap[p.starLord] || { occupies: 1, owns: [] };
-      const subInfo = planetMap[p.subLord] || { occupies: 1, owns: [] };
+      const selfInfo = planetMap[p.name];
+      const starInfo = planetMap[p.starLord];
+      const subInfo = planetMap[p.subLord];
+      if (!selfInfo) throw new Error(`KP signification cannot resolve chart position for ${p.name}.`);
+      if (!starInfo) throw new Error(`KP signification cannot resolve star lord ${p.starLord} for ${p.name}.`);
+      if (!subInfo) throw new Error(`KP signification cannot resolve sub lord ${p.subLord} for ${p.name}.`);
 
-      // In KP: Planet strongly signifies houses of Star Lord, then its own
-      const housesSet = new Set<number>();
-      housesSet.add(starInfo.occupies);
-      starInfo.owns.forEach((h) => housesSet.add(h));
-      housesSet.add(selfInfo.occupies);
-      selfInfo.owns.forEach((h) => housesSet.add(h));
+      // Classical KP planet-level four-fold significations. Keep the four
+      // grades separate: A=star lord's occupied house, B=planet's occupied
+      // house, C=star lord's owned houses, D=planet's owned houses.
+      const levels = {
+        levelA: [starInfo.occupies],
+        levelB: [selfInfo.occupies],
+        levelC: [...starInfo.owns],
+        levelD: [...selfInfo.owns],
+      };
+
+      // Classical "self-strength": no other planet tenants this planet's
+      // stars. Keep this test distinct from the modern Gondhalekar own-star
+      // Positional Status override, which belongs to the separate 4-Step engine.
+      const starTenants = planets
+        .filter((candidate) => candidate.name !== p.name && candidate.starLord === p.name)
+        .map((candidate) => candidate.name);
+      const hasSelfStrength = starTenants.length === 0;
+      const strengthOrder: KPPlanetSignificationGrade[] = hasSelfStrength
+        ? ["B", "A", "D", "C"]
+        : ["A", "B", "C", "D"];
+
+      const housesSet = new Set<number>([
+        ...levels.levelA,
+        ...levels.levelB,
+        ...levels.levelC,
+        ...levels.levelD,
+      ]);
 
       result[p.name] = {
         planet: p.name,
@@ -184,6 +547,10 @@ export class KPSignificators {
         subLord: p.subLord,
         subLordOccupiesHouse: subInfo.occupies,
         subLordOwnsHouses: subInfo.owns,
+        levels,
+        strengthOrder,
+        starTenants,
+        hasSelfStrength,
         signifiedHouses: Array.from(housesSet).sort((a, b) => a - b),
       };
     });

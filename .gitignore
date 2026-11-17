@@ -8,3 +8,6 @@ coverage/
 tsconfig.tsbuildinfo
 .aistudio/
 backups/
+.open-next/
+.wrangler/
+.dev.vars

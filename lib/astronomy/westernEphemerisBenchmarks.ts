@@ -1,0 +1,207 @@
+/**
+ * Helpers for independent JPL Horizons comparisons of Celestia's apparent
+ * geocentric ecliptic planet coordinates.
+ *
+ * These helpers deliberately do not assume the two providers have identical
+ * correction models or frames. Residuals are measurements, not accuracy claims.
+ */
+
+export const WESTERN_HORIZONS_BODIES = [
+  { name: "Sun", targetId: "10" },
+  { name: "Moon", targetId: "301" },
+  { name: "Mercury", targetId: "199" },
+  { name: "Venus", targetId: "299" },
+  { name: "Mars", targetId: "499" },
+  { name: "Jupiter", targetId: "599" },
+  { name: "Saturn", targetId: "699" },
+  { name: "Uranus", targetId: "799" },
+  { name: "Neptune", targetId: "899" },
+  { name: "Pluto", targetId: "999" },
+] as const;
+
+export type WesternHorizonsBody = typeof WESTERN_HORIZONS_BODIES[number]["name"];
+
+
+const HORIZONS_API_ENDPOINT = "https://ssd.jpl.nasa.gov/api/horizons.api";
+
+/**
+ * Builds an observer-table query using Horizons' documented TLIST syntax:
+ * every calendar instant is individually quoted, and the list itself is
+ * space-delimited. Wrapping the entire list in one pair of quotes is invalid.
+ */
+export function buildJplWesternHorizonsQueryUrl(targetId: string, epochsUtc: string[]): string {
+  if (!/^\d+$/.test(targetId)) {
+    throw new RangeError("Horizons target id must contain decimal digits only.");
+  }
+  if (epochsUtc.length === 0) {
+    throw new RangeError("At least one UTC epoch is required for a Horizons query.");
+  }
+  const utcList = epochsUtc.map((value) => {
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value) ||
+        !Number.isFinite(Date.parse(value)) ||
+        new Date(value).toISOString() !== value) {
+      throw new Error("Invalid canonical UTC benchmark epoch: " + value);
+    }
+    const parsed = new Date(value);
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const calendarDate = value.slice(0, 4) + "-" + monthNames[parsed.getUTCMonth()] +
+      "-" + value.slice(8, 10);
+    return "'" + calendarDate + " " + value.slice(11, 23) + "'";
+  }).join(" ");
+
+  const parameters: Record<string, string> = {
+    format: "json",
+    COMMAND: "'" + targetId + "'",
+    OBJ_DATA: "'NO'",
+    MAKE_EPHEM: "'YES'",
+    EPHEM_TYPE: "'OBSERVER'",
+    CENTER: "'500@399'",
+    TLIST: utcList,
+    TLIST_TYPE: "'CAL'",
+    TIME_TYPE: "'UT'",
+    TIME_DIGITS: "'FRACSEC'",
+    TIME_ZONE: "'+00:00'",
+    CAL_TYPE: "'GREGORIAN'",
+    ANG_FORMAT: "'DEG'",
+    REF_SYSTEM: "'ICRF'",
+    APPARENT: "'AIRLESS'",
+    QUANTITIES: "'31'",
+  };
+  const url = new URL(HORIZONS_API_ENDPOINT);
+  for (const [key, value] of Object.entries(parameters)) {
+    url.searchParams.set(key, value);
+  }
+  return url.toString().replace(/\+/g, "%20");
+}
+
+export interface EclipticCoordinate {
+  longitudeDegrees: number;
+  latitudeDegrees: number;
+}
+
+export interface HorizonsEclipticRow extends EclipticCoordinate {
+  epochUtc: string;
+}
+
+export interface EclipticResidual {
+  longitudeArcseconds: number;
+  latitudeArcseconds: number;
+}
+
+export function signedCircularDifferenceDegrees(
+  actualDegrees: number,
+  referenceDegrees: number
+): number {
+  if (!Number.isFinite(actualDegrees) || !Number.isFinite(referenceDegrees)) {
+    throw new RangeError("Angular comparison requires finite degree values.");
+  }
+  const raw = ((actualDegrees - referenceDegrees) % 360 + 360) % 360;
+  return raw >= 180 ? raw - 360 : raw;
+}
+
+export function compareEclipticCoordinates(
+  actual: EclipticCoordinate,
+  reference: EclipticCoordinate
+): EclipticResidual {
+  if (
+    !Number.isFinite(actual.longitudeDegrees) ||
+    !Number.isFinite(actual.latitudeDegrees) ||
+    !Number.isFinite(reference.longitudeDegrees) ||
+    !Number.isFinite(reference.latitudeDegrees)
+  ) {
+    throw new RangeError("Ecliptic comparison requires finite longitude and latitude values.");
+  }
+  return {
+    longitudeArcseconds:
+      Math.abs(signedCircularDifferenceDegrees(actual.longitudeDegrees, reference.longitudeDegrees)) * 3600,
+    latitudeArcseconds:
+      Math.abs(actual.latitudeDegrees - reference.latitudeDegrees) * 3600,
+  };
+}
+
+/**
+ * Parses the numeric data rows between Horizons' $$SOE / $$EOE markers for a
+ * query requesting QUANTITIES=31 only. Observer quantity 31 is emitted as the
+ * final two numeric fields: ecliptic longitude and latitude in degrees.
+ */
+function parseHorizonsCalendarEpoch(dateToken: string, timeToken: string): string {
+  const dateMatch = /^(\d{4})-([A-Za-z]{3})-(\d{2})$/.exec(dateToken);
+  const timeMatch = /^(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?$/.exec(timeToken);
+  const monthIndex = dateMatch
+    ? ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+        .indexOf(dateMatch[2])
+    : -1;
+  if (!dateMatch || !timeMatch || monthIndex < 0) {
+    throw new Error("Unexpected Horizons calendar timestamp: " + dateToken + " " + timeToken);
+  }
+  const year = Number(dateMatch[1]);
+  const day = Number(dateMatch[3]);
+  const hour = Number(timeMatch[1]);
+  const minute = Number(timeMatch[2]);
+  const second = Number(timeMatch[3]);
+  const fraction = (timeMatch[4] ?? "").padEnd(3, "0");
+  const millisecond = Number(fraction.slice(0, 3));
+  const date = new Date(Date.UTC(year, monthIndex, day, hour, minute, second, millisecond));
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== monthIndex ||
+    date.getUTCDate() !== day ||
+    hour > 23 || minute > 59 || second > 60
+  ) {
+    throw new Error("Invalid Horizons calendar timestamp: " + dateToken + " " + timeToken);
+  }
+  return date.toISOString();
+}
+
+/**
+ * Parses quantity-31 observer rows and verifies every returned timestamp and
+ * its order against the requested UTC epoch list before returning coordinates.
+ */
+export function parseHorizonsObserverEclipticRows(
+  outputText: string,
+  expectedEpochsUtc: string[]
+): HorizonsEclipticRow[] {
+  if (!Array.isArray(expectedEpochsUtc) || expectedEpochsUtc.length === 0) {
+    throw new RangeError("Expected Horizons epochs must be a non-empty UTC list.");
+  }
+  const startMarker = outputText.indexOf("$$SOE");
+  const endMarker = outputText.indexOf("$$EOE");
+  if (startMarker < 0 || endMarker < 0 || endMarker <= startMarker) {
+    throw new Error("Horizons output is missing a valid $$SOE / $$EOE data section.");
+  }
+
+  const dataSection = outputText.slice(startMarker + 5, endMarker);
+  const lines = dataSection.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const rows: HorizonsEclipticRow[] = [];
+  for (const line of lines) {
+    const fields = line.split(/\s+/);
+    if (fields.length < 4) {
+      throw new Error("Unexpected Horizons quantity-31 row: " + line);
+    }
+    const epochUtc = parseHorizonsCalendarEpoch(fields[0], fields[1]);
+    const expectedEpochUtc = expectedEpochsUtc[rows.length];
+    if (epochUtc !== expectedEpochUtc) {
+      throw new Error(
+        "Horizons returned epoch " + epochUtc +
+        " at row " + (rows.length + 1) +
+        "; expected " + expectedEpochUtc + "."
+      );
+    }
+    const longitudeDegrees = Number(fields[fields.length - 2]);
+    const latitudeDegrees = Number(fields[fields.length - 1]);
+    if (!Number.isFinite(longitudeDegrees) || !Number.isFinite(latitudeDegrees)) {
+      throw new Error("Horizons quantity-31 row does not end in numeric longitude/latitude: " + line);
+    }
+    if (longitudeDegrees < 0 || longitudeDegrees >= 360 || latitudeDegrees < -90 || latitudeDegrees > 90) {
+      throw new Error("Horizons returned ecliptic coordinates outside valid angular ranges: " + line);
+    }
+    rows.push({ epochUtc, longitudeDegrees, latitudeDegrees });
+  }
+
+  if (rows.length !== expectedEpochsUtc.length) {
+    throw new Error(
+      "Horizons returned " + rows.length + " data rows; expected " + expectedEpochsUtc.length + "."
+    );
+  }
+  return rows;
+}

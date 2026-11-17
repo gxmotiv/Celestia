@@ -6,10 +6,17 @@
  */
 
 import * as Astronomy from "astronomy-engine";
+import { calculateEastPointLongitude, calculateVertexLongitude } from "./anglePoints";
+import { calculateRegiomontanusHouses } from "./regiomontanusHouses";
+import { calculateKochHouses } from "./kochHouses";
+import { calculateCampanusHouses } from "./campanusHouses";
+import { calculateAlcabitiusHouses } from "./alcabitiusHouses";
+import { calculateMorinusHouses } from "./morinusHouses";
+import { calculateMeridianHouses } from "./meridianHouses";
 
 export interface SwissPlanetPosition {
-  longitude: number;      // Exact position (0.001° accuracy)
-  latitude: number;       // Declination / celestial latitude
+  longitude: number;      // Ecliptic longitude in degrees, rounded for display (not an accuracy guarantee)
+  latitude: number;       // Ecliptic latitude in degrees (not declination)
   distance: number;       // AU from Earth
   speed: number;          // Degrees per day (retrograde detection)
   isRetrograde: boolean;  // True if retrograde
@@ -17,6 +24,9 @@ export interface SwissPlanetPosition {
   degree: number;         // 0 to 29.999° in sign
   house: number | null;   // Assigned house number (1-12)
 }
+
+/** Selects which ascending lunar node model is used for the Rahu/Ketu pair. */
+export type LunarNodeType = "mean" | "true";
 
 export interface SwissAllPlanets {
   sun: SwissPlanetPosition;
@@ -38,6 +48,14 @@ export interface SwissHouseResult {
   midheaven: number;
   houseCusps: number[]; // Array of 12 house cusps (1-indexed semantics: [0..11] or 12 items)
   vertex: number;
+  /** Local apparent sidereal time / RAMC in degrees, using the same model as house cusps. */
+  localSiderealTime: number;
+  /** True obliquity of date in degrees, matching Astronomy Engine GAST. */
+  obliquity: number;
+  houseSystemUsed: "P" | "W" | "E" | "O" | "R" | "K" | "C" | "B" | "M" | "X";
+  /** Discloses a documented method-specific orientation adjustment or fallback. */
+  houseSystemNote?: string;
+  equatorialAscendant: number;
 }
 
 export interface SwissAspect {
@@ -111,13 +129,25 @@ export class SwissEphemerisEngine {
   }
 
   /**
-   * Calculates the exact Chitra Paksha (Lahiri) Ayanamsa for a given Julian Day
+   * Returns the application's polynomial Lahiri/Chitrapaksha-style ayanamsa
+   * approximation for a Julian Day. This is not a native Swiss Ephemeris call
+   * and is not independently certified as an exact value for every epoch.
    */
   public getAyanamsa(julianDay: number): number {
+    if (!Number.isFinite(julianDay)) {
+      throw new RangeError("Julian Day must be finite.");
+    }
     const T = (julianDay - 2451545.0) / 36525.0;
-    // IAU Chitra Paksha / Lahiri Ayanamsa: 23°51'25.53" at J2000.0 (23.85709°)
-    const ayanamsa = 23.85709 + 1.396971 * T - 0.0003086 * T * T;
-    return ayanamsa;
+    // IAE 1989 precession polynomial relative to J2000, applied to this app's
+    // Lahiri-style J2000 zero point. Coefficients are arcseconds per century
+    // (and higher powers thereof). This is an approximation, not native
+    // Swiss Ephemeris SE_SIDM_LAHIRI and does not add a full nutation model.
+    const ayanamsaArcseconds =
+      85885.53 +
+      5029.0966 * T +
+      1.11161 * T * T -
+      0.000113 * T * T * T;
+    return ayanamsaArcseconds / 3600.0;
   }
 
   /**
@@ -279,7 +309,9 @@ export class SwissEphemerisEngine {
   }
 
   /**
-   * Calculate EXACT planetary position with 0.001° precision
+   * Calculate an apparent geocentric position using astronomy-engine.
+   * Returned coordinates are rounded to 0.0001°; decimal places do not
+   * represent the underlying ephemeris accuracy.
    */
   public calculatePlanetPosition(
     planet: number,
@@ -309,7 +341,7 @@ export class SwissEphemerisEngine {
     let speed = 0;
 
     if (body !== null) {
-      // Calculate apparent geocentric ecliptic coordinates (including light-time aberration & nutation)
+      // Request the library's apparent geocentric vector, then transform it to ecliptic coordinates.
       const vec = Astronomy.GeoVector(body, time, true);
       const ecl = Astronomy.Ecliptic(vec);
       lon = (ecl.elon % 360 + 360) % 360;
@@ -325,7 +357,8 @@ export class SwissEphemerisEngine {
       if (diff < -180) diff += 360;
       speed = diff * 24.0;
     } else if (planet === this.MEAN_NODE || planet === this.TRUE_NODE) {
-      // High precision Lunar Nodes based on Swiss Ephemeris / Meeus formulas
+      // Mean-node polynomial and this application's approximate true-node
+      // periodic corrections. These are not calls to Swiss Ephemeris/libswe.
       const T = (julianDay - 2451545.0) / 36525.0;
       let omega = 125.04452 - 1934.136261 * T + 0.0020708 * T * T + (T * T * T) / 450000;
 
@@ -343,7 +376,7 @@ export class SwissEphemerisEngine {
       }
 
       lon = (omega % 360 + 360) % 360;
-      speed = -0.05295; // Mean node retrograde motion
+      speed = -0.05295; // Approximate mean retrograde rate (also used for this true-node approximation)
       dist = 0.00257; // Average lunar distance in AU
     }
 
@@ -368,23 +401,85 @@ export class SwissEphemerisEngine {
   }
 
   /**
-   * Unrounded apparent geocentric tropical solar longitude from astronomy-engine.
-   * This is deliberately separate from the rounded display-oriented planet result.
+   * Unrounded apparent geocentric tropical ecliptic coordinates for the major
+   * solar-system bodies supported by Astronomy Engine.
+   *
+   * GeoVector applies light-time and the requested stellar-aberration correction;
+   * Ecliptic transforms the J2000-equatorial vector into true ecliptic coordinates
+   * of date. This intentionally does not claim to reproduce every Horizons
+   * correction (notably its gravitational light deflection and IAU76/80 frame).
    */
-  public getApparentSunLongitude(julianDay: number): number {
+  public getApparentGeocentricEclipticPosition(
+    bodyName: "Sun" | "Moon" | "Mercury" | "Venus" | "Mars" | "Jupiter" |
+      "Saturn" | "Uranus" | "Neptune" | "Pluto",
+    julianDay: number
+  ): { longitude: number; latitude: number } {
     if (!Number.isFinite(julianDay)) {
       throw new RangeError("Julian Day must be finite.");
     }
+    const body = {
+      Sun: Astronomy.Body.Sun,
+      Moon: Astronomy.Body.Moon,
+      Mercury: Astronomy.Body.Mercury,
+      Venus: Astronomy.Body.Venus,
+      Mars: Astronomy.Body.Mars,
+      Jupiter: Astronomy.Body.Jupiter,
+      Saturn: Astronomy.Body.Saturn,
+      Uranus: Astronomy.Body.Uranus,
+      Neptune: Astronomy.Body.Neptune,
+      Pluto: Astronomy.Body.Pluto,
+    }[bodyName];
     const time = new Astronomy.AstroTime(julianDay - 2451545.0);
-    const vector = Astronomy.GeoVector(Astronomy.Body.Sun, time, true);
+    const vector = Astronomy.GeoVector(body, time, true);
     const ecliptic = Astronomy.Ecliptic(vector);
-    return ((ecliptic.elon % 360) + 360) % 360;
+    return {
+      longitude: ((ecliptic.elon % 360) + 360) % 360,
+      latitude: ecliptic.elat,
+    };
+  }
+
+  /** Unrounded apparent geocentric tropical solar longitude. */
+  public getApparentSunLongitude(julianDay: number): number {
+    return this.getApparentGeocentricEclipticPosition("Sun", julianDay).longitude;
+  }
+
+  /** Unrounded apparent geocentric tropical lunar longitude. */
+  public getApparentMoonLongitude(julianDay: number): number {
+    return this.getApparentGeocentricEclipticPosition("Moon", julianDay).longitude;
   }
 
   /**
-   * Calculate ALL planets at once (Tropical or Sidereal)
+   * Return the ten major planetary positions and one internally consistent
+   * Rahu/Ketu pair. Ketu is always exactly 180° from the selected ascending
+   * node model; it is never calculated from a different node model.
+   *
+   * The default preserves the prior chart convention (mean node). Pass "true"
+   * to use this engine's approximate true-node formula for both ends.
    */
-  public calculateAllPlanets(julianDay: number, isSidereal: boolean = false): SwissAllPlanets {
+  public calculateAllPlanets(
+    julianDay: number,
+    isSidereal: boolean = false,
+    nodeType: LunarNodeType = "mean"
+  ): SwissAllPlanets {
+    if (nodeType !== "mean" && nodeType !== "true") {
+      throw new RangeError("Lunar node type must be 'mean' or 'true'.");
+    }
+
+    const ascendingNode = this.calculatePlanetPosition(
+      nodeType === "mean" ? this.MEAN_NODE : this.TRUE_NODE,
+      julianDay,
+      isSidereal
+    );
+    const ketuLongitude = Math.round((((ascendingNode.longitude + 180) % 360) + 360) % 360 * 10000) / 10000;
+    const ketu: SwissPlanetPosition = {
+      ...ascendingNode,
+      longitude: ketuLongitude,
+      sign: this.getZodiacSign(ketuLongitude),
+      degree: Math.round((ketuLongitude % 30) * 10000) / 10000,
+      latitude: 0,
+      isRetrograde: ascendingNode.speed < 0,
+    };
+
     return {
       sun: this.calculatePlanetPosition(this.SUN, julianDay, isSidereal),
       moon: this.calculatePlanetPosition(this.MOON, julianDay, isSidereal),
@@ -396,20 +491,23 @@ export class SwissEphemerisEngine {
       uranus: this.calculatePlanetPosition(this.URANUS, julianDay, isSidereal),
       neptune: this.calculatePlanetPosition(this.NEPTUNE, julianDay, isSidereal),
       pluto: this.calculatePlanetPosition(this.PLUTO, julianDay, isSidereal),
-      rahu: this.calculatePlanetPosition(this.MEAN_NODE, julianDay, isSidereal),
-      ketu: this.calculatePlanetPosition(this.TRUE_NODE, julianDay, isSidereal),
+      rahu: ascendingNode,
+      ketu,
     };
   }
 
   /**
-   * Calculate astrological houses (Placidus, Equal, Whole Sign)
+   * Calculate Placidus, Equal, Whole Sign, Porphyry, Regiomontanus, Koch, Campanus, Alcabitius or Morinus and Meridian / Axial Rotation houses.
    */
   public calculateHouses(
     julianDay: number,
     latitude: number,
     longitude: number,
-    system: "P" | "W" | "E" = "P"
+    system: "P" | "W" | "E" | "O" | "R" | "K" | "C" | "B" | "M" | "X" = "P"
   ): SwissHouseResult {
+    if (!Number.isFinite(julianDay) || !Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+      throw new RangeError("House calculation requires a finite Julian Day, latitude within ±90°, and longitude within ±180°.");
+    }
     const time = new Astronomy.AstroTime(julianDay - 2451545.0);
 
     // Greenwich Apparent Sidereal Time (GST) in hours
@@ -417,9 +515,14 @@ export class SwissEphemerisEngine {
     // Right Ascension of Midheaven (RAMC) in degrees
     const ramc = ((gstHours * 15.0 + longitude) % 360.0 + 360.0) % 360.0;
 
-    // True Obliquity of the Ecliptic with nutation
-    const T = (julianDay - 2451545.0) / 36525.0;
-    const epsDeg = 23.4392911 - 0.0130042 * T - 0.00000016 * T * T + 0.000000504 * T * T * T;
+    // SiderealTime() returns Greenwich Apparent Sidereal Time (GAST), whose
+    // reference equinox includes nutation. Use the matching true obliquity of
+    // date rather than mixing GAST with a mean-obliquity polynomial.
+    const earthTilt = Astronomy.e_tilt(time);
+    const epsDeg = earthTilt.tobl;
+    if (!Number.isFinite(epsDeg)) {
+      throw new RangeError("Astronomy Engine returned an invalid true obliquity.");
+    }
     const eps = epsDeg * (Math.PI / 180.0);
     const phi = latitude * (Math.PI / 180.0);
     const radRamc = ramc * (Math.PI / 180.0);
@@ -435,41 +538,159 @@ export class SwissEphemerisEngine {
     ) * (180.0 / Math.PI);
     if (asc < 0) asc += 360.0;
 
-    // Vertex calculation (western electric axis)
-    const ramcVertex = (ramc + 180.0) * (Math.PI / 180.0);
-    let vertex = Math.atan2(
-      Math.cos(ramcVertex),
-      -Math.sin(ramcVertex) * Math.cos(eps) + (1 / Math.tan(phi || 0.0001)) * Math.sin(eps)
-    ) * (180.0 / Math.PI);
-    if (vertex < 0) vertex += 360.0;
+    const vertex = calculateVertexLongitude(ramc, latitude, epsDeg);
+    const equatorialAscendant = calculateEastPointLongitude(ramc, epsDeg);
 
+    // Placidus is undefined at polar-circle latitudes. Use the standard Porphyry
+    // quadrant fallback explicitly instead of allowing a trigonometric result to
+    // masquerade as a valid Placidus chart.
+    let systemUsed: "P" | "W" | "E" | "O" | "R" | "K" | "C" | "B" | "M" | "X" =
+      system === "P" && Math.abs(latitude) >= 66.5622
+        ? "O"
+        : system === "K" && Math.abs(latitude) >= 90 - epsDeg
+          ? "O"
+          : system === "C" && Math.abs(latitude) >= 90
+            ? "O"
+            : system === "B" && Math.abs(latitude) >= 90
+              ? "O"
+              : system;
+    let houseSystemNote: string | undefined =
+      system === "C" && systemUsed === "O"
+        ? "Campanus house construction is indeterminate at the exact geographic poles; Porphyry quadrant houses were used instead."
+        : system === "B" && systemUsed === "O"
+          ? "Alcabitius semi-arc construction is indeterminate at the exact geographic poles; Porphyry quadrant houses were used instead."
+          : undefined;
     const cusps: number[] = new Array(12);
 
-    if (system === "W") {
+    if (systemUsed === "W") {
       // Whole Sign System: House 1 begins at 0° of Ascendant sign
       const ascSignIdx = Math.floor(asc / 30);
       for (let i = 0; i < 12; i++) {
         cusps[i] = ((ascSignIdx + i) % 12) * 30.0;
       }
-    } else if (system === "E") {
+    } else if (systemUsed === "E") {
       // Equal House System: 30° divisions starting from ASC
       for (let i = 0; i < 12; i++) {
         cusps[i] = (asc + i * 30.0) % 360.0;
       }
+    } else if (systemUsed === "O") {
+      // Porphyry: divide each ecliptic quadrant into three equal arcs.
+      const ascendant = asc;
+      const descendant = (asc + 180.0) % 360.0;
+      const ic = (mc + 180.0) % 360.0;
+      const forwardArc = (from: number, to: number) => ((to - from) % 360 + 360) % 360;
+      const q1 = forwardArc(ascendant, ic);
+      const q2 = forwardArc(ic, descendant);
+      const q3 = forwardArc(descendant, mc);
+      const q4 = forwardArc(mc, ascendant);
+      cusps[0] = ascendant;
+      cusps[1] = (ascendant + q1 / 3) % 360;
+      cusps[2] = (ascendant + 2 * q1 / 3) % 360;
+      cusps[3] = ic;
+      cusps[4] = (ic + q2 / 3) % 360;
+      cusps[5] = (ic + 2 * q2 / 3) % 360;
+      cusps[6] = descendant;
+      cusps[7] = (descendant + q3 / 3) % 360;
+      cusps[8] = (descendant + 2 * q3 / 3) % 360;
+      cusps[9] = mc;
+      cusps[10] = (mc + q4 / 3) % 360;
+      cusps[11] = (mc + 2 * q4 / 3) % 360;
+    } else if (systemUsed === "R") {
+      // Regiomontanus divides the celestial equator into 30° arcs and
+      // projects each division to the ecliptic through the horizon's
+      // north/south points. This is independent of Porphyry quadrant trisection.
+      const regio = calculateRegiomontanusHouses(ramc, latitude, epsDeg);
+      asc = regio.ascendant;
+      mc = regio.midheaven;
+      for (let index = 0; index < 12; index += 1) {
+        cusps[index] = regio.houseCusps[index];
+      }
+    } else if (systemUsed === "K") {
+      // Koch (Birthplace) houses trisect the MC's semi-diurnal arc. The
+      // ascensional difference of the MC adjusts four pseudo-sidereal angles,
+      // whose rising ecliptic intersections define cusps 11, 12, 2 and 3.
+      // Polar-circle requests were explicitly resolved to Porphyry above.
+      const koch = calculateKochHouses(ramc, latitude, epsDeg);
+      asc = koch.ascendant;
+      mc = koch.midheaven;
+      for (let index = 0; index < 12; index += 1) {
+        cusps[index] = koch.houseCusps[index];
+      }
+    } else if (systemUsed === "C") {
+      // Campanus divides the prime vertical into equal 30° arcs and projects
+      // the resulting great-circle house boundaries through the horizon's
+      // north/south points onto the ecliptic.
+      const campanus = calculateCampanusHouses(ramc, latitude, epsDeg);
+      asc = campanus.ascendant;
+      mc = campanus.midheaven;
+      if (campanus.polarShifted) {
+        houseSystemNote = "Campanus polar orientation was rotated 180° to preserve the conventional house-cusp ordering; house assignment uses the resulting reversed cusp direction.";
+      }
+      for (let index = 0; index < 12; index += 1) {
+        cusps[index] = campanus.houseCusps[index];
+      }
+    } else if (systemUsed === "B") {
+      // Alcabitius trisects the Ascendant's diurnal and nocturnal semi-arcs
+      // in right ascension, then projects the resulting points to the ecliptic.
+      const alcabitius = calculateAlcabitiusHouses(ramc, latitude, epsDeg);
+      asc = alcabitius.ascendant;
+      mc = alcabitius.midheaven;
+      if (alcabitius.orientationAdjusted) {
+        houseSystemNote = "Alcabitius applied its documented 180° Ascendant orientation adjustment before deriving the semi-arcs.";
+      }
+      for (let index = 0; index < 12; index += 1) {
+        cusps[index] = alcabitius.houseCusps[index];
+      }
+    } else if (systemUsed === "X") {
+      // Meridian / Axial Rotation divides the ecliptic into points whose
+      // right ascensions are ARMC + n × 30°. This is not Morinus: it uses
+      // the inverse equatorial-to-ecliptic transformation.
+      const meridian = calculateMeridianHouses(ramc, epsDeg);
+      for (let index = 0; index < 12; index += 1) {
+        cusps[index] = meridian.houseCusps[index];
+      }
+      const ascendantToMidheaven = ((asc - mc + 540) % 360) - 180;
+      if (ascendantToMidheaven < 0) {
+        asc = (asc + 180) % 360;
+        houseSystemNote = "Meridian / Axial Rotation preserved the Ascendant on the eastern horizon by applying the documented 180° orientation adjustment; the Meridian cusps are unchanged.";
+      }
+    } else if (systemUsed === "M") {
+      // Morinus divides the celestial equator into twelve equal 30° arcs
+      // beginning at ARMC and projects each point to the ecliptic. These
+      // cusps are latitude-independent and differ from the Meridian system.
+      const morinus = calculateMorinusHouses(ramc, epsDeg);
+      for (let index = 0; index < 12; index += 1) {
+        cusps[index] = morinus.houseCusps[index];
+      }
+
+      // Swiss Ephemeris keeps the Ascendant on the eastern horizon at polar
+      // orientations where the raw angular difference places it on the west.
+      const ascendantToMidheaven = ((asc - mc + 540) % 360) - 180;
+      if (ascendantToMidheaven < 0) {
+        asc = (asc + 180) % 360;
+        houseSystemNote = "Morinus preserved the Ascendant on the eastern horizon by applying the documented 180° polar-orientation adjustment; the latitude-independent Morinus cusps are unchanged.";
+      }
     } else {
       // Placidus House System
-      cusps[9] = mc; // 10th house
       cusps[3] = (mc + 180.0) % 360.0; // 4th house (IC)
       cusps[0] = asc; // 1st house
       cusps[6] = (asc + 180.0) % 360.0; // 7th house (DESC)
+      cusps[9] = mc; // 10th house (MC)
 
       // Calculate Placidus semi-arc cusps (11, 12, 2, 3)
       const calcPlacidusCusp = (f: number, ramcOffset: number): number => {
         let r = (ramc + ramcOffset) * (Math.PI / 180.0);
         for (let iter = 0; iter < 10; iter++) {
-          const sinDec = Math.sin(eps) * Math.sin(r);
-          const cosDec = Math.cos(Math.asin(Math.max(-1, Math.min(1, sinDec))));
-          const tanDec = sinDec / (cosDec || 0.0001);
+          // The iteration variable r is right ascension. Declination must
+          // be computed from the corresponding ecliptic longitude, not from
+          // right ascension itself. Convert RA -> ecliptic longitude first.
+          const eclipticLongitude = Math.atan2(
+            Math.sin(r),
+            Math.cos(r) * Math.cos(eps)
+          );
+          const sinDec = Math.sin(eps) * Math.sin(eclipticLongitude);
+          const cosDec = Math.sqrt(Math.max(0, 1 - sinDec * sinDec));
+          const tanDec = sinDec / Math.max(cosDec, 1e-12);
           const semiArcRatio = Math.asin(Math.max(-1, Math.min(1, Math.tan(phi) * tanDec))) * f;
           r = (ramc + ramcOffset) * (Math.PI / 180.0) + semiArcRatio;
         }
@@ -489,11 +710,60 @@ export class SwissEphemerisEngine {
         cusps[7] = (cusps[1] + 180.0) % 360.0;  // 8th house
         cusps[8] = (cusps[2] + 180.0) % 360.0;  // 9th house
       } catch {
-        // Fallback for extreme polar latitudes
-        for (let i = 0; i < 12; i++) {
-          cusps[i] = (asc + i * 30.0) % 360.0;
+        // A numerical Placidus failure must never be reported as Placidus.
+        // Use the explicit Porphyry quadrant method and expose that fallback.
+        systemUsed = "O";
+        const ascendant = asc;
+        const descendant = (asc + 180.0) % 360.0;
+        const ic = (mc + 180.0) % 360.0;
+        const forwardArc = (from: number, to: number) => ((to - from) % 360 + 360) % 360;
+        const quadrants = [
+          [ascendant, ic],
+          [ic, descendant],
+          [descendant, mc],
+          [mc, ascendant],
+        ] as const;
+        for (let quadrant = 0; quadrant < 4; quadrant++) {
+          const [start, end] = quadrants[quadrant];
+          const arc = forwardArc(start, end);
+          const base = quadrant * 3;
+          cusps[base] = start;
+          cusps[base + 1] = (start + arc / 3) % 360;
+          cusps[base + 2] = (start + 2 * arc / 3) % 360;
         }
       }
+    }
+
+    const hasTwelveFiniteCusps = () =>
+      Array.from({ length: 12 }, (_, index) => cusps[index]).every(Number.isFinite);
+
+    if (!hasTwelveFiniteCusps() && systemUsed !== "O") {
+      // Math functions return NaN rather than throwing for some invalid
+      // semi-arc configurations. Detect that explicitly and resolve using
+      // the documented Porphyry quadrant fallback.
+      systemUsed = "O";
+      const ascendant = asc;
+      const descendant = (asc + 180.0) % 360.0;
+      const ic = (mc + 180.0) % 360.0;
+      const forwardArc = (from: number, to: number) => ((to - from) % 360 + 360) % 360;
+      const quadrants = [
+        [ascendant, ic],
+        [ic, descendant],
+        [descendant, mc],
+        [mc, ascendant],
+      ] as const;
+      for (let quadrant = 0; quadrant < 4; quadrant++) {
+        const [start, end] = quadrants[quadrant];
+        const arc = forwardArc(start, end);
+        const base = quadrant * 3;
+        cusps[base] = start;
+        cusps[base + 1] = (start + arc / 3) % 360;
+        cusps[base + 2] = (start + 2 * arc / 3) % 360;
+      }
+    }
+
+    if (!hasTwelveFiniteCusps() || !Number.isFinite(asc) || !Number.isFinite(mc)) {
+      throw new RangeError("House calculation could not produce twelve finite cusps and valid angles.");
     }
 
     const round4 = (v: number) => Math.round(v * 10000) / 10000;
@@ -503,6 +773,11 @@ export class SwissEphemerisEngine {
       midheaven: round4(mc),
       houseCusps: cusps.map(round4),
       vertex: round4(vertex),
+      localSiderealTime: round4(ramc),
+      obliquity: round4(epsDeg),
+      houseSystemUsed: systemUsed,
+      houseSystemNote,
+      equatorialAscendant: round4(equatorialAscendant),
     };
   }
 

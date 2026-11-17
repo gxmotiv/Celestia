@@ -30,6 +30,12 @@ interface AIReadingViewProps {
   birthTime: string;
   cityName: string;
   country: string;
+  latitude?: number;
+  longitude?: number;
+  utcInstant?: string;
+  ianaTimezone?: string;
+  utcOffsetSeconds?: number;
+  isBirthTimeUnknown?: boolean;
   western: WesternChartData;
   vedic: VedicChartData;
   numerology: NumerologyProfile;
@@ -44,6 +50,12 @@ export function AIReadingView({
   birthTime,
   cityName,
   country,
+  latitude,
+  longitude,
+  utcInstant,
+  ianaTimezone,
+  utcOffsetSeconds,
+  isBirthTimeUnknown = false,
   western,
   vedic,
   numerology,
@@ -92,23 +104,29 @@ export function AIReadingView({
           date: birthDate,
           time: birthTime,
           place: `${cityName}, ${country}`,
-          latitude: western.ascendant.longitude || 0,
-          longitude: western.midheaven.longitude || 0,
-          timezone: `UTC${cityName ? "" : "+0"}`,
+          latitude: latitude ?? western.birthLatitude ?? null,
+          longitude: longitude ?? western.birthLongitude ?? null,
+          utcInstant: utcInstant ?? null,
+          ianaTimezone: ianaTimezone ?? null,
+          utcOffsetSeconds: utcOffsetSeconds ?? null,
+          timeKnown: !isBirthTimeUnknown,
         },
         western: {
           sun: {
-            sign: sun?.sign || "Taurus",
-            degree: Math.round((sun?.signDegree || 0) * 10) / 10,
-            house: sun?.house || 1,
+            sign: sun?.sign ?? null,
+            degree: sun ? Math.round(sun.signDegree * 10) / 10 : null,
+            house: sun?.house ?? null,
           },
           moon: {
-            sign: moon?.sign || "Scorpio",
-            degree: Math.round((moon?.signDegree || 0) * 10) / 10,
-            house: moon?.house || 2,
+            sign: moon?.sign ?? null,
+            degree: moon ? Math.round(moon.signDegree * 10) / 10 : null,
+            house: moon?.house ?? null,
           },
           ascendant: western.ascendant.sign,
           midheaven: western.midheaven.sign,
+          houseSystem: western.houseSystem,
+          requestedHouseSystem: western.requestedHouseSystem ?? null,
+          houseSystemNote: western.houseSystemNote ?? null,
           planets: westernPlanetsMap,
           aspects: western.aspects.slice(0, 8).map((a) => ({
             planet1: a.planet1,
@@ -127,7 +145,6 @@ export function AIReadingView({
           currentDasha: {
             planet: vedic.currentMahadasha,
             subPlanet: vedic.currentAntardasha,
-            yearsRemaining: "Active cycle",
           },
           navamsa: {
             lagna: vedic.lagna.navamsaRasiName,
@@ -161,6 +178,25 @@ export function AIReadingView({
         readingMode: modeToUse,
         readingLength,
         userQuestion: modeToUse === "question" ? userQuestion : undefined,
+        // Include the exact calculated objects powering the on-screen result
+        // cards. The API route caps and forwards this structured context.
+        chartContext: {
+          western,
+          vedic,
+          numerology,
+          bazi: chinese,
+          chartMetadata: {
+            birthDate,
+            birthTime,
+            utcInstant: utcInstant ?? null,
+            ianaTimezone: ianaTimezone ?? null,
+            utcOffsetSeconds: utcOffsetSeconds ?? null,
+            latitude: latitude ?? western.birthLatitude ?? null,
+            longitude: longitude ?? western.birthLongitude ?? null,
+            timeKnown: !isBirthTimeUnknown,
+            location: `${cityName}, ${country}`,
+          },
+        },
       };
 
       const res = await fetch("/api/astrology/ai-reading", {
@@ -170,12 +206,18 @@ export function AIReadingView({
       });
 
       const data = await res.json();
-      if (data.success && data.reading) {
+      if (!res.ok || !data.success) {
+        throw new Error(typeof data.error === "string" ? data.error : "The AI gateway could not complete this reading.");
+      }
+      if (data.reading) {
         setReadingText(data.reading);
         setIsAiGenerated(data.isAiGenerated);
       }
     } catch (err) {
-      console.error("Failed to generate AI reading:", err);
+      const message = err instanceof Error ? err.message : "Unknown error.";
+      console.error("Failed to generate AI reading:", err instanceof Error ? err.name : "unknown_error");
+      setReadingText("### AI request not completed\n" + message + "\n\nYour calculated chart data has not been changed.");
+      setIsAiGenerated(false);
     } finally {
       setIsLoading(false);
     }
@@ -282,6 +324,12 @@ export function AIReadingView({
           baziData={chinese}
           birthDate={birthDate}
           birthTime={birthTime}
+          birthUtcInstant={utcInstant}
+          birthLongitude={longitude}
+          birthLatitude={latitude}
+          birthIanaTimezone={ianaTimezone}
+          birthUtcOffsetSeconds={utcOffsetSeconds}
+          isBirthTimeUnknown={isBirthTimeUnknown}
           cityName={cityName}
           country={country}
           fullName={fullName}
@@ -296,7 +344,7 @@ export function AIReadingView({
               <div>
                 <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-amber-400" />
-                  AI Interpretation Engine (Gemini 3.8 Flash Synthesis)
+                  AI Interpretation Engine (NaraRouter Dual-Model Gateway)
                 </h3>
                 <p className="text-xs text-slate-400">
                   Select an interpretive focus area or interrogate the multi-system matrix directly.
@@ -398,7 +446,7 @@ export function AIReadingView({
         {/* Primary Generate Trigger */}
         <div className="flex items-center justify-between pt-2">
           <span className="text-xs text-slate-400">
-            Engineered with Gemini 3.8 Flash & Grounded Mathematical Ephemeris
+            Grounded in Celestia chart calculations · NaraRouter AI
           </span>
 
           <button
@@ -542,7 +590,7 @@ export function AIReadingView({
           <div className="pt-6 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-2">
             <div className="flex items-center gap-2">
               <span className="font-mono text-amber-400/90">
-                {isAiGenerated ? "Generated via Gemini 3.8 Intelligence" : "Calculated via Astronomical Synthesizer"}
+                {isAiGenerated ? "Generated via AI Gateway" : "Calculated via Astronomical Synthesizer"}
               </span>
               <span aria-hidden="true">·</span>
               <span>{readingLength === "detailed" ? "Comprehensive Dossier" : "Executive Brief"}</span>

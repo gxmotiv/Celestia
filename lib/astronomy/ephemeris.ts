@@ -1,8 +1,10 @@
 /**
- * High-Precision Ephemeris and Astrological Calculations Engine
- * Computes geocentric ecliptic coordinates for the Sun, Moon, 8 planets, Lunar Nodes,
- * Midheaven (MC), Ascendant (ASC), and 12 House Cusps (Placidus, Equal, Whole Sign).
- * Fully client-side, self-contained, and compliant with astronomical standards (VSOP/Meeus).
+ * Natal-chart calculation and formatting layer.
+ *
+ * Planetary positions are supplied by the astronomy-engine-backed compatibility
+ * facade in ./swissEphemeris. The legacy facade name does not mean native Swiss
+ * Ephemeris/libswe is installed or called. Display rounding is not a guarantee of
+ * physical ephemeris accuracy; consult the project accuracy audit for limitations.
  */
 
 import { swissEphemeris } from "./swissEphemeris";
@@ -12,8 +14,14 @@ import { LunarPointsCalculator, AdditionalPoints } from "./lunarPointsCalculator
 import { ArabianPartsCalculator, ArabianPartsResult } from "./arabianPartsCalculator";
 import { PlanetaryHoursCalculator, PlanetaryHoursResult } from "./planetaryHours";
 import { AlmutenFigurisCalculator, AlmutenFigurisResult } from "./almutenFigurisCalculator";
+import { isSunAboveHorizon } from "./horizon";
+import { recommendWesternHouseSystem } from "./westernHouseSystemPolicy";
+import { calculateMorinusHouses } from "./morinusHouses";
+import { calculateMeridianHouses } from "./meridianHouses";
 
 export type SolarProximity = "Cazimi" | "Combust" | "UnderBeams" | "Free";
+export type WesternHouseSystem = "Auto" | "Placidus" | "Equal" | "WholeSign" | "Porphyry" | "Regiomontanus" | "Koch" | "Campanus" | "Alcabitius" | "Morinus" | "Meridian";
+export type ResolvedWesternHouseSystem = Exclude<WesternHouseSystem, "Auto">;
 
 export interface PlanetPosition {
   id: string;
@@ -31,6 +39,22 @@ export interface PlanetPosition {
   element: "Fire" | "Earth" | "Air" | "Water";
   modality: "Cardinal" | "Fixed" | "Mutable";
   solarProximity?: SolarProximity;
+  /** Discloses a known approximation or symbolic placeholder used for this point. */
+  calculationNote?: string;
+  /** Unknown when the current coordinate model does not calculate instantaneous direction. */
+  motionStatus?: "unknown";
+}
+
+/**
+ * Return only points with a calculation model suitable for derived Western
+ * geometry. Approximate/symbolic placeholders remain visible in the natal
+ * chart, but must not silently generate aspects, harmonics, declinations,
+ * transit contacts, or specialist contacts.
+ */
+export function filterCalculationReadyPoints(
+  points: readonly PlanetPosition[]
+): PlanetPosition[] {
+  return points.filter((point) => !point.calculationNote);
 }
 
 export interface HouseCusp {
@@ -49,7 +73,8 @@ export interface AspectData {
   angle: number; // nominal angle: 0, 60, 90, 120, 180, etc.
   actualDiff: number; // absolute difference
   orb: number; // orb difference from exact
-  isApplying: boolean;
+  /** Null when one point has no modeled speed or the relative speed is stationary. */
+  isApplying: boolean | null;
   nature: "Harmonious" | "Challenging" | "Neutral";
 }
 
@@ -63,9 +88,16 @@ export interface WesternChartData {
   descendant: number;
   imumCoeli: number;
   julianDay: number;
-  siderealTime: number; // RAMC in degrees
+  siderealTime: number; // local sidereal time / RAMC in degrees
   obliquity: number;
-  houseSystem: "Placidus" | "Equal" | "WholeSign";
+  birthLatitude?: number;
+  birthLongitude?: number; // east-positive degrees
+  /** House system actually used for the Western chart. */
+  houseSystem: ResolvedWesternHouseSystem;
+  /** User selection before automatic/polar fallback resolution. */
+  requestedHouseSystem?: WesternHouseSystem;
+  /** Explains automatic selection or a polar fallback when applicable. */
+  houseSystemNote?: string;
   asteroids?: AsteroidPositions;
   additionalPoints?: AdditionalPoints;
   arabianParts?: ArabianPartsResult;
@@ -124,6 +156,42 @@ export function normalizeDegrees(deg: number): number {
   let d = deg % 360.0;
   if (d < 0) d += 360.0;
   return d;
+}
+
+/**
+ * Determines whether a moving longitude is closing on an aspect to a fixed
+ * reference longitude. relativeSpeed is longitude1 minus longitude2 in degrees/day.
+ * Returns null when speed is stationary/unknown or the aspect is exactly
+ * partile, where a single instant cannot establish applying vs separating.
+ */
+export function isAngularAspectApplying(
+  longitude1: number,
+  longitude2: number,
+  aspectAngle: number,
+  relativeSpeed: number
+): boolean | null {
+  if (![longitude1, longitude2, aspectAngle, relativeSpeed].every(Number.isFinite) ||
+      Math.abs(relativeSpeed) < 1e-12) {
+    return null;
+  }
+
+  const separation = normalizeDegrees(longitude1 - longitude2);
+  const targets = aspectAngle === 0 || aspectAngle === 180
+    ? [normalizeDegrees(aspectAngle)]
+    : [normalizeDegrees(aspectAngle), normalizeDegrees(360 - aspectAngle)];
+
+  let nearestSignedError = 0;
+  let nearestMagnitude = Number.POSITIVE_INFINITY;
+  for (const target of targets) {
+    const signedError = normalizeDegrees(separation - target + 180) - 180;
+    if (Math.abs(signedError) < nearestMagnitude) {
+      nearestMagnitude = Math.abs(signedError);
+      nearestSignedError = signedError;
+    }
+  }
+
+  if (nearestMagnitude < 1e-9) return null;
+  return nearestSignedError * relativeSpeed < 0;
 }
 
 export function formatDegreeMinute(deg: number): string {
@@ -418,13 +486,13 @@ export function calculateLunarNode(T: number): number {
 
 /**
  * Houses calculation:
- * Midheaven (MC), Ascendant (ASC), and intermediate cusps (Placidus, Equal, Whole Sign)
+ * Midheaven (MC), Ascendant (ASC), and house cusps (Placidus, Equal, Whole Sign, Morinus and Meridian)
  */
 export function calculateHouses(
   ramc: number, // Right Ascension of Midheaven in degrees (Local Sidereal Time)
   lat: number, // Geographic latitude in degrees
   obliquity: number, // Obliquity of ecliptic in degrees
-  system: "Placidus" | "Equal" | "WholeSign" = "Placidus"
+  system: "Placidus" | "Equal" | "WholeSign" | "Morinus" | "Meridian" = "Placidus"
 ): { mc: number; asc: number; cusps: number[] } {
   const ramcRad = ramc * DEG2RAD;
   const latRad = lat * DEG2RAD;
@@ -443,7 +511,28 @@ export function calculateHouses(
 
   const cusps = new Array<number>(12).fill(0);
 
-  if (system === "Equal") {
+  if (system === "Meridian") {
+    // Meridian / Axial Rotation projects ecliptic points whose right
+    // ascensions are spaced by 30° from the local meridian. It is distinct
+    // from Morinus, which starts with points on the celestial equator.
+    const meridian = calculateMeridianHouses(ramc, obliquity);
+    const ascendantToMidheaven = ((asc - mc + 540) % 360) - 180;
+    if (ascendantToMidheaven < 0) asc = normalizeDegrees(asc + 180);
+    for (let house = 0; house < 12; house += 1) {
+      cusps[house] = meridian.houseCusps[house];
+    }
+  } else if (system === "Morinus") {
+    // Morinus cusps are projected from the celestial equator and do not
+    // depend on geographic latitude. Keep the astronomical Ascendant as a
+    // separate angle, adjusting it only when the raw solution is on the
+    // western half of the horizon at a polar orientation.
+    const morinus = calculateMorinusHouses(ramc, obliquity);
+    const ascendantToMidheaven = ((asc - mc + 540) % 360) - 180;
+    if (ascendantToMidheaven < 0) asc = normalizeDegrees(asc + 180);
+    for (let house = 0; house < 12; house += 1) {
+      cusps[house] = morinus.houseCusps[house];
+    }
+  } else if (system === "Equal") {
     // Equal house: Each house is exactly 30 degrees starting from Ascendant
     for (let h = 0; h < 12; h++) {
       cusps[h] = normalizeDegrees(asc + h * 30);
@@ -505,16 +594,35 @@ export function calculateHouses(
  * Determine which house a given ecliptic longitude falls into
  */
 export function getHouseNumber(lon: number, cusps: number[]): number {
+  if (cusps.length !== 12 || !cusps.every(Number.isFinite) || !Number.isFinite(lon)) {
+    throw new RangeError("House assignment requires twelve finite house cusps and a finite longitude.");
+  }
   const norm = normalizeDegrees(lon);
+
+  // Most house systems list cusps in increasing zodiacal longitude. Some
+  // high-latitude position-circle systems rotate the entire celestial frame
+  // by 180°, producing a valid reversed cusp sequence. Determine which of the
+  // two possible circular directions makes one complete 360° circuit.
+  let forwardTotal = 0;
+  let reverseTotal = 0;
   for (let i = 0; i < 12; i++) {
-    const c1 = cusps[i];
-    const c2 = cusps[(i + 1) % 12];
-    if (c1 <= c2) {
-      if (norm >= c1 && norm < c2) return i + 1;
-    } else {
-      // Crosses 0 degrees Aries
-      if (norm >= c1 || norm < c2) return i + 1;
-    }
+    const current = normalizeDegrees(cusps[i]);
+    const next = normalizeDegrees(cusps[(i + 1) % 12]);
+    forwardTotal += normalizeDegrees(next - current);
+    reverseTotal += normalizeDegrees(current - next);
+  }
+  const forward = forwardTotal <= reverseTotal;
+
+  for (let i = 0; i < 12; i++) {
+    const current = normalizeDegrees(cusps[i]);
+    const next = normalizeDegrees(cusps[(i + 1) % 12]);
+    const arc = forward
+      ? normalizeDegrees(next - current)
+      : normalizeDegrees(current - next);
+    const offset = forward
+      ? normalizeDegrees(norm - current)
+      : normalizeDegrees(current - norm);
+    if (offset < arc) return i + 1;
   }
   return 1;
 }
@@ -559,20 +667,22 @@ export function formatPoint(
  */
 export function calculateAspects(planets: PlanetPosition[]): AspectData[] {
   const aspects: AspectData[] = [];
+  // Refuse to derive aspects from explicitly approximate/symbolic placeholder positions.
+  const aspectablePlanets = filterCalculationReadyPoints(planets);
   const MAJOR_ASPECTS = [
+    // The five classical Ptolemaic aspects. Quincunx and Semisextile
+    // are classified and calculated by MinorAspectsEngine instead.
     { name: "Conjunction", symbol: "☌", angle: 0, defaultOrb: 8, nature: "Neutral" as const },
     { name: "Sextile", symbol: "⚹", angle: 60, defaultOrb: 6, nature: "Harmonious" as const },
     { name: "Square", symbol: "□", angle: 90, defaultOrb: 7, nature: "Challenging" as const },
     { name: "Trine", symbol: "△", angle: 120, defaultOrb: 8, nature: "Harmonious" as const },
     { name: "Opposition", symbol: "☍", angle: 180, defaultOrb: 8, nature: "Challenging" as const },
-    { name: "Quincunx", symbol: "⚻", angle: 150, defaultOrb: 3, nature: "Challenging" as const },
-    { name: "Semisextile", symbol: "⚺", angle: 30, defaultOrb: 2.5, nature: "Neutral" as const },
   ];
 
-  for (let i = 0; i < planets.length; i++) {
-    for (let j = i + 1; j < planets.length; j++) {
-      const p1 = planets[i];
-      const p2 = planets[j];
+  for (let i = 0; i < aspectablePlanets.length; i++) {
+    for (let j = i + 1; j < aspectablePlanets.length; j++) {
+      const p1 = aspectablePlanets[i];
+      const p2 = aspectablePlanets[j];
 
       // Exclude North Node - South Node opposition (it's always 180° by definition)
       if (
@@ -594,9 +704,17 @@ export function calculateAspects(planets: PlanetPosition[]): AspectData[] {
         const orbDiff = Math.abs(diff - asp.angle);
 
         if (orbDiff <= maxOrb) {
-          // Applying vs separating check based on relative speeds
-          const relativeSpeed = (p1.speed || 1) - (p2.speed || 0.5);
-          const isApplying = relativeSpeed > 0 ? diff < asp.angle : diff > asp.angle;
+          // Compare the signed angular error to the nearest aspect branch.
+          const hasInstantaneousSpeeds =
+            typeof p1.speed === "number" && Number.isFinite(p1.speed) &&
+            typeof p2.speed === "number" && Number.isFinite(p2.speed);
+          const relativeSpeed = hasInstantaneousSpeeds ? p1.speed! - p2.speed! : Number.NaN;
+          const isAngleWithoutSpeed = ["Ascendant", "Midheaven", "Descendant", "Imum Coeli"].includes(p1.name) ||
+            ["Ascendant", "Midheaven", "Descendant", "Imum Coeli"].includes(p2.name);
+          const isApplying = isAngleWithoutSpeed || !hasInstantaneousSpeeds ||
+            Math.abs(relativeSpeed) < 1e-12
+            ? null
+            : isAngularAspectApplying(p1.longitude, p2.longitude, asp.angle, relativeSpeed);
 
           aspects.push({
             planet1: p1.name,
@@ -631,24 +749,62 @@ export function calculateWesternChart(
   latitude: number,
   longitude: number,
   timezoneOffsetHours: number, // e.g. -5 for EST, 5.5 for IST
-  houseSystem: "Placidus" | "Equal" | "WholeSign" = "Placidus",
+  houseSystem: WesternHouseSystem = "Placidus",
   second: number = 0
 ): WesternChartData {
-  // High-precision Swiss Ephemeris calculation (0.001° accuracy)
-  // Unambiguously normalizes local birth time and timezone offset to UTC and computes Julian Day
+  // Convert the supplied local clock and fixed UTC offset to a UTC Julian Day.
+  // This lower-level API cannot infer historical IANA timezone transitions.
   const jd = swissEphemeris.calculateJulianDay(year, month, day, hour, minute, second, timezoneOffsetHours);
-  const sysCode = houseSystem === "WholeSign" ? "W" : houseSystem === "Equal" ? "E" : "P";
-  const swissHouses = swissEphemeris.calculateHouses(jd, latitude, longitude, sysCode);
-  const rawCusps = swissHouses.houseCusps;
-  const asc = swissHouses.ascendant;
-  const mc = swissHouses.midheaven;
+  if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+    throw new RangeError("Western chart coordinates must use latitude ±90° and east-positive longitude ±180°.");
+  }
+  const autoHouseRecommendation = houseSystem === "Auto"
+    ? recommendWesternHouseSystem("modern-natal", latitude)
+    : undefined;
+  const explicitPolarPlacidusFallback =
+    houseSystem === "Placidus" && Math.abs(latitude) >= 66.5622;
+  const resolvedRequest: ResolvedWesternHouseSystem =
+    autoHouseRecommendation?.resolvedSystem ??
+    (explicitPolarPlacidusFallback ? "Porphyry" : houseSystem === "Auto" ? "Placidus" : houseSystem);
+  const polarPlacidusFallback =
+    autoHouseRecommendation?.usedPolarFallback ?? explicitPolarPlacidusFallback;
+  const sysCode = resolvedRequest === "WholeSign" ? "W"
+    : resolvedRequest === "Equal" ? "E"
+    : resolvedRequest === "Porphyry" ? "O"
+    : resolvedRequest === "Regiomontanus" ? "R"
+    : resolvedRequest === "Koch" ? "K"
+    : resolvedRequest === "Campanus" ? "C"
+    : resolvedRequest === "Alcabitius" ? "B"
+    : resolvedRequest === "Morinus" ? "M"
+    : resolvedRequest === "Meridian" ? "X" : "P";
+  const houseResult = swissEphemeris.calculateHouses(jd, latitude, longitude, sysCode);
+  const rawCusps = houseResult.houseCusps;
+  const actualHouseSystem: ResolvedWesternHouseSystem = houseResult.houseSystemUsed === "W" ? "WholeSign"
+    : houseResult.houseSystemUsed === "E" ? "Equal"
+    : houseResult.houseSystemUsed === "O" ? "Porphyry"
+    : houseResult.houseSystemUsed === "R" ? "Regiomontanus"
+    : houseResult.houseSystemUsed === "K" ? "Koch"
+    : houseResult.houseSystemUsed === "C" ? "Campanus"
+    : houseResult.houseSystemUsed === "B" ? "Alcabitius"
+    : houseResult.houseSystemUsed === "M" ? "Morinus"
+    : houseResult.houseSystemUsed === "X" ? "Meridian" : "Placidus";
+  const houseSystemNote = polarPlacidusFallback
+    ? autoHouseRecommendation?.rationale ??
+      "Celestia's conservative policy selected Porphyry at |latitude| ≥ 66.5622°. This is an application fallback, not a claim that Placidus is impossible at every such location; other implementations may resolve it at some high-latitude dates and coordinates."
+    : houseResult.houseSystemNote ??
+      (actualHouseSystem !== resolvedRequest
+        ? `${resolvedRequest} houses are undefined at this latitude; Porphyry quadrant houses were used instead.`
+        : autoHouseRecommendation?.rationale);
+  const asc = houseResult.ascendant;
+  const mc = houseResult.midheaven;
 
-  const T = (jd - 2451545.0) / 36525.0;
-  const gmst = calculateGMST(jd);
-  const ramc = normalizeDegrees(gmst + longitude);
-  const obliquity = calculateObliquity(T);
+  // Reuse the same apparent sidereal time and true obliquity used for the
+  // Ascendant/MC calculation so horizon, house and astrocartography geometry agree.
+  const ramc = houseResult.localSiderealTime;
+  const obliquity = houseResult.obliquity;
 
-  // Compute all planets with Swiss Ephemeris
+  // Calculate positions through the astronomy-engine-backed compatibility facade.
+  // Default node convention is mean Rahu with Ketu exactly opposite that same node.
   const sp = swissEphemeris.calculateAllPlanets(jd, false);
 
   const planetsList: PlanetPosition[] = [];
@@ -663,16 +819,21 @@ export function calculateWesternChart(
   planetsList.push(formatPoint("Neptune", "Neptune", sp.neptune.longitude, rawCusps, sp.neptune.speed, sp.neptune.latitude));
   planetsList.push(formatPoint("Pluto", "Pluto", sp.pluto.longitude, rawCusps, sp.pluto.speed, sp.pluto.latitude));
 
-  // Lunar Nodes
+  // Lunar nodes are supplied as a consistent antipodal pair by the shared engine.
   planetsList.push(formatPoint("NorthNode", "NorthNode", sp.rahu.longitude, rawCusps, sp.rahu.speed));
-  const southNodeLon = normalizeDegrees(sp.rahu.longitude + 180.0);
-  planetsList.push(formatPoint("SouthNode", "SouthNode", southNodeLon, rawCusps, sp.rahu.speed));
+  planetsList.push(formatPoint("SouthNode", "SouthNode", sp.ketu.longitude, rawCusps, sp.ketu.speed));
 
-  // Chiron calculation (~50.7-year orbit between Saturn and Uranus)
+  // Chiron is currently an illustrative sine-formula placeholder, not an
+  // integrated/perturbed small-body ephemeris. Do not invent a constant speed:
+  // its true geocentric motion can be retrograde and varies substantially.
   const chironT = (jd - 2451545.0) / 36525.0;
   const chironM = normalizeDegrees(339.8 + 719.9 * chironT);
   const chironLon = normalizeDegrees(71.9 + chironM + 12.0 * Math.sin(chironM * (Math.PI / 180)));
-  planetsList.push(formatPoint("Chiron", "Chiron", chironLon, rawCusps, 0.05));
+  const chironPosition = formatPoint("Chiron", "Chiron", chironLon, rawCusps, 0.05);
+  chironPosition.speed = undefined;
+  chironPosition.motionStatus = "unknown";
+  chironPosition.calculationNote = "Illustrative sine-formula placeholder only. This is not an integrated or perturbed Chiron ephemeris and has not been validated against JPL Horizons. Its instantaneous speed and retrograde state are not calculated. Chiron is excluded from aspect and midpoint calculations until a suitable small-body ephemeris is integrated.";
+  planetsList.push(chironPosition);
 
   // Ascendant and Midheaven
   const ascPoint = formatPoint("Ascendant", "Ascendant", asc, rawCusps);
@@ -686,7 +847,17 @@ export function calculateWesternChart(
   const lunarPointsCalc = new LunarPointsCalculator();
   const additionalPoints = lunarPointsCalc.calculateAll(jd, ramc, latitude, obliquity, rawCusps);
 
-  // Calculate Arabian Parts
+  // Determine chart sect from the Sun's actual geometric altitude, not its
+  // sign-based house number. This remains invariant under house-system changes.
+  const isBirthDaytime = isSunAboveHorizon({
+    eclipticLongitude: sp.sun.longitude,
+    eclipticLatitude: sp.sun.latitude,
+    obliquity,
+    localSiderealTime: ramc,
+    geographicLatitude: latitude,
+  });
+
+  // Calculate Arabian Parts using the astronomical sect result.
   const arabianCalc = new ArabianPartsCalculator();
   const arabianParts = arabianCalc.calculateAll({
     ascendant: asc,
@@ -698,6 +869,7 @@ export function calculateWesternChart(
     jupiter: sp.jupiter.longitude,
     saturn: sp.saturn.longitude,
     houseCusps: rawCusps,
+    isDayChart: isBirthDaytime,
   });
 
   // Format House Cusps
@@ -715,6 +887,10 @@ export function calculateWesternChart(
   // Calculate Solar Proximity (Cazimi <= 17', Combust <= 8.5°, Under Beams <= 17°)
   const sunLon = sp.sun.longitude;
   planetsList.forEach((p) => {
+    if (p.calculationNote) {
+      p.solarProximity = undefined;
+      return;
+    }
     if (p.id === "Sun") {
       p.solarProximity = "Free";
       return;
@@ -733,13 +909,18 @@ export function calculateWesternChart(
   });
 
   // Calculate aspects including planets, North Node, Ascendant, and Midheaven
-  const aspectTargets = [...planetsList, ascPoint, mcPoint];
+  // Points with unvalidated placeholder coordinates must not generate
+  // apparently precise aspects or aspect-phase labels.
+  const aspectablePlanets = planetsList.filter((planet) => !planet.calculationNote);
+  const aspectTargets = [...aspectablePlanets, ascPoint, mcPoint];
   const aspects = calculateAspects(aspectTargets);
-  const minorAspects = new MinorAspectsEngine().calculateMinorAspects(planetsList);
+  const minorAspects = new MinorAspectsEngine().calculateMinorAspects(aspectablePlanets);
 
   // Calculate Traditional Planetary Hours and Day Ruler
   const planetaryHoursCalc = new PlanetaryHoursCalculator();
-  const planetaryHours = planetaryHoursCalc.calculate(year, month, day, hour, minute, latitude);
+  const planetaryHours = planetaryHoursCalc.calculate(
+    year, month, day, hour, minute, latitude, longitude, timezoneOffsetHours
+  );
 
   // Calculate Ibn Ezra / Lilly Almuten Figuris (Ruler of Geniture)
   const almutenCalc = new AlmutenFigurisCalculator();
@@ -750,9 +931,10 @@ export function calculateWesternChart(
     moon: sp.moon.longitude,
     partOfFortune,
     planets: planetsList.map((p) => ({ name: p.name, longitude: p.longitude, house: p.house })),
-    isDayChart: planetaryHours.isBirthInDaytime,
+    isDayChart: isBirthDaytime,
     dayRuler: planetaryHours.dayRuler,
     hourRuler: planetaryHours.currentHourRuler,
+    julianDay: jd,
   });
 
   return {
@@ -767,7 +949,11 @@ export function calculateWesternChart(
     julianDay: jd,
     siderealTime: ramc,
     obliquity,
-    houseSystem,
+    birthLatitude: latitude,
+    birthLongitude: longitude,
+    houseSystem: actualHouseSystem,
+    requestedHouseSystem: houseSystem,
+    houseSystemNote,
     asteroids,
     additionalPoints,
     arabianParts,

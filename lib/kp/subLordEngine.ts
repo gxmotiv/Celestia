@@ -296,47 +296,128 @@ export class SubLordCalculator {
   }
 
   /**
-   * Generates the Modern KP 1 to 2193 Sub-Sub Lord Table.
+   * Generates the extended KP 1–2193 sub-sub table.
+   *
+   * Build the 2,187 theoretical intervals from the 243 unsplit
+   * nakshatra/sub-lord intervals (27 × 9), then split the six resulting
+   * sub-sub intervals that cross a 30° sign boundary. Do not subdivide
+   * the 249 sign-split horary rows: doing so restarts the sub-sub ratios
+   * at a sign edge and incorrectly creates 2,241 entries.
+   *
+   * The 1–2193 extension is a later KP development, not K.S. Krishnamurti's
+   * original 1–249 table.
    */
   public static generate2193Table(): KP2193Entry[] {
     if (SubLordCalculator.cached2193Table) {
       return SubLordCalculator.cached2193Table;
     }
 
-    const base249 = SubLordCalculator.generate249Table();
     const table: KP2193Entry[] = [];
     let seedCounter = 1;
+    const nakshatraSpan = SubLordCalculator.NAKSHATRA_SPAN;
+    const boundaryEpsilon = 1e-10;
 
-    for (const entry249 of base249) {
-      const subLordIdx = VIMSHOTTARI_CYCLE.indexOf(entry249.subLord as any);
-      const totalSpan = entry249.endLongitude - entry249.startLongitude;
-      let cumSubSub = 0;
+    const snapToSignBoundary = (longitude: number): number => {
+      const nearestBoundary = Math.round(longitude / 30) * 30;
+      return Math.abs(longitude - nearestBoundary) <= boundaryEpsilon
+        ? nearestBoundary
+        : longitude;
+    };
 
-      for (let ss = 0; ss < 9; ss++) {
-        const subSubLord = VIMSHOTTARI_CYCLE[(subLordIdx + ss) % 9];
-        const planetYears = DASHA_YEARS[subSubLord];
-        const ssSpan = (planetYears / SubLordCalculator.TOTAL_DASHA_YEARS) * totalSpan;
-        const ssStart = entry249.startLongitude + cumSubSub;
-        const ssEnd = ssStart + ssSpan;
+    const appendSegment = (
+      startLongitude: number,
+      endLongitude: number,
+      nakshatraIndex: number,
+      starLord: string,
+      subLord: string,
+      subSubLord: string
+    ) => {
+      const start = snapToSignBoundary(startLongitude);
+      const end = snapToSignBoundary(endLongitude);
+      const signIndex = Math.min(11, Math.floor(start / 30));
+      const signStart = signIndex * 30;
+      const localStart = start - signStart;
+      const localEnd = end - signStart;
 
-        table.push({
-          seed: seedCounter++,
-          signIndex: entry249.signIndex,
-          signName: entry249.signName,
-          signLord: entry249.signLord,
-          nakshatraIndex: entry249.nakshatraIndex,
-          nakshatraName: entry249.nakshatraName,
-          starLord: entry249.starLord,
-          subLord: entry249.subLord,
-          subSubLord,
-          startLongitude: ssStart,
-          endLongitude: ssEnd,
-          centerLongitude: (ssStart + ssEnd) / 2,
-          spanDms: `${SubLordCalculator.formatDMS(ssStart % 30)} - ${SubLordCalculator.formatDMS(ssEnd % 30)}`,
-        });
+      table.push({
+        seed: seedCounter++,
+        signIndex,
+        signName: SubLordCalculator.getSignName(signIndex),
+        signLord: SubLordCalculator.getSignLord(signIndex),
+        nakshatraIndex,
+        nakshatraName: NAKSHATRAS[nakshatraIndex].name,
+        starLord,
+        subLord,
+        subSubLord,
+        startLongitude: start,
+        endLongitude: end,
+        centerLongitude: (start + end) / 2,
+        spanDms: `${SubLordCalculator.formatDMS(localStart)} - ${SubLordCalculator.formatDMS(localEnd)}`,
+      });
+    };
 
-        cumSubSub += ssSpan;
+    // Generate the 243 original sub intervals in zodiac order. Sign-boundary
+    // splits are applied only after each parent interval has been subdivided.
+    for (let nakIdx = 0; nakIdx < 27; nakIdx++) {
+      const nakshatra = NAKSHATRAS[nakIdx];
+      const starLord = nakshatra.lord;
+      const nakStart = nakIdx * nakshatraSpan;
+      const starLordIndex = VIMSHOTTARI_CYCLE.indexOf(starLord as (typeof VIMSHOTTARI_CYCLE)[number]);
+      let subStart = nakStart;
+
+      for (let subIndex = 0; subIndex < 9; subIndex++) {
+        const subLord = VIMSHOTTARI_CYCLE[(starLordIndex + subIndex) % 9];
+        const subYears = DASHA_YEARS[subLord];
+        const subEnd = subIndex === 8
+          ? nakStart + nakshatraSpan
+          : subStart + (subYears / SubLordCalculator.TOTAL_DASHA_YEARS) * nakshatraSpan;
+        const subSpan = subEnd - subStart;
+        const subLordIndex = VIMSHOTTARI_CYCLE.indexOf(subLord);
+        let subSubStart = subStart;
+
+        for (let subSubIndex = 0; subSubIndex < 9; subSubIndex++) {
+          const subSubLord = VIMSHOTTARI_CYCLE[(subLordIndex + subSubIndex) % 9];
+          const subSubEnd = subSubIndex === 8
+            ? subEnd
+            : subSubStart +
+              (DASHA_YEARS[subSubLord] / SubLordCalculator.TOTAL_DASHA_YEARS) * subSpan;
+
+          // A sub-sub interval can cross a sign boundary. Split that interval
+          // into adjacent sign-local rows while retaining the same lords.
+          const normalizedSubSubStart = snapToSignBoundary(subSubStart);
+          const normalizedSubSubEnd = snapToSignBoundary(subSubEnd);
+          const splitPoints: number[] = [normalizedSubSubStart];
+          let nextBoundary = (Math.floor(normalizedSubSubStart / 30) + 1) * 30;
+          while (nextBoundary < normalizedSubSubEnd - boundaryEpsilon) {
+            if (nextBoundary > normalizedSubSubStart + boundaryEpsilon) {
+              splitPoints.push(nextBoundary);
+            }
+            nextBoundary += 30;
+          }
+          splitPoints.push(normalizedSubSubEnd);
+
+          for (let part = 0; part < splitPoints.length - 1; part++) {
+            appendSegment(
+              splitPoints[part],
+              splitPoints[part + 1],
+              nakIdx,
+              starLord,
+              subLord,
+              subSubLord
+            );
+          }
+
+          subSubStart = subSubEnd;
+        }
+
+        subStart = subEnd;
       }
+    }
+
+    if (table.length !== 2193) {
+      throw new Error(
+        `KP 1–2193 construction produced ${table.length} rows; expected 2,187 base sub-sub intervals plus six sign-boundary splits.`
+      );
     }
 
     SubLordCalculator.cached2193Table = table;
