@@ -17,6 +17,7 @@ import { KPCuspsCalculator } from "./kpCusps";
 import { SubLordCalculator } from "./subLordEngine";
 import { KPSignificators } from "./kpSignificators";
 import { KPPredictionEngine } from "./kpPredictionEngine";
+import type { KPReaderVIDayLordContext } from "./kpDayLord";
 
 export class KPEngine {
   private cuspsCalc = new KPCuspsCalculator();
@@ -31,7 +32,8 @@ export class KPEngine {
     westernData: WesternChartData,
     vedicData: VedicChartData,
     birthDate: Date,
-    bodySet: "classical-nine" | "extended-twelve" = "classical-nine"
+    bodySet: "classical-nine" | "extended-twelve" = "classical-nine",
+    birthTimeKnown: boolean = true
   ): KPChartData {
     const year = birthDate.getUTCFullYear();
     const month = birthDate.getUTCMonth() + 1;
@@ -135,9 +137,9 @@ export class KPEngine {
       );
 
     // 5. Calculate KP Ruling Planets (RP)
-    // The local calendar date above remains the input for the existing
-    // date-based KP ayanamsa profile. Day lord uses the real shared UTC instant
-    // recovered from the chart Julian Day, plus the chart's birthplace.
+    // Keep the local calendar date above for the existing date-based KP
+    // ayanamsa profile. Day lord uses the actual UTC instant encoded by the
+    // shared chart Julian Day and the chart's birthplace.
     const birthInstant = new Date((westernData.julianDay - 2440587.5) * 86_400_000);
     const dayLordContext: KPReaderVIDayLordContext = {
       birthInstant,
