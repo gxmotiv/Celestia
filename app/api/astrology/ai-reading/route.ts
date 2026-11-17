@@ -60,7 +60,8 @@ Format a useful, structured response with Markdown headings. Do not repeat the e
         systemPrompt,
         userPrompt,
         maxOutputTokens: readingLength === "concise" ? 2048 : 4096,
-        modelTier: readingLength === "concise" ? "budget" : "reasoning",
+        // Concise changes answer length, not the reasoning quality.
+        modelTier: "reasoning",
       });
       return NextResponse.json({
         success: true,
