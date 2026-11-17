@@ -242,6 +242,12 @@ export function KPSystemPanel({
           <span className="text-[11px] text-slate-400 font-mono">
             Placidus Cusps + KP Rule Adjusted
           </span>
+          <span className="w-full text-[10px] text-slate-500">
+            {kpData.rulingPlanets.dayLordResolution.note}
+            {kpData.rulingPlanets.dayLordResolution.sunriseUtc
+              ? " Sunrise (UTC): " + kpData.rulingPlanets.dayLordResolution.sunriseUtc + "."
+              : ""}
+          </span>
         </div>
       </div>
 
