@@ -248,3 +248,45 @@ The Shadbala panel includes a visible "Required Shadbala threshold source" selec
 - **B. V. Raman, *Graha and Bhava Balas*, Chapter VIII, Article 122 and Example 57:** [scanned edition](https://dn790000.ca.archive.org/0/items/1050-jyotish-books-with-siderial-zodiac/Bhava%20and%20Graha%20Balas_B.V.Raman%201996.pdf). Article 122 expressly gives Sun 5, Moon 6, Mars 5, Mercury 7, Jupiter 6.5, Venus 5.5 and Saturn 5 Rupas.
 
 The distinction is now visible and testable. Neither table is treated as an error or silently substituted for the other. The current Shadbala engine is still marked partial overall; this threshold correction does not complete the underlying six Bala calculations.
+
+
+## 10. Naisargika Bala precision: BPHS 27.14 versus Raman Article 108
+
+A cross-check of the fixed natural-strength table found that the former engine values were a mixed precision convention: Venus and Jupiter used Raman's truncated decimals, while Mercury used the rounded BPHS-style value. The mixed table was not a faithful representation of either source.
+
+### 10.1 BPHS Sanskrit formula
+
+BPHS Chapter 27, verse 14, gives a single exact construction: one Rupa (60 Virupas) divided by seven, multiplied successively by 1 through 7 for the planets ordered from Saturn up to the Sun. Reading the sequence upward gives:
+
+| Graha | Exact construction | BPHS Virupas (rounded to 2 dp) |
+|---|---:|---:|
+| Saturn | 60 × 1/7 | 8.57 |
+| Mars | 60 × 2/7 | 17.14 |
+| Mercury | 60 × 3/7 | 25.71 |
+| Jupiter | 60 × 4/7 | 34.29 |
+| Venus | 60 × 5/7 | 42.86 |
+| Moon | 60 × 6/7 | 51.43 |
+| Sun | 60 × 7/7 | 60.00 |
+
+The engine's default `bphs-sevenths-rounded` method follows this formula and rounds the exact fractions to two decimal places. For the component result, it uses the two-decimal value as the Virupa contribution, just as the rest of the displayed Shadbala table is reported at two decimals.
+
+### 10.2 Raman's printed decimal convention
+
+Raman, *Graha and Bhava Balas*, Chapter VII, Article 108 and Example 52, says the decimal values are expressed for convenience and prints: Sun 60.00, Moon 51.43, Venus 42.85, Jupiter 34.28, Mercury 25.70, Mars 17.14 and Saturn 8.57. That table truncates rather than rounds the recurring sevenths at three positions: Venus, Jupiter and Mercury. The engine now preserves those printed values under the distinct `raman-article-108` choice.
+
+The selected method is passed into the Shadbala engine and exposed in the panel as "Naisargika Bala source". The two choices are not blended. The result's Naisargika subcomponent reports which method was used.
+
+### 10.3 Integrity checks
+
+- The static default `NAISARGIKA_POINTS` now matches the BPHS exact-sevenths-rounded table.
+- A separate `RAMAN_NAISARGIKA_POINTS` table preserves Raman Article 108's literal printed decimals, including Mercury 25.70.
+- The regression tests verify all seven planets under both methods and the three differing values independently.
+- Integration tests verify that the selected natural-strength value is recorded in the result and that an unknown method identifier throws rather than silently falling back.
+- The benchmark case now cites BPHS Chapter 27, verse 14, not an unrelated Shadbala/Drik passage; its expected values match the selected BPHS formula.
+
+### 10.4 Primary references
+
+- BPHS Chapter 27, verse 14, Sanskrit, transliteration and word-by-word explanation: [Enjoy Learning Sanskrit](https://enjoylearningsanskrit.com/scriptures/parashara/chapter-27/verse-14/) and [Siva.sh](https://www.siva.sh/brihat-parashara-hora-shastra/27/14).
+- B. V. Raman, *Graha and Bhava Balas*, Chapter VII, Article 108 and Example 52: [scanned edition](https://dn790000.ca.archive.org/0/items/1050-jyotish-books-with-siderial-zodiac/Bhava%20and%20Graha%20Balas_B.V.Raman%201996.pdf).
+
+This refinement changes only the Naisargika Bala contribution by the source's rounding/truncation difference. It does not make the overall six-fold Shadbala implementation complete; source-specific Cheshta/Yuddha coverage and whole-chart reconciliation remain outstanding.
