@@ -90,9 +90,11 @@ for (const [planet, expectedBphs, expectedRaman] of [
   });
   assert.equal(bphsResult.naisargikaBala.points, expectedBphs);
   assert.equal(ramanResult.naisargikaBala.points, expectedRaman);
-  assert.equal(
-    ramanResult.totalVirupas - bphsResult.totalVirupas,
-    Number((expectedRaman - expectedBphs).toFixed(2)),
+  assert.ok(
+    Math.abs(
+      (ramanResult.totalVirupas - bphsResult.totalVirupas) -
+      (expectedRaman - expectedBphs)
+    ) < 1e-9,
     `${planet} total Virupas must move only by its source-specific Naisargika decimal difference`
   );
   assert.equal(ramanResult.isComplete, false);
