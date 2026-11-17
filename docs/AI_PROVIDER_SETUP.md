@@ -1,40 +1,39 @@
 # Celestia AI provider setup
 
-Celestia supports a server-side FreeModel route with the existing Gemini integration as a backup.
+Celestia uses FreeModel server-side and keeps Gemini as a backup.
 
 ## Configure FreeModel
 
-1. Create or open your FreeModel account and create an API key with the `inference` scope. Keep the key private.
-2. Retrieve the model list using the key:
+1. Add `FREEMODEL_API_KEY` to your hosting platform's server-side secret manager. The key needs the `inference` scope. Do not paste it into source code, a browser variable, GitHub commits, or chat.
+2. Celestia selects an available catalogue model automatically. The current defaults are:
+   - `gpt-6-luna` for concise readings and routine requests.
+   - `claude-haiku-5.5` for detailed chart reports and Master Oracle consultations.
+3. Optional server-side overrides:
+   - `FREEMODEL_MODEL`: change the standard/budget model.
+   - `FREEMODEL_REASONING_MODEL`: change the model used for detailed reasoning.
+4. The authenticated `GET https://freemodel.in/v1/models` response is the final source of truth for the IDs available to your key. A model-not-found response triggers one fallback attempt with `gpt-6-luna`.
+5. Keep `GEMINI_API_KEY` configured as a backup. Gemini is used when FreeModel is not configured or a transient/network/upstream failure occurs. Invalid credentials and billing failures are not silently hidden by fallback.
 
-   ```bash
-   curl https://freemodel.in/v1/models \
-     -H "Authorization: Bearer $FREEMODEL_API_KEY"
-   ```
-
-3. Choose a model ID from that authenticated response. Set these runtime variables in your deployment's server-side environment/secrets:
-
-   - `FREEMODEL_API_KEY`: the private API key
-   - `FREEMODEL_MODEL`: the exact model ID returned by `/v1/models`
-
-4. Keep `GEMINI_API_KEY` configured as a fallback. FreeModel is attempted first when both FreeModel variables are present. Gemini is used when FreeModel is not configured, or when a request fails due to a transient/network/upstream error. Authentication and billing errors are not silently retried through Gemini.
-
-Do not expose either key in client-side code, browser variables, screenshots, or Git commits. Never paste a key into a chat.
+FreeModel's key remains on the server. The application never returns it to the browser.
 
 ## Token budget and routing behavior
 
-- The report endpoint uses a 2,048-token output budget for concise reports and 4,096 for detailed reports.
-- The Oracle endpoint uses a 2,048-token output budget.
-- FreeModel documents a 2,048-token minimum for `max_tokens`; lower settings may be raised by the gateway.
-- Input and output both count toward the FreeModel monthly allowance. Long chart context and conversation history therefore cost tokens too.
-- The code records the provider and model name in the API response for basic observability.
-- A local data-only fallback is returned when no configured provider can produce a response.
+- Concise reports use the budget tier; detailed reports and Master Oracle use the reasoning tier.
+- Output budgets are 2,048 tokens for concise reports and Oracle answers, and 4,096 for detailed reports.
+- FreeModel documents a 2,048-token minimum for `max_tokens`; reasoning tokens may consume part of the completion budget.
+- Prompt and completion tokens both count toward the allowance. The Oracle only sends the latest four conversation turns, with per-message length limits.
+- The API response includes the actual provider, actual model returned by the gateway, and prompt/completion/total token usage when supplied by the provider.
+- A local data-only fallback is returned only when no configured provider can produce a response.
 
 ## Model selection advice
 
-Do not assume that a gateway's displayed model label proves upstream identity or quality. Choose an exact ID from your authenticated catalogue, then test it on Celestia's own tasks: TypeScript diagnosis, house-system regression tests, long-context repository review, and tool/function calling if enabled.
+The defaults intentionally separate everyday work from more difficult interpretation:
 
-For low-cost coding research, DeepSeek's official direct API documentation currently lists `deepseek-flash` with a 1M-token context and tool calling. The route configured above will use that ID only if it is actually present in your FreeModel catalogue; do not assume the two providers have identical model IDs or prices.
+- `gpt-6-luna`: the low-cost standard model. FreeModel lists it with reasoning and tool support at approximately $0.10 input / $0.20 output per million tokens.
+- `claude-haiku-5.5`: the higher-quality reasoning tier for detailed reports and the Master Oracle. FreeModel lists it at approximately $0.80 input / $0.80 output per million tokens.
+- The reasoning tier is used less often, so the stronger model is not charged for every short request.
+
+These are catalogue prices, not a guarantee of identical cost on every plan or future date. The authenticated model list and dashboard usage are authoritative. Benchmark scores are not a substitute for Celestia-specific testing; compare actual chart-interpretation correctness, factual discipline, user satisfaction, latency, and tokens per completed response before changing defaults.
 
 ## Deploying
 
