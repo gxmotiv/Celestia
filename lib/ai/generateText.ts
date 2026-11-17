@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 
-export type CelestiaAIProvider = "freemodel" | "gemini";
+export type CelestiaAIProvider = "freemodel" | "nararouter" | "gemini";
 export type CelestiaAIModelTier = "budget" | "reasoning";
 
 export interface CelestiaAIUsage {
@@ -108,6 +108,62 @@ async function generateWithFreeModel(
   };
 }
 
+async function generateWithNaraRouter(
+  apiKey: string,
+  model: string,
+  options: Required<Pick<GenerateTextOptions, "systemPrompt" | "userPrompt" | "maxOutputTokens" | "temperature">>,
+  baseUrl: string
+): Promise<CelestiaAIResult> {
+  const response = await fetch(baseUrl + "/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: "Bearer " + apiKey,
+      "Content-Type": "application/json",
+    },
+    cache: "no-store",
+    signal: AbortSignal.timeout(45_000),
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: "system", content: options.systemPrompt },
+        { role: "user", content: options.userPrompt },
+      ],
+      temperature: options.temperature,
+      max_tokens: options.maxOutputTokens,
+      reasoning_effort: model.toLowerCase().includes("flash") ? "low" : "medium",
+      stream: false,
+    }),
+  });
+
+  const body = await response.json().catch(() => null) as
+    | {
+        model?: string;
+        choices?: Array<{ message?: { content?: string | null } }>;
+        usage?: unknown;
+        error?: { message?: string; code?: string };
+      }
+    | null;
+
+  if (!response.ok) {
+    const error = new Error(
+      body?.error?.message || "NaraRouter request failed with HTTP " + response.status + "."
+    ) as ProviderError;
+    error.status = response.status;
+    throw error;
+  }
+
+  const text = body?.choices?.[0]?.message?.content;
+  if (typeof text !== "string" || !text.trim()) {
+    throw new Error("NaraRouter returned an empty or unsupported response.");
+  }
+
+  return {
+    text: text.trim(),
+    provider: "nararouter",
+    model: body?.model || model,
+    usage: readUsage(body?.usage),
+  };
+}
 /**
  * FreeModel is selected per task:
  * - budget: GPT-6 Luna for short, routine responses
@@ -126,34 +182,67 @@ export async function generateCelestiaText(
     temperature: input.temperature ?? 0.35,
   };
 
-  const freeModelKey = process.env.FREEMODEL_API_KEY?.trim();
   const modelTier = input.modelTier ?? "budget";
+  const freeModelKey = process.env.FREEMODEL_API_KEY?.trim();
+  const naraRouterKey = process.env.NARAROUTER_API_KEY?.trim();
+  const geminiKey = process.env.GEMINI_API_KEY?.trim();
+
   const freeModelName = input.model?.trim() || (
     modelTier === "reasoning"
       ? process.env.FREEMODEL_REASONING_MODEL?.trim() || DEFAULT_REASONING_MODEL
       : process.env.FREEMODEL_MODEL?.trim() || DEFAULT_BUDGET_MODEL
   );
-  const geminiKey = process.env.GEMINI_API_KEY?.trim();
+  const naraRouterName = input.model?.trim() || (
+    modelTier === "reasoning"
+      ? process.env.NARAROUTER_REASONING_MODEL?.trim() || process.env.NARAROUTER_MODEL?.trim() || "auto/bynara"
+      : process.env.NARAROUTER_MODEL?.trim() || "auto/bynara"
+  );
+  const naraRouterBaseUrl = (
+    process.env.NARAROUTER_BASE_URL?.trim() || "https://router.bynara.id/v1"
+  ).replace(/\/+$/, "");
 
+  let lastProviderError: unknown;
+
+  // Keep the existing FreeModel primary route. NaraRouter is the next provider
+  // so a configured free-plan router can cover FreeModel outages/quota limits.
   if (freeModelKey) {
     try {
       return await generateWithFreeModel(freeModelKey, freeModelName, options);
     } catch (error) {
       const status = (error as ProviderError | null)?.status;
-
-      // A stale/incorrect tier model ID should not make the feature unusable.
-      // Retry once with the known low-cost catalogue model; never print a key.
       if (status === 404 && freeModelName !== DEFAULT_BUDGET_MODEL) {
-        console.warn(`FreeModel model ${freeModelName} was not found; retrying with ${DEFAULT_BUDGET_MODEL}.`);
+        console.warn("FreeModel model " + freeModelName + " was not found; retrying with " + DEFAULT_BUDGET_MODEL + ".");
         try {
           return await generateWithFreeModel(freeModelKey, DEFAULT_BUDGET_MODEL, options);
-        } catch (fallbackError) {
-          if (!geminiKey || !isRetryableProviderFailure(fallbackError)) throw fallbackError;
+        } catch (retryError) {
+          const retryStatus = (retryError as ProviderError | null)?.status;
+          if (![404, 408, 425, 429, 500, 502, 503, 504, 529].includes(retryStatus ?? -1)) {
+            throw retryError;
+          }
+          lastProviderError = retryError;
+          console.warn("FreeModel fallback model also failed; trying the next configured provider.");
         }
-      } else if (!geminiKey || !isRetryableProviderFailure(error)) {
-        throw error;
+      } else if (isRetryableProviderFailure(error) || status === 404) {
+        lastProviderError = error;
+        console.warn("FreeModel failed; trying the next configured provider:", error);
       } else {
-        console.warn("FreeModel failed transiently; trying configured Gemini fallback:", error);
+        // Do not hide invalid credentials or billing/permission failures.
+        throw error;
+      }
+    }
+  }
+
+  if (naraRouterKey) {
+    try {
+      return await generateWithNaraRouter(naraRouterKey, naraRouterName, options, naraRouterBaseUrl);
+    } catch (error) {
+      const status = (error as ProviderError | null)?.status;
+      if (isRetryableProviderFailure(error) || status === 404) {
+        lastProviderError = error;
+        console.warn("NaraRouter failed; trying the next configured provider:", error);
+      } else {
+        // Keep authentication, permission, and billing errors visible.
+        throw error;
       }
     }
   }
@@ -162,7 +251,7 @@ export async function generateCelestiaText(
     const ai = new GoogleGenAI({ apiKey: geminiKey });
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      contents: `${options.systemPrompt}\n\n${options.userPrompt}`,
+      contents: options.systemPrompt + "\n\n" + options.userPrompt,
       config: {
         temperature: options.temperature,
         maxOutputTokens: options.maxOutputTokens,
@@ -185,5 +274,6 @@ export async function generateCelestiaText(
     throw new Error("Gemini returned an empty response.");
   }
 
-  throw new Error("No AI provider is configured. Set FREEMODEL_API_KEY or GEMINI_API_KEY.");
+  if (lastProviderError) throw lastProviderError;
+  throw new Error("No AI provider is configured. Set FREEMODEL_API_KEY, NARAROUTER_API_KEY, or GEMINI_API_KEY.");
 }
