@@ -242,8 +242,8 @@ export class VedicBenchmarkRunner {
     const naisargikaCorrect =
       naisargikaPoints["Sun"] === 60.0 &&
       naisargikaPoints["Moon"] === 51.43 &&
-      naisargikaPoints["Venus"] === 42.85 &&
-      naisargikaPoints["Jupiter"] === 34.28 &&
+      naisargikaPoints["Venus"] === 42.86 &&
+      naisargikaPoints["Jupiter"] === 34.29 &&
       naisargikaPoints["Mercury"] === 25.71 &&
       naisargikaPoints["Mars"] === 17.14 &&
       naisargikaPoints["Saturn"] === 8.57;
@@ -252,11 +252,11 @@ export class VedicBenchmarkRunner {
       id: "SB-01",
       name: "Naisargika Bala Fixed Virupas (Sun to Saturn)",
       category: "Shadbala",
-      shastraReference: "BPHS Ch. 27, Sloka 19-20",
-      expected: "Sun: 60, Moon: 51.43, Venus: 42.85, Jupiter: 34.28, Mercury: 25.71, Mars: 17.14, Saturn: 8.57",
+      shastraReference: "BPHS Ch. 27, Sloka 14",
+      expected: "BPHS 27.14: Sun: 60, Moon: 51.43, Venus: 42.86, Jupiter: 34.29, Mercury: 25.71, Mars: 17.14, Saturn: 8.57",
       actual: `Sun: ${naisargikaPoints["Sun"]}, Moon: ${naisargikaPoints["Moon"]}, Venus: ${naisargikaPoints["Venus"]}, Saturn: ${naisargikaPoints["Saturn"]}`,
       passed: naisargikaCorrect,
-      notes: "Naisargika (natural) strength reflects relative luminosity and optical visibility.",
+      notes: "BPHS 27.14 assigns 60/7 multiplied by ranks 7 through 1, rounded to two decimals; Raman Article 108's separately selectable printed decimals are not mixed into this benchmark.",
     });
 
     // Test 2.2: Dig Bala Maximum at Cardinal Points
