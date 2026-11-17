@@ -596,10 +596,17 @@ const moonForRulingPlanets = {
   starLord: "Mars",
   subLord: "Jupiter",
 } as KPPlanet;
+const rulingPlanetBirthInstant = new Date("2000-01-02T12:00:00.000Z");
 const rulingPlanets = predictionEngine.calculateRulingPlanets(
   rulingPlanetCusps,
   [moonForRulingPlanets],
-  new Date(Date.UTC(2000, 0, 2))
+  rulingPlanetBirthInstant,
+  {
+    birthInstant: rulingPlanetBirthInstant,
+    latitude: 0,
+    longitude: 0,
+    birthTimeKnown: true,
+  }
 );
 assert.deepEqual(
   rulingPlanets.rulingPlanetsOrdered,
