@@ -728,62 +728,67 @@ export class Chara5LevelEngine {
 
   public calculate(
     ascendantSign: string,
-    planetsInSigns: Record<string, string>,
+    mahadashaPeriods: ReadonlyArray<{
+      sign: string; years: number; startDate: Date; endDate: Date;
+      lord: string; direction: "direct" | "reverse";
+    }>,
     birthDate: Date,
     refDate: Date = new Date(),
     selectedPath?: { level1?: string; level2?: string; level3?: string; level4?: string }
   ): System5LevelHierarchy {
-    const startIdx = Chara5LevelEngine.SIGNS.indexOf(ascendantSign);
-    const validStart = startIdx === -1 ? 0 : startIdx;
-    const isOdd = validStart % 2 === 0; // Aries = 0 (odd 1)
-    const directProgression = isOdd;
-
-    // Calculate Level 1: 12 Mahadasha Signs
-    const level1: DashaLevelItem[] = [];
-    let currentMs = birthDate.getTime();
-    let curSignIdx = validStart;
-
-    for (let i = 0; i < 12; i++) {
-      const sign = Chara5LevelEngine.SIGNS[curSignIdx];
-      // Classical count to 9th house principle (1 to 9 years)
-      const ninthIdx = directProgression ? (curSignIdx + 8) % 12 : (curSignIdx - 8 + 12) % 12;
-      const count = Math.max(1, Math.min(9, Math.abs(ninthIdx - curSignIdx) || 7));
-      const years = count;
-      const durDays = years * 360;
-      const durMs = durDays * 24 * 3600 * 1000;
-      const sDate = new Date(currentMs);
-      const eDate = new Date(currentMs + durMs);
-      const isCur = refDate.getTime() >= sDate.getTime() && refDate.getTime() < eDate.getTime();
-
-      level1.push({
-        level: 1,
-        levelLabel: "Mahadasha",
-        name: sign,
-        lord: Chara5LevelEngine.SIGN_LORDS[sign],
-        fullName: `${sign} Rasi Mahadasha`,
-        path: [sign],
-        startDate: sDate,
-        endDate: eDate,
-        startDateFormatted: formatDate(sDate),
-        endDateFormatted: formatDate(eDate),
-        durationYears: years,
-        durationDays: durDays,
-        durationHours: 0,
-        durationFormatted: `${years}y`,
-        isCurrent: isCur,
-        brief: `Jaimini sign period activating houses governed by ${sign}.`,
-        tone: "positive",
-        bestHours: "06:00 - 18:00",
-      });
-
-      curSignIdx = directProgression ? (curSignIdx + 1) % 12 : (curSignIdx - 1 + 12) % 12;
-      currentMs += durMs;
+    if (!Chara5LevelEngine.SIGNS.includes(ascendantSign)) {
+      throw new RangeError("Five-level Chara requires a valid Ascendant sign.");
     }
+    if (!(birthDate instanceof Date) || !Number.isFinite(birthDate.getTime())) {
+      throw new RangeError("Five-level Chara requires a valid birth date.");
+    }
+    if (!(refDate instanceof Date) || !Number.isFinite(refDate.getTime())) {
+      throw new RangeError("Five-level Chara requires a valid reference date.");
+    }
+    if (!Array.isArray(mahadashaPeriods) || mahadashaPeriods.length !== 12) {
+      throw new RangeError("Five-level Chara requires the twelve validated source-profile Mahadasha periods.");
+    }
+    if (mahadashaPeriods[0].sign !== ascendantSign || mahadashaPeriods[0].startDate.getTime() !== birthDate.getTime()) {
+      throw new RangeError("Five-level Chara Mahadasha periods must begin at the supplied Ascendant and birth date.");
+    }
+    const seen = new Set<string>();
+    for (const period of mahadashaPeriods) {
+      if (!Chara5LevelEngine.SIGNS.includes(period.sign) || seen.has(period.sign) ||
+          !Number.isFinite(period.years) || period.years < 0 ||
+          !(period.startDate instanceof Date) || !Number.isFinite(period.startDate.getTime()) ||
+          !(period.endDate instanceof Date) || !Number.isFinite(period.endDate.getTime()) ||
+          period.endDate.getTime() < period.startDate.getTime() ||
+          (period.direction !== "direct" && period.direction !== "reverse") ||
+          typeof period.lord !== "string" || !period.lord) {
+        throw new RangeError("Five-level Chara received an invalid source Mahadasha period.");
+      }
+      seen.add(period.sign);
+    }
+    if (seen.size !== 12) throw new RangeError("Five-level Chara requires each zodiac sign exactly once.");
+    const directProgression = mahadashaPeriods[0].direction === "direct";
+    const lordBySign = new Map(mahadashaPeriods.map((period) => [period.sign, period.lord]));
 
+    // Level 1 is copied from the validated BPHS/Santhanam calculation so the
+    // standard Chara view and five-level dashboard share identical MD dates/years.
+    const level1: DashaLevelItem[] = mahadashaPeriods.map((period) => {
+      const sDate = new Date(period.startDate.getTime());
+      const eDate = new Date(period.endDate.getTime());
+      const durationDays = period.years * 360;
+      return {
+        level: 1, levelLabel: "Mahadasha", name: period.sign, lord: period.lord,
+        fullName: `${period.sign} Rasi Mahadasha`, path: [period.sign],
+        startDate: sDate, endDate: eDate,
+        startDateFormatted: formatDate(sDate), endDateFormatted: formatDate(eDate),
+        durationYears: period.years, durationDays, durationHours: 0,
+        durationFormatted: `${period.years}y`,
+        isCurrent: refDate.getTime() >= sDate.getTime() && refDate.getTime() < eDate.getTime(),
+        brief: `BPHS/Santhanam ${period.sign} sign period.`,
+        tone: "positive", bestHours: "06:00 - 18:00",
+      };
+    });
     const activeL1 = level1.find((item) => item.isCurrent) ?? null;
     const targetL1Name = selectedPath?.level1 || activeL1?.name || level1[0].name;
     const targetL1 = level1.find((item) => item.name === targetL1Name) || activeL1 || level1[0];
-
     // Level 2: Antardasha Signs = L1_duration / 12
     const level2: DashaLevelItem[] = [];
     let l2CurrentMs = targetL1.startDate.getTime();
@@ -801,7 +806,7 @@ export class Chara5LevelEngine {
         level: 2,
         levelLabel: "Antardasha",
         name: adSign,
-        lord: Chara5LevelEngine.SIGN_LORDS[adSign],
+        lord: lordBySign.get(adSign) || Chara5LevelEngine.SIGN_LORDS[adSign],
         fullName: `${targetL1.name} > ${adSign} Antardasha`,
         path: [targetL1.name, adSign],
         startDate: sDate,
@@ -842,7 +847,7 @@ export class Chara5LevelEngine {
         level: 3,
         levelLabel: "Pratyantardasha",
         name: pdSign,
-        lord: Chara5LevelEngine.SIGN_LORDS[pdSign],
+        lord: lordBySign.get(pdSign) || Chara5LevelEngine.SIGN_LORDS[pdSign],
         fullName: `${targetL1.name} > ${targetL2.name} > ${pdSign}`,
         path: [targetL1.name, targetL2.name, pdSign],
         startDate: sDate,
@@ -884,7 +889,7 @@ export class Chara5LevelEngine {
         level: 4,
         levelLabel: "Sookshma",
         name: sdSign,
-        lord: Chara5LevelEngine.SIGN_LORDS[sdSign],
+        lord: lordBySign.get(sdSign) || Chara5LevelEngine.SIGN_LORDS[sdSign],
         fullName: `${targetL1.name} > ${targetL2.name} > ${targetL3.name} > ${sdSign}`,
         path: [targetL1.name, targetL2.name, targetL3.name, sdSign],
         startDate: sDate,
@@ -926,7 +931,7 @@ export class Chara5LevelEngine {
         level: 5,
         levelLabel: "Prana",
         name: prSign,
-        lord: Chara5LevelEngine.SIGN_LORDS[prSign],
+        lord: lordBySign.get(prSign) || Chara5LevelEngine.SIGN_LORDS[prSign],
         fullName: `${targetL1.name} > ${targetL2.name} > ${targetL3.name} > ${targetL4.name} > ${prSign}`,
         path: [targetL1.name, targetL2.name, targetL3.name, targetL4.name, prSign],
         startDate: sDate,
@@ -951,7 +956,7 @@ export class Chara5LevelEngine {
     return {
       systemName: "Chara",
       totalCycleYears: level1.reduce((sum, item) => sum + item.durationYears, 0),
-      description: "Jaimini Chara Sign-Based System down to Level 5 Prana Sign precision.",
+      description: "BPHS/Santhanam Mahadasha periods; lower sign sub-period order remains provisional pending lineage reconciliation.",
       levels: {
         1: level1,
         2: level2,

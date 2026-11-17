@@ -25,7 +25,7 @@ positions=withPosition(withPosition(baseline,"Saturn","Aquarius"),"Rahu","Taurus
 positions=withPosition(withPosition(withPosition(withPosition(baseline,"Mars","Leo"),"Venus","Leo"),"Ketu","Pisces"),"Jupiter","Aquarius");
 const companionWinner=periodFor(calculate("Aries",positions),"Scorpio");assert.equal(companionWinner.lord,"Mars");assert.equal(companionWinner.years,10);
 // Equal companion count: dual > fixed > movable sign strength.
-positions=withPosition(withPosition(baseline,"Mars","Virgo"),"Ketu","Taurus");const modalityWinner=periodFor(calculate("Aries",positions),"Scorpio");assert.equal(modalityWinner.lord,"Mars");assert.equal(modalityWinner.years,11);
+positions=withPosition(withPosition(withPosition(baseline,"Mars","Virgo"),"Ketu","Taurus"),"Venus","Leo");const modalityWinner=periodFor(calculate("Aries",positions),"Scorpio");assert.equal(modalityWinner.lord,"Mars");assert.equal(modalityWinner.years,11);
 // Equal sign strength: exalted co-lord selected before longer count in this profile.
 positions=[{planet:"Sun",sign:"Aries"},{planet:"Moon",sign:"Taurus"},{planet:"Mars",sign:"Capricorn"},{planet:"Mercury",sign:"Gemini"},{planet:"Jupiter",sign:"Virgo"},{planet:"Venus",sign:"Leo"},{planet:"Saturn",sign:"Pisces"},{planet:"Rahu",sign:"Sagittarius"},{planet:"Ketu",sign:"Cancer"}];
 const exaltedCoLord=periodFor(calculate("Aries",positions),"Scorpio");assert.equal(exaltedCoLord.lord,"Mars");assert.equal(exaltedCoLord.years,4);

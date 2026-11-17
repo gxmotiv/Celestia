@@ -1366,7 +1366,7 @@ export class CompleteDashaOrchestrator {
 
     const c5 = this.c5Engine.calculate(
       params.ascendantSign,
-      params.planetsInSigns,
+      chara,
       params.birthDate,
       refDate
     );
