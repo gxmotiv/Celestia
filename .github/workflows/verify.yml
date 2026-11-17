@@ -48,6 +48,7 @@ jobs:
           - testShadbalaRamanReferenceSuite.ts
           - testShadbalaDigBalaSuite.ts
           - testShadbalaThresholdSourceSuite.ts
+          - testShadbalaNaisargikaSourceSuite.ts
           - testRegiomontanusHouseSystemSuite.ts
           - testKochHouseSystemSuite.ts
           - testCampanusHouseSystemSuite.ts
