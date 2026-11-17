@@ -1118,6 +1118,12 @@ export function VedicChart({
             baziData={baziData}
             birthDate={birthDate}
             birthTime={birthTime}
+            birthUtcInstant={birthUtcInstant}
+            birthLongitude={birthLongitude}
+            birthLatitude={birthLatitude}
+            birthIanaTimezone={birthIanaTimezone}
+            birthUtcOffsetSeconds={birthUtcOffsetSeconds}
+            isBirthTimeUnknown={isBirthTimeUnknown}
             cityName={cityName}
             country={country}
             fullName={fullName}

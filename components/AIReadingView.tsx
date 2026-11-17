@@ -30,6 +30,12 @@ interface AIReadingViewProps {
   birthTime: string;
   cityName: string;
   country: string;
+  latitude?: number;
+  longitude?: number;
+  utcInstant?: string;
+  ianaTimezone?: string;
+  utcOffsetSeconds?: number;
+  isBirthTimeUnknown?: boolean;
   western: WesternChartData;
   vedic: VedicChartData;
   numerology: NumerologyProfile;
@@ -44,6 +50,12 @@ export function AIReadingView({
   birthTime,
   cityName,
   country,
+  latitude,
+  longitude,
+  utcInstant,
+  ianaTimezone,
+  utcOffsetSeconds,
+  isBirthTimeUnknown = false,
   western,
   vedic,
   numerology,
@@ -92,23 +104,29 @@ export function AIReadingView({
           date: birthDate,
           time: birthTime,
           place: `${cityName}, ${country}`,
-          latitude: western.ascendant.longitude || 0,
-          longitude: western.midheaven.longitude || 0,
-          timezone: `UTC${cityName ? "" : "+0"}`,
+          latitude: latitude ?? western.birthLatitude ?? null,
+          longitude: longitude ?? western.birthLongitude ?? null,
+          utcInstant: utcInstant ?? null,
+          ianaTimezone: ianaTimezone ?? null,
+          utcOffsetSeconds: utcOffsetSeconds ?? null,
+          timeKnown: !isBirthTimeUnknown,
         },
         western: {
           sun: {
-            sign: sun?.sign || "Taurus",
-            degree: Math.round((sun?.signDegree || 0) * 10) / 10,
-            house: sun?.house || 1,
+            sign: sun?.sign ?? null,
+            degree: sun ? Math.round(sun.signDegree * 10) / 10 : null,
+            house: sun?.house ?? null,
           },
           moon: {
-            sign: moon?.sign || "Scorpio",
-            degree: Math.round((moon?.signDegree || 0) * 10) / 10,
-            house: moon?.house || 2,
+            sign: moon?.sign ?? null,
+            degree: moon ? Math.round(moon.signDegree * 10) / 10 : null,
+            house: moon?.house ?? null,
           },
           ascendant: western.ascendant.sign,
           midheaven: western.midheaven.sign,
+          houseSystem: western.houseSystem,
+          requestedHouseSystem: western.requestedHouseSystem ?? null,
+          houseSystemNote: western.houseSystemNote ?? null,
           planets: westernPlanetsMap,
           aspects: western.aspects.slice(0, 8).map((a) => ({
             planet1: a.planet1,
@@ -127,7 +145,6 @@ export function AIReadingView({
           currentDasha: {
             planet: vedic.currentMahadasha,
             subPlanet: vedic.currentAntardasha,
-            yearsRemaining: "Active cycle",
           },
           navamsa: {
             lagna: vedic.lagna.navamsaRasiName,
@@ -161,6 +178,25 @@ export function AIReadingView({
         readingMode: modeToUse,
         readingLength,
         userQuestion: modeToUse === "question" ? userQuestion : undefined,
+        // Include the exact calculated objects powering the on-screen result
+        // cards. The API route caps and forwards this structured context.
+        chartContext: {
+          western,
+          vedic,
+          numerology,
+          bazi: chinese,
+          chartMetadata: {
+            birthDate,
+            birthTime,
+            utcInstant: utcInstant ?? null,
+            ianaTimezone: ianaTimezone ?? null,
+            utcOffsetSeconds: utcOffsetSeconds ?? null,
+            latitude: latitude ?? western.birthLatitude ?? null,
+            longitude: longitude ?? western.birthLongitude ?? null,
+            timeKnown: !isBirthTimeUnknown,
+            location: `${cityName}, ${country}`,
+          },
+        },
       };
 
       const res = await fetch("/api/astrology/ai-reading", {
@@ -288,6 +324,12 @@ export function AIReadingView({
           baziData={chinese}
           birthDate={birthDate}
           birthTime={birthTime}
+          birthUtcInstant={utcInstant}
+          birthLongitude={longitude}
+          birthLatitude={latitude}
+          birthIanaTimezone={ianaTimezone}
+          birthUtcOffsetSeconds={utcOffsetSeconds}
+          isBirthTimeUnknown={isBirthTimeUnknown}
           cityName={cityName}
           country={country}
           fullName={fullName}

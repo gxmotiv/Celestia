@@ -36,6 +36,12 @@ interface MasterAIAstrologerCockpitProps {
   baziData?: BaZiProfile;
   birthDate: string;
   birthTime: string;
+  birthUtcInstant?: string;
+  birthLongitude?: number;
+  birthLatitude?: number;
+  birthIanaTimezone?: string;
+  birthUtcOffsetSeconds?: number;
+  isBirthTimeUnknown?: boolean;
   cityName?: string;
   country?: string;
   fullName?: string;
@@ -197,6 +203,12 @@ export function MasterAIAstrologerCockpit({
   baziData,
   birthDate,
   birthTime,
+  birthUtcInstant,
+  birthLongitude,
+  birthLatitude,
+  birthIanaTimezone,
+  birthUtcOffsetSeconds,
+  isBirthTimeUnknown = false,
   cityName = "City of Birth",
   country = "Earth",
   fullName,
@@ -231,12 +243,8 @@ export function MasterAIAstrologerCockpit({
 
     const charaPlanetPositions = CharaDashaCalculator.toPlanetPositions(vedicData.planets);
 
-    const currentMD =
-      vedicData.vimshottariDashas.find((d) => d.isCurrent) ||
-      vedicData.vimshottariDashas[0];
-    const currentAD =
-      currentMD?.subPeriods?.find((s) => s.isCurrent) ||
-      currentMD?.subPeriods?.[0];
+    const currentMD = vedicData.vimshottariDashas.find((d) => d.isCurrent);
+    const currentAD = currentMD?.subPeriods?.find((s) => s.isCurrent);
 
     const moonNakshatra1Indexed = (moonPlanet.nakshatraIndex ?? 13) + 1;
     const moonDegreeInNakshatra = (moonPlanet.siderealLongitude || 180) % (360 / 27);
@@ -253,19 +261,15 @@ export function MasterAIAstrologerCockpit({
   }, [vedicData, birthDate, birthTime, orchestrator]);
 
   // Active Mahadasha and Antardasha
-  const currentMD = useMemo(() => {
-    return (
-      vedicData.vimshottariDashas.find((d) => d.isCurrent) ||
-      vedicData.vimshottariDashas[0]
-    );
-  }, [vedicData]);
+  const currentMD = useMemo(
+    () => vedicData.vimshottariDashas.find((d) => d.isCurrent),
+    [vedicData]
+  );
 
-  const currentAD = useMemo(() => {
-    return (
-      currentMD?.subPeriods?.find((s) => s.isCurrent) ||
-      currentMD?.subPeriods?.[0]
-    );
-  }, [currentMD]);
+  const currentAD = useMemo(
+    () => currentMD?.subPeriods?.find((s) => s.isCurrent),
+    [currentMD]
+  );
 
   // Active remedy profile based on Mahadasha lord
   const activeRemedyLord = currentMD?.planet || "Jupiter";
@@ -278,7 +282,7 @@ export function MasterAIAstrologerCockpit({
       sender: "oracle",
       text: `Namaste, revered ${effectiveName}. I am **Acharya Celestia**, your Master Esoteric Astrologer and Celestial Synthesizer. 
 
-I am currently reading your **10-System Classical Dasha convergence** synchronized with your **${vedicData.lagna.rasiName} Ascendant**, **${vedicData.birthNakshatra} Nakshatra** (Lord: **${vedicData.birthNakshatraLord}**), and the active **${currentMD?.planet || "Jupiter"} Mahadasha** / **${currentAD?.planet || "Saturn"} Antardasha**.
+I am currently reading your **10-System Classical Dasha convergence** synchronized with your **${vedicData.lagna.rasiName} Ascendant**, **${vedicData.birthNakshatra} Nakshatra** (Lord: **${vedicData.birthNakshatraLord}**), and the active **${currentMD?.planet || "not currently identified"} Mahadasha** / **${currentAD?.planet || "not currently identified"} Antardasha**.
 
 Ask me any specific inquiry regarding your predictive timing, career milestones, relationship fruition, or sacred Vedic remedies.`,
       timestamp: "Live Oracle Synchronized",
@@ -286,7 +290,7 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
   ]);
 
   const [inputQuery, setInputQuery] = useState("");
-  const [modelOverride, setModelOverride] = useState<"auto" | "agnes-2.5-flash" | "laguna-s-2.1">("auto");
+  const [modelOverride, setModelOverride] = useState<"auto" | "fast" | "reasoning" | "coding">("auto");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isConsulting, setIsConsulting] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -331,43 +335,67 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
           text: m.text,
         })),
         context: {
-          western: {
-            sunSign: sun?.sign || "Aries",
-            moonSign: moon?.sign || "Taurus",
-            ascendantSign: westernData?.ascendant.sign || "Aries",
-            midheavenSign: westernData?.midheaven.sign || "Capricorn",
-            majorAspects: westernData?.aspects.slice(0, 5).map((a) => `${a.planet1} ${a.aspectName} ${a.planet2}`),
+          birthTimeMetadata: {
+            date: birthDate,
+            civilTime: birthTime,
+            utcInstant: birthUtcInstant ?? null,
+            ianaTimezone: birthIanaTimezone ?? null,
+            utcOffsetSeconds: birthUtcOffsetSeconds ?? null,
+            latitude: birthLatitude ?? westernData?.birthLatitude ?? null,
+            longitude: birthLongitude ?? westernData?.birthLongitude ?? null,
+            timeKnown: !isBirthTimeUnknown,
+            place: `${cityName}, ${country}`,
           },
+          western: westernData ? {
+            sunSign: sun?.sign ?? null,
+            moonSign: moon?.sign ?? null,
+            ascendantSign: westernData.ascendant?.sign ?? null,
+            midheavenSign: westernData.midheaven?.sign ?? null,
+            houseSystem: westernData.houseSystem,
+            requestedHouseSystem: westernData.requestedHouseSystem ?? null,
+            houseSystemNote: westernData.houseSystemNote ?? null,
+            planets: westernData.planets,
+            houses: westernData.houses,
+            majorAspects: westernData.aspects,
+            minorAspects: westernData.minorAspects ?? [],
+            additionalPoints: westernData.additionalPoints ?? null,
+            arabianParts: westernData.arabianParts ?? null,
+            planetaryHours: westernData.planetaryHours ?? null,
+            almutenFiguris: westernData.almutenFiguris ?? null,
+          } : null,
           vedic: {
             moonRasi: vedicData.moonSignRasi,
             lagnaRasi: vedicData.lagna.rasiName,
             nakshatra: vedicData.birthNakshatra,
             pada: vedicData.birthPada,
             nakshatraLord: vedicData.birthNakshatraLord,
-            activeMahadasha: currentMD?.planet || "Jupiter",
-            activeAntardasha: currentAD?.planet || "Saturn",
-            yogas: vedicData.yogas.map((y) => y.name),
-            sadeSatiStatus: "Standard Transit",
+            activeMahadasha: currentMD?.planet ?? vedicData.currentMahadasha ?? null,
+            activeAntardasha: currentAD?.planet ?? vedicData.currentAntardasha ?? null,
+            planets: vedicData.planets,
+            houses: vedicData.houses,
+            navamsaHouses: vedicData.navamsaHouses,
+            vimshottariDashas: vedicData.vimshottariDashas,
+            yogas: vedicData.yogas,
+            d9Chart: vedicData.d9Chart ?? null,
+            jaiminiKarakas: vedicData.jaiminiKarakas ?? null,
+            taraBala: vedicData.taraBala ?? null,
+            gocharVedha: vedicData.gocharVedha ?? null,
           },
           dashaConvergence: {
             activeSystemsCount: dashaSystems.convergence.length,
-            dominantTone: dashaSystems.convergence[0]?.tone || "positive",
+            dominantTone: dashaSystems.convergence[0]?.tone ?? null,
             systemSummaries: dashaSystems.convergence.map((p) => ({
               system: p.system,
               lord: p.lordOrSign,
               tone: p.tone,
+              durationRemaining: p.durationRemaining,
+              coreTheme: p.coreTheme,
             })),
+            completeDashaResults: dashaSystems,
+            suppliedActiveDashas: Array.isArray(activeDashas) ? activeDashas : null,
           },
-          numerology: {
-            lifePath: numerologyData?.lifePathNumber || 1,
-            expression: numerologyData?.expressionNumber || 1,
-            personalYear: numerologyData?.personalYearNumber || 1,
-          },
-          bazi: {
-            zodiacAnimal: baziData?.zodiacAnimal || "Dragon",
-            dayMaster: baziData?.dayMaster.symbol || "Jia",
-            dominantElement: baziData?.dayMaster.stem?.element || "Wood",
-          },
+          numerology: numerologyData ?? null,
+          bazi: baziData ?? null,
         },
       };
 
@@ -391,6 +419,7 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
       const oracleMessageId = "oracle-" + Date.now();
       const messageTimestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
       const selectedModel = res.headers.get("x-celestia-ai-model") || undefined;
+      const selectedProvider = res.headers.get("x-celestia-ai-provider") || "AI provider";
       const contentType = res.headers.get("content-type") || "";
 
       if (contentType.includes("text/event-stream")) {
@@ -400,7 +429,7 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
           text: "",
           timestamp: messageTimestamp,
           isAiGenerated: true,
-          provider: "NaraRouter",
+          provider: selectedProvider,
           model: selectedModel,
         }]);
 
@@ -447,7 +476,7 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
         if (!streamedText.trim()) throw new Error("The AI provider returned an empty response.");
       } else {
         const data = await res.json();
-        const reply = data.reply || "The stars illuminate your path. Focus on grounding your current planetary energies.";
+        const reply = data.reply || "The AI provider returned no reading.";
         setMessages((prev) => [...prev, {
           id: oracleMessageId,
           sender: "oracle",
@@ -723,14 +752,15 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
                   <select
                     id="nara-model"
                     value={modelOverride}
-                    onChange={(event) => setModelOverride(event.target.value as "auto" | "agnes-2.5-flash" | "laguna-s-2.1")}
+                    onChange={(event) => setModelOverride(event.target.value as "auto" | "fast" | "reasoning" | "coding")}
                     disabled={isConsulting}
                     className="min-h-9 rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-[11px] text-slate-200"
                     aria-label="Choose AI model"
                   >
-                    <option value="auto">Auto route</option>
-                    <option value="agnes-2.5-flash">Agnes Vision / General</option>
-                    <option value="laguna-s-2.1">Laguna Code / Debug</option>
+                    <option value="auto">Auto · balanced</option>
+                    <option value="fast">Fast · low token use</option>
+                    <option value="reasoning">Deep reasoning · expert</option>
+                    <option value="coding">Coding · tools + reasoning</option>
                   </select>
                   <label className="inline-flex min-h-9 cursor-pointer items-center rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-[11px] text-slate-300 hover:border-amber-500/50">
                     Attach screenshot

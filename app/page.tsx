@@ -566,6 +566,12 @@ export default function HomePage() {
                 birthTime={formData.birthTime}
                 cityName={formData.cityName}
                 country={formData.country}
+                latitude={formData.latitude}
+                longitude={formData.longitude}
+                utcInstant={birthTimeContext.utcInstant}
+                ianaTimezone={birthTimeContext.ianaTimezone ?? undefined}
+                utcOffsetSeconds={birthTimeContext.offsetSeconds}
+                isBirthTimeUnknown={formData.isTimeUnknown}
                 western={westernData}
                 vedic={vedicData}
                 numerology={numerologyData}
