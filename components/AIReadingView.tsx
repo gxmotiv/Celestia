@@ -60,6 +60,8 @@ export function AIReadingView({
   const [isLoading, setIsLoading] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [isAiGenerated, setIsAiGenerated] = useState<boolean | null>(null);
+  const [aiProvider, setAiProvider] = useState<string | null>(null);
+  const [aiModel, setAiModel] = useState<string | null>(null);
 
   const [activeMode, setActiveMode] = useState<ReadingMode>("holistic");
   const [readingLength, setReadingLength] = useState<"detailed" | "concise">("detailed");
@@ -183,6 +185,8 @@ export function AIReadingView({
       if (data.success && data.reading) {
         setReadingText(data.reading);
         setIsAiGenerated(data.isAiGenerated);
+        setAiProvider(typeof data.provider === "string" ? data.provider : null);
+        setAiModel(typeof data.model === "string" ? data.model : null);
       }
     } catch (err) {
       console.error("Failed to generate AI reading:", err);
@@ -552,7 +556,9 @@ export function AIReadingView({
           <div className="pt-6 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-2">
             <div className="flex items-center gap-2">
               <span className="font-mono text-amber-400/90">
-                {isAiGenerated ? "Generated via Gemini 3.8 Intelligence" : "Calculated via Astronomical Synthesizer"}
+                {isAiGenerated
+                  ? `Generated via ${aiProvider === "freemodel" ? "FreeModel" : aiProvider === "gemini" ? "Gemini" : "AI"}${aiModel ? ` · ${aiModel}` : ""}`
+                  : "Calculated via Astronomical Synthesizer"}
               </span>
               <span aria-hidden="true">·</span>
               <span>{readingLength === "detailed" ? "Comprehensive Dossier" : "Executive Brief"}</span>
