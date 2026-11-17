@@ -2,12 +2,12 @@
 
 **Review date:** 17 November 2026  
 **Branch:** `deploy/cloudflare-workers-free`  
-**Status:** BPHS/Santhanam profile implemented in code; initial regression suite passes. Full repository integration and source-lineage reconciliation remain in progress.  
+**Status:** BPHS/Santhanam base profile implemented, regression-tested and deployed to the live Cloudflare Worker on 17 November 2026. Rao/Raman and lower-level source reconciliation remain open.  
 **Scope:** `CharaDashaCalculator` in `lib/vedic/completeDashaSystems.ts`.
 
 ## Executive finding
 
-The current implementation labels its output as Jaimini Chara Dasha, but its sequence direction and sign-duration calculations do not consistently follow the cited classical source rules. It must not be promoted as source-faithful until the rules are separated into a named lineage profile and independently benchmarked.
+The pre-fix implementation labelled its output as Jaimini Chara Dasha, but its sequence direction and sign-duration calculations did not consistently follow the cited classical source rules. That legacy defect is corrected for the named BPHS/Santhanam Mahadasha profile; other lineages and lower sub-periods remain separately unresolved.
 
 This is a code-inspection finding, not a claim that one modern lineage owns the only valid Chara Dasha.
 
@@ -87,7 +87,7 @@ The runtime now contains a named BPHS/Santhanam base profile, `bphs-santhanam-19
 - All nine classical grahas are required once. Celestia's `NorthNode`/`SouthNode` names are normalized to Rahu/Ketu; outer planets and other points are excluded.
 - Both Chara Mahadasha output and Level 1 in the five-level view use the same generated periods. The five-level lower sub-period order is still provisional pending a separately sourced lineage specification.
 
-The dedicated source regression suite is `scripts/testJaiminiCharaDashaSourceSuite.ts`. The full type/build/test matrix still needs a clean post-integration pass before deployment.
+The dedicated source regression suite is `scripts/testJaiminiCharaDashaSourceSuite.ts`. Production build, ESLint, the configured verification matrix, offline Android ARM32/ARM64 build, Cloudflare Worker deployment, NaraRouter secret configuration and public HTML smoke test passed on commit `06c8e7b6d8a9c09e090e08183e417360db6913c3`.
 
 ## Remaining gaps
 

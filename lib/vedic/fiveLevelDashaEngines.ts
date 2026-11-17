@@ -956,7 +956,7 @@ export class Chara5LevelEngine {
     return {
       systemName: "Chara",
       totalCycleYears: level1.reduce((sum, item) => sum + item.durationYears, 0),
-      description: "BPHS/Santhanam Mahadasha periods; lower sign sub-period order remains provisional pending lineage reconciliation.",
+      description: `BPHS/Santhanam Mahadasha order runs ${directProgression ? "forward" : "in reverse"} from Lagna by the ninth-sign pada rule. Each sign-year count uses that sign’s own three-sign pada direction. Lower sign sub-period order remains provisional pending separate source-lineage reconciliation.`,
       levels: {
         1: level1,
         2: level2,

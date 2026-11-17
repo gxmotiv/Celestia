@@ -547,7 +547,7 @@ export function MultiDashaDashboard({
         <FiveLevelDashaSystemView
           system={allDashas.fiveLevels.chara}
           systemTitle="Jaimini Chara Dasha (Levels 1 to 5)"
-          tradition="Jaimini Upadesha Sutras Sign-Based System"
+          tradition="BPHS Ch.46 vv.155–167 · Santhanam profile · bphs-santhanam-1984"
         />
       )}
 

@@ -65,7 +65,7 @@ Policy: keep changes on isolated branches; do not merge or deploy until the owne
 
 - Added `docs/audit/jaimini-chara-dasha-source-audit.md`.
 - Code inspection found the legacy `CharaDashaCalculator` selects sequence direction from Ascendant parity, derives sign duration from the ninth sign/ninth lord, caps counts at nine, and silently substitutes Aries for an invalid Ascendant. These behaviors do not match the cited BPHS/Santhanam sign-to-lord and ninth-sign direction rules as transcribed in the audit.
-- **Status: confirmed source mismatch; not fixed yet.** Do not advertise the current Chara Dasha output as source-faithful. A replacement requires explicit BPHS/Santhanam and Jaimini/Rao-Raman profiles, co-lord adjudication for Scorpio/Aquarius, validated inputs, and published worked-example fixtures.
+- **Status: BPHS/Santhanam profile implemented and deployed.** Do not advertise all Chara Dasha traditions as complete; Rao/Raman, lower sub-period rules and independent worked-chart reconciliation remain open.
 - Keep the 7/8 Chara Karaka selection separate from Dasha duration logic; the former does not resolve the latter.
 
 ## Workstream 3 — KP and interpretive output
@@ -111,9 +111,9 @@ Policy: keep changes on isolated branches; do not merge or deploy until the owne
 |---|---|---|
 | TypeScript archived snapshots exclusion | Implemented on PR #3 | Archive remains; inspect every excluded path to ensure no active module was excluded. |
 | Duplicate/unused modules | Audit required | Identify duplicates before cleanup; do not delete historical files during audit. |
-| Production build | Partial / CI-gated | Earlier commits passed; rerun on the latest audit branch after all integration changes. |
-| Browser deployment | Not started | Choose GitHub Pages only if the app can be exported without server routes. Otherwise use a zero-cost GitHub-triggered deployment target with server/API support. Never expose API secrets in static client bundles. |
-| Public link | Not created | Publish only after full calculation, privacy and UI acceptance gates; provide the exact verified deployment URL. |
+| Production build | Passed | Production build, ESLint and configured verification matrix passed on `06c8e7b`; Android ARM32/ARM64 APK build passed. |
+| Browser deployment | Deployed | Cloudflare Worker deployment, NaraRouter secret configuration and public HTML smoke test passed on 17 November 2026. |
+| Public link | Live | https://celestia.gagandeep-hwr.workers.dev/ — verified by the post-deployment HTTP/HTML smoke check. |
 
 ## Current PR chain
 
@@ -133,5 +133,5 @@ Do not merge the chain automatically. Review each diff and rerun the full workfl
 - [x] Add Scorpio/Aquarius dual-lord selection and inspectable dignity adjustments.
 - [x] Normalize chart node identifiers and require all nine classical grahas.
 - [x] Make five-level Level 1 consume the same source-calculated Mahadasha periods.
-- [ ] Obtain a clean full build/CI pass after all legacy caller migrations.
+- [x] Migrate legacy orchestrator callers and pass the production build, ESLint, configured verification matrix and offline Android ARM32/ARM64 build.
 - [ ] Add Rao/Raman profile, sourced Antardasha/lower levels, second cycle and independent worked-chart reconciliation.
