@@ -27,13 +27,15 @@ FreeModel's key remains on the server. The application never returns it to the b
 
 ## Model selection advice
 
-The defaults intentionally separate everyday work from more difficult interpretation:
+The defaults separate genuinely lightweight requests from work where interpretation quality matters:
 
-- `gpt-6-luna`: the low-cost standard model. FreeModel lists it with reasoning and tool support at approximately $0.10 input / $0.20 output per million tokens.
-- `claude-haiku-5.5`: the higher-quality reasoning tier for detailed reports and the Master Oracle. FreeModel lists it at approximately $0.80 input / $0.80 output per million tokens.
-- The reasoning tier is used less often, so the stronger model is not charged for every short request.
+- `claude-haiku-5.5`: the default for both concise and detailed astrology reports and Master Oracle consultations. A concise report changes the answer length, not the model's reasoning quality.
+- `gpt-6-luna`: the lower-cost budget tier for future lightweight classification, summaries, and other low-stakes tasks. It is not used for the app's astrology interpretation endpoints by default.
+- If the configured reasoning model ID is unavailable and FreeModel returns 404, Celestia retries once with `gpt-6-luna` so the feature can still respond; the actual model is returned to the UI.
 
-These are catalogue prices, not a guarantee of identical cost on every plan or future date. The authenticated model list and dashboard usage are authoritative. Benchmark scores are not a substitute for Celestia-specific testing; compare actual chart-interpretation correctness, factual discipline, user satisfaction, latency, and tokens per completed response before changing defaults.
+Artificial Analysis Intelligence Index v5 (October 27, 2026) scores Claude Haiku 5.5 at 36 and DeepSeek V4.1 Flash 1017 at 33; its estimated cost per benchmark task is $0.41 versus $0.60, respectively. These are benchmark-task estimates, not a promise of equal cost for every Celestia request. See the [Artificial Analysis v5 methodology and results](https://artificialanalysis.ai/articles/artificial-analysis-intelligence-index-v5).
+
+The authenticated FreeModel model list and dashboard usage are authoritative for the model IDs and token rates actually available to your key. Benchmark scores are not a substitute for Celestia-specific testing; compare chart-interpretation correctness, factual discipline, user satisfaction, latency, and tokens per completed response before changing defaults.
 
 ## Deploying
 
