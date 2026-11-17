@@ -769,6 +769,19 @@ export function AdvancedWesternPanel({
             </p>
           </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5">
+              <div className="text-[10px] uppercase tracking-wide text-emerald-300 font-bold">Active L1 · Major chapter</div>
+              <div className="text-sm font-semibold text-slate-100 mt-1">{spiritReleasing.currentL1Period.sign} · {spiritReleasing.currentL1Period.ruler}</div>
+              <div className="text-[11px] text-slate-400 mt-1">{new Date(spiritReleasing.currentL1Period.startDate).toLocaleString()} — {new Date(spiritReleasing.currentL1Period.endDate).toLocaleString()}</div>
+            </div>
+            <div className="p-3 rounded-xl border border-sky-500/30 bg-sky-500/5">
+              <div className="text-[10px] uppercase tracking-wide text-sky-300 font-bold">Active L2 · Subperiod</div>
+              <div className="text-sm font-semibold text-slate-100 mt-1">{spiritReleasing.currentL2Period.sign} · {spiritReleasing.currentL2Period.ruler}</div>
+              <div className="text-[11px] text-slate-400 mt-1">{new Date(spiritReleasing.currentL2Period.startDate).toLocaleString()} — {new Date(spiritReleasing.currentL2Period.endDate).toLocaleString()}</div>
+            </div>
+          </div>
+
           {/* L1 Major Chapters Table */}
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs text-slate-300">
@@ -783,15 +796,17 @@ export function AdvancedWesternPanel({
               </thead>
               <tbody className="divide-y divide-slate-800/60 font-mono">
                 {spiritReleasing.allL1Periods.map((p, i) => (
-                  <tr key={i} className="hover:bg-slate-800/40 transition-colors">
+                  <tr key={i} className={p.startDate === spiritReleasing.currentL1Period.startDate ? "bg-emerald-500/10" : "hover:bg-slate-800/40 transition-colors"}>
                     <td className="py-2 px-3 font-sans font-semibold text-slate-200">
                       {p.sign}
                     </td>
                     <td className="py-2 px-3 font-sans text-amber-400">{p.ruler}</td>
                     <td className="py-2 px-3">{p.durationYears} Years</td>
-                    <td className="py-2 px-3">{p.startDate} — {p.endDate}</td>
+                    <td className="py-2 px-3">{new Date(p.startDate).toLocaleString()} — {new Date(p.endDate).toLocaleString()}</td>
                     <td className="py-2 px-3 font-sans">
-                      {p.isPeak ? (
+                      {p.startDate === spiritReleasing.currentL1Period.startDate ? (
+                        <span className="text-[10px] font-bold text-emerald-300">● Current L1</span>
+                      ) : p.isPeak ? (
                         <span className="text-[10px] font-bold text-rose-300 bg-rose-500/20 px-2 py-0.5 rounded border border-rose-500/30">
                           ★ Peak Chapter
                         </span>
