@@ -24,7 +24,7 @@ import { calculateVedicChart } from "@/lib/astronomy/vedic";
 import { calculateNumerologyProfile } from "@/lib/astronomy/numerology";
 import { calculateBaZiProfileFromInstant } from "@/lib/astronomy/baziProfileAdapter";
 import { resolveLocalDateTime } from "@/lib/astronomy/historicalTimezone";
-import { parseBirthClockTime } from "@/lib/astronomy/timeInput";
+import { parseBirthDateTimeInput } from "@/lib/astronomy/timeInput";
 
 import {
   Compass,
@@ -88,29 +88,15 @@ export default function HomePage() {
 
   // All chart systems share one resolved UTC birth instant.
   const { westernData, vedicData, numerologyData, baziData, birthTimeContext } = useMemo(() => {
-    const [year, month, day] = formData.birthDate.split("-").map(Number);
-    if (![year, month, day].every(Number.isInteger) || year < 1 || month < 1 || month > 12 || day < 1 || day > 31) {
-      throw new RangeError("Birth date must be a valid Gregorian date.");
+    const parsedBirthDateTime = parseBirthDateTimeInput(
+      formData.birthDate,
+      formData.birthTime,
+      formData.isTimeUnknown
+    );
+    if (!parsedBirthDateTime) {
+      throw new RangeError("Birth date/time is invalid. Enter a valid Gregorian date and HH:mm time, or explicitly mark the time as unknown.");
     }
-    const calendarCheck = new Date(Date.UTC(year, month - 1, day));
-    if (calendarCheck.getUTCFullYear() !== year || calendarCheck.getUTCMonth() !== month - 1 || calendarCheck.getUTCDate() !== day) {
-      throw new RangeError("Birth date is not a valid Gregorian calendar date.");
-    }
-    // Unknown time is an explicit 12:00 placeholder, never an inferred birth time.
-    // Otherwise reject malformed legacy/profile values rather than silently charting noon.
-    let hour: number;
-    let minute: number;
-    if (formData.isTimeUnknown) {
-      hour = 12;
-      minute = 0;
-    } else {
-      const parsedClock = parseBirthClockTime(formData.birthTime);
-      if (parsedClock.usedFallback) {
-        throw new RangeError("Birth time is invalid or missing. Enter a valid HH:mm time or mark it as unknown.");
-      }
-      hour = parsedClock.hour;
-      minute = parsedClock.minute;
-    }
+    const { year, month, day, hour, minute } = parsedBirthDateTime;
 
     let birthDateObj: Date;
     let offsetSeconds: number;
@@ -197,8 +183,8 @@ export default function HomePage() {
   }, [formData]);
 
   const handleFormSubmit = (data: BirthFormData) => {
-    if (!data.isTimeUnknown && parseBirthClockTime(data.birthTime).usedFallback) {
-      window.alert("Enter a valid birth time in HH:mm format, or mark the birth time as unknown.");
+    if (!parseBirthDateTimeInput(data.birthDate, data.birthTime, data.isTimeUnknown)) {
+      window.alert("Enter a valid Gregorian birth date and complete HH:mm time, or mark the birth time as unknown.");
       return;
     }
     setFormData(data);
@@ -207,8 +193,9 @@ export default function HomePage() {
   };
 
   const handleProfileSelect = (data: BirthFormData) => {
-    if (!data.isTimeUnknown && parseBirthClockTime(data.birthTime).usedFallback) {
-      window.alert("This saved profile has an invalid or missing birth time. Review it in the birth form before calculating.");
+    const parsedProfileDateTime = parseBirthDateTimeInput(data.birthDate, data.birthTime, data.isTimeUnknown);
+    if (!parsedProfileDateTime) {
+      window.alert("This saved profile has an invalid Gregorian birth date or time. Review it in the birth form before calculating.");
       setIsFormCollapsed(false);
       return;
     }
@@ -219,19 +206,9 @@ export default function HomePage() {
         setIsFormCollapsed(false);
         return;
       }
-      const [profileYear, profileMonth, profileDay] = data.birthDate.split("-").map(Number);
       let resolution;
       try {
-        const clock = data.isTimeUnknown
-          ? { hour: 12, minute: 0, usedFallback: true }
-          : parseBirthClockTime(data.birthTime);
-        if (clock.usedFallback && !data.isTimeUnknown) {
-          throw new RangeError("Saved birth time is invalid or missing.");
-        }
-        resolution = resolveLocalDateTime({
-          year: profileYear, month: profileMonth, day: profileDay,
-          hour: clock.hour, minute: clock.minute,
-        }, data.ianaTimezone);
+        resolution = resolveLocalDateTime(parsedProfileDateTime, data.ianaTimezone);
       } catch {
         window.alert("This saved profile has an invalid birth date or time. Review it in the birth form before calculating.");
         setIsFormCollapsed(false);

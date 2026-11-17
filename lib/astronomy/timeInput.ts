@@ -78,3 +78,54 @@ export function isRelationshipChartTimeReady(
     input.timezoneOffset >= -14 &&
     input.timezoneOffset <= 14;
 }
+
+
+export interface ParsedBirthDateTimeInput {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+}
+
+/**
+ * Parse a complete Gregorian birth date and clock time without inventing noon
+ * for a missing/partially edited time. Noon is returned only when the user
+ * explicitly marks the birth time as unknown.
+ */
+export function parseBirthDateTimeInput(
+  birthDate: string,
+  birthTime: string,
+  isTimeUnknown = false
+): ParsedBirthDateTimeInput | null {
+  if (typeof birthDate !== "string") return null;
+  const match = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(birthDate);
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (year < 1 || year > 9999 || month < 1 || month > 12 || day < 1 || day > 31) {
+    return null;
+  }
+
+  // setUTCFullYear avoids Date.UTC's special 1900 offset for years 0–99.
+  const calendarDate = new Date(0);
+  calendarDate.setUTCHours(0, 0, 0, 0);
+  calendarDate.setUTCFullYear(year, month - 1, day);
+  if (
+    calendarDate.getUTCFullYear() !== year ||
+    calendarDate.getUTCMonth() !== month - 1 ||
+    calendarDate.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  if (isTimeUnknown) {
+    return { year, month, day, hour: 12, minute: 0 };
+  }
+
+  const clock = parseBirthClockTime(birthTime);
+  if (clock.usedFallback) return null;
+  return { year, month, day, hour: clock.hour, minute: clock.minute };
+}

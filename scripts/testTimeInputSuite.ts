@@ -1,4 +1,4 @@
-import { isRelationshipChartTimeReady, parseBirthClockTime } from "../lib/astronomy/timeInput";
+import { isRelationshipChartTimeReady, parseBirthClockTime, parseBirthDateTimeInput } from "../lib/astronomy/timeInput";
 
 interface TestResult {
   name: string;
@@ -82,6 +82,16 @@ test(
   "false",
   String(isRelationshipChartTimeReady({ ...readyBase, birthTime: "24:00", hasResolvedInstant: true }))
 );
+
+
+const leapDay = parseBirthDateTimeInput("2000-02-29", "00:00");
+test("Complete leap-day midnight parses without fallback", !!leapDay && leapDay.year === 2000 && leapDay.month === 2 && leapDay.day === 29 && leapDay.hour === 0 && leapDay.minute === 0, "2000-02-29 00:00", JSON.stringify(leapDay));
+test("Non-leap February 29 is rejected before timezone resolution", parseBirthDateTimeInput("2023-02-29", "12:00") === null, "null", JSON.stringify(parseBirthDateTimeInput("2023-02-29", "12:00")));
+test("Incomplete birth time is rejected instead of resolving the noon fallback", parseBirthDateTimeInput("2000-01-01", "") === null, "null", JSON.stringify(parseBirthDateTimeInput("2000-01-01", "")));
+test("Malformed birth time is rejected", parseBirthDateTimeInput("2000-01-01", "9:05") === null, "null", JSON.stringify(parseBirthDateTimeInput("2000-01-01", "9:05")));
+test("Explicitly unknown time uses a noon placeholder", JSON.stringify(parseBirthDateTimeInput("2000-01-01", "", true)) === JSON.stringify({ year: 2000, month: 1, day: 1, hour: 12, minute: 0 }), "explicit 12:00 placeholder", JSON.stringify(parseBirthDateTimeInput("2000-01-01", "", true)));
+test("Explicitly unknown time still requires a valid Gregorian date", parseBirthDateTimeInput("2023-02-29", "", true) === null, "null", JSON.stringify(parseBirthDateTimeInput("2023-02-29", "", true)));
+test("Years 1–99 are validated as their actual Gregorian years", !!parseBirthDateTimeInput("0044-03-15", "12:00") && parseBirthDateTimeInput("0044-03-15", "12:00")?.year === 44, "year 44 CE", JSON.stringify(parseBirthDateTimeInput("0044-03-15", "12:00")));
 
 let passed = 0;
 let failed = 0;

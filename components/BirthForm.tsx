@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { searchCities } from "@/lib/astronomy/cities";
 import { resolveLocalDateTime } from "@/lib/astronomy/historicalTimezone";
-import { parseBirthClockTime } from "@/lib/astronomy/timeInput";
+import { parseBirthDateTimeInput } from "@/lib/astronomy/timeInput";
 import { WesternHouseSystem } from "@/lib/astronomy/ephemeris";
 import {
   Compass,
@@ -88,17 +88,16 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
 
   const timezoneResolution = useMemo(() => {
     if (formData.timezoneMode !== "automatic" || !formData.ianaTimezone) return null;
-    const dateParts = formData.birthDate.split("-").map(Number);
-    if (dateParts.length !== 3 || dateParts.some((value) => !Number.isInteger(value))) return null;
-    const { hour, minute } = parseBirthClockTime(formData.birthTime);
-    return resolveLocalDateTime({
-      year: dateParts[0],
-      month: dateParts[1],
-      day: dateParts[2],
-      hour,
-      minute,
-    }, formData.ianaTimezone);
-  }, [formData.birthDate, formData.birthTime, formData.ianaTimezone, formData.timezoneMode]);
+    const localBirthDateTime = parseBirthDateTimeInput(
+      formData.birthDate,
+      formData.birthTime,
+      formData.isTimeUnknown
+    );
+    // Do not run the 72-hour historical offset scan for an incomplete or
+    // invalid field value. Unknown time is allowed only as an explicit noon placeholder.
+    if (!localBirthDateTime) return null;
+    return resolveLocalDateTime(localBirthDateTime, formData.ianaTimezone);
+  }, [formData.birthDate, formData.birthTime, formData.isTimeUnknown, formData.ianaTimezone, formData.timezoneMode]);
 
   // Debounced search that queries Geoapify with fallback to built-in list
   const handleCitySearch = (query: string) => {
@@ -342,6 +341,10 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setTimezoneError("");
+    if (!parseBirthDateTimeInput(formData.birthDate, formData.birthTime, formData.isTimeUnknown)) {
+      setTimezoneError("Enter a valid Gregorian birth date and a complete HH:mm time, or explicitly mark the birth time as unknown.");
+      return;
+    }
     if (formData.timezoneMode === "automatic") {
       if (!formData.ianaTimezone || !timezoneResolution) {
         setTimezoneError("An IANA timezone is required for automatic historical-time resolution. Select a supported city or use a confirmed manual offset.");
