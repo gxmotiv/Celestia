@@ -416,6 +416,9 @@ export default function HomePage() {
                 birthTime={formData.birthTime}
                 cityName={formData.cityName}
                 country={formData.country}
+                latitude={formData.latitude}
+                longitude={formData.longitude}
+                timezoneOffset={formData.timezoneOffset}
                 western={westernData}
                 vedic={vedicData}
                 numerology={numerologyData}
