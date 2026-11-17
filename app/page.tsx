@@ -538,6 +538,7 @@ export default function HomePage() {
                 vedicData={vedicData}
                 fullName={formData.fullName}
                 birthDateStr={formData.birthDate}
+                isBirthTimeUnknown={formData.isTimeUnknown}
               />
             )}
 
