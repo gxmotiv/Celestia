@@ -12,12 +12,21 @@ export async function POST(req: NextRequest) {
       vedic,
       numerology,
       chinese,
+      extendedSystems,
       readingMode = "holistic",
       readingLength = "detailed",
       userQuestion,
     } = payload ?? {};
 
     const fullName = typeof name === "string" && name.trim() ? name.trim() : "Querent";
+    const extendedSystemsJson = extendedSystems && typeof extendedSystems === "object"
+      ? JSON.stringify(extendedSystems)
+      : "";
+    const extendedSystemsSection = extendedSystemsJson.length > 0 && extendedSystemsJson.length <= 52000
+      ? extendedSystemsJson
+      : extendedSystemsJson.length > 52000
+      ? "Extended context was omitted because it exceeded the route safety limit. Do not infer missing systems from the short chart summary."
+      : "Not supplied.";
     const question = typeof userQuestion === "string" ? userQuestion.slice(0, 2000) : "";
     const westernPlanets = western?.planets && typeof western.planets === "object"
       ? Object.entries(western.planets).slice(0, 15).map(([planet, value]) => {
@@ -34,7 +43,8 @@ export async function POST(req: NextRequest) {
 
     const systemPrompt = `You are Acharya Celestia, a careful multi-tradition astrology research assistant.
 Use only the chart values supplied below. Never invent planetary placements, aspects, house positions, dasha dates, or birth details. Clearly distinguish traditional astrological interpretation from verifiable facts and avoid presenting predictions as certainty.
-Respect the named traditions separately: Western Tropical, Vedic Sidereal/Lahiri, numerology, and Chinese BaZi. If a data point is missing, say so instead of guessing.
+Respect the named traditions separately: Western Tropical, Vedic Sidereal/Lahiri, KP, Jaimini, BaZi, numerology branches, and each transit framework. If a data point is missing, say so instead of guessing.
+Use the extended calculation context as source data only. It does not make heuristic astrology scores statistically calibrated probabilities. Do not invent omitted D2-D60 charts, partner data, KP Horary inputs, or other missing feature state.
 Format a useful, structured response with Markdown headings. Do not repeat the entire raw input.`;
 
     const userPrompt = [
@@ -51,6 +61,8 @@ Format a useful, structured response with Markdown headings. Do not repeat the e
       `Vedic: Lagna ${vedic?.lagna ?? "not supplied"}; Moon Rasi ${vedic?.moonSign ?? "not supplied"}; Nakshatra ${vedic?.nakshatra ?? "not supplied"} Pada ${vedic?.pada ?? "?"}; Nakshatra lord ${vedic?.nakshatraLord ?? "?"}; current Mahadasha ${vedic?.currentDasha?.planet ?? "?"}; Antardasha ${vedic?.currentDasha?.subPlanet ?? "?"}; Navamsa Lagna ${vedic?.navamsa?.lagna ?? "?"}; Moon Navamsa ${vedic?.navamsa?.moonNavamsa ?? "?"}; Yogas: ${vedicYogas}.`,
       `Numerology: Life Path ${numerology?.lifePath ?? "?"}; Expression ${numerology?.expression ?? "?"}; Soul Urge ${numerology?.soulUrge ?? "?"}; Personality ${numerology?.personality ?? "?"}; Birthday ${numerology?.birthday ?? "?"}; Maturity ${numerology?.maturity ?? "?"}; Personal Year ${numerology?.personalYear ?? "?"}.`,
       `BaZi: Animal ${chinese?.animal ?? "?"}; Year element ${chinese?.element ?? "?"}; Yin/Yang ${chinese?.yinYang ?? "?"}; Day Master ${chinese?.dayMaster ?? "?"} (strength ${chinese?.dayMasterStrength ?? "?"}); Four pillars ${JSON.stringify(chinese?.bazi ?? {})}; element balance ${JSON.stringify(chinese?.elementsBalance ?? {})}.`,
+      "EXTENDED CALCULATED SYSTEM CONTEXT (JSON)",
+      extendedSystemsSection,
       "",
       "Deliver the requested report using the verified data above."
     ].filter(Boolean).join("\n");
