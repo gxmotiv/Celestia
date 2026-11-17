@@ -25,7 +25,7 @@ export interface BirthFormData {
   latitude: number;
   longitude: number;
   timezoneOffset: number; // hours from UTC
-  houseSystem: "Placidus" | "Equal" | "WholeSign";
+  houseSystem: "Auto" | "Placidus" | "Equal" | "WholeSign";
 }
 
 interface LocationOption {
@@ -200,7 +200,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
         latitude: 48.4011,
         longitude: 9.9876,
         timezoneOffset: 0.6658,
-        houseSystem: "Placidus",
+        houseSystem: "Auto",
       };
       setFormData(sample);
       setCitySearchQuery("Ulm, Baden-Württemberg, Germany");
@@ -216,7 +216,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
         latitude: 43.7844,
         longitude: 10.9253,
         timezoneOffset: 1,
-        houseSystem: "Placidus",
+        houseSystem: "Auto",
       };
       setFormData(sample);
       setCitySearchQuery("Vinci, Tuscany, Italy");
@@ -232,7 +232,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
         latitude: 47.6006,
         longitude: 9.3174,
         timezoneOffset: 1,
-        houseSystem: "Placidus",
+        houseSystem: "Auto",
       };
       setFormData(sample);
       setCitySearchQuery("Kesswil, Thurgau, Switzerland");
@@ -248,7 +248,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
         latitude: 52.8089,
         longitude: -0.6293,
         timezoneOffset: 0,
-        houseSystem: "Placidus",
+        houseSystem: "Auto",
       };
       setFormData(sample);
       setCitySearchQuery("Woolsthorpe, Lincolnshire, UK");
@@ -507,6 +507,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
                 onChange={(e) => setFormData({ ...formData, houseSystem: e.target.value as BirthFormData["houseSystem"] })}
                 className="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded text-xs text-slate-100 focus:border-amber-500 focus:outline-none"
               >
+                <option value="Auto">Automatic (Placidus; Equal at polar latitudes)</option>
                 <option value="Placidus">Placidus (Time-Proportional)</option>
                 <option value="WholeSign">Whole Sign (Classical Hellenistic)</option>
                 <option value="Equal">Equal House (30° from Asc)</option>
