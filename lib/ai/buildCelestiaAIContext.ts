@@ -121,7 +121,10 @@ export function buildCelestiaAIContext(input: CelestiaAIContextInput) {
   let kpContext: Record<string, unknown> | null = null;
   if (birthInstant) {
     try {
-      const kpChart = new KPEngine().generateKPChart(input.western, input.vedic, birthInstant);
+      // KPSystemPanel uses local birth calendar components at a stable UTC noon
+      // anchor because this engine consumes the calendar date, not the birth clock time.
+      const kpCalendarDate = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+      const kpChart = new KPEngine().generateKPChart(input.western, input.vedic, kpCalendarDate);
       const predictionEngine = new KPPredictionEngine();
       const predictions = Object.values(KP_EVENT_RULES).map((rule) =>
         predictionEngine.predictEvent(
