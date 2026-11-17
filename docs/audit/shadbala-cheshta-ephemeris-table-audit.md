@@ -199,3 +199,52 @@ Celestia now treats `birthTimeKnown === false` as a hard stop for angle-dependen
 Regression tests now use finite Raman-chart angles with `birthTimeKnown: false` and verify that neither Kendradi nor Dig Bala treats them as exact. The behavior is fail-closed rather than silently using noon-derived cardinal points.
 
 The Shadbala result now also carries a visible estimate note for unknown-time charts: longitude-derived values use the chart's representative instant, and the engine does not yet evaluate an intraday ephemeris range to prove that signs, vargas, paksha relationships, and aspect classes remain unchanged. The detail panel lists the actual estimate/validation reasons rather than showing only their count.
+
+
+## 9. Shadbala minimum-strength thresholds: BPHS versus Raman
+
+This audit found that the current engine's single threshold table was valid for the BPHS chapter 27 rule, but it was not universal across the two primary source traditions already represented in the Shadbala panel.
+
+### 9.1 BPHS Chapter 27, verses 32–33
+
+The Sanskrit number-verse (27.32) gives the sequence for the Sun and the planets that follow it: thirty-nine, thirty-six, thirty, forty-two, thirty-nine, thirty-three and thirty, each multiplied by ten. Verse 27.33 says that when the total of the Sun and the others reaches the respective figure they are considered *subalin* (strong); when it exceeds the figure, the strength is complete/full.
+
+The resulting BPHS table, in the seven-graha order Sun / Moon / Mars / Mercury / Jupiter / Venus / Saturn, is:
+
+| Graha | Virupas | Rupas |
+|---|---:|---:|
+| Sun | 390 | 6.5 |
+| Moon | 360 | 6.0 |
+| Mars | 300 | 5.0 |
+| Mercury | 420 | 7.0 |
+| Jupiter | 390 | 6.5 |
+| Venus | 330 | 5.5 |
+| Saturn | 300 | 5.0 |
+
+The engine's existing `REQUIRED_RUPAS` table matches this sequence exactly. The threshold is a total Shadbala minimum; it is not a component-by-component guarantee and does not convert an incomplete component subtotal into a complete classification.
+
+### 9.2 B. V. Raman, *Graha and Bhava Balas*, Article 122
+
+Raman's Article 122, "Powerful Planets", gives his separate minimums in Rupas: Sun 5, Moon 6, Mars 5, Mercury 7, Jupiter 6.5, Venus 5.5 and Saturn 5. In Virupas this is 300 / 360 / 300 / 420 / 390 / 330 / 300.
+
+Only the Sun differs from the BPHS 27.32–33 table: 300 Virupas (5 Rupas) in Raman Article 122, versus 390 Virupas (6.5 Rupas) in BPHS. A single unnamed `REQUIRED_RUPAS` selector would therefore make a source-specific difference invisible to the user. The engine now exposes two explicit profiles:
+
+- `bphs-27-32-33` — default; the seven BPHS totals above.
+- `raman-article-122` — Raman's seven Article 122 minimums.
+
+The Shadbala panel includes a visible "Required Shadbala threshold source" selector. Switching it changes only `requiredRupas`, `requiredVirupas`, and the corresponding ratio/threshold comparison. It must not change any of the six component scores or the available Virupa subtotal.
+
+### 9.3 Guardrails and regression tests
+
+- The engine defaults to BPHS to preserve existing behavior, but reports the selected threshold method in every `ShadbalaResult`.
+- Unknown threshold method identifiers throw rather than falling back to BPHS or to an arbitrary 5-Rupa default.
+- The test suite checks all seven entries in both tables, verifies the expected default, verifies the Raman alternative, and proves that switching profiles leaves the available subtotal unchanged.
+- Partial Shadbala remains partial: a selected minimum cannot bypass missing Yuddha Bala, incomplete Cheshta data, unavailable birth-angle input, unverified component methods or the global implementation status. Strong/weak classification remains withheld until completeness conditions are met.
+- The result does not imply that reaching a numerical minimum makes a planet benefic. Strength and functional benefic/malefic nature remain separate judgements.
+
+### 9.4 Primary references
+
+- **BPHS Chapter 27, verses 32–33:** [Sanskrit verse 32 and translation](https://www.siva.sh/brihat-parashara-hora-shastra/27/32); [verse 33 and translation](https://vedicpupil.in/library/books/brihat-parashara-hora-shastra/chapter-27/verse-33). R. Santhanam's full-text edition is also available at [Internet Archive](https://archive.org/stream/brihatparasarahorashastrabyr.santhanam/Brihat%20Par%C4%81%C5%9Bara%20Hor%C4%81%20%C5%9Ah%C4%81stra%20By%20R.%20Santhanam_djvu.txt).
+- **B. V. Raman, *Graha and Bhava Balas*, Chapter VIII, Article 122 and Example 57:** [scanned edition](https://dn790000.ca.archive.org/0/items/1050-jyotish-books-with-siderial-zodiac/Bhava%20and%20Graha%20Balas_B.V.Raman%201996.pdf). Article 122 expressly gives Sun 5, Moon 6, Mars 5, Mercury 7, Jupiter 6.5, Venus 5.5 and Saturn 5 Rupas.
+
+The distinction is now visible and testable. Neither table is treated as an error or silently substituted for the other. The current Shadbala engine is still marked partial overall; this threshold correction does not complete the underlying six Bala calculations.
