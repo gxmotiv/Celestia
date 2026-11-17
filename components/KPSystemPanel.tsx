@@ -43,6 +43,8 @@ interface KPSystemPanelProps {
   vedicData: VedicChartData;
   fullName: string;
   birthDateStr: string;
+  /** Explicit state; a noon placeholder is not a known birth clock time. */
+  isBirthTimeUnknown?: boolean;
 }
 
 const LIFE_EVENTS = [
@@ -65,6 +67,7 @@ export function KPSystemPanel({
   vedicData,
   fullName,
   birthDateStr,
+  isBirthTimeUnknown = false,
 }: KPSystemPanelProps) {
   // Navigation tabs: Classical + Modern KP Suite
   const [activeSubTab, setActiveSubTab] = useState<
@@ -96,14 +99,22 @@ export function KPSystemPanel({
   const fourStepEngine = useMemo(() => new KPFourStepEngine(), []);
   const horaryEngine = useMemo(() => new KPHoraryEngine(), []);
 
+  // Keep the local civil calendar date for the existing date-based KP
+  // ayanamsa profile. Day lord uses westernData.julianDay, not this placeholder.
   const birthDateObj = useMemo(() => {
-    return new Date(birthDateStr.includes("T") ? birthDateStr : `${birthDateStr}T12:00:00Z`);
+    return new Date(birthDateStr.includes("T") ? birthDateStr : birthDateStr + "T12:00:00Z");
   }, [birthDateStr]);
 
   // Master KP Chart Data
   const kpData: KPChartData = useMemo(() => {
-    return kpEngine.generateKPChart(westernData, vedicData, birthDateObj, kpBodySet);
-  }, [kpEngine, westernData, vedicData, birthDateObj, kpBodySet]);
+    return kpEngine.generateKPChart(
+      westernData,
+      vedicData,
+      birthDateObj,
+      kpBodySet,
+      !isBirthTimeUnknown
+    );
+  }, [kpEngine, westernData, vedicData, birthDateObj, kpBodySet, isBirthTimeUnknown]);
 
   // Positional Status (PS)
   const psMap: Record<string, PositionalStatus> = useMemo(() => {
@@ -205,7 +216,7 @@ export function KPSystemPanel({
             <div className="p-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-xs space-y-0.5">
               <span className="text-[10px] text-slate-400 uppercase font-medium block">Ruling Day Lord</span>
               <span className="font-bold text-cyan-300 font-mono">
-                {kpData.rulingPlanets.dayLord}
+                {kpData.rulingPlanets.dayLord ?? "Unavailable"}
               </span>
             </div>
           </div>
@@ -219,7 +230,7 @@ export function KPSystemPanel({
               Ruling Planets (RP):
             </span>
             <span className="text-slate-300">
-              Day: <strong className="text-amber-300">{kpData.rulingPlanets.dayLord}</strong>
+              Day: <strong className="text-amber-300">{kpData.rulingPlanets.dayLord ?? "Unavailable"}</strong>
             </span>
             <span className="text-slate-600">·</span>
             <span className="text-slate-300">
@@ -1454,7 +1465,7 @@ export function KPSystemPanel({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
             <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-xl space-y-1 text-center">
               <span className="text-[10px] uppercase font-semibold text-slate-400 block">5. Day Lord</span>
-              <span className="text-lg font-bold text-amber-300 block">{kpData.rulingPlanets.dayLord}</span>
+              <span className="text-lg font-bold text-amber-300 block">{kpData.rulingPlanets.dayLord ?? "Unavailable"}</span>
               <span className="text-[10px] text-slate-500">Weekday lord · UTC day currently provisional</span>
             </div>
 
