@@ -407,8 +407,44 @@ export class WesternBenchmarkRunner {
       standardReference: "Vettius Valens Anthologies Book IV.4–10",
       expected: "12 successive L1 sign periods generated",
       actual: `${zrReport.allL1Periods.length} L1 periods starting in ${zrReport.lotSign}`,
-      passed: zrReport.allL1Periods.length === 12,
-      details: "Zodiacal releasing from the Lot of Spirit cycles through all twelve zodiacal signs with planet-specific periods.",
+      passed: zrReport.allL1Periods.length >= 12,
+      details: "The first twelve L1 chapters traverse all signs; later chapters continue with the Loosing of the Bond transition.",
+    });
+
+    // Test 15a: Traditional 211-year sign-period cycle.
+    const zrCycleYears = Object.values(ZodiacalReleasingEngine.SIGN_PERIODS)
+      .reduce((total, years) => total + years, 0);
+    results.push({
+      id: "W-PRED-06",
+      name: "Zodiacal Releasing 211-Year Minor-Years Cycle",
+      category: "Predictive Hellenistic",
+      standardReference: "Vettius Valens / 360-day ideal-year convention",
+      expected: "211 sign-years across the twelve signs",
+      actual: String(zrCycleYears) + " sign-years",
+      passed: zrCycleYears === 211,
+      details: "The standard allotments sum to 211 ideal years before calendar conversion.",
+    });
+
+    // Test 15b: Active L1/L2 periods must contain the queried instant and preserve birth time.
+    const zrBirth = new Date("1990-01-01T12:34:00.000Z");
+    const zrNow = new Date("2025-01-01T12:34:00.000Z");
+    const zrTimed = this.releasingEngine.calculateReleasing(zrBirth, spiritLon, "Spirit (Career & Purpose)", zrNow);
+    const l1Start = Date.parse(zrTimed.currentL1Period.startDate);
+    const l1End = Date.parse(zrTimed.currentL1Period.endDate);
+    const l2Start = Date.parse(zrTimed.currentL2Period.startDate);
+    const l2End = Date.parse(zrTimed.currentL2Period.endDate);
+    results.push({
+      id: "W-PRED-07",
+      name: "Zodiacal Releasing Active L1/L2 Date-Boundary Invariant",
+      category: "Predictive Hellenistic",
+      standardReference: "Valens-style 360-day year and 30-day month",
+      expected: "Queried instant is inside both active periods; birth UTC time is preserved",
+      actual: "L1 " + zrTimed.currentL1Period.startDate + "–" + zrTimed.currentL1Period.endDate +
+        "; L2 " + zrTimed.currentL2Period.startDate + "–" + zrTimed.currentL2Period.endDate,
+      passed: l1Start <= zrNow.getTime() && zrNow.getTime() < l1End &&
+        l2Start <= zrNow.getTime() && zrNow.getTime() < l2End &&
+        zrTimed.allL1Periods[0].startDate === zrBirth.toISOString(),
+      details: "L1 and L2 use exact timestamp boundaries; the active L2 subperiod is truncated at its parent L1 end.",
     });
 
     // Test 16: Secondary Progressions "Day for a Year" (1 Day = 1 Year)
