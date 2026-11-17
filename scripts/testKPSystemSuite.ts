@@ -6,6 +6,7 @@ import { KPFourStepEngine } from "../lib/kp/kpFourStepEngine";
 import { KPSignificators } from "../lib/kp/kpSignificators";
 import { KPPredictionEngine } from "../lib/kp/kpPredictionEngine";
 import { KPEngine } from "../lib/kp/kpEngine";
+import { KPHoraryEngine } from "../lib/kp/kpHoraryEngine";
 import type { VedicChartData } from "../lib/astronomy/vedic";
 import type { KPCusps, KPPlanet, KPPlanetSignification } from "../lib/kp/kpTypes";
 
@@ -232,6 +233,46 @@ assert.deepEqual(
 
 assert.equal(kpIntegratedChart.currentDashaLord, "Jupiter");
 assert.equal(kpIntegratedChart.currentAntardashaLord, "Venus");
+
+// KP Reader VI's worked example for horary number 74 states that the
+// commencement of the Cancer/P dimension is 14°53'20" and that this
+// commencing point is taken as the Horary Ascendant (printed pp. 100–102).
+const horary74Entry = SubLordCalculator.getHorary249Entry(74);
+assert.ok(Math.abs(horary74Entry.startLongitude - (90 + 14 + 53 / 60 + 20 / 3600)) < 1e-10);
+assert.ok(
+  Math.abs(horary74Entry.centerLongitude - horary74Entry.startLongitude) > 1e-6,
+  "The midpoint must remain distinct from the selected sub's commencement."
+);
+const horaryEngine = new KPHoraryEngine();
+const horary74 = horaryEngine.calculateHoraryJudgment(
+  74,
+  "1-249",
+  "career",
+  kpIntegratedChart,
+  new Date("2000-01-01T12:00:00.000Z")
+);
+assert.ok(
+  Math.abs(horary74.horaryAscendant.longitude - horary74Entry.startLongitude) < 1e-10,
+  "KP Horary #74 Ascendant must use the sub interval's commencement, not its centre."
+);
+assert.ok(
+  Math.abs(horary74.horaryChart.cusps.cusps[0] - horary74Entry.startLongitude) < 1e-8,
+  "Horary first cusp must equal the published seed commencement."
+);
+
+// The extended 1–2193 table must use its own selected micro-interval's start.
+const horary2193Entry = SubLordCalculator.getHorary2193Entry(805);
+const horary2193 = horaryEngine.calculateHoraryJudgment(
+  805,
+  "1-2193",
+  "career",
+  kpIntegratedChart,
+  new Date("2000-01-01T12:00:00.000Z")
+);
+assert.ok(
+  Math.abs(horary2193.horaryAscendant.longitude - horary2193Entry.startLongitude) < 1e-10,
+  "KP Horary 1–2193 must use the selected sub-sub interval's commencement."
+);
 
 assert.ok(kpFromPlacidus.cusps.every(Number.isFinite));
 assert.ok(kpFromWholeSign.cusps.every(Number.isFinite));

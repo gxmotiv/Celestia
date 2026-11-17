@@ -152,7 +152,9 @@ export class KPHoraryEngine {
 
     if (tableType === "1-249") {
       const entry: KP249Entry = SubLordCalculator.getHorary249Entry(seed);
-      ascLon = entry.centerLongitude;
+      // KP Reader VI defines the chosen sub's commencement as the Horary
+      // Ascendant, not the midpoint of that sub interval.
+      ascLon = entry.startLongitude;
       ascSign = entry.signName;
       ascSignIndex = entry.signIndex;
       ascSignLord = entry.signLord;
@@ -162,7 +164,9 @@ export class KPHoraryEngine {
       spanEndFormatted = SubLordCalculator.formatDMS(entry.endLongitude % 30);
     } else {
       const entry: KP2193Entry = SubLordCalculator.getHorary2193Entry(seed);
-      ascLon = entry.centerLongitude;
+      // The 1–2193 profile also assigns the beginning of the selected
+      // sub-sub interval as its Ascendant.
+      ascLon = entry.startLongitude;
       ascSign = entry.signName;
       ascSignIndex = entry.signIndex;
       ascSignLord = entry.signLord;
