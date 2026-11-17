@@ -12,6 +12,7 @@ import {
   PakshaMoonAccountingRule,
   AyanaBalaMethod,
   DrekkanaBalaMethod,
+  ShadbalaRequirementMethod,
 } from "@/lib/vedic/shadbalaEngine";
 import type { DrishtiVirupaVariant } from "@/lib/vedic/drishtiEngine";
 import { WesternChartData } from "@/lib/astronomy/ephemeris";
@@ -74,6 +75,8 @@ export function ShadbalaPanel({
   const [ayanaMethod, setAyanaMethod] = useState<AyanaBalaMethod>("bphs-khanda");
   const [drekkanaBalaMethod, setDrekkanaBalaMethod] =
     useState<DrekkanaBalaMethod>("bphs-sanskrit-raman");
+  const [requirementMethod, setRequirementMethod] =
+    useState<ShadbalaRequirementMethod>("bphs-27-32-33");
 
   const chartInput: ShadbalaChartInput = useMemo(() => {
     const planetsMap: ShadbalaChartInput["planets"] = {};
@@ -164,6 +167,7 @@ export function ShadbalaPanel({
         ? { localApparentTimeMinutes }
         : {}),
       saptavargajaScale,
+      shadbalaRequirementMethod: requirementMethod,
       drishtiVirupaVariant,
       drikFullAspectReading,
       drikMercuryAssociationRule,
@@ -191,6 +195,7 @@ export function ShadbalaPanel({
     ayanaMethod,
     drekkanaBalaMethod,
     saptavargajaScale,
+    requirementMethod,
     drishtiVirupaVariant,
     drikFullAspectReading,
     drikMercuryAssociationRule,
@@ -263,6 +268,23 @@ export function ShadbalaPanel({
               <li key={item}>{item}</li>
             ))}
           </ul>
+        </div>
+
+        <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
+          <label className="min-w-0 flex flex-col gap-1.5 text-xs text-slate-400">
+            Required Shadbala threshold source
+            <select
+              value={requirementMethod}
+              onChange={(event) => setRequirementMethod(event.target.value as ShadbalaRequirementMethod)}
+              className="min-w-[17rem] rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-xs text-slate-200"
+            >
+              <option value="bphs-27-32-33">BPHS 27.32–33: Sun 6.5R · Moon 6R · Mars 5R · Mercury 7R · Jupiter 6.5R · Venus 5.5R · Saturn 5R</option>
+              <option value="raman-article-122">Raman Article 122: Sun 5R · Moon 6R · Mars 5R · Mercury 7R · Jupiter 6.5R · Venus 5.5R · Saturn 5R</option>
+            </select>
+            <span className="text-[10px] leading-relaxed text-slate-500">
+              This changes only the minimum used for the strong/weak threshold, not the six component scores. It is not safe to blend the BPHS and Raman tables.
+            </span>
+          </label>
         </div>
 
         <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
