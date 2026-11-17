@@ -112,7 +112,8 @@ async function generateWithNaraRouter(
   apiKey: string,
   model: string,
   options: Required<Pick<GenerateTextOptions, "systemPrompt" | "userPrompt" | "maxOutputTokens" | "temperature">>,
-  baseUrl: string
+  baseUrl: string,
+  reasoningEffort: "low" | "medium"
 ): Promise<CelestiaAIResult> {
   const response = await fetch(baseUrl + "/chat/completions", {
     method: "POST",
@@ -130,7 +131,7 @@ async function generateWithNaraRouter(
       ],
       temperature: options.temperature,
       max_tokens: options.maxOutputTokens,
-      reasoning_effort: model.toLowerCase().includes("flash") ? "low" : "medium",
+      reasoning_effort: reasoningEffort,
       stream: false,
     }),
   });
@@ -234,7 +235,7 @@ export async function generateCelestiaText(
 
   if (naraRouterKey) {
     try {
-      return await generateWithNaraRouter(naraRouterKey, naraRouterName, options, naraRouterBaseUrl);
+      return await generateWithNaraRouter(naraRouterKey, naraRouterName, options, naraRouterBaseUrl, modelTier === "reasoning" ? "medium" : "low");
     } catch (error) {
       const status = (error as ProviderError | null)?.status;
       if (isRetryableProviderFailure(error) || status === 404) {
