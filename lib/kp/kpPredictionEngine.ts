@@ -18,6 +18,8 @@ import {
   KPRulingPlanets,
 } from "./kpTypes";
 import { KPSignificators } from "./kpSignificators";
+import { resolveKPReaderVIDayLord } from "./kpDayLord";
+import type { KPReaderVIDayLordContext } from "./kpDayLord";
 
 export interface KPEventRule {
   house: number;
@@ -326,25 +328,21 @@ export class KPPredictionEngine {
   }
 
   /**
-   * Calculate the five KP Ruling Planets in the Reader VI preference order:
-   * 1. Lagna Star Lord
-   * 2. Lagna Sign Lord
-   * 3. Moon Star Lord
-   * 4. Moon Sign Lord
-   * 5. Day Lord
-   *
-   * Limitation: weekday currently uses the UTC civil date, not local sunrise.
+   * Calculate KP Reader VI natal Ruling Planets in the documented preference order.
+   * The weekday lord is resolved from the actual birth instant and birthplace,
+   * not from the UTC civil weekday.
    */
   public calculateRulingPlanets(
     cusps: KPCusps,
     planets: KPPlanet[],
-    birthDate: Date
+    birthDate: Date,
+    dayLordContext?: KPReaderVIDayLordContext
   ): KPRulingPlanets {
     if (!(birthDate instanceof Date) || !Number.isFinite(birthDate.getTime())) {
       throw new Error("KP ruling planets require a valid birth/judgment Date.");
     }
-    const dayNames = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"];
-    const dayLord = dayNames[birthDate.getUTCDay()];
+    const dayLordResolution = resolveKPReaderVIDayLord(dayLordContext);
+    const dayLord = dayLordResolution.dayLord;
     const moon = planets.find((p) => p.name === "Moon");
     if (!moon) throw new Error("KP ruling planets require Moon position data; no substitute is permitted.");
     if (!moon.signLord || !moon.starLord || !moon.subLord) {
