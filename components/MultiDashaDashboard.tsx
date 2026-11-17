@@ -5,6 +5,7 @@ import { VedicChartData } from "@/lib/astronomy/vedic";
 import {
   CompleteDashaOrchestrator,
   AllDashaSystems,
+  CharaDashaCalculator,
 } from "@/lib/vedic/completeDashaSystems";
 import { ExtendedDashaCalculator } from "@/lib/vedic/extendedDashaLevels";
 import {
@@ -97,14 +98,11 @@ export function MultiDashaDashboard({
     );
   }, [vedicData]);
 
-  // Build planetsInSigns map for Jaimini Chara Dasha
-  const planetsInSigns = useMemo(() => {
-    const map: Record<string, string> = {};
-    vedicData.planets.forEach((p) => {
-      map[p.rasiName] = p.name;
-    });
-    return map;
-  }, [vedicData]);
+  // Keep all nine classical grahas for BPHS sign-strength and dual-lord checks.
+  const charaPlanetPositions = useMemo(
+    () => CharaDashaCalculator.toPlanetPositions(vedicData.planets),
+    [vedicData]
+  );
 
   // Calculate current Sookshma context for Level 5 Prana
   const currentMD = useMemo(() => {
@@ -166,7 +164,7 @@ export function MultiDashaDashboard({
       moonNakshatra1Indexed,
       moonDegreeInNakshatra,
       ascendantSign: vedicData.lagna.rasiName,
-      planetsInSigns,
+      charaPlanetPositions,
       birthDate: birthDateObj,
       sookshmaContext,
       referenceDate,
@@ -175,7 +173,7 @@ export function MultiDashaDashboard({
     orchestrator,
     moonPlanet,
     vedicData.lagna.rasiName,
-    planetsInSigns,
+    charaPlanetPositions,
     birthDateObj,
     sookshmaContext,
     referenceDate,

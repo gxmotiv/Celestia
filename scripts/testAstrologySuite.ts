@@ -352,7 +352,7 @@ assertTest(
 const charaCalc = new CharaDashaCalculator();
 const charaPeriodsAries = charaCalc.calculateCharaDasha(
   "Aries",
-  { Aries: "Mars", Leo: "Jupiter" },
+  CharaDashaCalculator.toPlanetPositions(einsteinVedic.planets),
   new Date("2000-01-01T00:00:00Z")
 );
 
@@ -492,20 +492,7 @@ const allDashasCombined = orchestrator.generateAllDashas({
   moonNakshatra1Indexed: einsteinMoon.nakshatraIndex + 1,
   moonDegreeInNakshatra: einsteinMoon.siderealLongitude % (360 / 27),
   ascendantSign: einsteinVedic.lagna.rasiName,
-  planetsInSigns: {
-    Aries: "Mars",
-    Taurus: "Venus",
-    Gemini: "Mercury",
-    Cancer: "Moon",
-    Leo: "Sun",
-    Virgo: "Mercury",
-    Libra: "Venus",
-    Scorpio: "Mars",
-    Sagittarius: "Jupiter",
-    Capricorn: "Saturn",
-    Aquarius: "Saturn",
-    Pisces: "Jupiter",
-  },
+  charaPlanetPositions: CharaDashaCalculator.toPlanetPositions(einsteinVedic.planets),
   birthDate: new Date("1000-01-01T00:00:00.000Z"),
   referenceDate: new Date("2026-11-08T12:00:00.000Z"),
 });

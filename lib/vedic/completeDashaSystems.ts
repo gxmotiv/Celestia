@@ -113,6 +113,10 @@ export interface CharaDashaPeriod {
   direction: "direct" | "reverse";
   lord: string; // Sign lord
   isCurrent: boolean;
+  countDirection?: "direct" | "reverse";
+  profileId?: "bphs-santhanam-1984";
+  baseYears?: number;
+  adjustmentYears?: number;
   interpretation: CharaInterpretation;
 }
 
@@ -624,152 +628,116 @@ export class YoginiDashaCalculator {
 // PART 3: CHARA DASHA (JAIMINI SIGN-BASED SYSTEM)
 // ============================================================
 
+export interface CharaDashaPlanetPosition { planet: string; sign: string; }
+
+/** BPHS/Santhanam Chara Dasha profile, Chapter 46, verses 155–167. */
 export class CharaDashaCalculator {
-  public static readonly SIGNS = [
-    "Aries",
-    "Taurus",
-    "Gemini",
-    "Cancer",
-    "Leo",
-    "Virgo",
-    "Libra",
-    "Scorpio",
-    "Sagittarius",
-    "Capricorn",
-    "Aquarius",
-    "Pisces",
-  ];
+  public static readonly PROFILE_ID = "bphs-santhanam-1984" as const;
+  public static readonly SIGNS = ["Aries","Taurus","Gemini","Cancer","Leo","Virgo","Libra","Scorpio","Sagittarius","Capricorn","Aquarius","Pisces"] as const;
+  public static readonly REQUIRED_PLANETS = ["Sun","Moon","Mars","Mercury","Jupiter","Venus","Saturn","Rahu","Ketu"] as const;
+  public static readonly SIGN_LORDS: Record<string,string> = { Aries:"Mars",Taurus:"Venus",Gemini:"Mercury",Cancer:"Moon",Leo:"Sun",Virgo:"Mercury",Libra:"Venus",Scorpio:"Mars",Sagittarius:"Jupiter",Capricorn:"Saturn",Aquarius:"Saturn",Pisces:"Jupiter" };
+  /** Individual sign-year direction from four three-sign padas in BPHS 46.156. */
+  public static readonly COUNT_DIRECTIONS: readonly ("direct"|"reverse")[] = ["direct","direct","direct","reverse","reverse","reverse","direct","direct","direct","reverse","reverse","reverse"];
+  private static readonly PLANET_ALIASES: Record<string,string> = { NorthNode:"Rahu", SouthNode:"Ketu" };
+  // Nodal exaltation/debilitation is not assumed because schools disagree.
+  private static readonly EXALTATION_SIGNS: Record<string,string> = { Sun:"Aries",Moon:"Taurus",Mars:"Capricorn",Mercury:"Virgo",Jupiter:"Cancer",Venus:"Pisces",Saturn:"Libra" };
+  private static readonly DEBILITATION_SIGNS: Record<string,string> = { Sun:"Libra",Moon:"Scorpio",Mars:"Cancer",Mercury:"Pisces",Jupiter:"Capricorn",Venus:"Virgo",Saturn:"Aries" };
+  private static readonly DUAL_LORDS: Record<string,[string,string]> = { Scorpio:["Mars","Ketu"], Aquarius:["Saturn","Rahu"] };
+  private static readonly MODALITY_STRENGTH: Record<string,number> = { Movable:0,Fixed:1,Dual:2 };
+  private static readonly SIGN_MODALITIES = ["Movable","Fixed","Dual","Movable","Fixed","Dual","Movable","Fixed","Dual","Movable","Fixed","Dual"] as const;
 
-  public static readonly SIGN_LORDS: Record<string, string> = {
-    Aries: "Mars",
-    Taurus: "Venus",
-    Gemini: "Mercury",
-    Cancer: "Moon",
-    Leo: "Sun",
-    Virgo: "Mercury",
-    Libra: "Venus",
-    Scorpio: "Mars",
-    Sagittarius: "Jupiter",
-    Capricorn: "Saturn",
-    Aquarius: "Saturn",
-    Pisces: "Jupiter",
-  };
+  /** Keeps the nine classical grahas and normalizes Celestia's node identifiers. */
+  public static toPlanetPositions(positions: ReadonlyArray<{name:string;rasiName:string}>): CharaDashaPlanetPosition[] {
+    const required = new Set<string>(CharaDashaCalculator.REQUIRED_PLANETS);
+    return positions.flatMap(({name,rasiName}) => {
+      const planet = CharaDashaCalculator.PLANET_ALIASES[name] || name;
+      return required.has(planet) ? [{planet,sign:rasiName}] : [];
+    });
+  }
 
-  /**
-   * Calculate complete Chara Dasha cycle based on Jaimini Upadesha Sutras
-   */
-  public calculateCharaDasha(
-    ascendantSign: string,
-    planetsInSigns: Record<string, string>, // { "Aries": "Mars", "Taurus": "Sun" }
-    birthDate: Date,
-    referenceDate: Date = new Date()
-  ): CharaDashaPeriod[] {
-    const periods: CharaDashaPeriod[] = [];
-    const startIndex = CharaDashaCalculator.SIGNS.indexOf(ascendantSign);
-    const validStartIndex = startIndex === -1 ? 0 : startIndex;
-
-    // Odd sign = direct zodiacal progression; Even sign = reverse progression
-    const isOddSign = validStartIndex % 2 === 0; // Aries = idx 0 (odd sign 1)
-    const direction: "direct" | "reverse" = isOddSign ? "direct" : "reverse";
-
-    let currentIndex = validStartIndex;
-    let currentMs = birthDate.getTime();
-
-    // 12 sign periods
-    for (let i = 0; i < 12; i++) {
-      const sign = CharaDashaCalculator.SIGNS[currentIndex];
-      const years = this.calculateSignYears(sign, planetsInSigns, direction);
-      const durationMs = years * 360 * 24 * 3600 * 1000;
-
-      const startDate = new Date(currentMs);
-      const endDate = new Date(currentMs + durationMs);
-
-      const isCurrent =
-        referenceDate.getTime() >= startDate.getTime() &&
-        referenceDate.getTime() < endDate.getTime();
-
-      periods.push({
-        sign,
-        years,
-        startDate,
-        endDate,
-        startDateFormatted: this.formatDate(startDate),
-        endDateFormatted: this.formatDate(endDate),
-        direction,
-        lord: CharaDashaCalculator.SIGN_LORDS[sign],
-        isCurrent,
-        interpretation: this.getCharaInterpretation(sign, years),
-      });
-
-      if (direction === "direct") {
-        currentIndex = (currentIndex + 1) % 12;
-      } else {
-        currentIndex = (currentIndex - 1 + 12) % 12;
-      }
-
-      currentMs += durationMs;
+  /** Mahadasha sequence direction (v.167) is separate from each sign's year-count direction (vv.155–156). */
+  public calculateCharaDasha(ascendantSign:string,planetPositions:readonly CharaDashaPlanetPosition[],birthDate:Date,referenceDate:Date=new Date()):CharaDashaPeriod[]{
+    const startIndex=CharaDashaCalculator.SIGNS.indexOf(ascendantSign as (typeof CharaDashaCalculator.SIGNS)[number]);
+    if(startIndex<0) throw new RangeError('Chara Dasha requires a valid Ascendant sign; received "'+ascendantSign+'".');
+    if(!(birthDate instanceof Date)||!Number.isFinite(birthDate.getTime())) throw new RangeError("Chara Dasha requires a valid birth date.");
+    if(!(referenceDate instanceof Date)||!Number.isFinite(referenceDate.getTime())) throw new RangeError("Chara Dasha requires a valid reference date.");
+    if(!Array.isArray(planetPositions)) throw new TypeError("Chara Dasha requires nine classical planet positions.");
+    const planetToSign=new Map<string,string>();
+    const occupantsBySign=new Map<string,string[]>();
+    for(const sign of CharaDashaCalculator.SIGNS) occupantsBySign.set(sign,[]);
+    for(const position of planetPositions){
+      if(!position||typeof position.planet!=="string"||typeof position.sign!=="string") throw new TypeError("Each Chara Dasha position must contain planet and sign strings.");
+      const planet=CharaDashaCalculator.PLANET_ALIASES[position.planet]||position.planet;
+      if(!CharaDashaCalculator.REQUIRED_PLANETS.includes(planet as (typeof CharaDashaCalculator.REQUIRED_PLANETS)[number])) throw new RangeError('Unsupported Chara Dasha planet "'+position.planet+'".');
+      if(!CharaDashaCalculator.SIGNS.includes(position.sign as (typeof CharaDashaCalculator.SIGNS)[number])) throw new RangeError('Invalid sign "'+position.sign+'" for '+planet+'.');
+      if(planetToSign.has(planet)) throw new RangeError("Duplicate Chara Dasha position for "+planet+".");
+      planetToSign.set(planet,position.sign); occupantsBySign.get(position.sign)!.push(planet);
     }
-
+    const missing=CharaDashaCalculator.REQUIRED_PLANETS.filter((planet)=>!planetToSign.has(planet));
+    if(missing.length) throw new RangeError("Chara Dasha needs all nine classical grahas; missing: "+missing.join(", ")+".");
+    // BPHS 46.167: use the ninth sign from Lagna's three-sign pada group to choose global order.
+    const ninthGroup=Math.floor(((startIndex+8)%12)/3);
+    const sequenceDirection:"direct"|"reverse"=ninthGroup===0||ninthGroup===2?"direct":"reverse";
+    const periods:CharaDashaPeriod[]=[]; let currentIndex=startIndex; let currentMs=birthDate.getTime();
+    for(let i=0;i<12;i++){
+      const sign=CharaDashaCalculator.SIGNS[currentIndex];
+      const details=this.calculateSignYears(sign,planetToSign,occupantsBySign);
+      const durationMs=details.years*360*24*60*60*1000;
+      const startDate=new Date(currentMs); const endDate=new Date(currentMs+durationMs);
+      periods.push({sign,years:details.years,startDate,endDate,startDateFormatted:this.formatDate(startDate),endDateFormatted:this.formatDate(endDate),direction:sequenceDirection,lord:details.lord,isCurrent:referenceDate.getTime()>=currentMs&&referenceDate.getTime()<currentMs+durationMs,countDirection:details.countDirection,profileId:CharaDashaCalculator.PROFILE_ID,baseYears:details.baseYears,adjustmentYears:details.adjustmentYears,interpretation:this.getCharaInterpretation(sign,details.years)});
+      currentIndex=sequenceDirection==="direct"?(currentIndex+1)%12:(currentIndex-1+12)%12; currentMs+=durationMs;
+    }
     return periods;
   }
 
-  /**
-   * Determine sign duration based on 9th house principle:
-   * Count signs from current sign to the 9th house sign or its lord.
-   */
-  private calculateSignYears(
-    sign: string,
-    planetsInSigns: Record<string, string>,
-    direction: "direct" | "reverse"
-  ): number {
-    const signIndex = CharaDashaCalculator.SIGNS.indexOf(sign);
-
-    let ninthIndex: number;
-    if (direction === "direct") {
-      ninthIndex = (signIndex + 8) % 12;
-    } else {
-      ninthIndex = (signIndex - 8 + 12) % 12;
-    }
-
-    const ninthSign = CharaDashaCalculator.SIGNS[ninthIndex];
-    const ninthLord = CharaDashaCalculator.SIGN_LORDS[ninthSign];
-
-    // If 9th sign contains planets, count to 9th sign
-    if (planetsInSigns[ninthSign]) {
-      return this.countSignsBetween(signIndex, ninthIndex, direction);
-    }
-
-    // Otherwise count to where 9th lord is located
-    const lordSign = Object.keys(planetsInSigns).find((s) => planetsInSigns[s] === ninthLord);
-    if (lordSign) {
-      const lordIndex = CharaDashaCalculator.SIGNS.indexOf(lordSign);
-      return this.countSignsBetween(signIndex, lordIndex, direction);
-    }
-
-    return this.countSignsBetween(signIndex, ninthIndex, direction);
+  private calculateSignYears(sign:string,planetToSign:Map<string,string>,occupantsBySign:Map<string,string[]>):{years:number;lord:string;countDirection:"direct"|"reverse";baseYears:number;adjustmentYears:number}{
+    const signIndex=CharaDashaCalculator.SIGNS.indexOf(sign as (typeof CharaDashaCalculator.SIGNS)[number]);
+    const countDirection=CharaDashaCalculator.COUNT_DIRECTIONS[signIndex];
+    let destinationSign:string; let lord:string;
+    const coLords=CharaDashaCalculator.DUAL_LORDS[sign];
+    if(coLords){
+      const choice=this.chooseDualLord(sign,coLords,planetToSign,occupantsBySign); destinationSign=choice.destinationSign; lord=choice.lord;
+      if(choice.bothInOwnSign) return {years:12,lord,countDirection,baseYears:12,adjustmentYears:0};
+    }else{lord=CharaDashaCalculator.SIGN_LORDS[sign];destinationSign=planetToSign.get(lord)!;}
+    const destinationIndex=CharaDashaCalculator.SIGNS.indexOf(destinationSign as (typeof CharaDashaCalculator.SIGNS)[number]);
+    const baseYears=this.countSignsBetween(signIndex,destinationIndex,countDirection);
+    const occupants=occupantsBySign.get(destinationSign)||[];
+    const hasExalted=occupants.some((planet)=>CharaDashaCalculator.EXALTATION_SIGNS[planet]===destinationSign);
+    const hasDebilitated=occupants.some((planet)=>CharaDashaCalculator.DEBILITATION_SIGNS[planet]===destinationSign);
+    const adjustmentYears=(hasExalted?1:0)-(hasDebilitated?1:0);
+    // BPHS v.165 has no stated minimum; a one-year base with a debilitated graha may yield zero.
+    return {years:Math.max(0,baseYears+adjustmentYears),lord,countDirection,baseYears,adjustmentYears};
   }
 
-  private countSignsBetween(
-    fromIndex: number,
-    toIndex: number,
-    direction: "direct" | "reverse"
-  ): number {
-    let count = 1;
-    let curr = fromIndex;
-
-    while (curr !== toIndex) {
-      if (direction === "direct") {
-        curr = (curr + 1) % 12;
-      } else {
-        curr = (curr - 1 + 12) % 12;
-      }
-      count++;
-      if (count > 9) break; // Standard Jaimini upper bound
-    }
-
-    return Math.max(1, Math.min(count, 9));
+  /** BPHS vv.158–164: resolve Mars/Ketu for Scorpio and Saturn/Rahu for Aquarius. */
+  private chooseDualLord(sign:string,lords:readonly [string,string],planetToSign:Map<string,string>,occupantsBySign:Map<string,string[]>):{destinationSign:string;lord:string;bothInOwnSign:boolean}{
+    const inSign=lords.filter((lord)=>planetToSign.get(lord)===sign);
+    if(inSign.length===2) return {destinationSign:sign,lord:lords.join(" & "),bothInOwnSign:true};
+    if(inSign.length===1){const other=lords.find((lord)=>lord!==inSign[0])!;return {destinationSign:planetToSign.get(other)!,lord:other,bothInOwnSign:false};}
+    const firstSign=planetToSign.get(lords[0])!; const secondSign=planetToSign.get(lords[1])!;
+    if(firstSign===secondSign) return {destinationSign:firstSign,lord:lords.join(" & "),bothInOwnSign:false};
+    const firstComp=(occupantsBySign.get(firstSign)||[]).filter((planet)=>planet!==lords[0]).length;
+    const secondComp=(occupantsBySign.get(secondSign)||[]).filter((planet)=>planet!==lords[1]).length;
+    if(firstComp!==secondComp){const n=firstComp>secondComp?0:1;return {destinationSign:n===0?firstSign:secondSign,lord:lords[n],bothInOwnSign:false};}
+    const firstIndex=CharaDashaCalculator.SIGNS.indexOf(firstSign as (typeof CharaDashaCalculator.SIGNS)[number]);
+    const secondIndex=CharaDashaCalculator.SIGNS.indexOf(secondSign as (typeof CharaDashaCalculator.SIGNS)[number]);
+    const firstMod=CharaDashaCalculator.SIGN_MODALITIES[firstIndex]; const secondMod=CharaDashaCalculator.SIGN_MODALITIES[secondIndex];
+    const modalityDifference=CharaDashaCalculator.MODALITY_STRENGTH[firstMod]-CharaDashaCalculator.MODALITY_STRENGTH[secondMod];
+    if(modalityDifference!==0){const n=modalityDifference>0?0:1;return {destinationSign:n===0?firstSign:secondSign,lord:lords[n],bothInOwnSign:false};}
+    // Explicit BPHS reading: exalted co-lord decides after sign modality and before the longer-count test.
+    const firstExalted=CharaDashaCalculator.EXALTATION_SIGNS[lords[0]]===firstSign;
+    const secondExalted=CharaDashaCalculator.EXALTATION_SIGNS[lords[1]]===secondSign;
+    if(firstExalted!==secondExalted){const n=firstExalted?0:1;return {destinationSign:n===0?firstSign:secondSign,lord:lords[n],bothInOwnSign:false};}
+    const from=CharaDashaCalculator.SIGNS.indexOf(sign as (typeof CharaDashaCalculator.SIGNS)[number]);
+    const direction=CharaDashaCalculator.COUNT_DIRECTIONS[from];
+    const firstYears=this.countSignsBetween(from,firstIndex,direction); const secondYears=this.countSignsBetween(from,secondIndex,direction);
+    if(firstYears!==secondYears){const n=firstYears>secondYears?0:1;return {destinationSign:n===0?firstSign:secondSign,lord:lords[n],bothInOwnSign:false};}
+    throw new RangeError("Cannot adjudicate dual lords for "+sign+" from the supplied placements.");
   }
 
+  private countSignsBetween(fromIndex:number,toIndex:number,direction:"direct"|"reverse"):number{
+    const distance=direction==="direct"?(toIndex-fromIndex+12)%12:(fromIndex-toIndex+12)%12; return distance+1;
+  }
   private getCharaInterpretation(sign: string, years: number): CharaInterpretation {
     const MAP: Record<string, CharaInterpretation> = {
       Aries: {
@@ -876,7 +844,6 @@ export class CharaDashaCalculator {
     return `${y}-${m}-${d}`;
   }
 }
-
 // ============================================================
 // PART 4: KALACHAKRA DASHA (108 PADA DEITY CYCLE)
 // ============================================================
@@ -1256,7 +1223,7 @@ export class CompleteDashaOrchestrator {
     moonNakshatra1Indexed: number;
     moonDegreeInNakshatra: number;
     ascendantSign: string;
-    planetsInSigns: Record<string, string>;
+    charaPlanetPositions: CharaDashaPlanetPosition[];
     birthDate: Date;
     sookshmaContext?: {
       mahadasha: string;
@@ -1301,7 +1268,7 @@ export class CompleteDashaOrchestrator {
     // 3. Jaimini Chara Dasha
     const chara = this.charaCalculator.calculateCharaDasha(
       params.ascendantSign,
-      params.planetsInSigns,
+      params.charaPlanetPositions,
       params.birthDate,
       refDate
     );
@@ -1546,7 +1513,7 @@ export class CompleteDashaOrchestrator {
     moonDegreeInNakshatra?: number;
     ascendantSign?: string;
     lagnaRasiIndex?: number;
-    planetsInSigns?: Record<string, string>;
+    charaPlanetPositions?: CharaDashaPlanetPosition[];
     birthDate: Date;
     sookshmaContext?: any;
     referenceDate?: Date;
@@ -1555,14 +1522,16 @@ export class CompleteDashaOrchestrator {
     const moonLong = params.moonLongitude ?? 180;
     const nak1Indexed = params.moonNakshatra1Indexed ?? ((params.moonNakshatraIndex ?? 13) + 1);
     const degInNak = params.moonDegreeInNakshatra ?? (moonLong % (360 / 27));
-    const ascSign = params.ascendantSign ?? "Aries";
+    const ascSign = params.ascendantSign ?? (Number.isInteger(params.lagnaRasiIndex) && (params.lagnaRasiIndex as number)>=0 && (params.lagnaRasiIndex as number)<12 ? CharaDashaCalculator.SIGNS[params.lagnaRasiIndex as number] : undefined);
+    if(!ascSign) throw new RangeError("generateAllSystems requires a valid Ascendant sign or lagnaRasiIndex.");
+    if(!params.charaPlanetPositions || params.charaPlanetPositions.length===0) throw new RangeError("generateAllSystems requires all nine classical Chara Dasha positions.");
 
     return this.generateAllDashas({
       moonLongitude: moonLong,
       moonNakshatra1Indexed: nak1Indexed,
       moonDegreeInNakshatra: degInNak,
       ascendantSign: ascSign,
-      planetsInSigns: params.planetsInSigns || {},
+      charaPlanetPositions: params.charaPlanetPositions,
       birthDate: params.birthDate,
       sookshmaContext: params.sookshmaContext,
       referenceDate: params.referenceDate || new Date(),

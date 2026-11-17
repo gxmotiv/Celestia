@@ -5,7 +5,7 @@ import { VedicChartData } from "@/lib/astronomy/vedic";
 import { WesternChartData } from "@/lib/astronomy/ephemeris";
 import { NumerologyProfile } from "@/lib/astronomy/numerology";
 import { BaZiProfile } from "@/lib/astronomy/chinese";
-import { CompleteDashaOrchestrator, AllDashaSystems } from "@/lib/vedic/completeDashaSystems";
+import { CompleteDashaOrchestrator, AllDashaSystems, CharaDashaCalculator } from "@/lib/vedic/completeDashaSystems";
 import {
   Sparkles,
   MessageSquare,
@@ -229,10 +229,7 @@ export function MasterAIAstrologerCockpit({
       rasiDegree: 10,
     };
 
-    const planetsInSigns: Record<string, string> = {};
-    vedicData.planets.forEach((p) => {
-      planetsInSigns[p.rasiName] = p.name;
-    });
+    const charaPlanetPositions = CharaDashaCalculator.toPlanetPositions(vedicData.planets);
 
     const currentMD =
       vedicData.vimshottariDashas.find((d) => d.isCurrent) ||
@@ -251,7 +248,7 @@ export function MasterAIAstrologerCockpit({
       moonNakshatra1Indexed,
       moonDegreeInNakshatra,
       ascendantSign: vedicData.lagna.rasiName,
-      planetsInSigns,
+      charaPlanetPositions,
     });
   }, [vedicData, birthDate, birthTime, orchestrator]);
 
