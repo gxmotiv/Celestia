@@ -135,10 +135,21 @@ export class KPEngine {
       );
 
     // 5. Calculate KP Ruling Planets (RP)
+    // The local calendar date above remains the input for the existing
+    // date-based KP ayanamsa profile. Day lord uses the real shared UTC instant
+    // recovered from the chart Julian Day, plus the chart's birthplace.
+    const birthInstant = new Date((westernData.julianDay - 2440587.5) * 86_400_000);
+    const dayLordContext: KPReaderVIDayLordContext = {
+      birthInstant,
+      latitude: westernData.birthLatitude ?? Number.NaN,
+      longitude: westernData.birthLongitude ?? Number.NaN,
+      birthTimeKnown,
+    };
     const rulingPlanets: KPRulingPlanets = this.predictionEngine.calculateRulingPlanets(
       kpCusps,
       kpPlanets,
-      birthDate
+      birthDate,
+      dayLordContext
     );
 
     return {
