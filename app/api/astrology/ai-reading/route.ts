@@ -68,6 +68,7 @@ Format a useful, structured response with Markdown headings. Do not repeat the e
         isAiGenerated: true,
         provider: result.provider,
         model: result.model,
+        usage: result.usage,
       });
     } catch (aiErr) {
       console.warn("AI reading provider unavailable; using transparent local fallback:", aiErr);
