@@ -38,6 +38,7 @@
   "exclude": [
     "node_modules",
     "backups",
-    "docs"
+    "docs",
+    "open-next.config.ts"
   ]
 }
