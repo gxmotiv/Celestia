@@ -72,6 +72,8 @@ A system is not complete because its top-level page renders or because one chart
 | L5 sign Dashas | Chara Dasha material is present in the broader Dasha engine | **Audit required.** Verify direction, sign-year count, dual lords, strength comparison and exception sequence against a named BPHS/Jaimini commentary variant. |
 | L6–L8 | Vedic chart integration currently publishes Jaimini Karakas/Karakamsa | **Partial.** A chart integration test exists; a complete Jaimini prediction suite (Arudha, Upapada, argala, special lagnas, sign Dashas and source-specific judgement) is not established by that integration test. |
 
+**New Chara Dasha integrity finding (17 November):** the legacy `CharaDashaCalculator` is not source-faithful: it chooses sequence direction from Lagna parity, counts sign years to the ninth sign/ninth lord, caps duration at nine, and defaults an unknown Lagna to Aries. BPHS/Santhanam and Rao/Raman source readings require a named direction profile, sign-to-lord duration, dual-lord handling and validated input. See `docs/audit/jaimini-chara-dasha-source-audit.md`. Status remains **not fixed / provisional**; no replacement algorithm is claimed.
+
 ### 3.4 Krishnamurti Paddhati (KP)
 
 | Layer | Current scope evidence | Status / next checks |
