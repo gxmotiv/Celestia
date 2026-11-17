@@ -62,6 +62,7 @@ export function AIReadingView({
   const [isAiGenerated, setIsAiGenerated] = useState<boolean | null>(null);
   const [aiProvider, setAiProvider] = useState<string | null>(null);
   const [aiModel, setAiModel] = useState<string | null>(null);
+  const [aiUsageTokens, setAiUsageTokens] = useState<number | null>(null);
 
   const [activeMode, setActiveMode] = useState<ReadingMode>("holistic");
   const [readingLength, setReadingLength] = useState<"detailed" | "concise">("detailed");
@@ -77,6 +78,7 @@ export function AIReadingView({
   const generateReading = async (overrideMode?: ReadingMode) => {
     const modeToUse = overrideMode || activeMode;
     setIsLoading(true);
+    setAiUsageTokens(null);
 
     try {
       const sun = western.planets.find((p) => p.name === "Sun");
@@ -187,6 +189,7 @@ export function AIReadingView({
         setIsAiGenerated(data.isAiGenerated);
         setAiProvider(typeof data.provider === "string" ? data.provider : null);
         setAiModel(typeof data.model === "string" ? data.model : null);
+        setAiUsageTokens(typeof data.usage?.totalTokens === "number" ? data.usage.totalTokens : null);
       }
     } catch (err) {
       console.error("Failed to generate AI reading:", err);
@@ -310,7 +313,7 @@ export function AIReadingView({
               <div>
                 <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-amber-400" />
-                  AI Interpretation Engine (Gemini 3.8 Flash Synthesis)
+                  AI Interpretation Engine (Adaptive AI Model Routing)
                 </h3>
                 <p className="text-xs text-slate-400">
                   Select an interpretive focus area or interrogate the multi-system matrix directly.
@@ -412,7 +415,7 @@ export function AIReadingView({
         {/* Primary Generate Trigger */}
         <div className="flex items-center justify-between pt-2">
           <span className="text-xs text-slate-400">
-            Engineered with Gemini 3.8 Flash & Grounded Mathematical Ephemeris
+            Grounded in verified chart calculations with task-matched AI models
           </span>
 
           <button
@@ -559,6 +562,7 @@ export function AIReadingView({
                 {isAiGenerated
                   ? `Generated via ${aiProvider === "freemodel" ? "FreeModel" : aiProvider === "gemini" ? "Gemini" : "AI"}${aiModel ? ` · ${aiModel}` : ""}`
                   : "Calculated via Astronomical Synthesizer"}
+                {aiUsageTokens !== null ? ` · ${aiUsageTokens.toLocaleString()} tokens` : ""}
               </span>
               <span aria-hidden="true">·</span>
               <span>{readingLength === "detailed" ? "Comprehensive Dossier" : "Executive Brief"}</span>
