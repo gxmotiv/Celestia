@@ -30,6 +30,9 @@ interface AIReadingViewProps {
   birthTime: string;
   cityName: string;
   country: string;
+  latitude: number;
+  longitude: number;
+  timezoneOffset: number;
   western: WesternChartData;
   vedic: VedicChartData;
   numerology: NumerologyProfile;
@@ -44,6 +47,9 @@ export function AIReadingView({
   birthTime,
   cityName,
   country,
+  latitude,
+  longitude,
+  timezoneOffset,
   western,
   vedic,
   numerology,
@@ -92,9 +98,10 @@ export function AIReadingView({
           date: birthDate,
           time: birthTime,
           place: `${cityName}, ${country}`,
-          latitude: western.ascendant.longitude || 0,
-          longitude: western.midheaven.longitude || 0,
-          timezone: `UTC${cityName ? "" : "+0"}`,
+          latitude,
+          longitude,
+          timezoneOffsetHours: timezoneOffset,
+          timezone: `UTC${timezoneOffset >= 0 ? "+" : ""}${timezoneOffset}`,
         },
         western: {
           sun: {
@@ -109,6 +116,9 @@ export function AIReadingView({
           },
           ascendant: western.ascendant.sign,
           midheaven: western.midheaven.sign,
+          houseSystem: western.houseSystem,
+          houseSystemUsed: western.houseSystemUsed,
+          houseSystemFallbackReason: western.houseSystemFallbackReason,
           planets: westernPlanetsMap,
           aspects: western.aspects.slice(0, 8).map((a) => ({
             planet1: a.planet1,
