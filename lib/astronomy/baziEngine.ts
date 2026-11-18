@@ -435,7 +435,7 @@ export const EARTHLY_BRANCHES: EarthlyBranch[] = [
 
 export class SolarTermCalculator {
   /**
-   * Get Sun's geocentric tropical longitude for any given Date using Swiss Ephemeris
+   * Get the Sun's geocentric tropical longitude using the repository's Astronomy Engine-based adapter
    */
   public getSunLongitude(date: Date): number {
     const jd = date.getTime() / 86400000.0 + 2440587.5;
