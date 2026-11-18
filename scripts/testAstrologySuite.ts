@@ -78,6 +78,30 @@ assertTest(
   `Mean separation ${angularSeparation(siderealNodes.meanNorthNode.longitude, siderealNodes.meanSouthNode.longitude)}°; true separation ${angularSeparation(siderealNodes.trueNorthNode.longitude, siderealNodes.trueSouthNode.longitude)}°`
 );
 
+const nodeHalfStepDays = 1 / 48;
+const trueNodeBefore = swissEphemeris.calculatePlanetPosition(
+  swissEphemeris.TRUE_NODE,
+  nodeTestJd - nodeHalfStepDays
+).longitude;
+const trueNodeAfter = swissEphemeris.calculatePlanetPosition(
+  swissEphemeris.TRUE_NODE,
+  nodeTestJd + nodeHalfStepDays
+).longitude;
+const expectedTrueNodeSpeed = (() => {
+  let delta = trueNodeAfter - trueNodeBefore;
+  if (delta > 180) delta -= 360;
+  if (delta < -180) delta += 360;
+  return delta / (2 * nodeHalfStepDays);
+})();
+assertTest(
+  "0. Lunar Node Pair Consistency",
+  "True-node speed is derived from the true-node model, not copied from mean-node speed",
+  Math.abs(tropicalNodes.trueNorthNode.speed - expectedTrueNodeSpeed) <= 0.0001 &&
+    tropicalNodes.trueSouthNode.speed === tropicalNodes.trueNorthNode.speed,
+  "True-node speed matches the central finite difference of the true-node model",
+  `Reported ${tropicalNodes.trueNorthNode.speed}°/day; finite difference ${expectedTrueNodeSpeed}°/day`
+);
+
 
 // ======================================================================
 // CATEGORY 1: VIMSHOTTARI DASHA ACCURACY TESTS
