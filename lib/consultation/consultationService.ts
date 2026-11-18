@@ -60,8 +60,7 @@ export function prepareConsultationRoute(question: string): PreparedConsultation
     routingOnly: true,
     route,
     desks,
-    canUseExistingSpecialistAI:
-      nextAction === "existing-desk-route" || nextAction === "specialist-review-required",
+    canUseExistingSpecialistAI: nextAction === "existing-desk-route",
     blockedByPlannedDesks,
     nextAction,
   };
