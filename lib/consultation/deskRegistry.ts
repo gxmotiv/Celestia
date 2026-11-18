@@ -54,7 +54,7 @@ export interface ConsultationRoute {
 }
 
 const RULES: ReadonlyArray<{ desk: ConsultationDeskId; intent: string; pattern: RegExp; reason: string }> = [
-  { desk: "influence-safety", intent: "manipulation-or-safety", pattern: /manipulat|gaslight|coerc|threaten|blackmail|pressure tactic|control me|scam|deceiv|forced|afraid of (him|her|them)|unsafe/i, reason: "The question mentions possible manipulation, coercion, deception or personal safety." },
+  { desk: "influence-safety", intent: "manipulation-or-safety", pattern: /manipulat|gaslight|coerc|threaten|blackmail|pressure tactic|control me|scam|deceiv|forced|afraid of (him|her|them)|unsafe|track(ing)? my phone|read(ing)? my messages|isolat(ing|ed) me/i, reason: "The question mentions possible manipulation, coercion, deception or personal safety." },
   { desk: "psychology-behaviour", intent: "behaviour-and-emotions", pattern: /emotion|anxious|overthink|confidence|self.?esteem|habit|procrastinat|motivat|attachment|behavio[u]?r|personality|blind spot|why do i keep|repeat(ing)? the same pattern|anger|stress|fear|grief|cognitive bias|peer pressure|group dynamics|social influence|persuasion/i, reason: "The question concerns emotions, habits, thinking patterns or behaviour." },
   { desk: "relationships", intent: "relationship-question", pattern: /relationship|partner|marriage|dating|break.?up|compatib|friendship|family conflict|trust issue|intimacy/i, reason: "The question concerns a relationship or interpersonal pattern." },
   { desk: "jaimini", intent: "jaimini-astrology", pattern: /jaimini|chara karaka|atmakaraka|darakaraka|arudha|rashi drishti/i, reason: "The question explicitly requests Jaimini methods." },
