@@ -208,7 +208,7 @@ function solveKepler(M: number, e: number): number {
 }
 
 /**
- * Sun's true geocentric ecliptic longitude (VSOP87 / Meeus approximation)
+ * Sun's geocentric ecliptic longitude using a compact Meeus-style approximation
  */
 export function calculateSun(T: number): { lon: number; R: number } {
   // Mean longitude of Sun
