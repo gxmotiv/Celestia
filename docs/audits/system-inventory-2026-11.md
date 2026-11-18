@@ -116,7 +116,7 @@ Every feature PR must state:
 8. Whether it changes user-visible results or stored profile data.
 
 
-## 7. High-priority accuracy and test-runner findings
+## 6. High-priority accuracy and test-runner findings
 
 ### Ephemeris naming and precision claims need correction
 - `lib/astronomy/swissEphemeris.ts` imports `astronomy-engine` directly and constructs a compatibility-shaped `SwissEphemerisEngine` wrapper. It is not a native Swiss Ephemeris binding.
@@ -129,7 +129,7 @@ Every feature PR must state:
 - Test suites exist as standalone TypeScript scripts. A reproducible, documented test command/runner is needed so CI and contributors can execute each suite consistently.
 - Some test scripts include named historical-chart expectations. Those are only valid golden fixtures if their source, time convention, coordinate frame and precision are documented independently; self-authored expected values are not independent validation.
 
-## 6. Non-negotiable quality gates
+## 7. Non-negotiable quality gates
 - Do not infer accuracy from a successful TypeScript build.
 - Do not call the astronomy-engine-backed facade native Swiss Ephemeris.
 - Do not silently substitute noon for an unknown birth time without marking time-dependent outputs provisional.
