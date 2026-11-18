@@ -6,6 +6,23 @@ ROOT = pathlib.Path(__file__).resolve().parent
 CONFIG = json.loads((ROOT / "config.json").read_text(encoding="utf-8"))
 CAPS = {name: task["max_tokens"] for name, task in CONFIG["tasks"].items()}
 API_URL = "https://api.apinex.bond/v1/chat/completions"
+SAFE_RESPONSE_HEADERS = ("cf-ray", "cf-mitigated", "server", "content-type", "date", "retry-after")
+
+def capture_response_diagnostics(result, headers, body_text=""):
+    """Save only allowlisted response metadata; never save request headers or credentials."""
+    safe = {}
+    if headers:
+        for name in SAFE_RESPONSE_HEADERS:
+            value = headers.get(name)
+            if value:
+                safe[name] = str(value)[:300]
+    result["response_headers"] = safe
+    ray = safe.get("cf-ray")
+    if not ray and body_text:
+        match = re.search(r"\bRay\s*ID\s*:\s*([a-f0-9-]+)", body_text, re.IGNORECASE)
+        if match:
+            ray = match.group(1)
+    result["cloudflare_ray_id"] = ray
 
 def main():
     parser = argparse.ArgumentParser()
@@ -68,6 +85,7 @@ def main():
         with urllib.request.urlopen(request, timeout=100) as response:
             raw = response.read()
             result["http_status"] = response.status
+            capture_response_diagnostics(result, response.headers)
         data = json.loads(raw.decode("utf-8"))
         choices = data.get("choices") or []
         if not choices:
@@ -96,6 +114,7 @@ def main():
         detail = ""
         try:
             error_body = exc.read(4096).decode("utf-8", errors="replace")
+            capture_response_diagnostics(result, exc.headers, error_body)
             try:
                 error_json = json.loads(error_body)
                 error_obj = error_json.get("error", error_json) if isinstance(error_json, dict) else {}
@@ -109,8 +128,8 @@ def main():
                 detail = error_body
             detail = detail.replace(key, "[REDACTED]")
             detail = re.sub(r"sk-apx-[A-Za-z0-9_-]+", "[REDACTED_API_KEY]", detail)
-            detail = re.sub(r"Bearer\\s+\\S+", "Bearer [REDACTED]", detail, flags=re.IGNORECASE)
-            detail = re.sub(r"\\s+", " ", detail).strip()[:400]
+            detail = re.sub(r"Bearer\s+\S+", "Bearer [REDACTED]", detail, flags=re.IGNORECASE)
+            detail = re.sub(r"\s+", " ", detail).strip()[:400]
         except Exception:
             detail = ""
         result["error"] = "HTTP error " + str(exc.code) + ": " + exc.reason + ((" — " + detail) if detail else "")
