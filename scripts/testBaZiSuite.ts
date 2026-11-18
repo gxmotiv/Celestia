@@ -193,25 +193,35 @@ assertTest(
 // fixtures, not independent astronomical timestamp references.
 const fixedLongitudeCalc = new SolarTermCalculator();
 const restoreSunLongitude = fixedLongitudeCalc.getSunLongitude.bind(fixedLongitudeCalc);
-const jiaYearTigerStem = 2; // Jia year: Tiger month begins with Bing.
+// Year-stem Tiger-month starting stems for Jia..Gui: Bing, Wu, Geng, Ren, Jia.
+const tigerStartStemByYearStem = [2, 4, 6, 8, 0, 2, 4, 6, 8, 0];
 for (let monthOrder = 0; monthOrder < 12; monthOrder++) {
   const boundary = (315 + monthOrder * 30) % 360;
   const expectedBranch = expectedMonthBranches[monthOrder];
-  const expectedStem = (jiaYearTigerStem + monthOrder) % 10;
+  const expectedStem = (tigerStartStemByYearStem[0] + monthOrder) % 10;
   const previousOrder = (monthOrder + 11) % 12;
   const previousBranch = expectedMonthBranches[previousOrder];
-  const previousStem = (jiaYearTigerStem + previousOrder) % 10;
+  // Just before Li Chun, the Year Pillar still belongs to the prior solar year.
+  const previousYearStemIndex = monthOrder === 0 ? 9 : 0;
+  const previousStem =
+    (tigerStartStemByYearStem[previousYearStemIndex] + previousOrder) % 10;
   const cases = [
-    { label: "before", longitude: (boundary - 0.000001 + 360) % 360, branch: previousBranch, stem: previousStem },
-    { label: "at", longitude: boundary, branch: expectedBranch, stem: expectedStem },
-    { label: "after", longitude: (boundary + 0.000001) % 360, branch: expectedBranch, stem: expectedStem },
+    {
+      label: "before",
+      longitude: (boundary - 0.000001 + 360) % 360,
+      branch: previousBranch,
+      stem: previousStem,
+      yearStemIndex: previousYearStemIndex,
+    },
+    { label: "at", longitude: boundary, branch: expectedBranch, stem: expectedStem, yearStemIndex: 0 },
+    { label: "after", longitude: (boundary + 0.000001) % 360, branch: expectedBranch, stem: expectedStem, yearStemIndex: 0 },
   ] as const;
 
   for (const item of cases) {
     fixedLongitudeCalc.getSunLongitude = () => item.longitude;
     const pillar = fixedLongitudeCalc.calculateMonthPillar(
       new Date("2026-01-01T12:00:00.000Z"),
-      0
+      item.yearStemIndex
     );
     assertTest(
       "3A. Month Pillar Integration",
