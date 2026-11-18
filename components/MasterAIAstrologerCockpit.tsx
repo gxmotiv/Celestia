@@ -5,6 +5,7 @@ import { VedicChartData } from "@/lib/astronomy/vedic";
 import { WesternChartData } from "@/lib/astronomy/ephemeris";
 import { NumerologyProfile } from "@/lib/astronomy/numerology";
 import { BaZiProfile } from "@/lib/astronomy/chinese";
+import { CONSULTATION_DESKS } from "@/lib/consultation/deskRegistry";
 import { CompleteDashaOrchestrator, AllDashaSystems } from "@/lib/vedic/completeDashaSystems";
 import {
   Sparkles,
@@ -678,10 +679,10 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
                     <div className="w-5 h-5 rounded-full border-2 border-amber-500/30 border-t-amber-500 animate-spin shrink-0" />
                     <div className="space-y-1">
                       <span className="text-xs font-semibold text-amber-300">
-                        Acharya Celestia is consulting the 10-Dasha ephemeris...
+                        Celestia is checking the specialist desk...
                       </span>
                       <p className="text-[11px] text-slate-400">
-                        Calculating active house activations, planetary aspects, and classical remedial alignment.
+                        Matching your question to available methods and safety boundaries before generating a response.
                       </p>
                     </div>
                   </div>
@@ -695,7 +696,7 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
                   value={inputQuery}
                   onChange={(e) => setInputQuery(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSendQuery()}
-                  placeholder="Ask Acharya Celestia anything about your chart, dasha timing, or remedies..."
+                  placeholder="Ask about your chart, timing or remedies. Other desks show their readiness above."
                   className="flex-1 px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-500 transition-colors"
                 />
                 <button
@@ -712,6 +713,38 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
 
           {/* Quick Consultation Sidebar (Col 3) */}
           <div className="space-y-4">
+            {/* Specialist Desk Directory */}
+            <div className="p-4 bg-slate-950 border border-slate-800 rounded-2xl space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-bold text-slate-200 uppercase tracking-wider font-mono">
+                  Specialist Consultation Desks
+                </span>
+                <span className="text-[10px] text-slate-500 font-mono">12 desks</span>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Questions are routed to the relevant desk. Partial and planned desks are not treated as ready AI services.
+              </p>
+              <div className="space-y-1.5 max-h-80 overflow-y-auto pr-1">
+                {CONSULTATION_DESKS.map((desk) => (
+                  <div key={desk.id} className="flex items-start justify-between gap-2 p-2 rounded-lg bg-slate-900/70 border border-slate-800/80">
+                    <div className="min-w-0">
+                      <div className="text-[11px] font-semibold text-slate-200">{desk.label}</div>
+                      <div className="text-[10px] text-slate-500 leading-snug">{desk.purpose}</div>
+                    </div>
+                    <span className={`shrink-0 text-[9px] uppercase tracking-wide font-mono px-1.5 py-0.5 rounded ${
+                      desk.status === "existing-system"
+                        ? "text-emerald-300 bg-emerald-500/10 border border-emerald-500/20"
+                        : desk.status === "partial"
+                        ? "text-amber-300 bg-amber-500/10 border border-amber-500/20"
+                        : "text-slate-400 bg-slate-800 border border-slate-700"
+                    }`}>
+                      {desk.status === "existing-system" ? "Existing" : desk.status === "partial" ? "Partial" : "Planned"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             {/* Exemplary Master Inquiries */}
             <div className="p-4 bg-slate-950 border border-slate-800 rounded-2xl space-y-3">
               <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5 uppercase tracking-wider font-mono">
