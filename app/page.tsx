@@ -22,7 +22,8 @@ import { swissEphemeris } from "@/lib/astronomy/swissEphemeris";
 import { calculateWesternChart } from "@/lib/astronomy/ephemeris";
 import { calculateVedicChart } from "@/lib/astronomy/vedic";
 import { calculateNumerologyProfile } from "@/lib/astronomy/numerology";
-import { calculateBaZiProfile } from "@/lib/astronomy/chinese";
+import { CompleteBaZiEngine } from "@/lib/astronomy/baziEngine";
+import { createBaZiProfileFromChart } from "@/lib/astronomy/baziProfileAdapter";
 
 import {
   Compass,
@@ -40,6 +41,8 @@ import {
   CheckCircle2,
   SlidersHorizontal,
 } from "lucide-react";
+
+const baziEngine = new CompleteBaZiEngine();
 
 const SYSTEM_TABS = [
   { id: "western", label: "Western Natal Wheel", icon: Orbit, badge: "Wheel" },
@@ -85,8 +88,10 @@ export default function HomePage() {
     const day = parseInt(dStr, 10) || 1;
 
     const [hStr, minStr] = formData.birthTime.split(":");
-    const hour = parseInt(hStr, 10) || 12;
-    const minute = parseInt(minStr, 10) || 0;
+    const parsedHour = Number.parseInt(hStr, 10);
+    const parsedMinute = Number.parseInt(minStr, 10);
+    const hour = Number.isFinite(parsedHour) ? parsedHour : 12;
+    const minute = Number.isFinite(parsedMinute) ? parsedMinute : 0;
 
     // Unambiguously normalize local birth date/time and timezone offset to true UTC instant
     const birthDateObj = swissEphemeris.createUTCDate(
@@ -118,8 +123,34 @@ export default function HomePage() {
     // 3. Pythagorean Numerology
     const nData = calculateNumerologyProfile(formData.fullName, year, month, day);
 
-    // 4. Chinese BaZi (Four Pillars)
-    const bData = calculateBaZiProfile(year, month, day, hour);
+    // 4. Chinese BaZi (Four Pillars): use the UTC instant and explicit clock policy.
+    // The form currently supplies a fixed numeric UTC offset, not historical IANA resolution.
+    const baziChart = baziEngine.generateBaZiChart(
+      birthDateObj,
+      undefined,
+      undefined,
+      {
+        clock: {
+          timeBasis: "civil-clock",
+          longitudeDegrees: formData.longitude,
+          civilUtcOffsetSeconds: Math.round(formData.timezoneOffset * 3600),
+        },
+        dayBoundaryPolicy: "pure-zi",
+        birthTimeKnown: !formData.isTimeUnknown,
+        instantResolution: "manual-fixed-offset",
+        uncertainPillars: formData.isTimeUnknown ? ["day", "hour"] : [],
+        warnings: [
+          "Birthplace time is resolved with the form's fixed numeric UTC offset; historical IANA timezone and daylight-saving transitions are not yet resolved.",
+          "Solar-term transitions use the Astronomy Engine longitude snapshot; independent published timestamp fixtures currently cover the 2026 Jie terms.",
+          ...(formData.isTimeUnknown
+            ? [
+                "Birth time is unknown: Day and Hour Pillars are provisional noon-based placeholders. Day Master analysis is also provisional; Year/Month can be uncertain when the birth date falls on a Jie boundary.",
+              ]
+            : []),
+        ],
+      }
+    );
+    const bData = createBaZiProfileFromChart(baziChart);
 
     return {
       westernData: wData,
