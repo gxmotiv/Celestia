@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "provider": "NASA/JPL Horizons API",
+  "retrievedAt": "2026-11-18",
+  "reference": {
+    "target": "Moon (301)",
+    "center": "Earth geocenter (500@399)",
+    "timeType": "TT",
+    "referenceFrame": "ICRF",
+    "vectorCorrection": "NONE (geometric; no light-time or aberration corrections)",
+    "vectorTable": "2 (x,y,z,vx,vy,vz)",
+    "units": "AU and AU/day",
+    "sourceEphemeris": "DE441",
+    "api": "https://ssd-api.jpl.nasa.gov/doc/horizons.html"
+  },
+  "timeConversion": {
+    "note": "jdUT is paired with jdTT using the published TT-UTC offset for each epoch; the app's AstroTime constructor converts UT to its internal TT. These points are after 1972.",
+    "values": [
+      "2000-01-01 UTC uses TT-UTC 64.184 seconds",
+      "2024-01-01 UTC uses TT-UTC 69.184 seconds"
+    ]
+  },
+  "fixtures": [
+    {
+      "id": "jpl-de441-moon-2000-01-01-12tt",
+      "epochTT": "2000-01-01T12:00:00",
+      "jdTT": 2451545,
+      "jdUT": 2451544.9992571296,
+      "ttMinusUtcSeconds": 64.184,
+      "vector": {
+        "x": -0.00194928164999959,
+        "y": -0.001782891912549237,
+        "z": -0.0005087137064757065,
+        "vx": 0.0003716704772402443,
+        "vy": -0.0003846978272380905,
+        "vz": -0.000174030156738267
+      }
+    },
+    {
+      "id": "jpl-de441-moon-2024-01-01-12tt",
+      "epochTT": "2024-01-01T12:00:00",
+      "jdTT": 2460311,
+      "jdUT": 2460310.999199259,
+      "ttMinusUtcSeconds": 69.184,
+      "vector": {
+        "x": -0.002563697979518862,
+        "y": 0.0007243362569250046,
+        "z": 0.000477809407382897,
+        "vx": -0.0001793057298165072,
+        "vy": -0.0004689842106521002,
+        "vz": -0.0002446088562774551
+      }
+    }
+  ]
+}
