@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { clampCelestiaOutputTokens, resolveCelestiaAIProvider } from "./providerPolicy";
 
 export type CelestiaAIProvider = "freemodel" | "nararouter" | "gemini";
 export type CelestiaAIModelTier = "budget" | "reasoning";
@@ -25,16 +26,9 @@ interface GenerateTextOptions {
   model?: string;
 }
 
-type ProviderError = Error & { status?: number };
 
 const DEFAULT_BUDGET_MODEL = "gpt-6-luna";
 const DEFAULT_REASONING_MODEL = "claude-haiku-5.5";
-
-function isRetryableProviderFailure(error: unknown): boolean {
-  const status = (error as ProviderError | null)?.status;
-  // Do not disguise bad credentials, missing permissions, or exhausted billing.
-  return status === undefined || [408, 425, 429, 500, 502, 503, 504, 529].includes(status);
-}
 
 function readUsage(value: unknown): CelestiaAIUsage | undefined {
   if (!value || typeof value !== "object") return undefined;
@@ -166,12 +160,11 @@ async function generateWithNaraRouter(
   };
 }
 /**
- * FreeModel is selected per task:
- * - budget: GPT-6 Luna for short, routine responses
- * - reasoning: Claude Haiku 5.5 for detailed chart synthesis and Oracle work
+ * Exactly one provider is selected for each consultation.
  *
- * FREEMODEL_MODEL and FREEMODEL_REASONING_MODEL can override these public
- * catalogue IDs. The API key is read only on the server and is never returned.
+ * CELESTIA_AI_PROVIDER accepts: freemodel (default), nararouter, gemini.
+ * Provider failures are returned to the caller; no cross-provider fallback,
+ * model substitution or automatic retry is performed.
  */
 export async function generateCelestiaText(
   input: GenerateTextOptions
@@ -179,102 +172,73 @@ export async function generateCelestiaText(
   const options = {
     systemPrompt: input.systemPrompt,
     userPrompt: input.userPrompt,
-    maxOutputTokens: input.maxOutputTokens ?? 2048,
+    maxOutputTokens: clampCelestiaOutputTokens(input.maxOutputTokens),
     temperature: input.temperature ?? 0.35,
   };
 
   const modelTier = input.modelTier ?? "budget";
-  const freeModelKey = process.env.FREEMODEL_API_KEY?.trim();
-  const naraRouterKey = process.env.NARAROUTER_API_KEY?.trim();
-  const geminiKey = process.env.GEMINI_API_KEY?.trim();
+  const provider = resolveCelestiaAIProvider(process.env.CELESTIA_AI_PROVIDER);
 
-  const freeModelName = input.model?.trim() || (
-    modelTier === "reasoning"
-      ? process.env.FREEMODEL_REASONING_MODEL?.trim() || DEFAULT_REASONING_MODEL
-      : process.env.FREEMODEL_MODEL?.trim() || DEFAULT_BUDGET_MODEL
-  );
-  const naraRouterName = input.model?.trim() || (
-    modelTier === "reasoning"
-      ? process.env.NARAROUTER_REASONING_MODEL?.trim() || process.env.NARAROUTER_MODEL?.trim() || "auto/bynara"
-      : process.env.NARAROUTER_MODEL?.trim() || "auto/bynara"
-  );
-  const naraRouterBaseUrl = (
-    process.env.NARAROUTER_BASE_URL?.trim() || "https://router.bynara.id/v1"
-  ).replace(/\/+$/, "");
-
-  let lastProviderError: unknown;
-
-  // Keep the existing FreeModel primary route. NaraRouter is the next provider
-  // so a configured free-plan router can cover FreeModel outages/quota limits.
-  if (freeModelKey) {
-    try {
-      return await generateWithFreeModel(freeModelKey, freeModelName, options);
-    } catch (error) {
-      const status = (error as ProviderError | null)?.status;
-      if (status === 404 && freeModelName !== DEFAULT_BUDGET_MODEL) {
-        console.warn("FreeModel model " + freeModelName + " was not found; retrying with " + DEFAULT_BUDGET_MODEL + ".");
-        try {
-          return await generateWithFreeModel(freeModelKey, DEFAULT_BUDGET_MODEL, options);
-        } catch (retryError) {
-          const retryStatus = (retryError as ProviderError | null)?.status;
-          if (![404, 408, 425, 429, 500, 502, 503, 504, 529].includes(retryStatus ?? -1)) {
-            throw retryError;
-          }
-          lastProviderError = retryError;
-          console.warn("FreeModel fallback model also failed; trying the next configured provider.");
-        }
-      } else if (isRetryableProviderFailure(error) || status === 404) {
-        lastProviderError = error;
-        console.warn("FreeModel failed; trying the next configured provider:", error);
-      } else {
-        // Do not hide invalid credentials or billing/permission failures.
-        throw error;
-      }
+  if (provider === "freemodel") {
+    const apiKey = process.env.FREEMODEL_API_KEY?.trim();
+    if (!apiKey) {
+      throw new Error("CELESTIA_AI_PROVIDER is freemodel, but FREEMODEL_API_KEY is not configured.");
     }
+    const model = input.model?.trim() || (
+      modelTier === "reasoning"
+        ? process.env.FREEMODEL_REASONING_MODEL?.trim() || DEFAULT_REASONING_MODEL
+        : process.env.FREEMODEL_MODEL?.trim() || DEFAULT_BUDGET_MODEL
+    );
+    return generateWithFreeModel(apiKey, model, options);
   }
 
-  if (naraRouterKey) {
-    try {
-      return await generateWithNaraRouter(naraRouterKey, naraRouterName, options, naraRouterBaseUrl, modelTier === "reasoning" ? "medium" : "low");
-    } catch (error) {
-      const status = (error as ProviderError | null)?.status;
-      if (isRetryableProviderFailure(error) || status === 404) {
-        lastProviderError = error;
-        console.warn("NaraRouter failed; trying the next configured provider:", error);
-      } else {
-        // Keep authentication, permission, and billing errors visible.
-        throw error;
-      }
+  if (provider === "nararouter") {
+    const apiKey = process.env.NARAROUTER_API_KEY?.trim();
+    if (!apiKey) {
+      throw new Error("CELESTIA_AI_PROVIDER is nararouter, but NARAROUTER_API_KEY is not configured.");
     }
+    const model = input.model?.trim() || (
+      modelTier === "reasoning"
+        ? process.env.NARAROUTER_REASONING_MODEL?.trim() || process.env.NARAROUTER_MODEL?.trim() || "auto/bynara"
+        : process.env.NARAROUTER_MODEL?.trim() || "auto/bynara"
+    );
+    const baseUrl = (process.env.NARAROUTER_BASE_URL?.trim() || "https://router.bynara.id/v1")
+      .replace(/\/+$/, "");
+    return generateWithNaraRouter(
+      apiKey,
+      model,
+      options,
+      baseUrl,
+      modelTier === "reasoning" ? "medium" : "low"
+    );
   }
 
-  if (geminiKey) {
-    const ai = new GoogleGenAI({ apiKey: geminiKey });
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: options.systemPrompt + "\n\n" + options.userPrompt,
-      config: {
-        temperature: options.temperature,
-        maxOutputTokens: options.maxOutputTokens,
-      },
-    });
-
-    if (response.text?.trim()) {
-      const metadata = response.usageMetadata;
-      return {
-        text: response.text.trim(),
-        provider: "gemini",
-        model: "gemini-2.5-flash",
-        usage: metadata ? {
-          promptTokens: metadata.promptTokenCount,
-          completionTokens: metadata.candidatesTokenCount,
-          totalTokens: metadata.totalTokenCount,
-        } : undefined,
-      };
-    }
-    throw new Error("Gemini returned an empty response.");
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  if (!apiKey) {
+    throw new Error("CELESTIA_AI_PROVIDER is gemini, but GEMINI_API_KEY is not configured.");
   }
+  const ai = new GoogleGenAI({ apiKey });
+  const response = await ai.models.generateContent({
+    model: input.model?.trim() || "gemini-2.5-flash",
+    contents: options.systemPrompt + "\n\n" + options.userPrompt,
+    config: {
+      temperature: options.temperature,
+      maxOutputTokens: options.maxOutputTokens,
+    },
+  });
 
-  if (lastProviderError) throw lastProviderError;
-  throw new Error("No AI provider is configured. Set FREEMODEL_API_KEY, NARAROUTER_API_KEY, or GEMINI_API_KEY.");
+  if (response.text?.trim()) {
+    const metadata = response.usageMetadata;
+    return {
+      text: response.text.trim(),
+      provider: "gemini",
+      model: input.model?.trim() || "gemini-2.5-flash",
+      usage: metadata ? {
+        promptTokens: metadata.promptTokenCount,
+        completionTokens: metadata.candidatesTokenCount,
+        totalTokens: metadata.totalTokenCount,
+      } : undefined,
+    };
+  }
+  throw new Error("Gemini returned an empty response.");
 }
