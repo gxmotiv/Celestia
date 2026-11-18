@@ -11,6 +11,7 @@ import {
 } from "../lib/vedic/completeDashaSystems";
 import { TransitEngine } from "../lib/astronomy/transits";
 import { routeConsultationQuestion, CONSULTATION_DESKS } from "../lib/consultation/deskRegistry";
+import { clampCelestiaOutputTokens, resolveCelestiaAIProvider } from "../lib/ai/providerPolicy";
 
 interface TestResult {
   category: string;
@@ -654,6 +655,65 @@ assertTest(
   "12 unique desk IDs",
   `${CONSULTATION_DESKS.length} desks / ${new Set(CONSULTATION_DESKS.map((desk) => desk.id)).size} unique IDs`
 );
+
+// ======================================================================
+// CATEGORY 6: AI PROVIDER BUDGET AND FALLBACK POLICY
+// ======================================================================
+console.log("Running Category 6: AI Provider Policy Tests...");
+
+const providerDefault = resolveCelestiaAIProvider(undefined);
+assertTest(
+  "6.1 Provider Selection",
+  "Unconfigured provider defaults to FreeModel only",
+  providerDefault === "freemodel",
+  "freemodel",
+  providerDefault
+);
+
+const providerSelections = ["freemodel", "nararouter", "gemini"] as const;
+providerSelections.forEach((provider) => {
+  const resolved = resolveCelestiaAIProvider(provider);
+  assertTest(
+    "6.2 Explicit Provider Selection",
+    `Selects only ${provider}`,
+    resolved === provider,
+    provider,
+    resolved
+  );
+});
+
+let invalidProviderRejected = false;
+try {
+  resolveCelestiaAIProvider("automatic-fallback");
+} catch {
+  invalidProviderRejected = true;
+}
+assertTest(
+  "6.3 Provider Allowlist",
+  "Rejects unknown provider names rather than silently choosing another",
+  invalidProviderRejected,
+  "Unknown provider rejected",
+  invalidProviderRejected ? "Rejected" : "Accepted unexpectedly"
+);
+
+const tokenCases = [
+  { input: undefined, expected: 2048 },
+  { input: 512, expected: 512 },
+  { input: 99999, expected: 4096 },
+  { input: 0, expected: 1 },
+  { input: -20, expected: 1 },
+  { input: 1024.9, expected: 1024 },
+] as const;
+tokenCases.forEach(({ input, expected }) => {
+  const actual = clampCelestiaOutputTokens(input);
+  assertTest(
+    "6.4 Output Token Ceiling",
+    `Clamps output token input ${String(input)}`,
+    actual === expected,
+    String(expected),
+    String(actual)
+  );
+});
 
 // SUMMARY OUTPUT
 // ======================================================================
