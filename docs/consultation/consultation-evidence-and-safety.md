@@ -88,6 +88,15 @@ A useful consultation structure:
 
 Behaviour-change guidance supports agreed goals, action and coping plans, monitoring, feedback, social support, individual tailoring and evaluation. Celestia should be autonomy-supportive: offer options and let the user decide, rather than pressure or manipulate them.
 
+## 4A. Initial implementation status (PR #76)
+
+Typed, offline content foundations now exist:
+- Psychology & Human Behaviour: eight topic domains, response structure, limits and source metadata.
+- Influence & Safety: seven protective pattern groups, observable-behaviour framing, device-monitoring cautions and defensive-only rules.
+- Life & Personal Strategy: seven-step decision/action-planning framework and study, career and routine modes.
+
+These are **partial foundations**, not complete specialist services. Their registry status remains `partial`, which prevents the astrology-only Oracle from answering them. No generated psychological advice or live provider call is enabled by these modules. Source URLs are provenance references; future retrieval must fetch only relevant passages and attach claim-level citations.
+
 ## 5. Specialist-desk capability contract
 
 Every method exposed to the AI must have a machine-readable capability record:
@@ -176,6 +185,13 @@ A successful routing test does not mean the advice, sources, calculations or saf
 10. Ministry of Women and Child Development, Women Helpline 181: https://www.wcd.gov.in/women/help
 11. Ministry of Health and Family Welfare, Tele-MANAS: https://telemanas.mohfw.gov.in/
 12. Indian Cyber Crime Coordination Centre, National Cybercrime Reporting Portal and 1930 financial fraud helpline: https://i4c.mha.gov.in/ncrp.aspx
+13. US National Institute of Mental Health, Psychotherapies: https://www.nimh.nih.gov/health/topics/psychotherapies
+14. US National Institute of Mental Health, Caring for Your Mental Health: https://www.nimh.nih.gov/health/topics/caring-for-your-mental-health
+15. American Psychological Association, Policy Statement on Evidence-Based Practice in Psychology: https://www.apa.org/practice/guidelines/evidence-based-statement
+16. American Psychological Association, Healthy Ways to Handle Life's Stressors: https://www.apa.org/topics/stress/tips
+17. Bailey, Goal Setting and Action Planning for Health Behavior Change, 2017: https://pmc.ncbi.nlm.nih.gov/articles/PMC6796229/
+18. UK Government, Domestic abuse: how to get help: https://www.gov.uk/guidance/domestic-abuse-how-to-get-help
+19. UK National Health Service, Getting help for domestic violence and abuse: https://www.nhs.uk/live-well/getting-help-for-domestic-violence/
 
 ### Implementation note
 
