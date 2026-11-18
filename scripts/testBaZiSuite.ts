@@ -1,4 +1,5 @@
 import { createBaZiClock, equationOfTimeMinutes } from "../lib/astronomy/timeEngine";
+import { NAOJ_2026_BAZI_JIE_FIXTURES } from "../lib/astronomy/baziSolarTermReferenceFixtures";
 import {
   SolarTermCalculator,
   getSolarMonthPosition,
@@ -346,6 +347,35 @@ assertTest(
   `${baziTransit.pillars.year.combinedName}`
 );
 
+
+
+/* Independent published ephemeris cross-check: NAOJ 2026 solar-term table.
+ * Source timestamps are minute-resolution UTC conversions; 0.01° is the
+ * declared longitude tolerance for this first comparison, not a time claim.
+ */
+function angularDistanceDegrees(a: number, b: number): number {
+  const delta = Math.abs(((a - b + 540) % 360) - 180);
+  return delta;
+}
+assertTest(
+  "11. Independent Solar-Term References",
+  "NAOJ fixture set contains all 12 BaZi Jie boundaries",
+  NAOJ_2026_BAZI_JIE_FIXTURES.length === 12,
+  "12 Jie fixtures",
+  `${NAOJ_2026_BAZI_JIE_FIXTURES.length} fixtures`
+);
+for (const fixture of NAOJ_2026_BAZI_JIE_FIXTURES) {
+  const longitudeAtPublishedMinute = solarCalc.getSunLongitude(new Date(fixture.utc));
+  const error = angularDistanceDegrees(longitudeAtPublishedMinute, fixture.longitude);
+  assertTest(
+    "11. Independent Solar-Term References",
+    `NAOJ 2026 ${fixture.name} at ${fixture.sourceLocal}`,
+    error <= 0.01,
+    `${fixture.longitude}° ±0.01°`,
+    `${longitudeAtPublishedMinute.toFixed(6)}° (error ${error.toFixed(6)}°)`,
+    "NAOJ published minute-resolution local time converted to UTC"
+  );
+}
 
 /* BaZi clock-basis and day-boundary regressions.
  * These are deterministic conversion/branch tests, not independent almanac fixtures.
