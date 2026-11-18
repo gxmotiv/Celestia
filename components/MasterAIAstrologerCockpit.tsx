@@ -435,7 +435,7 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
       const fallbackMsg: ChatMessage = {
         id: "oracle-" + Date.now(),
         sender: "oracle",
-        text: "### Consultation unavailable\\n\\nThe consultation router or specialist service could not be reached. To avoid sending your question to the wrong desk or inventing guidance, no astrology fallback was generated. Please try again later.",
+        text: `### Consultation unavailable\n\nThe consultation router or specialist service could not be reached. To avoid sending your question to the wrong desk or inventing guidance, no astrology fallback was generated. Please try again later.`,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         isAiGenerated: false,
         provider: "local-safety-fallback",
