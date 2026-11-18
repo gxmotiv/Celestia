@@ -174,7 +174,7 @@ export interface BaZiChart {
     instantResolution: "manual-fixed-offset" | "iana-resolved";
     uncertainPillars: BaZiPillarName[];
     warnings: string[];
-    solarLongitudeMethod: "astronomy-engine-2.1.19-geocentric-ecliptic-of-date";
+    solarLongitudeMethod: "astronomy-engine-geovector-ecliptic-output";
     solarTermBoundaryMode: "instantaneous-longitude-snapshot";
   };
   pillars: {
@@ -500,7 +500,8 @@ export function getSolarMonthPosition(sunLongitude: number): {
 
 export class SolarTermCalculator {
   /**
-   * Get Sun's geocentric tropical longitude for any given Date using Swiss Ephemeris
+   * Get the Sun's apparent geocentric ecliptic longitude through Celestia's
+   * astronomy-engine-backed compatibility facade (not native Swiss Ephemeris).
    */
   public getSunLongitude(date: Date): number {
     const jd = date.getTime() / 86400000.0 + 2440587.5;
@@ -1298,7 +1299,7 @@ export class CompleteBaZiEngine {
             ...(options.warnings ?? []),
             "Year/Month boundaries currently use instantaneous Astronomy Engine solar longitude. Independent annual solar-term timestamp fixtures and a shared solved-boundary table remain pending.",
           ],
-          solarLongitudeMethod: "astronomy-engine-2.1.19-geocentric-ecliptic-of-date" as const,
+          solarLongitudeMethod: "astronomy-engine-geovector-ecliptic-output" as const,
           solarTermBoundaryMode: "instantaneous-longitude-snapshot" as const,
         },
       } : {}),
