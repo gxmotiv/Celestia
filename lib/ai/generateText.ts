@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { clampCelestiaOutputTokens, resolveCelestiaAIProvider } from "./providerPolicy";
+import { clampCelestiaOutputTokens, isCelestiaAIEnabled, resolveCelestiaAIProvider } from "./providerPolicy";
 
 export type CelestiaAIProvider = "freemodel" | "nararouter" | "gemini";
 export type CelestiaAIModelTier = "budget" | "reasoning";
@@ -177,6 +177,10 @@ export async function generateCelestiaText(
     maxOutputTokens: clampCelestiaOutputTokens(input.maxOutputTokens),
     temperature: input.temperature ?? 0.35,
   };
+
+  if (!isCelestiaAIEnabled(process.env.CELESTIA_AI_ENABLED)) {
+    throw new Error("AI provider calls are disabled. Set CELESTIA_AI_ENABLED=true only after explicitly approving outbound model usage.");
+  }
 
   const modelTier = input.modelTier ?? "budget";
   const provider = resolveCelestiaAIProvider(process.env.CELESTIA_AI_PROVIDER);
