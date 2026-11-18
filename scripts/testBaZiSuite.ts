@@ -1,3 +1,4 @@
+import { createBaZiClock, equationOfTimeMinutes } from "../lib/astronomy/timeEngine";
 import {
   SolarTermCalculator,
   getSolarMonthPosition,
@@ -343,6 +344,125 @@ assertTest(
   baziTransit.pillars.year.heavenlyStem.element === "Metal", // 1980 = Geng Shen (Metal Monkey)
   "1980 = Geng-Shen (Metal Monkey)",
   `${baziTransit.pillars.year.combinedName}`
+);
+
+
+/* BaZi clock-basis and day-boundary regressions.
+ * These are deterministic conversion/branch tests, not independent almanac fixtures.
+ */
+const clockInstant = new Date("2024-06-01T12:34:56.789Z");
+const clockEot = equationOfTimeMinutes(clockInstant);
+const civilClock = createBaZiClock(clockInstant, {
+  timeBasis: "civil-clock",
+  longitudeDegrees: 77.6,
+  civilUtcOffsetSeconds: 19_800,
+});
+assertTest(
+  "8. BaZi Time Basis",
+  "Civil clock applies explicit UTC+05:30 offset and preserves sub-minute fields",
+  civilClock.clockDate.toISOString() === "2024-06-01T18:04:56.789Z",
+  "2024-06-01T18:04:56.789Z",
+  civilClock.clockDate.toISOString()
+);
+
+const meanClock = createBaZiClock(clockInstant, {
+  timeBasis: "local-mean-solar",
+  longitudeDegrees: 77.6,
+});
+assertTest(
+  "8. BaZi Time Basis",
+  "LMST applies east-positive longitude × four minutes per degree",
+  meanClock.clockDate.getTime() - clockInstant.getTime() === 18_624_000,
+  "18,624,000 ms",
+  String(meanClock.clockDate.getTime() - clockInstant.getTime())
+);
+
+const apparentClock = createBaZiClock(clockInstant, {
+  timeBasis: "local-apparent-solar",
+  longitudeDegrees: 77.6,
+});
+assertTest(
+  "8. BaZi Time Basis",
+  "LAST equals LMST plus Equation of Time",
+  Math.abs(
+    (apparentClock.clockDate.getTime() - meanClock.clockDate.getTime()) -
+    clockEot * 60_000
+  ) <= 1,
+  "LMST + EoT within 1 ms",
+  `EoT ${clockEot.toFixed(6)} min`
+);
+
+assertTest(
+  "8. BaZi Time Basis",
+  "Equation of Time returns a finite bounded value",
+  Number.isFinite(clockEot) && Math.abs(clockEot) < 20,
+  "Finite and within ±20 minutes",
+  `${clockEot.toFixed(6)} minutes`
+);
+
+const dayBeforeZi = new Date("2024-02-10T22:59:59.999Z");
+const atZi = new Date("2024-02-10T23:00:00.000Z");
+const nextMidnight = new Date("2024-02-11T00:00:00.000Z");
+const earlyBefore = solarCalc.calculateDayPillar(dayBeforeZi, "pure-zi");
+const pureAt = solarCalc.calculateDayPillar(atZi, "pure-zi");
+const earlyAt = solarCalc.calculateDayPillar(atZi, "early-late-zi");
+const earlyMidnight = solarCalc.calculateDayPillar(nextMidnight, "early-late-zi");
+assertTest(
+  "9. BaZi Day Boundary",
+  "Pure-Zi day changes at 23:00",
+  pureAt.combinedChinese !== earlyBefore.combinedChinese,
+  "Next sexagenary day at 23:00",
+  `${earlyBefore.combinedChinese} -> ${pureAt.combinedChinese}`
+);
+assertTest(
+  "9. BaZi Day Boundary",
+  "Early/Late-Zi retains civil day at 23:00",
+  earlyAt.combinedChinese === earlyBefore.combinedChinese,
+  "Same day pillar through 23:59",
+  `${earlyBefore.combinedChinese} / ${earlyAt.combinedChinese}`
+);
+assertTest(
+  "9. BaZi Day Boundary",
+  "Early/Late-Zi changes at midnight",
+  earlyMidnight.combinedChinese !== earlyAt.combinedChinese,
+  "Next sexagenary day at 00:00",
+  `${earlyAt.combinedChinese} -> ${earlyMidnight.combinedChinese}`
+);
+
+const hourBeforeZi = solarCalc.calculateHourPillar(dayBeforeZi, 0);
+const hourAtZi = solarCalc.calculateHourPillar(atZi, 0);
+const hourAtChou = solarCalc.calculateHourPillar(nextMidnight, 0);
+assertTest(
+  "10. BaZi Hour Boundary",
+  "Hour branch changes from Hai to Zi at 23:00",
+  hourBeforeZi.earthlyBranch.index === 11 && hourAtZi.earthlyBranch.index === 0,
+  "Hai -> Zi",
+  `${hourBeforeZi.earthlyBranch.name} -> ${hourAtZi.earthlyBranch.name}`
+);
+assertTest(
+  "10. BaZi Hour Boundary",
+  "Hour branch changes from Zi to Chou at 01:00",
+  solarCalc.calculateHourPillar(new Date("2024-02-11T01:00:00.000Z"), 0)
+    .earthlyBranch.index === 1,
+  "Chou",
+  hourAtChou.earthlyBranch.name
+);
+
+let missingCivilOffsetRejected = false;
+try {
+  createBaZiClock(clockInstant, {
+    timeBasis: "civil-clock",
+    longitudeDegrees: 77.6,
+  });
+} catch {
+  missingCivilOffsetRejected = true;
+}
+assertTest(
+  "8. BaZi Time Basis",
+  "Civil clock rejects missing UTC offset",
+  missingCivilOffsetRejected,
+  "RangeError",
+  missingCivilOffsetRejected ? "RangeError thrown" : "No error"
 );
 
 // ============================================================
