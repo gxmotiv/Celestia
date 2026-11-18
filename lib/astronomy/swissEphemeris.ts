@@ -1,14 +1,18 @@
 /**
- * Swiss Ephemeris High-Precision Astronomical Engine
- * Computes planetary coordinates with 0.001° accuracy based on JPL DE405 / VSOP87
- * and IAU standards. Provides full compatibility with the Swiss Ephemeris API.
+ * Celestia astronomical compatibility facade.
+ *
+ * Planet positions are calculated with astronomy-engine (Astronomy.GeoVector
+ * and Astronomy.Ecliptic), plus Celestia's own formulae for lunar nodes and
+ * selected derived quantities. This is NOT the native Swiss Ephemeris library.
+ * Swiss-style method names/constants are compatibility shims only; they do
+ * not imply Swiss Ephemeris algorithms, DE ephemeris files, or accuracy parity.
  */
 
 import * as Astronomy from "astronomy-engine";
 
 export interface SwissPlanetPosition {
-  longitude: number;      // Exact position (0.001° accuracy)
-  latitude: number;       // Declination / celestial latitude
+  longitude: number;      // Ecliptic longitude from the configured astronomy-engine path
+  latitude: number;       // Ecliptic latitude
   distance: number;       // AU from Earth
   speed: number;          // Degrees per day (retrograde detection)
   isRetrograde: boolean;  // True if retrograde
