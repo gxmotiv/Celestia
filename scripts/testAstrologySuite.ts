@@ -11,7 +11,7 @@ import {
 } from "../lib/vedic/completeDashaSystems";
 import { TransitEngine } from "../lib/astronomy/transits";
 import { routeConsultationQuestion, CONSULTATION_DESKS } from "../lib/consultation/deskRegistry";
-import { clampCelestiaOutputTokens, resolveCelestiaAIProvider } from "../lib/ai/providerPolicy";
+import { clampCelestiaOutputTokens, isCelestiaAIEnabled, resolveCelestiaAIProvider } from "../lib/ai/providerPolicy";
 import { prepareConsultationRoute } from "../lib/consultation/consultationService";
 import { buildPsychologyConsultationBrief, PSYCHOLOGY_TOPICS } from "../lib/consultation/desks/psychologyBehaviour";
 import { buildInfluenceSafetyBrief, INFLUENCE_PATTERNS } from "../lib/consultation/desks/influenceSafety";
@@ -712,6 +712,11 @@ assertTest("5.7 Capability Gate", "New desks remain blocked from astrology-only 
 console.log("Running Category 6: AI Provider Policy Tests...");
 
 const providerDefault = resolveCelestiaAIProvider(undefined);
+const aiDefaultDisabled = !isCelestiaAIEnabled(undefined);
+const aiRejectsFalse = !isCelestiaAIEnabled("false");
+const aiRequiresExactOptIn = !isCelestiaAIEnabled("yes") && isCelestiaAIEnabled("true");
+assertTest("6.0 Provider Opt-In Gate", "Provider requests are disabled by default", aiDefaultDisabled, "disabled", String(aiDefaultDisabled ? "disabled" : "enabled"));
+assertTest("6.0 Provider Opt-In Gate", "False and ambiguous values cannot enable provider requests", aiRejectsFalse && aiRequiresExactOptIn, "only exact true enables", `false=${aiRejectsFalse}, exact=true=${aiRequiresExactOptIn}`);
 assertTest(
   "6.1 Provider Selection",
   "Unconfigured provider defaults to FreeModel only",
