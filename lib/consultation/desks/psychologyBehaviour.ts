@@ -68,6 +68,42 @@ export const PSYCHOLOGY_SOURCES: readonly DeskSource[] = [
     evidenceType: "professional-guidance",
     supports: ["stress appraisal", "social support", "mindfulness", "reframing", "seeking help"],
     limitations: ["General coping suggestions are not a substitute for assessment or treatment."]
+  },
+  {
+    id: "adult-attachment-measurement-review",
+    title: "Self-report measures of secure attachment in adulthood: A systematic review",
+    organization: "Clinical Psychology & Psychotherapy",
+    url: "https://onlinelibrary.wiley.com/doi/10.1002/cpp.2756",
+    evidenceType: "peer-reviewed-review",
+    supports: ["attachment measurement limitations", "psychometric quality varies across instruments"],
+    limitations: ["The review found variable methodological quality and no single instrument with sufficient evidence across the full range of psychometric properties."]
+  },
+  {
+    id: "adult-attachment-review",
+    title: "Attachment in Adulthood: Recent Developments, Emerging Debates, and Future Directions",
+    organization: "Annual Review of Psychology",
+    url: "https://www.annualreviews.org/content/journals/10.1146/annurev-psych-010418-102813",
+    evidenceType: "peer-reviewed-review",
+    supports: ["adult attachment research", "developmental and relationship context", "ongoing theoretical debates"],
+    limitations: ["A research framework, not a tool for classifying a person from a short conversation."]
+  },
+  {
+    id: "big-five-cross-cultural-validity",
+    title: "Challenges to capture the big five personality traits in non-WEIRD populations",
+    organization: "Science Advances",
+    url: "https://www.science.org/doi/full/10.1126/sciadv.aaw5226",
+    evidenceType: "peer-reviewed-review",
+    supports: ["cross-cultural measurement caution", "language and context can affect trait measurement"],
+    limitations: ["Findings caution against assuming that measures validated in one population transfer unchanged to all languages and settings."]
+  },
+  {
+    id: "ai-chatbot-personality-measurement",
+    title: "How well can an AI chatbot infer personality? Examining psychometric properties of machine-inferred personality scores",
+    organization: "Journal of Applied Psychology",
+    url: "https://doi.org/10.1037/apl0001082",
+    evidenceType: "peer-reviewed-review",
+    supports: ["research on machine-inferred personality scores", "need to assess reliability and validity"],
+    limitations: ["The study used a specific chatbot, sample and lengthy interaction; it reported low criterion-related validity and relatively poor discriminant validity, so it does not validate casual chat-based personality claims."]
   }
 ] as const;
 
@@ -100,17 +136,17 @@ export const PSYCHOLOGY_TOPICS: readonly PsychologyTopic[] = [
     id: "personality-and-individual-differences",
     label: "Personality and individual differences",
     scope: "Discuss traits, values, preferences and context as tentative ways to reflect on patterns.",
-    safeApproach: ["Distinguish a validated instrument from an informal reflection prompt.", "Describe traits dimensionally and contextually.", "Allow the user to reject a description that does not fit."],
-    avoid: ["No personality-disorder diagnosis.", "No certainty from astrology, a single message, or an unvalidated quiz."],
-    sourceIds: ["apa-evidence-practice"]
+    safeApproach: ["Distinguish a validated instrument from an informal reflection prompt.", "Describe traits dimensionally and contextually.", "Check whether an instrument has been validated for the user's language and population.", "Allow the user to reject a description that does not fit."],
+    avoid: ["No personality-disorder diagnosis.", "No personality score inferred from casual chat, astrology or an unvalidated quiz.", "Do not assume Western-developed scales transfer unchanged across cultures or translations."],
+    sourceIds: ["apa-evidence-practice", "big-five-cross-cultural-validity", "ai-chatbot-personality-measurement"]
   },
   {
     id: "attachment-and-relationships",
     label: "Attachment concepts and relationships",
     scope: "Explain attachment concepts as broad research frameworks and support reflection on communication and needs.",
-    safeApproach: ["Describe patterns as hypotheses, not fixed identities.", "Focus on specific interactions, needs and boundaries.", "Consider situational and cultural alternatives."],
-    avoid: ["Do not assign attachment styles to absent third parties.", "Do not infer motives or predict relationship outcomes."],
-    sourceIds: ["apa-evidence-practice", "nimh-psychotherapies"]
+    safeApproach: ["Describe patterns as hypotheses, not fixed identities.", "Focus on specific interactions, needs and boundaries.", "Consider situational and cultural alternatives.", "Explain that attachment instruments vary in psychometric support."],
+    avoid: ["Do not assign attachment styles to absent third parties.", "Do not infer motives or predict relationship outcomes.", "Do not treat a short quiz or single conversation as a validated attachment assessment."],
+    sourceIds: ["apa-evidence-practice", "nimh-psychotherapies", "adult-attachment-measurement-review", "adult-attachment-review"]
   },
   {
     id: "social-influence-and-groups",
