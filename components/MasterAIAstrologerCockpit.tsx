@@ -335,6 +335,11 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
               `${desk.label ?? "Specialist desk"} (${desk.status ?? "status unknown"})`
             ).join(", ")
           : "No reliable specialist route was returned";
+        const specialtyLabels = Array.isArray(routeData?.specialties)
+          ? routeData.specialties.map((specialty: { label?: string; status?: string }) =>
+              `${specialty.label ?? "Astrology method"} (${specialty.status ?? "status unknown"})`
+            ).join(", ")
+          : "";
         const action = routeData?.nextAction ?? "routing-unavailable";
         const explanation = action === "urgent-support"
           ? "This may involve immediate danger. Please contact local emergency services or a trusted person who can help you now. Celestia will not treat this as an astrology question."
@@ -348,7 +353,7 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
         const oracleMsg: ChatMessage = {
           id: "oracle-" + Date.now(),
           sender: "oracle",
-          text: `### Consultation routing\n\n${explanation}\n\n**Selected desk(s):** ${deskLabels}\n\n**Routing status:** ${action}`,
+          text: `### Consultation routing\n\n${explanation}\n\n**Selected desk(s):** ${deskLabels}${specialtyLabels ? `\n\n**Selected astrology method(s):** ${specialtyLabels}` : ""}\n\n**Routing status:** ${action}`,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
           isAiGenerated: false,
           provider: "local-router",
