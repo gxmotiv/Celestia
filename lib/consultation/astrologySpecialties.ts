@@ -76,6 +76,45 @@ export const ASTROLOGY_SPECIALTIES: readonly AstrologySpecialty[] = [
   { id: "timing-dasha-transit", parentDesk: "transits-timing", label: "Dasha + Transit Synthesis", scope: "Compare supported timing systems without manufacturing agreement.", methods: ["Vimshottari periods", "transit triggers", "period overlap"], status: "partial-foundation", requiredGates: [...CALCULATION_GATES, ...INTERPRETATION_GATES], limitations: ["Only validated dasha systems may be included in a result."] },
 ] as const;
 
+const SPECIALTY_INTENTS: ReadonlyArray<{ id: string; pattern: RegExp }> = [
+  { id: "western-natal", pattern: /western natal|tropical natal|birth chart|natal chart|ascendant|rising sign|midheaven/i },
+  { id: "western-traditional", pattern: /annual profection|profection|hellenistic|whole.?sign|sect|essential dignit|traditional western|time lord/i },
+  { id: "western-horary", pattern: /horary/i },
+  { id: "western-electional", pattern: /electional/i },
+  { id: "western-secondary-progressions", pattern: /secondary progression|progressed chart|progressed moon/i },
+  { id: "western-solar-return", pattern: /solar return|lunar return/i },
+  { id: "western-mundane", pattern: /mundane astrology|world astrology|ingress chart/i },
+  { id: "vedic-parashari", pattern: /parashari|parashara|vedic natal|jyotish natal/i },
+  { id: "vedic-varga", pattern: /divisional chart|\bD(?:2|3|4|7|9|10|12|16|20|24|27|30|40|45|60)\b|navamsa|drekkana|dashamsha|hora chart/i },
+  { id: "vedic-shadbala", pattern: /shadbala|shad bala|graha bala|planetary strength/i },
+  { id: "vedic-ashtakavarga", pattern: /ashtakavarga|sarvashtakavarga|bhinna ashtakavarga/i },
+  { id: "vedic-prashna", pattern: /prashna/i },
+  { id: "vedic-muhurta", pattern: /muhurta|panchanga|panchang/i },
+  { id: "vedic-tajika", pattern: /tajika|varshaphala|varsha pravesh/i },
+  { id: "jaimini-karakas", pattern: /jaimini|chara karaka|atmakaraka|amatyakaraka|darakaraka|karakamsa/i },
+  { id: "jaimini-arudha", pattern: /arudha|upapada|rashi drishti/i },
+  { id: "jaimini-dasha", pattern: /chara dasha|sthira dasha|shoola dasha|jaimini dasha/i },
+  { id: "kp-cusps", pattern: /\bKP\b|krishnamurti|sub.?lord|star lord|cuspal/i },
+  { id: "kp-ruling-planets", pattern: /ruling planets/i },
+  { id: "bazi-pillars", pattern: /ba.?zi|four pillars|day master|ten gods/i },
+  { id: "bazi-luck", pattern: /da yun|luck pillars|luck pillar/i },
+  { id: "bazi-qi-men", pattern: /qi.?men|qimen/i },
+  { id: "numerology-core", pattern: /numerolog|life path|expression number|personal year/i },
+  { id: "relationship-synastry", pattern: /synastry|composite chart|western compatibility/i },
+  { id: "relationship-vedic", pattern: /ashtakoota|guna milan|kundli matching|vedic compatibility|manglik/i },
+  { id: "transit-eclipses", pattern: /transit|eclipse|retrograde station/i },
+  { id: "timing-dasha-transit", pattern: /dasha.*transit|transit.*dasha|timing synthesis/i },
+];
+
+export function matchAstrologySpecialties(question: string): AstrologySpecialty[] {
+  const normalized = question.trim();
+  if (!normalized) return [];
+  const matchedIds = new Set(
+    SPECIALTY_INTENTS.filter((intent) => intent.pattern.test(normalized)).map((intent) => intent.id)
+  );
+  return ASTROLOGY_SPECIALTIES.filter((specialty) => matchedIds.has(specialty.id));
+}
+
 export function getAstrologySpecialties(parentDesk?: ConsultationDeskId): AstrologySpecialty[] {
   return ASTROLOGY_SPECIALTIES.filter((specialty) => !parentDesk || specialty.parentDesk === parentDesk);
 }
