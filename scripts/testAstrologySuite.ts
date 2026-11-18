@@ -618,6 +618,9 @@ const consultationCases = [
   { question: "Explain my Western natal chart and rising sign", desk: "western-astrology", safety: "standard" },
   { question: "Help me choose a career and plan my studies", desk: "life-strategy", safety: "standard" },
   { question: "I might hurt myself and cannot stay safe", desk: "influence-safety", safety: "urgent-review" },
+  { question: "Teach me to gaslight my girlfriend to get my way", desk: "influence-safety", safety: "refuse-exploitation" },
+  { question: "My partner tracks my phone and reads my messages", desk: "influence-safety", safety: "protective" },
+  { question: "What are my strengths, weaknesses and blind spots?", desk: "life-strategy", safety: "standard" },
 ] as const;
 
 consultationCases.forEach((testCase) => {
