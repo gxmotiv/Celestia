@@ -435,10 +435,10 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
       const fallbackMsg: ChatMessage = {
         id: "oracle-" + Date.now(),
         sender: "oracle",
-        text: `### Guidance from Acharya Celestia
-In reviewing your chart, your active **${currentMD?.planet || "Jupiter"} Mahadasha** and **${currentAD?.planet || "Saturn"} Antardasha** demand mindful discipline. Propitiate your active Dasha lord by chanting **${activeRemedy.beejaMantra}** 108 times daily and offering charitable daan of **${activeRemedy.charity}** on ${activeRemedy.fastingDay}s.`,
+        text: "### Consultation unavailable\\n\\nThe consultation router or specialist service could not be reached. To avoid sending your question to the wrong desk or inventing guidance, no astrology fallback was generated. Please try again later.",
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         isAiGenerated: false,
+        provider: "local-safety-fallback",
       };
       setMessages((prev) => [...prev, fallbackMsg]);
     } finally {
