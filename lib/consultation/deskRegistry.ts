@@ -54,7 +54,7 @@ export interface ConsultationRoute {
 }
 
 const RULES: ReadonlyArray<{ desk: ConsultationDeskId; intent: string; pattern: RegExp; reason: string }> = [
-  { desk: "influence-safety", intent: "manipulation-or-safety", pattern: /manipulat|gaslight|coerc|threaten|blackmail|pressure tactic|control me|scam|deceiv|forced|afraid of (him|her|them)|unsafe|track(s|ing)? my phone|read(s|ing)? my messages|isolat(ing|ed) me/i, reason: "The question mentions possible manipulation, coercion, deception or personal safety." },
+  { desk: "influence-safety", intent: "manipulation-or-safety", pattern: /manipulat|gaslight|coerc|threaten|blackmail|pressure tactic|control me|scam|deceiv|forced|afraid of (him|her|them)|unsafe|abuse|abused|domestic violence|stalk|scared to go home|afraid to go home|track(s|ing)? my phone|read(s|ing)? my messages|isolat(ing|ed) me/i, reason: "The question mentions possible manipulation, coercion, deception or personal safety." },
   { desk: "psychology-behaviour", intent: "behaviour-and-emotions", pattern: /emotion|anxious|overthink|confidence|self.?esteem|habit|procrastinat|motivat|attachment|behavio[u]?r|personality|blind spot|why do i keep|repeat(ing)? the same pattern|anger|stress|fear|grief|cognitive bias|peer pressure|group dynamics|social influence|persuasion/i, reason: "The question concerns emotions, habits, thinking patterns or behaviour." },
   { desk: "relationships", intent: "relationship-question", pattern: /relationship|partner|marriage|dating|break.?up|compatib|friendship|family conflict|trust issue|intimacy/i, reason: "The question concerns a relationship or interpersonal pattern." },
   { desk: "jaimini", intent: "jaimini-astrology", pattern: /jaimini|chara karaka|atmakaraka|darakaraka|arudha|rashi drishti/i, reason: "The question explicitly requests Jaimini methods." },
@@ -67,7 +67,7 @@ const RULES: ReadonlyArray<{ desk: ConsultationDeskId; intent: string; pattern: 
   { desk: "life-strategy", intent: "life-planning", pattern: /career|education|study plan|exam|goal|decision|choose between|what should i do|planning|routine|work path|strengths?|weaknesses|blind spots|personal development|self improvement|next step/i, reason: "The question asks for practical planning, choices or personal direction." },
 ];
 
-const URGENT_PATTERN = /suicid|kill myself|self.?harm|hurt myself|in immediate danger|someone is hurting me|being abused|threat to my life|threatened to kill me|can't stay safe|not safe right now/i;
+const URGENT_PATTERN = /suicid|kill myself|self.?harm|hurt myself|in immediate danger|someone is hurting me right now|threat to my life|threatened to kill me|threatening me right now|can't stay safe|not safe right now|outside my door right now/i;
 const HARMFUL_INFLUENCE_PATTERN = /\b(how can i|how do i|teach me to|give me a script to|best way to)\s+(manipulat|gaslight|coerce|blackmail|groom|intimidat|isolate|exploit|emotionally control|make someone dependent)\b|\b(make|force|trick)\s+(someone|them|my partner|my friend)\s+(obey|depend on me|feel guilty|do what i want)\b/i;
 
 export function routeConsultationQuestion(question: string): ConsultationRoute {
