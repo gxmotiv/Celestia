@@ -192,6 +192,10 @@ A successful routing test does not mean the advice, sources, calculations or saf
 17. Bailey, Goal Setting and Action Planning for Health Behavior Change, 2017: https://pmc.ncbi.nlm.nih.gov/articles/PMC6796229/
 18. UK Government, Domestic abuse: how to get help: https://www.gov.uk/guidance/domestic-abuse-how-to-get-help
 19. UK National Health Service, Getting help for domestic violence and abuse: https://www.nhs.uk/live-well/getting-help-for-domestic-violence/
+20. Fraley, Attachment in Adulthood: Recent Developments, Emerging Debates, and Future Directions, Annual Review of Psychology, 2019: https://www.annualreviews.org/content/journals/10.1146/annurev-psych-010418-102813
+21. Justo-Núñez et al., Self-report measures of secure attachment in adulthood: A systematic review, 2022: https://onlinelibrary.wiley.com/doi/10.1002/cpp.2756
+22. He et al., Challenges to capture the big five personality traits in non-WEIRD populations, Science Advances: https://www.science.org/doi/full/10.1126/sciadv.aaw5226
+23. Fan et al., How well can an AI chatbot infer personality? Examining psychometric properties of machine-inferred personality scores, Journal of Applied Psychology, 2023: https://doi.org/10.1037/apl0001082
 
 ### Implementation note
 
