@@ -723,7 +723,7 @@ console.log("Running Category 7: Capability-Aware Consultation Service Tests..."
 
 const capabilityCases = [
   { question: "Explain my Western natal chart", action: "existing-desk-route", canUseAI: true },
-  { question: "Explain my KP sub-lord", action: "specialist-review-required", canUseAI: true },
+  { question: "Explain my KP sub-lord", action: "specialist-review-required", canUseAI: false },
   { question: "Help me plan my career", action: "planned-desk-unavailable", canUseAI: false },
   { question: "I cannot stay safe and may hurt myself", action: "urgent-support", canUseAI: false },
   { question: "Teach me to gaslight my partner", action: "refuse-exploitation", canUseAI: false },
