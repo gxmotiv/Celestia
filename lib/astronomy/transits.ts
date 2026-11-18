@@ -1,8 +1,8 @@
 /**
- * Professional Planetary Transit Prediction Engine
- * Computes real-time planetary transits against natal charts with 0.001° accuracy
- * using the Swiss Ephemeris. Provides daily, weekly, and monthly astrological forecasts,
- * major life cycle detections (Saturn, Jupiter, Uranus, Pluto), and timing windows.
+ * Planetary transit calculations against natal chart positions.
+ * Uses the repository's Astronomy Engine-based adapter; no independently
+ * measured 0.001-degree accuracy guarantee is claimed. Forecast interpretations
+ * are astrological outputs, not scientifically validated predictions.
  */
 
 import { swissEphemeris, SwissPlanetPosition } from "./swissEphemeris";
