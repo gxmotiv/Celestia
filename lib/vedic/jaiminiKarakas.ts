@@ -5,6 +5,8 @@
  * of sidereal longitudes within their respective rasis (0° to 30°).
  */
 
+import { NavamsaCalculator } from "./d9NavamsaEngine";
+
 export interface JaiminiKaraka {
   role: string;
   roleShort: "AK" | "AmK" | "BK" | "MK" | "PiK" | "PK" | "GK" | "DK";
@@ -97,64 +99,80 @@ export class JaiminiKarakasEngine {
   public calculate7Karakas(
     planets: { name: string; siderealLongitude: number; house: number; rasiName: string }[]
   ): JaiminiKarakasResult {
-    // 7 classical Grahas only: Sun, Moon, Mars, Mercury, Jupiter, Venus, Saturn
     const classicalNames = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"];
     const candidates = planets
-      .filter((p) => classicalNames.includes(p.name))
-      .map((p) => {
-        const rasiDeg = p.siderealLongitude % 30;
+      .filter((planet) => classicalNames.includes(planet.name))
+      .map((planet) => {
+        if (!Number.isFinite(planet.siderealLongitude) || !Number.isFinite(planet.house)) {
+          throw new Error(`Invalid Jaimini input for ${planet.name}: longitude and house must be finite numbers.`);
+        }
+        const normalizedLongitude = ((planet.siderealLongitude % 360) + 360) % 360;
         return {
-          ...p,
-          rasiDeg,
+          ...planet,
+          siderealLongitude: normalizedLongitude,
+          rasiDeg: normalizedLongitude % 30,
         };
       });
 
-    // Sort by descending degree within sign
+    const counts = new Map<string, number>();
+    candidates.forEach((planet) => counts.set(planet.name, (counts.get(planet.name) ?? 0) + 1));
+    const missing = classicalNames.filter((name) => counts.get(name) !== 1);
+    if (missing.length > 0 || candidates.length !== 7) {
+      throw new Error(`Jaimini 7-Karaka calculation requires exactly one of each classical graha. Invalid: ${missing.join(", ") || "duplicate or unexpected input"}.`);
+    }
+
+    // Chara Karaka order is determined by descending degrees within each sign.
     candidates.sort((a, b) => b.rasiDeg - a.rasiDeg);
 
-    const karakas: JaiminiKaraka[] = candidates.map((c, idx) => {
-      const def = KARAKA_DEFINITIONS_7[idx];
-      const deg = Math.floor(c.rasiDeg);
-      const min = Math.floor((c.rasiDeg % 1) * 60);
-      const sec = Math.floor(((c.rasiDeg * 60) % 1) * 60);
+    const karakas: JaiminiKaraka[] = candidates.map((candidate, index) => {
+      const definition = KARAKA_DEFINITIONS_7[index];
+      const totalSeconds = Math.round(candidate.rasiDeg * 3600);
+      const degrees = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
 
       return {
-        role: def.role,
-        roleShort: def.roleShort,
-        roleName: def.roleName,
-        sanskritName: def.sanskritName,
-        planet: c.name,
-        symbol: PLANET_SYMBOLS[c.name] || "",
-        rasiDegree: c.rasiDeg,
-        rasiDegreeFormatted: `${deg}°${min.toString().padStart(2, "0")}'${sec.toString().padStart(2, "0")}"`,
-        sign: c.rasiName,
-        house: c.house,
-        signification: def.signification,
-        lifeDomain: def.lifeDomain,
+        role: definition.role,
+        roleShort: definition.roleShort,
+        roleName: definition.roleName,
+        sanskritName: definition.sanskritName,
+        planet: candidate.name,
+        symbol: PLANET_SYMBOLS[candidate.name] || "",
+        rasiDegree: candidate.rasiDeg,
+        rasiDegreeFormatted: `${degrees}°${minutes.toString().padStart(2, "0")}'${seconds.toString().padStart(2, "0")}\"`,
+        sign: candidate.rasiName,
+        house: candidate.house,
+        signification: definition.signification,
+        lifeDomain: definition.lifeDomain,
       };
     });
 
-    const ak = karakas[0];
-    const akPlanet = candidates[0];
-
-    // Karakamsa is the sign occupied by Atmakaraka in the D9 Navamsha chart
-    // Approximate Navamsha sign of AK from its sidereal longitude
-    const totalNavamsaUnits = Math.floor(akPlanet.siderealLongitude / (30 / 9));
-    const karakamsaSignIdx = totalNavamsaUnits % 12;
-    const rasiNames = [
-      "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
-      "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"
-    ];
-    const karakamsaSign = rasiNames[karakamsaSignIdx];
+    const atmakaraka = karakas[0];
+    const atmakarakaPlanet = candidates[0];
+    const navamsaCalculator = new NavamsaCalculator();
+    const karakamsaPosition = navamsaCalculator.calculateNavamsa(
+      atmakarakaPlanet.siderealLongitude,
+      atmakarakaPlanet.name
+    );
+    const karakamsaSignIdx = karakamsaPosition.signIndex;
+    const rasiNames = NavamsaCalculator.SIGN_NAMES;
+    const ascendant = planets.find((planet) => planet.name === "Ascendant" || planet.name === "Lagna");
+    if (!ascendant || !Number.isFinite(ascendant.siderealLongitude)) {
+      throw new Error("Jaimini Karakamsa house calculation requires a valid Ascendant or Lagna longitude.");
+    }
+    const ascendantLongitude = ((ascendant.siderealLongitude % 360) + 360) % 360;
+    const ascendantSignIndex = Math.floor(ascendantLongitude / 30);
+    const karakamsaHouseFromLagna = ((karakamsaSignIdx - ascendantSignIndex + 12) % 12) + 1;
 
     return {
       scheme: "7-Karaka",
-      atmakaraka: ak,
+      atmakaraka,
       karakas,
-      karakamsaSign,
+      karakamsaSign: rasiNames[karakamsaSignIdx],
       karakamsaSignIndex: karakamsaSignIdx,
-      karakamsaHouseFromLagna: ((karakamsaSignIdx - Math.floor(planets.find(p => p.name === "Ascendant" || p.name === "Lagna")?.siderealLongitude || 0) / 30 + 12) % 12) + 1,
-      summary: `Atmakaraka is ${ak.planet} at ${ak.rasiDegreeFormatted} in ${ak.sign} (House ${ak.house}). It signifies the soul's primary spiritual curriculum in this lifetime.`,
+      karakamsaHouseFromLagna,
+      summary: `Atmakaraka is ${atmakaraka.planet} at ${atmakaraka.rasiDegreeFormatted} in ${atmakaraka.sign} (House ${atmakaraka.house}). Its Navamsa sign is ${rasiNames[karakamsaSignIdx]} (Karakamsa).`,
     };
   }
+}
 }
