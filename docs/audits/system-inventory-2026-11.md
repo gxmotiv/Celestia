@@ -115,6 +115,20 @@ Every feature PR must state:
 7. CI run and exact test results.
 8. Whether it changes user-visible results or stored profile data.
 
+
+## 7. High-priority accuracy and test-runner findings
+
+### Ephemeris naming and precision claims need correction
+- `lib/astronomy/swissEphemeris.ts` imports `astronomy-engine` directly and constructs a compatibility-shaped `SwissEphemerisEngine` wrapper. It is not a native Swiss Ephemeris binding.
+- The same file's module header and method comments claim “0.001° accuracy” / “EXACT” positions, and `lib/astronomy/ephemeris.ts` repeats a “High-precision Swiss Ephemeris calculation (0.001° accuracy)” comment.
+- Rounding a result to 0.0001° or 0.001° is output resolution, not evidence of that physical accuracy. These claims must be removed or replaced with a documented, measured error budget after independent comparison. Do not change the algorithm merely to make the comments sound stronger.
+- The planetary path uses `Astronomy.GeoVector` and `Astronomy.Ecliptic`; lunar nodes use separate polynomial/periodic approximations. These paths need separate validation, especially true-node accuracy, speed estimation, historical dates and apparent/geometric coordinate conventions.
+
+### Test execution discoverability
+- The audited `package.json` defines `dev`, `build`, `start`, `lint` and `clean`, but no `test` script.
+- Test suites exist as standalone TypeScript scripts. A reproducible, documented test command/runner is needed so CI and contributors can execute each suite consistently.
+- Some test scripts include named historical-chart expectations. Those are only valid golden fixtures if their source, time convention, coordinate frame and precision are documented independently; self-authored expected values are not independent validation.
+
 ## 6. Non-negotiable quality gates
 - Do not infer accuracy from a successful TypeScript build.
 - Do not call the astronomy-engine-backed facade native Swiss Ephemeris.
