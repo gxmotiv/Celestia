@@ -433,6 +433,31 @@ export const EARTHLY_BRANCHES: EarthlyBranch[] = [
 // 5. SOLAR TERM & CALENDAR CALCULATION ENGINE
 // ============================================================
 
+/**
+ * Resolve the BaZi solar-month branch from the Sun's tropical longitude.
+ *
+ * The first solar month begins at Li Chun (315°) with Yin/Tiger (branch 2).
+ * Each following 30° interval advances one branch, wrapping after Hai/Pig.
+ * Intervals are start-inclusive and end-exclusive.
+ */
+export function getSolarMonthPosition(sunLongitude: number): {
+  branchIndex: number;
+  monthOrderFromLichun: number;
+} {
+  if (!Number.isFinite(sunLongitude)) {
+    throw new RangeError("Solar longitude must be a finite number.");
+  }
+
+  const longitude = normalizeDegrees(sunLongitude);
+  const monthOrderFromLichun =
+    Math.floor((((longitude - 315 + 360) % 360) + 360) % 360 / 30);
+
+  return {
+    branchIndex: (2 + monthOrderFromLichun) % 12,
+    monthOrderFromLichun,
+  };
+}
+
 export class SolarTermCalculator {
   /**
    * Get Sun's geocentric tropical longitude for any given Date using Swiss Ephemeris
