@@ -23,3 +23,11 @@ export function clampCelestiaOutputTokens(value?: number): number {
   if (value === undefined || !Number.isFinite(value)) return DEFAULT_MAX_OUTPUT_TOKENS;
   return Math.min(HARD_MAX_OUTPUT_TOKENS, Math.max(1, Math.floor(value)));
 }
+
+/**
+ * Provider calls are disabled unless an operator explicitly opts in.
+ * Only the exact string "true" enables outbound model requests.
+ */
+export function isCelestiaAIEnabled(value?: string | null): boolean {
+  return value?.trim().toLowerCase() === "true";
+}
