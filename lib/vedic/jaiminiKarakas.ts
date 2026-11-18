@@ -97,7 +97,8 @@ const PLANET_SYMBOLS: Record<string, string> = {
 
 export class JaiminiKarakasEngine {
   public calculate7Karakas(
-    planets: { name: string; siderealLongitude: number; house: number; rasiName: string }[]
+    planets: { name: string; siderealLongitude: number; house: number; rasiName: string }[],
+    ascendantInput?: { siderealLongitude: number }
   ): JaiminiKarakasResult {
     const classicalNames = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"];
     const candidates = planets
@@ -161,7 +162,7 @@ export class JaiminiKarakasEngine {
     );
     const karakamsaSignIdx = karakamsaPosition.signIndex;
     const rasiNames = NavamsaCalculator.SIGN_NAMES;
-    const ascendant = planets.find((planet) => planet.name === "Ascendant" || planet.name === "Lagna");
+    const ascendant = ascendantInput ?? planets.find((planet) => planet.name === "Ascendant" || planet.name === "Lagna");
     if (!ascendant || !Number.isFinite(ascendant.siderealLongitude)) {
       throw new Error("Jaimini Karakamsa house calculation requires a valid Ascendant or Lagna longitude.");
     }
