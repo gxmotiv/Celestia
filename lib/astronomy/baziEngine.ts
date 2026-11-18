@@ -1,7 +1,7 @@
 /**
  * Comprehensive Chinese BaZi (Four Pillars of Destiny - 八字) & 24 Solar Terms Engine
  * Implements:
- * 1. Solar Calendar & 24 Solar Terms Calculation via Swiss Ephemeris
+ * 1. Solar Calendar & 24 Solar Terms calculations (engine and boundary accuracy require independent validation)
  * 2. 10 Heavenly Stems (Tian Gan) & 12 Earthly Branches (Di Zhi) with Hidden Stems (Cang Gan)
  * 3. 60 Jia Zi Sexagenary Cycle
  * 4. Four Pillars: Year (Lichun), Month (Solar Terms), Day (60-day cycle), Hour (2-hour branches)
