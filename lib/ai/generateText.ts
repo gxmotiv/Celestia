@@ -17,6 +17,8 @@ export interface CelestiaAIResult {
   usage?: CelestiaAIUsage;
 }
 
+type ProviderError = Error & { status?: number };
+
 interface GenerateTextOptions {
   systemPrompt: string;
   userPrompt: string;
