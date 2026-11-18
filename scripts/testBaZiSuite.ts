@@ -431,7 +431,7 @@ assertTest(
 
 const hourBeforeZi = solarCalc.calculateHourPillar(dayBeforeZi, 0);
 const hourAtZi = solarCalc.calculateHourPillar(atZi, 0);
-const hourAtChou = solarCalc.calculateHourPillar(nextMidnight, 0);
+const hourAtChou = solarCalc.calculateHourPillar(new Date("2024-02-11T01:00:00.000Z"), 0);
 assertTest(
   "10. BaZi Hour Boundary",
   "Hour branch changes from Hai to Zi at 23:00",
