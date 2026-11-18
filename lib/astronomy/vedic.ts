@@ -705,7 +705,7 @@ export function calculateVedicChart(
 
   // Jaimini Chara Karakas (7-Karaka System)
   const jaiminiEngine = new JaiminiKarakasEngine();
-  const jaiminiKarakas = jaiminiEngine.calculate7Karakas(vedicPlanets);
+  const jaiminiKarakas = jaiminiEngine.calculate7Karakas(vedicPlanets, lagnaPlanet);
 
   // Tara Bala (9-Tara Chakra for birth Nakshatra)
   const taraBalaEngine = new TaraBalaEngine();
