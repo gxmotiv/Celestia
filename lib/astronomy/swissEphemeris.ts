@@ -346,26 +346,18 @@ export class SwissEphemerisEngine {
       if (diff < -180) diff += 360;
       speed = diff * 24.0;
     } else if (planet === this.MEAN_NODE || planet === this.TRUE_NODE) {
-      // Lunar-node approximation; validate independently before making precision claims.
-      const T = (julianDay - 2451545.0) / 36525.0;
-      let omega = 125.04452 - 1934.136261 * T + 0.0020708 * T * T + (T * T * T) / 450000;
-
-      if (planet === this.TRUE_NODE) {
-        // Periodic perturbations for True Node (evection, variation, solar inequality)
-        const sunVec = Astronomy.GeoVector(Astronomy.Body.Sun, time, true);
-        const sunEcl = Astronomy.Ecliptic(sunVec);
-        const moonVec = Astronomy.GeoVector(Astronomy.Body.Moon, time, true);
-        const moonEcl = Astronomy.Ecliptic(moonVec);
-        const D2 = 2 * (moonEcl.elon - sunEcl.elon) * (Math.PI / 180);
-        const M = (357.5291 + 35999.05029 * T) * (Math.PI / 180);
-        omega += -1.4979 * Math.sin(2 * (moonEcl.elon - omega) * (Math.PI / 180))
-                 - 0.1500 * Math.sin(M)
-                 - 0.1226 * Math.sin(D2);
-      }
-
-      lon = (omega % 360 + 360) % 360;
-      speed = -0.05295; // Mean node retrograde motion
-      dist = 0.00257; // Average lunar distance in AU
+      // Mean and true node longitudes use separate models. Speed is derived
+      // numerically from the same model rather than assigning the mean-node
+      // rate to the oscillating true node.
+      lon = this.calculateLunarNodeLongitude(planet, julianDay);
+      const halfStepDays = 1 / 48; // 30 minutes on either side (1-hour total span).
+      const before = this.calculateLunarNodeLongitude(planet, julianDay - halfStepDays);
+      const after = this.calculateLunarNodeLongitude(planet, julianDay + halfStepDays);
+      let delta = after - before;
+      if (delta > 180) delta -= 360;
+      if (delta < -180) delta += 360;
+      speed = delta / (2 * halfStepDays);
+      dist = 0.00257; // Placeholder mean lunar distance; nodes are geometric points.
     }
 
     if (isSidereal) {
@@ -386,6 +378,33 @@ export class SwissEphemerisEngine {
       degree: round4(lon % 30),
       house: null,
     };
+  }
+
+  /**
+   * Calculate an ascending lunar node longitude using the selected local model.
+   * The true-node formula remains an approximation and requires independent
+   * ephemeris benchmarking; this helper makes its inputs and rate reproducible.
+   */
+  private calculateLunarNodeLongitude(planet: number, julianDay: number): number {
+    const T = (julianDay - 2451545.0) / 36525.0;
+    let omega = 125.04452 - 1934.136261 * T + 0.0020708 * T * T + (T * T * T) / 450000;
+
+    if (planet === this.TRUE_NODE) {
+      const time = new Astronomy.AstroTime(julianDay - 2451545.0);
+      const sunVec = Astronomy.GeoVector(Astronomy.Body.Sun, time, true);
+      const sunEcl = Astronomy.Ecliptic(sunVec);
+      const moonVec = Astronomy.GeoVector(Astronomy.Body.Moon, time, true);
+      const moonEcl = Astronomy.Ecliptic(moonVec);
+      const D2 = 2 * (moonEcl.elon - sunEcl.elon) * (Math.PI / 180);
+      const M = (357.5291 + 35999.05029 * T) * (Math.PI / 180);
+
+      omega +=
+        -1.4979 * Math.sin(2 * (moonEcl.elon - omega) * (Math.PI / 180)) -
+        0.1500 * Math.sin(M) -
+        0.1226 * Math.sin(D2);
+    }
+
+    return ((omega % 360) + 360) % 360;
   }
 
   /**
