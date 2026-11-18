@@ -1,0 +1,506 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-11-18",
+  "provider": "NASA/JPL Horizons API",
+  "endpoint": "https://ssd.jpl.nasa.gov/api/horizons.api",
+  "request": {
+    "ephemType": "VECTORS",
+    "center": "500@399 (Earth geocenter)",
+    "timeType": "UT (JPL documents pre-1962 as UT1; all stored fixtures are 1970 or later)",
+    "referencePlane": "FRAME",
+    "referenceSystem": "ICRF",
+    "vectorCorrection": "LT+S (down-leg light-time and stellar aberration)",
+    "outputUnits": "AU-D",
+    "vectorTable": "1 (position only)"
+  },
+  "comparison": {
+    "astronomyEnginePackage": "astronomy-engine@2.1.19",
+    "astronomyEngineCall": "GeoVector(body, AstroTime(UTC epoch), true)",
+    "astronomyEngineFrame": "EQJ (J2000 mean equator); Horizons ICRF is aligned with FK5/J2000 to about 0.02 arcsec, but is not identical",
+    "metric": "angular separation between normalized Cartesian vectors; range is intentionally not compared",
+    "initialThresholdArcseconds": 60,
+    "thresholdBasis": "Astronomy Engine upstream README states a design accuracy of within ±1 arcminute; this fixture gate checks these epochs only and does not certify the full app or all historical dates"
+  },
+  "fixtures": [
+    {
+      "id": "1970-01-01-sun",
+      "body": "Sun",
+      "targetId": "10",
+      "epochUT": "1970-01-01T12:00:00",
+      "source": "DE441",
+      "vectorAU": {
+        "x": 0.1890340030401196,
+        "y": -0.8853150522838192,
+        "z": -0.3839017432013637
+      }
+    },
+    {
+      "id": "1970-01-01-moon",
+      "body": "Moon",
+      "targetId": "301",
+      "epochUT": "1970-01-01T12:00:00",
+      "source": "DE441",
+      "vectorAU": {
+        "x": -0.002479309968966847,
+        "y": -0.0006643352287156798,
+        "z": -0.000425404686805596
+      }
+    },
+    {
+      "id": "1970-01-01-mercury",
+      "body": "Mercury",
+      "targetId": "199",
+      "epochUT": "1970-01-01T12:00:00",
+      "source": "DE441",
+      "vectorAU": {
+        "x": 0.434177121140334,
+        "y": -0.6959641126279608,
+        "z": -0.3082087323184381
+      }
+    },
+    {
+      "id": "1970-01-01-venus",
+      "body": "Venus",
+      "targetId": "299",
+      "epochUT": "1970-01-01T12:00:00",
+      "source": "DE441",
+      "vectorAU": {
+        "x": 0.1628642013801844,
+        "y": -1.548426010684306,
+        "z": -0.6805082050127564
+      }
+    },
+    {
+      "id": "1970-01-01-mars",
+      "body": "Mars",
+      "targetId": "499",
+      "epochUT": "1970-01-01T12:00:00",
+      "source": "mar099",
+      "vectorAU": {
+        "x": 1.51305307873298,
+        "y": -0.414887172662692,
+        "z": -0.2040271425719119
+      }
+    },
+    {
+      "id": "1970-01-01-jupiter",
+      "body": "Jupiter",
+      "targetId": "599",
+      "epochUT": "1970-01-01T12:00:00",
+      "source": "jup365_merged",
+      "vectorAU": {
+        "x": -4.820741160510679,
+        "y": -2.899712606698883,
+        "z": -1.125324322509673
+      }
+    },
+    {
+      "id": "1970-01-01-saturn",
+      "body": "Saturn",
+      "targetId": "699",
+      "epochUT": "1970-01-01T12:00:00",
+      "source": "sat441l",
+      "vectorAU": {
+        "x": 7.425382768843796,
+        "y": 4.490493142060159,
+        "z": 1.524690506895279
+      }
+    },
+    {
+      "id": "1970-01-01-uranus",
+      "body": "Uranus",
+      "targetId": "799",
+      "epochUT": "1970-01-01T12:00:00",
+      "source": "ura184_merged",
+      "vectorAU": {
+        "x": -18.02363560805486,
+        "y": -2.752896834568932,
+        "z": -0.9438131943483944
+      }
+    },
+    {
+      "id": "1970-01-01-neptune",
+      "body": "Neptune",
+      "targetId": "899",
+      "epochUT": "1970-01-01T12:00:00",
+      "source": "nep098_merged",
+      "vectorAU": {
+        "x": -15.37426977184643,
+        "y": -25.10428313480613,
+        "z": -9.909751467322357
+      }
+    },
+    {
+      "id": "1970-01-01-pluto",
+      "body": "Pluto",
+      "targetId": "999",
+      "epochUT": "1970-01-01T12:00:00",
+      "source": "plu060_merged",
+      "vectorAU": {
+        "x": -30.23344148268322,
+        "y": -2.348441529690019,
+        "z": 8.322601002603259
+      }
+    },
+    {
+      "id": "2000-01-01-sun",
+      "body": "Sun",
+      "targetId": "10",
+      "epochUT": "2000-01-01T12:00:00",
+      "source": "DE441",
+      "vectorAU": {
+        "x": 0.1770501396310574,
+        "y": -0.887442745296273,
+        "z": -0.3847490649356691
+      }
+    },
+    {
+      "id": "2000-01-01-moon",
+      "body": "Moon",
+      "targetId": "301",
+      "epochUT": "2000-01-01T12:00:00",
+      "source": "DE441",
+      "vectorAU": {
+        "x": -0.001948846674303542,
+        "y": -0.001783021070926791,
+        "z": -0.0005087972971546986
+      }
+    },
+    {
+      "id": "2000-01-01-mercury",
+      "body": "Mercury",
+      "targetId": "199",
+      "epochUT": "2000-01-01T12:00:00",
+      "source": "DE441",
+      "vectorAU": {
+        "x": 0.04675411300587857,
+        "y": -1.287987835142282,
+        "z": -0.5851967252601457
+      }
+    },
+    {
+      "id": "2000-01-01-venus",
+      "body": "Venus",
+      "targetId": "299",
+      "epochUT": "2000-01-01T12:00:00",
+      "source": "DE441",
+      "vectorAU": {
+        "x": -0.5412378324543885,
+        "y": -0.9335527708570712,
+        "z": -0.3600380057759064
+      }
+    },
+    {
+      "id": "2000-01-01-mars",
+      "body": "Mars",
+      "targetId": "499",
+      "epochUT": "2000-01-01T12:00:00",
+      "source": "mar099",
+      "vectorAU": {
+        "x": 1.567790120026194,
+        "y": -0.8862594621644125,
+        "z": -0.4218097849736943
+      }
+    },
+    {
+      "id": "2000-01-01-jupiter",
+      "body": "Jupiter",
+      "targetId": "599",
+      "epochUT": "2000-01-01T12:00:00",
+      "source": "jup365_merged",
+      "vectorAU": {
+        "x": 4.178392537399873,
+        "y": 1.849102623996418,
+        "z": 0.6907357806920117
+      }
+    },
+    {
+      "id": "2000-01-01-saturn",
+      "body": "Saturn",
+      "targetId": "699",
+      "epochUT": "2000-01-01T12:00:00",
+      "source": "sat441l",
+      "vectorAU": {
+        "x": 6.583485302740583,
+        "y": 5.287373880120576,
+        "z": 1.890050398006989
+      }
+    },
+    {
+      "id": "2000-01-01-uranus",
+      "body": "Uranus",
+      "targetId": "799",
+      "epochUT": "2000-01-01T12:00:00",
+      "source": "ura184_merged",
+      "vectorAU": {
+        "x": 14.60745798327798,
+        "y": -13.39509837027153,
+        "z": -6.0670531567235
+      }
+    },
+    {
+      "id": "2000-01-01-neptune",
+      "body": "Neptune",
+      "targetId": "899",
+      "epochUT": "2000-01-01T12:00:00",
+      "source": "nep098_merged",
+      "vectorAU": {
+        "x": 16.98631617460083,
+        "y": -23.86927726299171,
+        "z": -10.20990478257757
+      }
+    },
+    {
+      "id": "2000-01-01-pluto",
+      "body": "Pluto",
+      "targetId": "999",
+      "epochUT": "2000-01-01T12:00:00",
+      "source": "plu060_merged",
+      "vectorAU": {
+        "x": -9.701363365521622,
+        "y": -28.86522098079959,
+        "z": -6.138124891980309
+      }
+    },
+    {
+      "id": "2024-01-01-sun",
+      "body": "Sun",
+      "targetId": "10",
+      "epochUT": "2024-01-01T12:00:00",
+      "source": "DE441",
+      "vectorAU": {
+        "x": 0.1743783273916032,
+        "y": -0.8878947083726082,
+        "z": -0.3848899972214859
+      }
+    },
+    {
+      "id": "2024-01-01-moon",
+      "body": "Moon",
+      "targetId": "301",
+      "epochUT": "2024-01-01T12:00:00",
+      "source": "DE441",
+      "vectorAU": {
+        "x": -0.002563611999382919,
+        "y": 0.000723904017407021,
+        "z": 0.0004775751174179144
+      }
+    },
+    {
+      "id": "2024-01-01-mercury",
+      "body": "Mercury",
+      "targetId": "199",
+      "epochUT": "2024-01-01T12:00:00",
+      "source": "DE441",
+      "vectorAU": {
+        "x": -0.1110581804518504,
+        "y": -0.7305954249771327,
+        "z": -0.2712779349607845
+      }
+    },
+    {
+      "id": "2024-01-01-venus",
+      "body": "Venus",
+      "targetId": "299",
+      "epochUT": "2024-01-01T12:00:00",
+      "source": "DE441",
+      "vectorAU": {
+        "x": -0.5397797046035953,
+        "y": -0.9831626589759036,
+        "z": -0.382577375558774
+      }
+    },
+    {
+      "id": "2024-01-01-mars",
+      "body": "Mars",
+      "targetId": "499",
+      "epochUT": "2024-01-01T12:00:00",
+      "source": "mar099",
+      "vectorAU": {
+        "x": -0.1121834198688807,
+        "y": -2.210627240059216,
+        "z": -0.9838703617318338
+      }
+    },
+    {
+      "id": "2024-01-01-jupiter",
+      "body": "Jupiter",
+      "targetId": "599",
+      "epochUT": "2024-01-01T12:00:00",
+      "source": "jup365_merged",
+      "vectorAU": {
+        "x": 3.664934593729564,
+        "y": 2.413359951574329,
+        "z": 0.9451431834254987
+      }
+    },
+    {
+      "id": "2024-01-01-saturn",
+      "body": "Saturn",
+      "targetId": "699",
+      "epochUT": "2024-01-01T12:00:00",
+      "source": "sat441l",
+      "vectorAU": {
+        "x": 9.171062286898009,
+        "y": -4.179069438909014,
+        "z": -2.131684992537689
+      }
+    },
+    {
+      "id": "2024-01-01-uranus",
+      "body": "Uranus",
+      "targetId": "799",
+      "epochUT": "2024-01-01T12:00:00",
+      "source": "ura184_merged",
+      "vectorAU": {
+        "x": 12.44334194335977,
+        "y": 13.19208068979388,
+        "z": 5.608075815283833
+      }
+    },
+    {
+      "id": "2024-01-01-neptune",
+      "body": "Neptune",
+      "targetId": "899",
+      "epochUT": "2024-01-01T12:00:00",
+      "source": "nep098_merged",
+      "vectorAU": {
+        "x": 30.01743554513434,
+        "y": -2.271872796085116,
+        "z": -1.694396261209941
+      }
+    },
+    {
+      "id": "2024-01-01-pluto",
+      "body": "Pluto",
+      "targetId": "999",
+      "epochUT": "2024-01-01T12:00:00",
+      "source": "plu060_merged",
+      "vectorAU": {
+        "x": 17.38227207985211,
+        "y": -28.0363140002204,
+        "z": -14.04039305502541
+      }
+    },
+    {
+      "id": "2026-11-18-sun",
+      "body": "Sun",
+      "targetId": "10",
+      "epochUT": "2026-11-18T12:00:00",
+      "source": "DE441",
+      "vectorAU": {
+        "x": -0.5559247907281978,
+        "y": -0.7499720859893856,
+        "z": -0.3250931630456477
+      }
+    },
+    {
+      "id": "2026-11-18-moon",
+      "body": "Moon",
+      "targetId": "301",
+      "epochUT": "2026-11-18T12:00:00",
+      "source": "DE441",
+      "vectorAU": {
+        "x": 0.002419360389709574,
+        "y": -0.0009528300837062914,
+        "z": -0.0003586973758040039
+      }
+    },
+    {
+      "id": "2026-11-18-mercury",
+      "body": "Mercury",
+      "targetId": "199",
+      "epochUT": "2026-11-18T12:00:00",
+      "source": "DE441",
+      "vectorAU": {
+        "x": -0.7510726086279208,
+        "y": -0.5274044373523918,
+        "z": -0.1859716896067535
+      }
+    },
+    {
+      "id": "2026-11-18-venus",
+      "body": "Venus",
+      "targetId": "299",
+      "epochUT": "2026-11-18T12:00:00",
+      "source": "DE441",
+      "vectorAU": {
+        "x": -0.3215104623313972,
+        "y": -0.1228524126166943,
+        "z": -0.05772914049888279
+      }
+    },
+    {
+      "id": "2026-11-18-mars",
+      "body": "Mars",
+      "targetId": "499",
+      "epochUT": "2026-11-18T12:00:00",
+      "source": "mar099",
+      "vectorAU": {
+        "x": -1.071599970485592,
+        "y": 0.6330880886500606,
+        "z": 0.3231908381162876
+      }
+    },
+    {
+      "id": "2026-11-18-jupiter",
+      "body": "Jupiter",
+      "targetId": "599",
+      "epochUT": "2026-11-18T12:00:00",
+      "source": "jup365_merged",
+      "vectorAU": {
+        "x": -4.317971967280737,
+        "y": 2.676368815598168,
+        "z": 1.235099804268961
+      }
+    },
+    {
+      "id": "2026-11-18-saturn",
+      "body": "Saturn",
+      "targetId": "699",
+      "epochUT": "2026-11-18T12:00:00",
+      "source": "sat441l",
+      "vectorAU": {
+        "x": 8.633752528006172,
+        "y": 1.273268181019568,
+        "z": 0.1148028409861237
+      }
+    },
+    {
+      "id": "2026-11-18-uranus",
+      "body": "Uranus",
+      "targetId": "799",
+      "epochUT": "2026-11-18T12:00:00",
+      "source": "ura184_merged",
+      "vectorAU": {
+        "x": 8.202067988064515,
+        "y": 15.18507439949835,
+        "z": 6.530019745686467
+      }
+    },
+    {
+      "id": "2026-11-18-neptune",
+      "body": "Neptune",
+      "targetId": "899",
+      "epochUT": "2026-11-18T12:00:00",
+      "source": "nep098_merged",
+      "vectorAU": {
+        "x": 29.2730255636784,
+        "y": 0.9435366622890281,
+        "z": -0.3745538885145167
+      }
+    },
+    {
+      "id": "2026-11-18-pluto",
+      "body": "Pluto",
+      "targetId": "999",
+      "epochUT": "2026-11-18T12:00:00",
+      "source": "plu060_merged",
+      "vectorAU": {
+        "x": 19.53644406485094,
+        "y": -26.58614919609403,
+        "z": -14.44147757338385
+      }
+    }
+  ]
+}
