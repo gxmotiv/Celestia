@@ -38,7 +38,7 @@ export interface SwissAllPlanets {
   meanNorthNode: SwissPlanetPosition;
   /** Mean descending node: exactly opposite the mean ascending node. */
   meanSouthNode: SwissPlanetPosition;
-  /** True ascending node approximation; not independently accuracy-certified. */
+  /** State-vector-derived true ascending node; still provisional against the pinned lunar model. */
   trueNorthNode: SwissPlanetPosition;
   /** True descending node approximation: exactly opposite the true ascending node. */
   trueSouthNode: SwissPlanetPosition;
@@ -357,7 +357,7 @@ export class SwissEphemerisEngine {
       if (delta > 180) delta -= 360;
       if (delta < -180) delta += 360;
       speed = delta / (2 * halfStepDays);
-      dist = 0.00257; // Placeholder mean lunar distance; nodes are geometric points.
+      dist = 0.00257; // Legacy API placeholder only; lunar nodes have no physical body-distance.
     }
 
     if (isSidereal) {
@@ -380,11 +380,6 @@ export class SwissEphemerisEngine {
     };
   }
 
-  /**
-   * Calculate an ascending lunar node longitude using the selected local model.
-   * The true-node formula remains an approximation and requires independent
-   * ephemeris benchmarking; this helper makes its inputs and rate reproducible.
-   */
   /**
    * Calculate the ascending node of the Moon's osculating geocentric orbit.
    *
