@@ -10,6 +10,7 @@ import {
   CompleteDashaOrchestrator,
 } from "../lib/vedic/completeDashaSystems";
 import { TransitEngine } from "../lib/astronomy/transits";
+import { swissEphemeris } from "../lib/astronomy/swissEphemeris";
 
 interface TestResult {
   category: string;
@@ -39,6 +40,44 @@ function assertTest(
     notes,
   });
 }
+
+// ======================================================================
+// LUNAR NODE PAIR CONSISTENCY
+// ======================================================================
+const nodeTestJd = swissEphemeris.calculateJulianDay(2024, 1, 1, 12, 0, 0, 0);
+const tropicalNodes = swissEphemeris.calculateAllPlanets(nodeTestJd, false);
+const siderealNodes = swissEphemeris.calculateAllPlanets(nodeTestJd, true);
+const angularSeparation = (a: number, b: number) => ((b - a) % 360 + 360) % 360;
+const isAntipodal = (north: number, south: number) =>
+  Math.abs(angularSeparation(north, south) - 180) <= 0.0001;
+
+assertTest(
+  "0. Lunar Node Pair Consistency",
+  "Legacy Rahu/Ketu aliases use one mean-node model and remain exactly opposite",
+  tropicalNodes.rahu.longitude === tropicalNodes.meanNorthNode.longitude &&
+    tropicalNodes.ketu.longitude === tropicalNodes.meanSouthNode.longitude &&
+    isAntipodal(tropicalNodes.rahu.longitude, tropicalNodes.ketu.longitude),
+  "Rahu = mean north node; Ketu = mean south node; separation = 180°",
+  `Rahu ${tropicalNodes.rahu.longitude}°; Ketu ${tropicalNodes.ketu.longitude}°; separation ${angularSeparation(tropicalNodes.rahu.longitude, tropicalNodes.ketu.longitude)}°`
+);
+
+assertTest(
+  "0. Lunar Node Pair Consistency",
+  "True-node pair remains separately available and exactly opposite",
+  isAntipodal(tropicalNodes.trueNorthNode.longitude, tropicalNodes.trueSouthNode.longitude),
+  "True north/south nodes separated by exactly 180°",
+  `True north ${tropicalNodes.trueNorthNode.longitude}°; true south ${tropicalNodes.trueSouthNode.longitude}°`
+);
+
+assertTest(
+  "0. Lunar Node Pair Consistency",
+  "Sidereal mean and true node pairs both preserve their 180° axes",
+  isAntipodal(siderealNodes.meanNorthNode.longitude, siderealNodes.meanSouthNode.longitude) &&
+    isAntipodal(siderealNodes.trueNorthNode.longitude, siderealNodes.trueSouthNode.longitude),
+  "Both sidereal node pairs separated by 180°",
+  `Mean separation ${angularSeparation(siderealNodes.meanNorthNode.longitude, siderealNodes.meanSouthNode.longitude)}°; true separation ${angularSeparation(siderealNodes.trueNorthNode.longitude, siderealNodes.trueSouthNode.longitude)}°`
+);
+
 
 // ======================================================================
 // CATEGORY 1: VIMSHOTTARI DASHA ACCURACY TESTS
