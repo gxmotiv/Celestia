@@ -1,0 +1,74 @@
+name: APInex Celestia Model Benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: "Run exactly one selected APInex model"
+        required: true
+        type: choice
+        default: deepseek-v4.1-flash
+        options:
+          - gemini-4-hydrogen
+          - deepseek-v4.1-flash
+          - qwen-3.8-max
+          - muse-spark-1.3
+          - mimo-v2.6-pro
+          - gemini-3.8-flash
+          - glm-5.3-flash
+          - kimi-k3
+          - hy4-flash
+          - minimax-m3.1-flash
+          - deepseek-v4-pro
+          - gpt-6-luna
+      task:
+        description: "Run exactly one task; start with D (hallucination check)"
+        required: true
+        type: choice
+        default: D
+        options: [D, A, B, C, E, F]
+      confirm_api_call:
+        description: "Set true only when you are ready to spend APInex free allowance on this ONE request"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apinex-celestia-benchmark
+  cancel-in-progress: false
+
+jobs:
+  safety-check:
+    if: ${{ inputs.confirm_api_call != true }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain that no API request was made
+        run: echo "No API request was made. Re-run manually and set confirm_api_call=true when ready."
+
+  benchmark-one-request:
+    if: ${{ inputs.confirm_api_call == true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Python
+        run: python3 --version
+      - name: Run one selected model/task request
+        env:
+          APINEX_API_KEY: ${{ secrets.APINEX_API_KEY }}
+        run: |
+          python3 scripts/apinex-benchmark/run.py \
+            --model "${{ inputs.model }}" \
+            --task "${{ inputs.task }}" \
+            --output-dir benchmark-results
+      - name: Upload private run artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: apinex-celestia-${{ inputs.model }}-${{ inputs.task }}-${{ github.run_id }}
+          path: benchmark-results/*.json
+          if-no-files-found: warn
+          retention-days: 14
