@@ -555,51 +555,8 @@ export class SolarTermCalculator {
     // 10. Lidong (225°) = Hai (Pig, index 11)
     // 11. Daxue (255°) = Zi (Rat, index 0)
     // 12. Xiaohan (285°) = Chou (Ox, index 1)
-    let branchIndex: number;
-    let monthOrderFromLichun: number; // 0 for Tiger, 1 for Rabbit... 11 for Ox
-
-    if (sunLon >= 315.0 || sunLon < 345.0) {
-      if (sunLon >= 315.0) {
-        branchIndex = 2; // Tiger
-        monthOrderFromLichun = 0;
-      } else {
-        branchIndex = 1; // Ox
-        monthOrderFromLichun = 11;
-      }
-    } else if (sunLon >= 345.0 || sunLon < 15.0) {
-      branchIndex = 3; // Rabbit
-      monthOrderFromLichun = 1;
-    } else if (sunLon >= 15.0 && sunLon < 45.0) {
-      branchIndex = 4; // Dragon
-      monthOrderFromLichun = 2;
-    } else if (sunLon >= 45.0 && sunLon < 75.0) {
-      branchIndex = 5; // Snake
-      monthOrderFromLichun = 3;
-    } else if (sunLon >= 75.0 && sunLon < 105.0) {
-      branchIndex = 6; // Horse
-      monthOrderFromLichun = 4;
-    } else if (sunLon >= 105.0 && sunLon < 135.0) {
-      branchIndex = 7; // Goat
-      monthOrderFromLichun = 5;
-    } else if (sunLon >= 135.0 && sunLon < 165.0) {
-      branchIndex = 8; // Monkey
-      monthOrderFromLichun = 6;
-    } else if (sunLon >= 165.0 && sunLon < 195.0) {
-      branchIndex = 9; // Rooster
-      monthOrderFromLichun = 7;
-    } else if (sunLon >= 195.0 && sunLon < 225.0) {
-      branchIndex = 10; // Dog
-      monthOrderFromLichun = 8;
-    } else if (sunLon >= 225.0 && sunLon < 255.0) {
-      branchIndex = 11; // Pig
-      monthOrderFromLichun = 9;
-    } else if (sunLon >= 255.0 && sunLon < 285.0) {
-      branchIndex = 0; // Rat
-      monthOrderFromLichun = 10;
-    } else {
-      branchIndex = 1; // Ox
-      monthOrderFromLichun = 11;
-    }
+    const { branchIndex, monthOrderFromLichun } =
+      getSolarMonthPosition(sunLon);
 
     // Classical "Five Tiger Seeking Month Stem" Rule (Wu Hu Dun):
     // Year Stem:
