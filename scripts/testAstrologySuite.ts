@@ -10,6 +10,7 @@ import {
   CompleteDashaOrchestrator,
 } from "../lib/vedic/completeDashaSystems";
 import { TransitEngine } from "../lib/astronomy/transits";
+import { routeConsultationQuestion, CONSULTATION_DESKS } from "../lib/consultation/deskRegistry";
 
 interface TestResult {
   category: string;
@@ -602,6 +603,55 @@ assertTest(
 );
 
 // ======================================================================
+// ======================================================================
+// CATEGORY 5: QUESTION-AWARE CONSULTATION ROUTER
+// ======================================================================
+console.log("Running Category 5: Consultation Desk Routing Tests...");
+
+const consultationCases = [
+  { question: "Am I being manipulated or gaslighted?", desk: "influence-safety", safety: "protective" },
+  { question: "Why do I keep repeating the same relationship pattern?", desk: "psychology-behaviour", safety: "standard" },
+  { question: "What does my Jaimini Atmakaraka indicate?", desk: "jaimini", safety: "standard" },
+  { question: "Explain my KP sub-lord", desk: "kp", safety: "standard" },
+  { question: "What does my BaZi Day Master mean?", desk: "bazi", safety: "standard" },
+  { question: "What are my Vedic nakshatra and mahadasha?", desk: "vedic-jyotish", safety: "standard" },
+  { question: "Explain my Western natal chart and rising sign", desk: "western-astrology", safety: "standard" },
+  { question: "Help me choose a career and plan my studies", desk: "life-strategy", safety: "standard" },
+  { question: "I might hurt myself and cannot stay safe", desk: "influence-safety", safety: "urgent-review" },
+] as const;
+
+consultationCases.forEach((testCase) => {
+  const route = routeConsultationQuestion(testCase.question);
+  assertTest(
+    "5.1 Consultation Routing",
+    `Routes: ${testCase.question}`,
+    route.desks.includes(testCase.desk as (typeof route.desks)[number]) && route.safetyMode === testCase.safety,
+    `${testCase.desk} / ${testCase.safety}`,
+    `${route.desks.join(", ")} / ${route.safetyMode}`
+  );
+});
+
+const multiDeskRoute = routeConsultationQuestion("Compare my Vedic kundli and Western natal chart for relationship patterns.");
+assertTest(
+  "5.2 Multi-Desk Routing",
+  "Astrology plus relationship question selects relevant desks and synthesis",
+  multiDeskRoute.desks.includes("vedic-jyotish") &&
+    multiDeskRoute.desks.includes("western-astrology") &&
+    multiDeskRoute.desks.includes("relationships") &&
+    multiDeskRoute.desks.includes("cross-system-synthesis"),
+  "Vedic + Western + Relationships + Cross-System Synthesis",
+  multiDeskRoute.desks.join(", ")
+);
+
+assertTest(
+  "5.3 Registry Integrity",
+  "All twelve independent consultation desks have unique IDs",
+  CONSULTATION_DESKS.length === 12 &&
+    new Set(CONSULTATION_DESKS.map((desk) => desk.id)).size === 12,
+  "12 unique desk IDs",
+  `${CONSULTATION_DESKS.length} desks / ${new Set(CONSULTATION_DESKS.map((desk) => desk.id)).size} unique IDs`
+);
+
 // SUMMARY OUTPUT
 // ======================================================================
 console.log("\n=================== TEST RESULTS ===================");
