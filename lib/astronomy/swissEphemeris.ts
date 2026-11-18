@@ -38,7 +38,7 @@ export interface SwissAllPlanets {
   meanNorthNode: SwissPlanetPosition;
   /** Mean descending node: exactly opposite the mean ascending node. */
   meanSouthNode: SwissPlanetPosition;
-  /** True ascending node approximation; not independently accuracy-certified. */
+  /** State-vector-derived true ascending node; still provisional against the pinned lunar model. */
   trueNorthNode: SwissPlanetPosition;
   /** True descending node approximation: exactly opposite the true ascending node. */
   trueSouthNode: SwissPlanetPosition;
@@ -357,7 +357,7 @@ export class SwissEphemerisEngine {
       if (delta > 180) delta -= 360;
       if (delta < -180) delta += 360;
       speed = delta / (2 * halfStepDays);
-      dist = 0.00257; // Placeholder mean lunar distance; nodes are geometric points.
+      dist = 0.00257; // Legacy API placeholder only; lunar nodes have no physical body-distance.
     }
 
     if (isSidereal) {
@@ -381,29 +381,53 @@ export class SwissEphemerisEngine {
   }
 
   /**
-   * Calculate an ascending lunar node longitude using the selected local model.
-   * The true-node formula remains an approximation and requires independent
-   * ephemeris benchmarking; this helper makes its inputs and rate reproducible.
+   * Calculate the ascending node of the Moon's osculating geocentric orbit.
+   *
+   * The lunar angular-momentum vector h = r x v is normal to the instantaneous
+   * orbital plane. Rotate h from Astronomy Engine's EQJ frame into its true
+   * ecliptic-of-date frame. The ascending intersection direction is k x h,
+   * where k is the ecliptic north pole (0, 0, 1). Its longitude is atan2(hx, -hy).
+   *
+   * This is a state-vector calculation, not Swiss Ephemeris. The accuracy of
+   * the dependency's lunar state is independently benchmarked only over the
+   * frozen JPL samples in tests/fixtures/jpl-moon-state-vectors.json.
    */
-  private calculateLunarNodeLongitude(planet: number, julianDay: number): number {
-    const T = (julianDay - 2451545.0) / 36525.0;
-    let omega = 125.04452 - 1934.136261 * T + 0.0020708 * T * T + (T * T * T) / 450000;
+  private calculateTrueLunarNodeLongitude(julianDay: number): number {
+    const time = new Astronomy.AstroTime(julianDay - 2451545.0);
+    const moon = Astronomy.GeoMoonState(time);
 
-    if (planet === this.TRUE_NODE) {
-      const time = new Astronomy.AstroTime(julianDay - 2451545.0);
-      const sunVec = Astronomy.GeoVector(Astronomy.Body.Sun, time, true);
-      const sunEcl = Astronomy.Ecliptic(sunVec);
-      const moonVec = Astronomy.GeoVector(Astronomy.Body.Moon, time, true);
-      const moonEcl = Astronomy.Ecliptic(moonVec);
-      const D2 = 2 * (moonEcl.elon - sunEcl.elon) * (Math.PI / 180);
-      const M = (357.5291 + 35999.05029 * T) * (Math.PI / 180);
+    const hx = moon.y * moon.vz - moon.z * moon.vy;
+    const hy = moon.z * moon.vx - moon.x * moon.vz;
+    const hz = moon.x * moon.vy - moon.y * moon.vx;
+    const hMagnitude = Math.hypot(hx, hy, hz);
 
-      omega +=
-        -1.4979 * Math.sin(2 * (moonEcl.elon - omega) * (Math.PI / 180)) -
-        0.1500 * Math.sin(M) -
-        0.1226 * Math.sin(D2);
+    if (!Number.isFinite(hMagnitude) || hMagnitude < 1e-18) {
+      throw new Error("Cannot calculate the true lunar node: invalid lunar angular-momentum vector.");
     }
 
+    // Ecliptic() rotates an EQJ vector to the true ecliptic of date (ECT).
+    // Transforming h as a vector keeps the plane normal in the same frame
+    // used to define the ecliptic intersection.
+    const hEcliptic = Astronomy.Ecliptic(
+      new Astronomy.Vector(hx, hy, hz, time)
+    ).vec;
+
+    const nodeLongitude = Math.atan2(hEcliptic.x, -hEcliptic.y) * (180 / Math.PI);
+    return ((nodeLongitude % 360) + 360) % 360;
+  }
+
+  /**
+   * Calculate the mean ascending lunar node using the current local polynomial.
+   * This remains a separate approximation and is not claimed to match Swiss
+   * Ephemeris' Moshier/ELP-based mean-node calculation.
+   */
+  private calculateLunarNodeLongitude(planet: number, julianDay: number): number {
+    if (planet === this.TRUE_NODE) {
+      return this.calculateTrueLunarNodeLongitude(julianDay);
+    }
+
+    const T = (julianDay - 2451545.0) / 36525.0;
+    const omega = 125.04452 - 1934.136261 * T + 0.0020708 * T * T + (T * T * T) / 450000;
     return ((omega % 360) + 360) % 360;
   }
 

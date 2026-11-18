@@ -10,6 +10,8 @@ import {
   CompleteDashaOrchestrator,
 } from "../lib/vedic/completeDashaSystems";
 import { TransitEngine } from "../lib/astronomy/transits";
+import * as Astronomy from "astronomy-engine";
+import jplMoonStateReference from "../tests/fixtures/jpl-moon-state-vectors.json";
 import { swissEphemeris } from "../lib/astronomy/swissEphemeris";
 
 interface TestResult {
@@ -101,6 +103,44 @@ assertTest(
   "True-node speed matches the central finite difference of the true-node model",
   `Reported ${tropicalNodes.trueNorthNode.speed}°/day; finite difference ${expectedTrueNodeSpeed}°/day`
 );
+
+// ======================================================================
+// TRUE NODE: GEOMETRIC JPL STATE-VECTOR CROSS-CHECK
+// ======================================================================
+const nodeReferenceArcseconds = 180;
+const wrapDegrees = (value: number) => ((value % 360) + 360) % 360;
+const signedAngularDifference = (a: number, b: number) =>
+  ((a - b + 540) % 360) - 180;
+
+for (const fixture of jplMoonStateReference.fixtures) {
+  const timeTT = Astronomy.AstroTime.FromTerrestrialTime(fixture.jdTT - 2451545.0);
+  const r = fixture.vector;
+  const hx = r.y * r.vz - r.z * r.vy;
+  const hy = r.z * r.vx - r.x * r.vz;
+  const hz = r.x * r.vy - r.y * r.vx;
+  const hInEclipticOfDate = Astronomy.Ecliptic(
+    new Astronomy.Vector(hx, hy, hz, timeTT)
+  ).vec;
+
+  const jplAscendingNode = wrapDegrees(
+    Math.atan2(hInEclipticOfDate.x, -hInEclipticOfDate.y) * (180 / Math.PI)
+  );
+  const appNode = swissEphemeris.calculatePlanetPosition(
+    swissEphemeris.TRUE_NODE,
+    fixture.jdUT
+  ).longitude;
+  const differenceArcseconds =
+    Math.abs(signedAngularDifference(appNode, jplAscendingNode)) * 3600;
+
+  assertTest(
+    "0. True Node JPL State-Vector Cross-Check",
+    `True-node longitude agrees with geometric JPL state vector at ${fixture.epochTT} TT`,
+    Number.isFinite(differenceArcseconds) && differenceArcseconds <= nodeReferenceArcseconds,
+    `JPL state-vector node within ${nodeReferenceArcseconds} arcsec`,
+    `App ${appNode.toFixed(8)}°; JPL ${jplAscendingNode.toFixed(8)}°; difference ${differenceArcseconds.toFixed(3)} arcsec`,
+    "JPL DE441 geometric Moon position/velocity; ICRF-to-EQJ alignment and the pinned lunar-model error remain in the uncertainty budget."
+  );
+}
 
 
 // ======================================================================
