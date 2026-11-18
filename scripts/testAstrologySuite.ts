@@ -18,6 +18,7 @@ import { buildInfluenceSafetyBrief, INFLUENCE_PATTERNS } from "../lib/consultati
 import { buildLifeStrategyBrief, LIFE_STRATEGY_STEPS } from "../lib/consultation/desks/lifeStrategy";
 import { ASTROLOGY_SPECIALTIES, getAstrologySpecialties } from "../lib/consultation/astrologySpecialties";
 import { JaiminiKarakasEngine } from "../lib/vedic/jaiminiKarakas";
+import { calculateAnnualProfection, calculateCompletedAge } from "../lib/astronomy/annualProfections";
 
 interface TestResult {
   category: string;
@@ -899,6 +900,53 @@ assertTest(
 );
 
 // ======================================================================
+// ======================================================================
+// ======================================================================
+// CATEGORY 10: WESTERN TRADITIONAL ANNUAL PROFECTIONS
+// ======================================================================
+console.log("Running Category 10: Annual Profection Tests...");
+
+const profectionBeforeBirthday = calculateAnnualProfection("2008-11-05", "2026-11-04", 0);
+const profectionOnBirthday = calculateAnnualProfection("2008-11-05", "2026-11-05", 0);
+assertTest(
+  "10.1 Annual Profection Birthday Boundary",
+  "Age and profected house change on the birthday, not on January 1",
+  profectionBeforeBirthday.age === 17 &&
+    profectionBeforeBirthday.profectedHouse === 6 &&
+    profectionOnBirthday.age === 18 &&
+    profectionOnBirthday.profectedHouse === 7,
+  "Before birthday: age 17 / house 6; on birthday: age 18 / house 7",
+  `Before: age ${profectionBeforeBirthday.age} / house ${profectionBeforeBirthday.profectedHouse}; on: age ${profectionOnBirthday.age} / house ${profectionOnBirthday.profectedHouse}`
+);
+assertTest(
+  "10.2 Annual Profection Time Lord",
+  "Uses traditional domicile rulership for the profected sign",
+  profectionOnBirthday.profectedSign === "Libra" && profectionOnBirthday.timeLord === "Venus",
+  "Libra / Venus",
+  `${profectionOnBirthday.profectedSign} / ${profectionOnBirthday.timeLord}`
+);
+assertTest(
+  "10.3 Completed Age",
+  "Handles a target date before the birthday within the same year",
+  calculateCompletedAge("2008-11-05", "2026-01-01") === 17,
+  "17",
+  String(calculateCompletedAge("2008-11-05", "2026-01-01"))
+);
+
+let invalidProfectionDateRejected = false;
+try {
+  calculateAnnualProfection("2008-02-30", "2026-11-05", 0);
+} catch {
+  invalidProfectionDateRejected = true;
+}
+assertTest(
+  "10.4 Profection Input Validation",
+  "Rejects impossible calendar dates",
+  invalidProfectionDateRejected,
+  "Invalid date rejected",
+  invalidProfectionDateRejected ? "Rejected" : "Accepted"
+);
+
 // ======================================================================
 // SUMMARY OUTPUT
 // ======================================================================
