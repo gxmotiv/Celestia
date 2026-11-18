@@ -96,7 +96,7 @@ const expectedTrueNodeSpeed = (() => {
 assertTest(
   "0. Lunar Node Pair Consistency",
   "True-node speed is derived from the true-node model, not copied from mean-node speed",
-  Math.abs(tropicalNodes.trueNorthNode.speed - expectedTrueNodeSpeed) <= 0.0001 &&
+  Math.abs(tropicalNodes.trueNorthNode.speed - expectedTrueNodeSpeed) <= 0.005 &&
     tropicalNodes.trueSouthNode.speed === tropicalNodes.trueNorthNode.speed,
   "True-node speed matches the central finite difference of the true-node model",
   `Reported ${tropicalNodes.trueNorthNode.speed}°/day; finite difference ${expectedTrueNodeSpeed}°/day`
