@@ -18,7 +18,7 @@ export interface DeskSource {
   title: string;
   organization: string;
   url: string;
-  evidenceType: "professional-guidance" | "government-health-guidance" | "peer-reviewed-review" | "research-policy";
+  evidenceType: "professional-guidance" | "government-health-guidance" | "peer-reviewed-review" | "peer-reviewed-study" | "research-policy";
   supports: string[];
   limitations: string[];
 }
@@ -92,7 +92,7 @@ export const PSYCHOLOGY_SOURCES: readonly DeskSource[] = [
     title: "Challenges to capture the big five personality traits in non-WEIRD populations",
     organization: "Science Advances",
     url: "https://www.science.org/doi/full/10.1126/sciadv.aaw5226",
-    evidenceType: "peer-reviewed-review",
+    evidenceType: "peer-reviewed-study",
     supports: ["cross-cultural measurement caution", "language and context can affect trait measurement"],
     limitations: ["Findings caution against assuming that measures validated in one population transfer unchanged to all languages and settings."]
   },
@@ -101,7 +101,7 @@ export const PSYCHOLOGY_SOURCES: readonly DeskSource[] = [
     title: "How well can an AI chatbot infer personality? Examining psychometric properties of machine-inferred personality scores",
     organization: "Journal of Applied Psychology",
     url: "https://doi.org/10.1037/apl0001082",
-    evidenceType: "peer-reviewed-review",
+    evidenceType: "peer-reviewed-study",
     supports: ["research on machine-inferred personality scores", "need to assess reliability and validity"],
     limitations: ["The study used a specific chatbot, sample and lengthy interaction; it reported low criterion-related validity and relatively poor discriminant validity, so it does not validate casual chat-based personality claims."]
   }
