@@ -1,7 +1,7 @@
 /**
  * Comprehensive Chinese BaZi (Four Pillars of Destiny - 八字) & 24 Solar Terms Engine
  * Implements:
- * 1. Solar Calendar & 24 Solar Terms Calculation via Swiss Ephemeris
+ * 1. Solar Calendar & 24 Solar Terms calculations (engine and boundary accuracy require independent validation)
  * 2. 10 Heavenly Stems (Tian Gan) & 12 Earthly Branches (Di Zhi) with Hidden Stems (Cang Gan)
  * 3. 60 Jia Zi Sexagenary Cycle
  * 4. Four Pillars: Year (Lichun), Month (Solar Terms), Day (60-day cycle), Hour (2-hour branches)
@@ -435,7 +435,7 @@ export const EARTHLY_BRANCHES: EarthlyBranch[] = [
 
 export class SolarTermCalculator {
   /**
-   * Get Sun's geocentric tropical longitude for any given Date using Swiss Ephemeris
+   * Get the Sun's geocentric tropical longitude using the repository's Astronomy Engine-based adapter
    */
   public getSunLongitude(date: Date): number {
     const jd = date.getTime() / 86400000.0 + 2440587.5;

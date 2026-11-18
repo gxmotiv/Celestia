@@ -162,7 +162,7 @@ export function PrintDossier({
               </div>
               <div>
                 <span className="text-slate-500 block">House System / Ephemeris:</span>
-                <strong className="text-slate-900">{formData.houseSystem} / Swiss Ephemeris</strong>
+                <strong className="text-slate-900">{formData.houseSystem} / Astronomy Engine-based adapter</strong>
               </div>
             </div>
           </div>
@@ -876,7 +876,7 @@ export function PrintDossier({
           <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg text-xs space-y-2 print-avoid-break">
             <strong className="text-slate-900 block text-xs">Astronomical Constants & Calculation Engine:</strong>
             <p className="text-[10px] text-slate-700 leading-relaxed font-mono">
-              • Ephemeris: Swiss Ephemeris / VSOP87 & ELP2000-82 lunar theory.<br />
+              • Ephemeris: Astronomy Engine-based planetary calculations; lunar-node and derived values use local approximations. Accuracy is not independently certified.<br />
               • Sidereal Lahiri Ayanamsa: 24° 08&apos; 42&quot; (Chitra Paksha standard).<br />
               • Fagan-Bradley Ayanamsa: 24.84° constellational alignment.<br />
               • Whole Sign Houses: Classical Hellenistic 30° equal sign sectors.<br />

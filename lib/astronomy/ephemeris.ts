@@ -208,7 +208,7 @@ function solveKepler(M: number, e: number): number {
 }
 
 /**
- * Sun's true geocentric ecliptic longitude (VSOP87 / Meeus approximation)
+ * Sun's geocentric ecliptic longitude using a compact Meeus-style approximation
  */
 export function calculateSun(T: number): { lon: number; R: number } {
   // Mean longitude of Sun
@@ -642,7 +642,7 @@ export function calculateWesternChart(
   houseSystem: WesternHouseSystemPreference = "Placidus",
   second: number = 0
 ): WesternChartData {
-  // High-precision Swiss Ephemeris calculation (0.001° accuracy)
+  // Astronomy Engine-based positions and locally calculated house geometry; no fixed accuracy claim.
   // Unambiguously normalizes local birth time and timezone offset to UTC and computes Julian Day
   const jd = swissEphemeris.calculateJulianDay(year, month, day, hour, minute, second, timezoneOffsetHours);
   const calculationSystem = houseSystem === "Auto" ? "Placidus" : houseSystem;
@@ -657,7 +657,7 @@ export function calculateWesternChart(
   const ramc = normalizeDegrees(gmst + longitude);
   const obliquity = calculateObliquity(T);
 
-  // Compute all planets with Swiss Ephemeris
+  // Compute planetary positions through the Astronomy Engine-based adapter.
   const sp = swissEphemeris.calculateAllPlanets(jd, false);
 
   const planetsList: PlanetPosition[] = [];
