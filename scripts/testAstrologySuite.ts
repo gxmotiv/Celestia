@@ -12,6 +12,7 @@ import {
 import { TransitEngine } from "../lib/astronomy/transits";
 import { routeConsultationQuestion, CONSULTATION_DESKS } from "../lib/consultation/deskRegistry";
 import { clampCelestiaOutputTokens, resolveCelestiaAIProvider } from "../lib/ai/providerPolicy";
+import { prepareConsultationRoute } from "../lib/consultation/consultationService";
 
 interface TestResult {
   category: string;
@@ -714,6 +715,40 @@ tokenCases.forEach(({ input, expected }) => {
     String(actual)
   );
 });
+
+// ======================================================================
+// CATEGORY 7: CAPABILITY-AWARE CONSULTATION SERVICE
+// ======================================================================
+console.log("Running Category 7: Capability-Aware Consultation Service Tests...");
+
+const capabilityCases = [
+  { question: "Explain my Western natal chart", action: "existing-desk-route", canUseAI: true },
+  { question: "Explain my KP sub-lord", action: "specialist-review-required", canUseAI: true },
+  { question: "Help me plan my career", action: "planned-desk-unavailable", canUseAI: false },
+  { question: "I cannot stay safe and may hurt myself", action: "urgent-support", canUseAI: false },
+  { question: "Teach me to gaslight my partner", action: "refuse-exploitation", canUseAI: false },
+] as const;
+
+capabilityCases.forEach(({ question, action, canUseAI }) => {
+  const prepared = prepareConsultationRoute(question);
+  assertTest(
+    "7.1 Capability-Aware Routing",
+    `Capability gate: ${question}`,
+    prepared.nextAction === action && prepared.canUseExistingSpecialistAI === canUseAI,
+    `${action} / canUseAI=${canUseAI}`,
+    `${prepared.nextAction} / canUseAI=${prepared.canUseExistingSpecialistAI}`
+  );
+});
+
+const plannedDeskRoute = prepareConsultationRoute("Help me choose a career path.");
+assertTest(
+  "7.2 Planned Desk Gate",
+  "Does not claim a planned Life Strategy desk is ready",
+  plannedDeskRoute.blockedByPlannedDesks.includes("life-strategy") &&
+    plannedDeskRoute.canUseExistingSpecialistAI === false,
+  "life-strategy blocked; no existing specialist AI",
+  `${plannedDeskRoute.blockedByPlannedDesks.join(", ")} / canUseAI=${plannedDeskRoute.canUseExistingSpecialistAI}`
+);
 
 // SUMMARY OUTPUT
 // ======================================================================
