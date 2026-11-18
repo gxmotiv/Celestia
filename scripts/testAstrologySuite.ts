@@ -801,7 +801,8 @@ const annualProfectionRoute = prepareConsultationRoute("Calculate my annual prof
 assertTest(
   "7.2 Method-Specific Capability Gate",
   "Does not send a partial annual-profection specialty to the generic Western AI prompt",
-  annualProfectionRoute.nextAction === "specialist-review-required" &&
+  annualProfectionRoute.route.desks.includes("western-astrology") &&
+    annualProfectionRoute.nextAction === "specialist-review-required" &&
     annualProfectionRoute.specialties.some((specialty) => specialty.id === "western-traditional" && specialty.status === "partial-foundation") &&
     annualProfectionRoute.canUseExistingSpecialistAI === false,
   "western-traditional partial; specialist review required",
@@ -980,8 +981,22 @@ try {
 } catch {
   invalidProfectionDateRejected = true;
 }
+let futureBirthDateRejected = false;
+try {
+  calculateCompletedAge("2008-11-05", "2008-11-04");
+} catch {
+  futureBirthDateRejected = true;
+}
 assertTest(
   "10.4 Profection Input Validation",
+  "Rejects a target date before the birth date",
+  futureBirthDateRejected,
+  "Target-before-birth rejected",
+  futureBirthDateRejected ? "Rejected" : "Accepted"
+);
+
+assertTest(
+  "10.5 Profection Input Validation",
   "Rejects impossible calendar dates",
   invalidProfectionDateRejected,
   "Invalid date rejected",
