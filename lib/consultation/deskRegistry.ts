@@ -18,7 +18,7 @@ export type ConsultationDeskId =
   | "life-strategy"
   | "cross-system-synthesis";
 
-export type ConsultationSafetyMode = "standard" | "protective" | "urgent-review";
+export type ConsultationSafetyMode = "standard" | "protective" | "urgent-review" | "refuse-exploitation";
 
 export interface ConsultationDesk {
   id: ConsultationDeskId;
@@ -55,7 +55,7 @@ export interface ConsultationRoute {
 
 const RULES: ReadonlyArray<{ desk: ConsultationDeskId; intent: string; pattern: RegExp; reason: string }> = [
   { desk: "influence-safety", intent: "manipulation-or-safety", pattern: /manipulat|gaslight|coerc|threaten|blackmail|pressure tactic|control me|scam|deceiv|forced|afraid of (him|her|them)|unsafe/i, reason: "The question mentions possible manipulation, coercion, deception or personal safety." },
-  { desk: "psychology-behaviour", intent: "behaviour-and-emotions", pattern: /emotion|anxious|overthink|confidence|self.?esteem|habit|procrastinat|motivat|attachment|behavio[u]?r|personality|blind spot|why do i keep|repeat(ing)? the same pattern|anger|stress|fear|grief/i, reason: "The question concerns emotions, habits, thinking patterns or behaviour." },
+  { desk: "psychology-behaviour", intent: "behaviour-and-emotions", pattern: /emotion|anxious|overthink|confidence|self.?esteem|habit|procrastinat|motivat|attachment|behavio[u]?r|personality|blind spot|why do i keep|repeat(ing)? the same pattern|anger|stress|fear|grief|cognitive bias|peer pressure|group dynamics|social influence|persuasion/i, reason: "The question concerns emotions, habits, thinking patterns or behaviour." },
   { desk: "relationships", intent: "relationship-question", pattern: /relationship|partner|marriage|dating|break.?up|compatib|friendship|family conflict|trust issue|intimacy/i, reason: "The question concerns a relationship or interpersonal pattern." },
   { desk: "jaimini", intent: "jaimini-astrology", pattern: /jaimini|chara karaka|atmakaraka|darakaraka|arudha|rashi drishti/i, reason: "The question explicitly requests Jaimini methods." },
   { desk: "kp", intent: "kp-astrology", pattern: /\bkp\b|krishnamurti|sub.?lord|star lord|cuspal sub/i, reason: "The question explicitly requests KP methods." },
@@ -64,10 +64,11 @@ const RULES: ReadonlyArray<{ desk: ConsultationDeskId; intent: string; pattern: 
   { desk: "western-astrology", intent: "western-astrology", pattern: /western astrology|tropical|natal chart|birth chart|ascendant|rising sign|midheaven|zodiac sign|planetary aspect|house system/i, reason: "The question explicitly requests Western chart concepts." },
   { desk: "transits-timing", intent: "astrological-timing", pattern: /transit|progression|solar return|lunar return|when is.*(period|window)|timing|forecast|upcoming astrological/i, reason: "The question asks about astrological timing or cycles." },
   { desk: "numerology", intent: "numerology", pattern: /numerolog|life path|expression number|personal year|destiny number/i, reason: "The question explicitly requests numerology." },
-  { desk: "life-strategy", intent: "life-planning", pattern: /career|education|study plan|exam|goal|decision|choose between|what should i do|planning|routine|work path|strengths?|weaknesses|next step/i, reason: "The question asks for practical planning, choices or personal direction." },
+  { desk: "life-strategy", intent: "life-planning", pattern: /career|education|study plan|exam|goal|decision|choose between|what should i do|planning|routine|work path|strengths?|weaknesses|blind spots|personal development|self improvement|next step/i, reason: "The question asks for practical planning, choices or personal direction." },
 ];
 
-const URGENT_PATTERN = /suicid|kill myself|self.?harm|hurt myself|in immediate danger|someone is hurting me|being abused|threat to my life|can't stay safe/i;
+const URGENT_PATTERN = /suicid|kill myself|self.?harm|hurt myself|in immediate danger|someone is hurting me|being abused|threat to my life|threatened to kill me|can't stay safe|not safe right now/i;
+const HARMFUL_INFLUENCE_PATTERN = /\b(how can i|how do i|teach me to|give me a script to|best way to)\s+(manipulat|gaslight|coerce|blackmail|groom|intimidat|isolate|exploit|emotionally control|make someone dependent)\b|\b(make|force|trick)\s+(someone|them|my partner|my friend)\s+(obey|depend on me|feel guilty|do what i want)\b/i;
 
 export function routeConsultationQuestion(question: string): ConsultationRoute {
   const normalized = question.trim();
@@ -82,6 +83,16 @@ export function routeConsultationQuestion(question: string): ConsultationRoute {
       intent: "urgent-safety",
       reasons: ["The wording may indicate immediate danger or self-harm; prioritise safety and human support, not astrological interpretation."],
       requiresHumanSupport: true,
+    };
+  }
+
+  if (HARMFUL_INFLUENCE_PATTERN.test(normalized)) {
+    return {
+      desks: ["influence-safety"],
+      safetyMode: "refuse-exploitation",
+      intent: "harmful-manipulation-request",
+      reasons: ["The request seeks help controlling, coercing or psychologically exploiting another person; offer ethical communication or defensive education instead."],
+      requiresHumanSupport: false,
     };
   }
 
