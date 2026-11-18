@@ -6,6 +6,7 @@ import { WesternChartData } from "@/lib/astronomy/ephemeris";
 import { NumerologyProfile } from "@/lib/astronomy/numerology";
 import { BaZiProfile } from "@/lib/astronomy/chinese";
 import { CONSULTATION_DESKS } from "@/lib/consultation/deskRegistry";
+import { ASTROLOGY_SPECIALTIES } from "@/lib/consultation/astrologySpecialties";
 import { CompleteDashaOrchestrator, AllDashaSystems } from "@/lib/vedic/completeDashaSystems";
 import {
   Sparkles,
@@ -742,6 +743,29 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
                     </span>
                   </div>
                 ))}
+              </div>
+              <div className="pt-3 border-t border-slate-800 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-bold text-amber-200 uppercase tracking-wider">Astrology specialist methods</span>
+                  <span className="text-[10px] text-slate-500 font-mono">{ASTROLOGY_SPECIALTIES.length} specialties</span>
+                </div>
+                <p className="text-[10px] text-slate-500 leading-relaxed">
+                  Expanded method directory. These labels describe scope and readiness; they do not mean every technique is already calculation- or AI-ready.
+                </p>
+                <div className="space-y-1.5 max-h-96 overflow-y-auto pr-1">
+                  {ASTROLOGY_SPECIALTIES.map((specialty) => (
+                    <div key={specialty.id} className="p-2 rounded-lg bg-slate-900/50 border border-slate-800/70">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="text-[10px] font-semibold text-slate-200">{specialty.label}</div>
+                          <div className="text-[9px] text-slate-500">{specialty.parentDesk.replace(/-/g, " ")}</div>
+                        </div>
+                        <span className="shrink-0 text-[8px] uppercase font-mono text-slate-400">{specialty.status.replace(/-/g, " ")}</span>
+                      </div>
+                      <div className="text-[9px] text-slate-400 mt-1 leading-snug">{specialty.methods.join(" · ")}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
