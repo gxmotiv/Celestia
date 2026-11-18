@@ -1,8 +1,8 @@
 /**
  * Jaimini Chara Karakas Engine
- * Implements classical Jaimini Upadesha Sutras and Maharishi Parashara doctrines.
- * Computes both 7-Karaka and 8-Karaka schemes based on the decreasing order
- * of sidereal longitudes within their respective rasis (0° to 30°).
+ * Current implementation: seven-karaka ordering by descending planetary
+ * longitude within each sidereal sign, plus Karakamsa derived through the
+ * shared Navamsa calculator. Eight-karaka/Rahu variants are not implemented.
  */
 
 import { NavamsaCalculator } from "./d9NavamsaEngine";
@@ -23,7 +23,7 @@ export interface JaiminiKaraka {
 }
 
 export interface JaiminiKarakasResult {
-  scheme: "7-Karaka" | "8-Karaka";
+  scheme: "7-Karaka";
   atmakaraka: JaiminiKaraka;
   karakas: JaiminiKaraka[];
   karakamsaSign: string;
@@ -106,10 +106,15 @@ export class JaiminiKarakasEngine {
         if (!Number.isFinite(planet.siderealLongitude) || !Number.isFinite(planet.house)) {
           throw new Error(`Invalid Jaimini input for ${planet.name}: longitude and house must be finite numbers.`);
         }
+        if (!Number.isInteger(planet.house) || planet.house < 1 || planet.house > 12) {
+          throw new Error("Invalid Jaimini house: expected an integer from 1 to 12.");
+        }
         const normalizedLongitude = ((planet.siderealLongitude % 360) + 360) % 360;
+        const signIndex = Math.floor(normalizedLongitude / 30);
         return {
           ...planet,
           siderealLongitude: normalizedLongitude,
+          rasiName: NavamsaCalculator.SIGN_NAMES[signIndex],
           rasiDeg: normalizedLongitude % 30,
         };
       });
