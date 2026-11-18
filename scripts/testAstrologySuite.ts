@@ -791,10 +791,10 @@ capabilityCases.forEach(({ question, action, canUseAI }) => {
 const plannedDeskRoute = prepareConsultationRoute("Explain my Jaimini Atmakaraka.");
 assertTest(
   "7.2 Planned Desk Gate",
-  "Does not claim a planned Life Strategy desk is ready",
-  plannedDeskRoute.blockedByPlannedDesks.includes("life-strategy") &&
+  "Does not claim the planned Jaimini desk is ready",
+  plannedDeskRoute.blockedByPlannedDesks.includes("jaimini") &&
     plannedDeskRoute.canUseExistingSpecialistAI === false,
-  "life-strategy blocked; no existing specialist AI",
+  "jaimini blocked; no existing specialist AI",
   `${plannedDeskRoute.blockedByPlannedDesks.join(", ")} / canUseAI=${plannedDeskRoute.canUseExistingSpecialistAI}`
 );
 
