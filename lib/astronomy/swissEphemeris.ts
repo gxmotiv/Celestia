@@ -34,7 +34,17 @@ export interface SwissAllPlanets {
   uranus: SwissPlanetPosition;
   neptune: SwissPlanetPosition;
   pluto: SwissPlanetPosition;
+  /** Mean ascending node (north node); legacy Rahu alias uses this model. */
+  meanNorthNode: SwissPlanetPosition;
+  /** Mean descending node: exactly opposite the mean ascending node. */
+  meanSouthNode: SwissPlanetPosition;
+  /** True ascending node approximation; not independently accuracy-certified. */
+  trueNorthNode: SwissPlanetPosition;
+  /** True descending node approximation: exactly opposite the true ascending node. */
+  trueSouthNode: SwissPlanetPosition;
+  /** Backward-compatible alias for meanNorthNode. */
   rahu: SwissPlanetPosition;
+  /** Backward-compatible alias for meanSouthNode. */
   ketu: SwissPlanetPosition;
 }
 
@@ -382,6 +392,26 @@ export class SwissEphemerisEngine {
    * Calculate ALL planets at once (Tropical or Sidereal)
    */
   public calculateAllPlanets(julianDay: number, isSidereal: boolean = false): SwissAllPlanets {
+    const meanNorthNode = this.calculatePlanetPosition(this.MEAN_NODE, julianDay, isSidereal);
+    const trueNorthNode = this.calculatePlanetPosition(this.TRUE_NODE, julianDay, isSidereal);
+
+    // A lunar nodal axis uses one node model consistently: the descending node
+    // is exactly 180° from the corresponding ascending node. Never pair mean
+    // Rahu with true Ketu, because both MEAN_NODE and TRUE_NODE are north nodes.
+    const makeSouthNode = (northNode: SwissPlanetPosition): SwissPlanetPosition => {
+      const longitude = Math.round((((northNode.longitude + 180) % 360 + 360) % 360) * 10000) / 10000;
+      return {
+        ...northNode,
+        longitude,
+        sign: this.getZodiacSign(longitude),
+        degree: Math.round((longitude % 30) * 10000) / 10000,
+        isRetrograde: northNode.speed < 0,
+      };
+    };
+
+    const meanSouthNode = makeSouthNode(meanNorthNode);
+    const trueSouthNode = makeSouthNode(trueNorthNode);
+
     return {
       sun: this.calculatePlanetPosition(this.SUN, julianDay, isSidereal),
       moon: this.calculatePlanetPosition(this.MOON, julianDay, isSidereal),
@@ -393,8 +423,13 @@ export class SwissEphemerisEngine {
       uranus: this.calculatePlanetPosition(this.URANUS, julianDay, isSidereal),
       neptune: this.calculatePlanetPosition(this.NEPTUNE, julianDay, isSidereal),
       pluto: this.calculatePlanetPosition(this.PLUTO, julianDay, isSidereal),
-      rahu: this.calculatePlanetPosition(this.MEAN_NODE, julianDay, isSidereal),
-      ketu: this.calculatePlanetPosition(this.TRUE_NODE, julianDay, isSidereal),
+      meanNorthNode,
+      meanSouthNode,
+      trueNorthNode,
+      trueSouthNode,
+      // Existing API aliases stay mean-node based for deterministic compatibility.
+      rahu: meanNorthNode,
+      ketu: meanSouthNode,
     };
   }
 
