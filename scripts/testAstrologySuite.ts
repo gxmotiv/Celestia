@@ -797,6 +797,47 @@ capabilityCases.forEach(({ question, action, canUseAI }) => {
   );
 });
 
+const annualProfectionRoute = prepareConsultationRoute("Calculate my annual profection and time lord.");
+assertTest(
+  "7.2 Method-Specific Capability Gate",
+  "Does not send a partial annual-profection specialty to the generic Western AI prompt",
+  annualProfectionRoute.nextAction === "specialist-review-required" &&
+    annualProfectionRoute.specialties.some((specialty) => specialty.id === "western-traditional" && specialty.status === "partial-foundation") &&
+    annualProfectionRoute.canUseExistingSpecialistAI === false,
+  "western-traditional partial; specialist review required",
+  `${annualProfectionRoute.nextAction} / ${annualProfectionRoute.specialties.map((specialty) => specialty.id + ":" + specialty.status).join(", ")}`
+);
+
+const horaryRoute = prepareConsultationRoute("I want a horary astrology reading.");
+assertTest(
+  "7.3 Planned Specialty Gate",
+  "Routes Horary to Western but blocks the unimplemented Horary specialty",
+  horaryRoute.nextAction === "planned-desk-unavailable" &&
+    horaryRoute.blockedByPlannedSpecialties.includes("western-horary"),
+  "western-horary planned and blocked",
+  `${horaryRoute.nextAction} / ${horaryRoute.blockedByPlannedSpecialties.join(", ")}`
+);
+
+const westernNatalRoute = prepareConsultationRoute("Explain my Western natal chart.");
+assertTest(
+  "7.4 Existing Specialty Route",
+  "Allows the existing Western natal foundation when no partial specialty is requested",
+  westernNatalRoute.nextAction === "existing-desk-route" &&
+    westernNatalRoute.specialties.some((specialty) => specialty.id === "western-natal"),
+  "existing-desk-route with western-natal",
+  `${westernNatalRoute.nextAction} / ${westernNatalRoute.specialties.map((specialty) => specialty.id).join(", ")}`
+);
+
+const vedicVargaRoute = prepareConsultationRoute("Explain my D9 Navamsa divisional chart.");
+assertTest(
+  "7.5 Divisional Chart Gate",
+  "Does not treat the partial divisional-chart specialty as fully AI-ready",
+  vedicVargaRoute.nextAction === "specialist-review-required" &&
+    vedicVargaRoute.specialties.some((specialty) => specialty.id === "vedic-varga"),
+  "vedic-varga specialist review required",
+  `${vedicVargaRoute.nextAction} / ${vedicVargaRoute.specialties.map((specialty) => specialty.id).join(", ")}`
+);
+
 const jaiminiDeskRoute = prepareConsultationRoute("Explain my Jaimini Atmakaraka.");
 assertTest(
   "7.2 Partial Jaimini Desk Gate",
