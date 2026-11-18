@@ -318,6 +318,43 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
     setIsConsulting(true);
 
     try {
+      // Route every question before it reaches the astrology-only Oracle prompt.
+      // Planned/partial desks, safety cases and exploitative requests must not
+      // be answered by an unrelated astrology prompt.
+      const routeResponse = await fetch("/api/consultation/route", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: textToSend }),
+      });
+      const routeData = await routeResponse.json();
+      if (!routeResponse.ok || !routeData?.route || routeData?.canUseExistingSpecialistAI !== true) {
+        const deskLabels = Array.isArray(routeData?.desks)
+          ? routeData.desks.map((desk: { label?: string; status?: string }) =>
+              `${desk.label ?? "Specialist desk"} (${desk.status ?? "status unknown"})`
+            ).join(", ")
+          : "No reliable specialist route was returned";
+        const action = routeData?.nextAction ?? "routing-unavailable";
+        const explanation = action === "urgent-support"
+          ? "This may involve immediate danger. Please contact local emergency services or a trusted person who can help you now. Celestia will not treat this as an astrology question."
+          : action === "refuse-exploitation"
+          ? "I cannot help with coercion or psychological exploitation. I can help with respectful communication or ways to protect yourself."
+          : action === "planned-desk-unavailable"
+          ? "The relevant specialist desk is not implemented yet. I will not send this question to an unrelated astrology prompt or pretend that desk is ready."
+          : action === "specialist-review-required"
+          ? "This question needs a specialist method review before AI interpretation is enabled. The current desk is only partially implemented."
+          : "The consultation router could not verify a safe specialist route. Please try again later.";
+        const oracleMsg: ChatMessage = {
+          id: "oracle-" + Date.now(),
+          sender: "oracle",
+          text: `### Consultation routing\n\n${explanation}\n\n**Selected desk(s):** ${deskLabels}\n\n**Routing status:** ${action}`,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          isAiGenerated: false,
+          provider: "local-router",
+        };
+        setMessages((prev) => [...prev, oracleMsg]);
+        return;
+      }
+
       const sun = westernData?.planets.find((p) => p.name === "Sun");
       const moon = westernData?.planets.find((p) => p.name === "Moon");
 
