@@ -91,8 +91,29 @@ def main():
         result["status"] = "success" if result["response_text"] else "empty_response"
     except urllib.error.HTTPError as exc:
         result["http_status"] = exc.code
-        # Do not dump full server body into logs; it may contain sensitive diagnostic material.
-        result["error"] = "HTTP error " + str(exc.code) + ": " + exc.reason
+        # Extract only short, non-secret diagnostic fields from the gateway error.
+        # Never print request headers, credentials, or an unrestricted response body.
+        detail = ""
+        try:
+            error_body = exc.read(4096).decode("utf-8", errors="replace")
+            try:
+                error_json = json.loads(error_body)
+                error_obj = error_json.get("error", error_json) if isinstance(error_json, dict) else {}
+                if isinstance(error_obj, dict):
+                    detail = str(error_obj.get("message") or error_obj.get("detail") or error_obj.get("code") or "")
+                elif isinstance(error_obj, str):
+                    detail = error_obj
+                if not detail:
+                    detail = str(error_json.get("message", "")) if isinstance(error_json, dict) else ""
+            except json.JSONDecodeError:
+                detail = error_body
+            detail = detail.replace(key, "[REDACTED]")
+            detail = re.sub(r"sk-apx-[A-Za-z0-9_-]+", "[REDACTED_API_KEY]", detail)
+            detail = re.sub(r"Bearer\\s+\\S+", "Bearer [REDACTED]", detail, flags=re.IGNORECASE)
+            detail = re.sub(r"\\s+", " ", detail).strip()[:400]
+        except Exception:
+            detail = ""
+        result["error"] = "HTTP error " + str(exc.code) + ": " + exc.reason + ((" — " + detail) if detail else "")
         result["status"] = "http_error"
     except urllib.error.URLError as exc:
         result["error"] = "Network error: " + str(exc.reason)
