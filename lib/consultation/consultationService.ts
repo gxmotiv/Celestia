@@ -3,6 +3,7 @@ import {
   routeConsultationQuestion,
   type ConsultationDeskId,
 } from "./deskRegistry";
+import { matchAstrologySpecialties } from "./astrologySpecialties";
 
 export interface PreparedConsultationRoute {
   question: string;
@@ -16,8 +17,18 @@ export interface PreparedConsultationRoute {
     methods: readonly string[];
     limitations: readonly string[];
   }>;
+  specialties: Array<{
+    id: string;
+    parentDesk: ConsultationDeskId;
+    label: string;
+    status: "existing-foundation" | "partial-foundation" | "research-required" | "planned";
+    scope: string;
+    methods: readonly string[];
+    limitations: readonly string[];
+  }>;
   canUseExistingSpecialistAI: boolean;
   blockedByPlannedDesks: ConsultationDeskId[];
+  blockedByPlannedSpecialties: string[];
   nextAction: "urgent-support" | "refuse-exploitation" | "planned-desk-unavailable" | "specialist-review-required" | "existing-desk-route";
 }
 
@@ -38,18 +49,33 @@ export function prepareConsultationRoute(question: string): PreparedConsultation
       limitations: desk.limitations,
     }] : [];
   });
+  const specialties = matchAstrologySpecialties(question).map((specialty) => ({
+    id: specialty.id,
+    parentDesk: specialty.parentDesk,
+    label: specialty.label,
+    status: specialty.status,
+    scope: specialty.scope,
+    methods: specialty.methods,
+    limitations: specialty.limitations,
+  }));
   const blockedByPlannedDesks = desks
     .filter((desk) => desk.status === "planned")
     .map((desk) => desk.id);
+  const blockedByPlannedSpecialties = specialties
+    .filter((specialty) => specialty.status === "planned")
+    .map((specialty) => specialty.id);
+  const requiresSpecialistReview =
+    desks.some((desk) => desk.status === "partial") ||
+    specialties.some((specialty) => specialty.status !== "existing-foundation");
 
   let nextAction: PreparedConsultationRoute["nextAction"];
   if (route.safetyMode === "urgent-review") {
     nextAction = "urgent-support";
   } else if (route.safetyMode === "refuse-exploitation") {
     nextAction = "refuse-exploitation";
-  } else if (blockedByPlannedDesks.length > 0) {
+  } else if (blockedByPlannedDesks.length > 0 || blockedByPlannedSpecialties.length > 0) {
     nextAction = "planned-desk-unavailable";
-  } else if (desks.some((desk) => desk.status === "partial")) {
+  } else if (requiresSpecialistReview) {
     nextAction = "specialist-review-required";
   } else {
     nextAction = "existing-desk-route";
@@ -60,8 +86,10 @@ export function prepareConsultationRoute(question: string): PreparedConsultation
     routingOnly: true,
     route,
     desks,
+    specialties,
     canUseExistingSpecialistAI: nextAction === "existing-desk-route",
     blockedByPlannedDesks,
+    blockedByPlannedSpecialties,
     nextAction,
   };
 }
