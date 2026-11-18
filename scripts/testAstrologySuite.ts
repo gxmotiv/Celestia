@@ -16,6 +16,7 @@ import { prepareConsultationRoute } from "../lib/consultation/consultationServic
 import { buildPsychologyConsultationBrief, PSYCHOLOGY_TOPICS } from "../lib/consultation/desks/psychologyBehaviour";
 import { buildInfluenceSafetyBrief, INFLUENCE_PATTERNS } from "../lib/consultation/desks/influenceSafety";
 import { buildLifeStrategyBrief, LIFE_STRATEGY_STEPS } from "../lib/consultation/desks/lifeStrategy";
+import { ASTROLOGY_SPECIALTIES, getAstrologySpecialties } from "../lib/consultation/astrologySpecialties";
 
 interface TestResult {
   category: string;
@@ -804,6 +805,52 @@ assertTest(
   `${plannedDeskRoute.blockedByPlannedDesks.join(", ")} / canUseAI=${plannedDeskRoute.canUseExistingSpecialistAI}`
 );
 
+// ======================================================================
+// CATEGORY 8: EXPANDED ASTROLOGY SPECIALTY CATALOGUE
+// ======================================================================
+console.log("Running Category 8: Astrology Specialty Catalogue Tests...");
+
+const specialtyIds = ASTROLOGY_SPECIALTIES.map((specialty) => specialty.id);
+assertTest(
+  "8.1 Astrology Specialty Catalogue",
+  "Specialty IDs are unique and catalogue is broad enough to cover major branches",
+  specialtyIds.length >= 20 && new Set(specialtyIds).size === specialtyIds.length,
+  "At least 20 unique specialties",
+  `${specialtyIds.length} specialties / ${new Set(specialtyIds).size} unique IDs`
+);
+
+const requiredParents = ["western-astrology", "vedic-jyotish", "jaimini", "kp", "bazi", "numerology", "relationships", "transits-timing"] as const;
+const parentCoverage = requiredParents.every((parent) => getAstrologySpecialties(parent).length > 0);
+assertTest(
+  "8.2 Astrology Specialty Coverage",
+  "Western, Vedic, Jaimini, KP, BaZi, numerology, relationships and timing have sub-specialties",
+  parentCoverage,
+  "All eight astrology-facing desks represented",
+  requiredParents.map((parent) => `${parent}:${getAstrologySpecialties(parent).length}`).join(" | ")
+);
+
+const allHaveGates = ASTROLOGY_SPECIALTIES.every((specialty) =>
+  specialty.requiredGates.length > 0 && specialty.limitations.length > 0 && specialty.methods.length > 0
+);
+assertTest(
+  "8.3 Readiness and Safety Gates",
+  "Every specialty declares methods, implementation gates and limitations",
+  allHaveGates,
+  "No specialty without explicit gates and limitations",
+  allHaveGates ? "All specialties gated" : "Missing specialty contract fields"
+);
+
+const plannedHorary = ASTROLOGY_SPECIALTIES.find((specialty) => specialty.id === "western-horary");
+const plannedQiMen = ASTROLOGY_SPECIALTIES.find((specialty) => specialty.id === "bazi-qi-men");
+assertTest(
+  "8.4 No False Capability Claims",
+  "Unimplemented Horary and Qi Men remain planned",
+  plannedHorary?.status === "planned" && plannedQiMen?.status === "planned",
+  "Both explicitly planned",
+  `Horary=${plannedHorary?.status}; Qi Men=${plannedQiMen?.status}`
+);
+
+// ======================================================================
 // SUMMARY OUTPUT
 // ======================================================================
 console.log("\n=================== TEST RESULTS ===================");
