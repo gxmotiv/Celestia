@@ -5,6 +5,7 @@ import { VedicChartData } from "@/lib/astronomy/vedic";
 import { WesternChartData } from "@/lib/astronomy/ephemeris";
 import { NumerologyProfile } from "@/lib/astronomy/numerology";
 import { BaZiProfile } from "@/lib/astronomy/chinese";
+import { swissEphemeris } from "@/lib/astronomy/swissEphemeris";
 import { CompleteDashaOrchestrator, AllDashaSystems } from "@/lib/vedic/completeDashaSystems";
 import {
   Sparkles,
@@ -35,11 +36,13 @@ interface MasterAIAstrologerCockpitProps {
   baziData?: BaZiProfile;
   birthDate: string;
   birthTime: string;
+  timezoneOffset?: number;
   cityName?: string;
   country?: string;
   fullName?: string;
   seekerName?: string;
   compactMode?: boolean;
+  extendedAIContext?: Record<string, unknown>;
   activeDashas?: any[];
   onClose?: () => void;
 }
@@ -197,11 +200,13 @@ export function MasterAIAstrologerCockpit({
   baziData,
   birthDate,
   birthTime,
+  timezoneOffset = 0,
   cityName = "City of Birth",
   country = "Earth",
   fullName,
   seekerName,
   compactMode = false,
+  extendedAIContext,
   activeDashas,
   onClose,
 }: MasterAIAstrologerCockpitProps) {
@@ -212,14 +217,14 @@ export function MasterAIAstrologerCockpit({
   const dashaSystems = useMemo<AllDashaSystems>(() => {
     const [yStr, mStr, dStr] = birthDate.split("-");
     const [hStr, minStr] = birthTime.split(":");
-    const birthDateObj = new Date(
-      Date.UTC(
-        parseInt(yStr, 10) || 1990,
-        (parseInt(mStr, 10) || 1) - 1,
-        parseInt(dStr, 10) || 1,
-        parseInt(hStr, 10) || 12,
-        parseInt(minStr, 10) || 0
-      )
+    const birthDateObj = swissEphemeris.createUTCDate(
+      parseInt(yStr, 10) || 1990,
+      parseInt(mStr, 10) || 1,
+      parseInt(dStr, 10) || 1,
+      parseInt(hStr, 10) || 12,
+      parseInt(minStr, 10) || 0,
+      0,
+      timezoneOffset
     );
 
     const moonPlanet = vedicData.planets.find((p) => p.name === "Moon") || {
@@ -253,7 +258,7 @@ export function MasterAIAstrologerCockpit({
       ascendantSign: vedicData.lagna.rasiName,
       planetsInSigns,
     });
-  }, [vedicData, birthDate, birthTime, orchestrator]);
+  }, [vedicData, birthDate, birthTime, timezoneOffset, orchestrator]);
 
   // Active Mahadasha and Antardasha
   const currentMD = useMemo(() => {
@@ -331,6 +336,7 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
           sender: m.sender,
           text: m.text,
         })),
+        extendedSystems: extendedAIContext,
         context: {
           western: {
             sunSign: sun?.sign || "Aries",

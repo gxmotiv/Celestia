@@ -1,0 +1,90 @@
+CELESTIA — AI MULTI-SYSTEM INTEGRATION REPORT
+Report date: 2026-11-17
+Repository: https://github.com/gxmotiv/Celestia
+Target branch: main
+Implementation branch: feat/unified-ai-astrology-context
+Status: CODE CHANGES COMMITTED TO A SEPARATE BRANCH; NOT MERGED OR DEPLOYED
+
+1. EXECUTIVE SUMMARY
+
+This implementation connects a shared, calculation-derived astrology context to both existing Celestia AI entry points:
+- Long-form AI synthesis / report.
+- Interactive Acharya Celestia Master Oracle.
+
+The work is committed on a separate branch so it can be reviewed before merging. It does not alter the main branch or claim that the live website has already changed.
+
+2. REPOSITORY FINDINGS THAT DROVE THE CHANGE
+
+Before the change, AIReadingView sent a limited, manually flattened selection of Western, Vedic, numerology and BaZi fields to the AI reading route. The Master Oracle sent a separate compact context to its own route. The two prompts therefore did not have a common, comprehensive data contract.
+
+The repository already had calculation modules for KP, Jaimini, multiple Vedic dasha systems, numerology branches, and multi-system transits. Those results were not all included in the AI payload.
+
+3. FILES CHANGED ON THE IMPLEMENTATION BRANCH
+
+- NEW lib/ai/buildCelestiaAIContext.ts
+  Shared context builder. It gathers structured results from the current calculation engines and labels provenance, coverage and unavailable data.
+
+- components/AIReadingView.tsx
+  Builds the shared context with useMemo and sends it to the long-form AI endpoint. It also passes that same context and the supplied numeric timezone offset to the Oracle cockpit. Missing Western Sun/Moon chart fields are no longer replaced with invented fallback signs/degrees/houses in the long-form payload.
+
+- components/MasterAIAstrologerCockpit.tsx
+  Accepts the shared context and sends it to the Master Oracle endpoint. Its dasha date construction now uses the supplied timezone offset via swissEphemeris.createUTCDate instead of interpreting the typed local birth time as UTC.
+
+- app/api/astrology/ai-reading/route.ts
+  Accepts the extended context, adds it to the AI instruction, and applies an 80,000-character context guard.
+
+- app/api/astrology/master-oracle/route.ts
+  Accepts the same extended context, adds it to the AI instruction, and applies an 80,000-character context guard.
+
+- docs/AI_INTEGRATION_CONTRACT.md
+  Defines how every future feature change must update the shared adapter and both AI entry points.
+
+4. SYSTEM COVERAGE PROVIDED BY THE SHARED CONTEXT
+
+- Western: full Western chart object supplied to AIReadingView.
+- Vedic: full Vedic chart object supplied to AIReadingView, including Jaimini and D9 fields when present.
+- Numerology: current complete report, whose source orchestrator exposes six top-level branches: Pythagorean, Vedic/Indian, Chaldean, Chinese Lo Shu, Kabbalah, and Tamil En Kaniyam.
+- BaZi: full BaZi profile supplied to AIReadingView.
+- Dasha: current outputs/convergence from the existing orchestrator, including Yogini, Chara, Kalachakra, Ashtottari and the available Vimshottari Prana path when a valid Sookshma context is available.
+- KP: KP chart, significators, ruling planets, twelve standard house-event evaluations, nine classical planetary four-step summaries, and twelve cuspal interlinks.
+- Transits: current-date Western, Vedic, Hellenistic and Western Sidereal snapshots, plus a Western/Vedic comparison.
+
+5. IMPORTANT LIMITATIONS — NOT CLAIMED AS COMPLETE
+
+- Partner/compatibility analysis is not automatically added to the AI context. It needs a second person's birth profile or the completed relationship result from the relationship feature.
+- KP Horary is not automatically added. It requires the user's selected horary number, table and question/result.
+- The current VedicChartData contract exposes the D9/Navamsa fields, but the shared AI view does not receive every D2-D60 chart. The AI is explicitly instructed not to invent missing divisional charts.
+- The builder does not yet add the separate Chinese BaZi transit mode or every specialised transit/UI state. Those require their actual calculated feature results and settings to be passed explicitly.
+- Historical timezone validation is not solved by this change. The current form provides a numeric UTC offset; the builder records this limitation and does not label it historically verified.
+- KP percentages are rule-based heuristic scores, not empirically calibrated event probabilities.
+- The calculation engines themselves have not been newly validated by this integration. Passing an engine result to AI does not prove the engine's astronomical or traditional-rule accuracy.
+- If the extended context exceeds 80,000 characters, the routes omit it and tell the model not to infer the missing extended data. This is safer than silently passing malformed partial JSON, but the request should then be retried with a compacted adapter.
+
+6. TESTS, CI AND DEPLOYMENT
+
+- GitHub commit/status lookup at the final integration commit returned no status checks.
+- A dedicated `scripts/testAIContextSuite.ts` regression suite was added to the PR workflow. Its result has not yet been observed.
+- No local TypeScript check, ESLint run, production build, unit-test suite or browser test was executed in this session.
+- No live API request was made to the deployed Cloudflare Worker.
+- No deployment was triggered.
+- Therefore this report does NOT certify that the branch builds, that the AI provider accepts every payload, or that the live website contains these changes.
+
+Required review before merging:
+1. Run the repository's supported TypeScript/ESLint/build commands in the actual project environment.
+2. Exercise both AI endpoints with a normal profile and a profile that has missing/optional chart fields.
+3. Inspect payload size and model-provider token limits using the configured provider.
+4. Confirm KP, dasha and transit snapshots against the relevant deterministic test suites.
+5. Review the explicit limitations above. Extend the adapters for partner data, KP Horary, additional divisional charts and specialised transit modes only when their real feature outputs are wired.
+6. Merge the pull request and deploy through the existing Cloudflare/GitHub workflow. Then verify the live URL with a real browser request.
+
+7. FUTURE FEATURE INTEGRATION RULE
+
+Every future feature PR that changes a calculation or user-visible astrology result must update:
+- lib/ai/buildCelestiaAIContext.ts (or a typed adapter called by it),
+- the appropriate prompt behavior in both AI routes,
+- regression tests proving inclusion and correct missing-data handling,
+- docs/AI_INTEGRATION_CONTRACT.md and this report.
+
+There is no safe magic auto-discovery that lets an AI model automatically understand newly added code. The central adapter plus the mandatory review checklist is the explicit integration mechanism.
+
+END OF REPORT

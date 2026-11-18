@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { WesternChartData } from "@/lib/astronomy/ephemeris";
 import { VedicChartData } from "@/lib/astronomy/vedic";
 import { NumerologyProfile } from "@/lib/astronomy/numerology";
@@ -23,6 +23,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { MasterAIAstrologerCockpit } from "@/components/MasterAIAstrologerCockpit";
+import { buildCelestiaAIContext } from "@/lib/ai/buildCelestiaAIContext";
 
 interface AIReadingViewProps {
   fullName: string;
@@ -55,6 +56,21 @@ export function AIReadingView({
   numerology,
   chinese,
 }: AIReadingViewProps) {
+  const extendedAIContext = useMemo(
+    () => buildCelestiaAIContext({
+      western,
+      vedic,
+      numerology,
+      bazi: chinese,
+      birthDate,
+      birthTime,
+      latitude,
+      longitude,
+      timezoneOffsetHours: timezoneOffset,
+    }),
+    [western, vedic, numerology, chinese, birthDate, birthTime, latitude, longitude, timezoneOffset]
+  );
+
   const [aiViewMode, setAiViewMode] = useState<"oracle" | "reading">("oracle");
   const [readingText, setReadingText] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
@@ -109,14 +125,14 @@ export function AIReadingView({
         },
         western: {
           sun: {
-            sign: sun?.sign || "Taurus",
-            degree: Math.round((sun?.signDegree || 0) * 10) / 10,
-            house: sun?.house || 1,
+            sign: sun?.sign ?? null,
+            degree: sun ? Math.round(sun.signDegree * 10) / 10 : null,
+            house: sun?.house ?? null,
           },
           moon: {
-            sign: moon?.sign || "Scorpio",
-            degree: Math.round((moon?.signDegree || 0) * 10) / 10,
-            house: moon?.house || 2,
+            sign: moon?.sign ?? null,
+            degree: moon ? Math.round(moon.signDegree * 10) / 10 : null,
+            house: moon?.house ?? null,
           },
           ascendant: western.ascendant.sign,
           midheaven: western.midheaven.sign,
@@ -172,6 +188,7 @@ export function AIReadingView({
           },
           elementsBalance: chinese.elementsBalance,
         },
+        extendedSystems: extendedAIContext,
         readingMode: modeToUse,
         readingLength,
         userQuestion: modeToUse === "question" ? userQuestion : undefined,
@@ -299,9 +316,11 @@ export function AIReadingView({
           baziData={chinese}
           birthDate={birthDate}
           birthTime={birthTime}
+          timezoneOffset={timezoneOffset}
           cityName={cityName}
           country={country}
           fullName={fullName}
+          extendedAIContext={extendedAIContext}
         />
       )}
 

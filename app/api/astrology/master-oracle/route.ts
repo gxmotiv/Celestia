@@ -8,6 +8,15 @@ export async function POST(req: NextRequest) {
     const seekerName = payload?.seekerName ?? payload?.name ?? "Querent";
     const question = String(payload?.query ?? payload?.question ?? "").slice(0, 2000);
     const context = payload?.context ?? payload?.profileData ?? {};
+    const extendedSystems = payload?.extendedSystems;
+    const extendedSystemsJson = extendedSystems && typeof extendedSystems === "object"
+      ? JSON.stringify(extendedSystems)
+      : "";
+    const extendedSystemsSection = extendedSystemsJson.length > 0 && extendedSystemsJson.length <= 80000
+      ? extendedSystemsJson
+      : extendedSystemsJson.length > 80000
+      ? "Extended context omitted because it exceeded the route safety limit; do not infer missing data."
+      : "Not supplied.";
     const history = Array.isArray(payload?.conversationHistory)
       ? payload.conversationHistory.slice(-4).map((message: { sender?: string; text?: string }) =>
           `${message.sender ?? "context"}: ${String(message.text ?? "").slice(0, 1200)}`
@@ -19,7 +28,7 @@ export async function POST(req: NextRequest) {
     }
 
     const systemPrompt = `You are Acharya Celestia, a careful multi-tradition astrological research assistant.
-Answer the querent's question using only the chart context supplied. Do not invent planetary positions, dasha dates, or life events. Distinguish traditional beliefs and interpretations from verified calculations, and never state predictions as guaranteed facts.
+Answer the querent's question using only the supplied chart context and extended calculation data. Do not invent planetary positions, dasha dates, partner data, or life events. Distinguish traditional doctrines, calculation outputs, heuristic scores, and verifiable facts. KP percentages are not calibrated real-world probabilities, and predictions must never be stated as guaranteed facts.
 Keep the answer focused, practical, respectful, and structured. If essential chart data is missing, say so explicitly.`;
 
     const userPrompt = [
@@ -31,6 +40,8 @@ Keep the answer focused, practical, respectful, and structured. If essential cha
       `Western: Sun ${context?.western?.sunSign ?? "?"}; Moon ${context?.western?.moonSign ?? "?"}; Ascendant ${context?.western?.ascendantSign ?? "?"}; Midheaven ${context?.western?.midheavenSign ?? "?"}; major aspects: ${(context?.western?.majorAspects ?? []).join("; ")}.`,
       `Vedic: Lagna ${context?.vedic?.lagnaRasi ?? context?.vedic?.lagna ?? "?"}; Moon Rasi ${context?.vedic?.moonRasi ?? "?"}; Nakshatra ${context?.vedic?.nakshatra ?? "?"} (Pada ${context?.vedic?.pada ?? "?"}; lord ${context?.vedic?.nakshatraLord ?? "?"}); Mahadasha ${context?.vedic?.activeMahadasha ?? context?.vedic?.mahadasha ?? "?"}; Antardasha ${context?.vedic?.activeAntardasha ?? context?.vedic?.antardasha ?? "?"}; yogas: ${(context?.vedic?.yogas ?? []).join("; ")}.`,
       `Dasha convergence: ${JSON.stringify(context?.dashaConvergence ?? {})}`,
+      "EXTENDED CALCULATED SYSTEM CONTEXT (JSON)",
+      extendedSystemsSection,
       `Numerology: Life Path ${context?.numerology?.lifePath ?? "?"}; Expression ${context?.numerology?.expression ?? "?"}; Personal Year ${context?.numerology?.personalYear ?? "?"}.`,
       `BaZi: Animal ${context?.bazi?.zodiacAnimal ?? "?"}; Day Master ${context?.bazi?.dayMaster ?? "?"}; dominant element ${context?.bazi?.dominantElement ?? "?"}.`,
       history ? `Recent conversation:\n${history}` : "",
