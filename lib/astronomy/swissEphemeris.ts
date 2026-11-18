@@ -284,7 +284,8 @@ export class SwissEphemerisEngine {
   }
 
   /**
-   * Calculate EXACT planetary position with 0.001° precision
+   * Calculate a planetary position using the astronomy-engine-backed facade.
+   * Numeric rounding in this module must not be interpreted as an accuracy guarantee.
    */
   public calculatePlanetPosition(
     planet: number,
@@ -330,7 +331,7 @@ export class SwissEphemerisEngine {
       if (diff < -180) diff += 360;
       speed = diff * 24.0;
     } else if (planet === this.MEAN_NODE || planet === this.TRUE_NODE) {
-      // High precision Lunar Nodes based on Swiss Ephemeris / Meeus formulas
+      // Celestia Meeus-style analytical approximation for the lunar nodes; not Swiss Ephemeris.
       const T = (julianDay - 2451545.0) / 36525.0;
       let omega = 125.04452 - 1934.136261 * T + 0.0020708 * T * T + (T * T * T) / 450000;
 
@@ -357,7 +358,7 @@ export class SwissEphemerisEngine {
       lon = ((lon - ayanamsa) % 360 + 360) % 360;
     }
 
-    // Rounding to 0.0001° gives true 0.001° accuracy while avoiding float jitter
+    // Round the reported value for stable display; this does not establish physical accuracy.
     const round4 = (v: number) => Math.round(v * 10000) / 10000;
 
     return {
