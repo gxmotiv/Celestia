@@ -1,5 +1,6 @@
 import {
   SolarTermCalculator,
+  getSolarMonthPosition,
   CompleteBaZiEngine,
   SOLAR_TERMS,
   HEAVENLY_STEMS,
