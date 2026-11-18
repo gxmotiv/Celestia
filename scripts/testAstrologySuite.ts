@@ -13,6 +13,9 @@ import { TransitEngine } from "../lib/astronomy/transits";
 import { routeConsultationQuestion, CONSULTATION_DESKS } from "../lib/consultation/deskRegistry";
 import { clampCelestiaOutputTokens, resolveCelestiaAIProvider } from "../lib/ai/providerPolicy";
 import { prepareConsultationRoute } from "../lib/consultation/consultationService";
+import { buildPsychologyConsultationBrief, PSYCHOLOGY_TOPICS } from "../lib/consultation/desks/psychologyBehaviour";
+import { buildInfluenceSafetyBrief, INFLUENCE_PATTERNS } from "../lib/consultation/desks/influenceSafety";
+import { buildLifeStrategyBrief, LIFE_STRATEGY_STEPS } from "../lib/consultation/desks/lifeStrategy";
 
 interface TestResult {
   category: string;
@@ -660,6 +663,49 @@ assertTest(
 );
 
 // ======================================================================
+// CATEGORY 5.4: SPECIALIST DESK CONTENT AND SAFETY CONTRACTS
+console.log("Running Category 5.4: Specialist Desk Content Contracts...");
+
+const psychologyBrief = buildPsychologyConsultationBrief();
+assertTest("5.4 Psychology Desk", "Eight bounded psychology topics and source metadata",
+  PSYCHOLOGY_TOPICS.length === 8 && psychologyBrief.sources.length >= 3,
+  "8 topics and at least 3 sources", `${PSYCHOLOGY_TOPICS.length} topics / ${psychologyBrief.sources.length} sources`);
+assertTest("5.4 Psychology Desk", "No diagnosis or mind-reading guardrails",
+  psychologyBrief.guardrails.some((item) => item.includes("Not a diagnosis")) &&
+  psychologyBrief.guardrails.some((item) => item.includes("Never infer hidden motives")),
+  "Non-clinical and no mind-reading", psychologyBrief.guardrails.join(" | "));
+
+const influenceBrief = buildInfluenceSafetyBrief();
+assertTest("5.5 Influence Safety Desk", "Protective pattern catalogue and sources",
+  INFLUENCE_PATTERNS.length >= 6 && influenceBrief.sources.length >= 2,
+  "At least 6 patterns and 2 sources", `${INFLUENCE_PATTERNS.length} patterns / ${influenceBrief.sources.length} sources`);
+assertTest("5.5 Influence Safety Desk", "Defensive-only and digital safety guardrails",
+  influenceBrief.guardrails.some((item) => item.includes("never provide manipulation scripts")) &&
+  influenceBrief.guardrails.some((item) => item.includes("device/account monitoring")),
+  "No coercive scripts; consider device monitoring", influenceBrief.guardrails.join(" | "));
+
+const strategyBrief = buildLifeStrategyBrief("study-plan");
+assertTest("5.6 Life Strategy Desk", "Seven-step plan and source metadata",
+  LIFE_STRATEGY_STEPS.length === 7 && strategyBrief.sources.length >= 2,
+  "7 steps and at least 2 sources", `${LIFE_STRATEGY_STEPS.length} steps / ${strategyBrief.sources.length} sources`);
+assertTest("5.6 Life Strategy Desk", "Study plan avoids guaranteed exam outcomes and preserves agency",
+  strategyBrief.responseStructure.some((item) => item.includes("do not promise marks")) &&
+  strategyBrief.guardrails.some((item) => item.includes("user retains decision authority")),
+  "No guaranteed marks; user decides", strategyBrief.responseStructure.join(" | "));
+
+const psychologyCapability = prepareConsultationRoute("Help me understand my emotions and overthinking.");
+const safetyCapability = prepareConsultationRoute("My partner is monitoring my messages; how can I stay safe?");
+const strategyCapability = prepareConsultationRoute("Help me make a study plan for my exams.");
+assertTest("5.7 Capability Gate", "New desks remain blocked from astrology-only AI while partial",
+  psychologyCapability.nextAction === "specialist-review-required" &&
+  safetyCapability.nextAction === "specialist-review-required" &&
+  strategyCapability.nextAction === "specialist-review-required" &&
+  !psychologyCapability.canUseExistingSpecialistAI &&
+  !safetyCapability.canUseExistingSpecialistAI &&
+  !strategyCapability.canUseExistingSpecialistAI,
+  "All three desks require specialist review",
+  `${psychologyCapability.nextAction} / ${safetyCapability.nextAction} / ${strategyCapability.nextAction}`);
+
 // CATEGORY 6: AI PROVIDER BUDGET AND FALLBACK POLICY
 // ======================================================================
 console.log("Running Category 6: AI Provider Policy Tests...");
@@ -726,7 +772,7 @@ console.log("Running Category 7: Capability-Aware Consultation Service Tests..."
 const capabilityCases = [
   { question: "Explain my Western natal chart", action: "existing-desk-route", canUseAI: true },
   { question: "Explain my KP sub-lord", action: "specialist-review-required", canUseAI: false },
-  { question: "Help me plan my career", action: "planned-desk-unavailable", canUseAI: false },
+  { question: "Help me plan my career", action: "specialist-review-required", canUseAI: false },
   { question: "I cannot stay safe and may hurt myself", action: "urgent-support", canUseAI: false },
   { question: "Teach me to gaslight my partner", action: "refuse-exploitation", canUseAI: false },
 ] as const;
@@ -742,7 +788,7 @@ capabilityCases.forEach(({ question, action, canUseAI }) => {
   );
 });
 
-const plannedDeskRoute = prepareConsultationRoute("Help me choose a career path.");
+const plannedDeskRoute = prepareConsultationRoute("Explain my Jaimini Atmakaraka.");
 assertTest(
   "7.2 Planned Desk Gate",
   "Does not claim a planned Life Strategy desk is ready",
