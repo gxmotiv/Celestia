@@ -1,4 +1,5 @@
 import { createBaZiClock, equationOfTimeMinutes } from "../lib/astronomy/timeEngine";
+import { createBaZiProfileFromChart } from "../lib/astronomy/baziProfileAdapter";
 import { NAOJ_2026_BAZI_JIE_FIXTURES } from "../lib/astronomy/baziSolarTermReferenceFixtures";
 import {
   SolarTermCalculator,
@@ -125,6 +126,79 @@ assertTest(
 // 3. FOUR PILLARS CALCULATION
 // ============================================================
 const baziEngine = new CompleteBaZiEngine();
+
+// ============================================================
+// 3B. ACTIVE NATAL BIRTH-FORM INTEGRATION
+// ============================================================
+const activeBirthInstant = new Date("2026-04-15T06:30:00.000Z");
+const activeBirthChart = baziEngine.generateBaZiChart(
+  activeBirthInstant,
+  "Male",
+  new Date("2026-11-18T00:00:00.000Z"),
+  {
+    clock: {
+      timeBasis: "civil-clock",
+      longitudeDegrees: 77.6,
+      civilUtcOffsetSeconds: 19_800,
+    },
+    dayBoundaryPolicy: "pure-zi",
+    birthTimeKnown: true,
+    instantResolution: "manual-fixed-offset",
+    uncertainPillars: [],
+    warnings: ["Test fixed-offset context."],
+  }
+);
+const activeBirthProfile = createBaZiProfileFromChart(activeBirthChart);
+assertTest(
+  "3B. Active Birth Form",
+  "Adapter uses the active engine's Year Pillar",
+  activeBirthProfile.yearPillar.combinedName === activeBirthChart.pillars.year.combinedName,
+  activeBirthChart.pillars.year.combinedName,
+  activeBirthProfile.yearPillar.combinedName
+);
+assertTest(
+  "3B. Active Birth Form",
+  "Adapter uses the active engine's Day Pillar",
+  activeBirthProfile.dayPillar.combinedName === activeBirthChart.pillars.day.combinedName,
+  activeBirthChart.pillars.day.combinedName,
+  activeBirthProfile.dayPillar.combinedName
+);
+assertTest(
+  "3B. Active Birth Form",
+  "Adapter preserves explicit civil-clock calculation metadata",
+  activeBirthProfile.calculationContext?.timeBasis === "civil-clock" &&
+    activeBirthProfile.calculationContext?.civilUtcOffsetSeconds === 19_800,
+  "civil-clock / UTC+05:30",
+  `${activeBirthProfile.calculationContext?.timeBasis} / UTC+${(activeBirthProfile.calculationContext?.civilUtcOffsetSeconds ?? 0) / 3600}`
+);
+const unknownTimeChart = baziEngine.generateBaZiChart(
+  activeBirthInstant,
+  "Male",
+  new Date("2026-11-18T00:00:00.000Z"),
+  {
+    clock: {
+      timeBasis: "civil-clock",
+      longitudeDegrees: 77.6,
+      civilUtcOffsetSeconds: 19_800,
+    },
+    dayBoundaryPolicy: "pure-zi",
+    birthTimeKnown: false,
+    instantResolution: "manual-fixed-offset",
+    uncertainPillars: ["day", "hour"],
+    warnings: ["Birth time unknown; noon placeholders are provisional."],
+  }
+);
+const unknownTimeProfile = createBaZiProfileFromChart(unknownTimeChart);
+assertTest(
+  "3B. Active Birth Form",
+  "Unknown birth time marks Day and Hour as uncertain",
+  unknownTimeProfile.calculationContext?.birthTimeKnown === false &&
+    unknownTimeProfile.calculationContext?.uncertainPillars.includes("day") &&
+    unknownTimeProfile.calculationContext?.uncertainPillars.includes("hour"),
+  "Day and Hour uncertain",
+  unknownTimeProfile.calculationContext?.uncertainPillars.join(", ") ?? "No metadata"
+);
+
 
 // ============================================================
 // 3A. SOLAR MONTH BRANCH SELECTION (ALL 12 JIE + BOUNDARIES)

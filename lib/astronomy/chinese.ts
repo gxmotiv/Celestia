@@ -67,6 +67,17 @@ export interface BaZiProfile {
     clashSign: string; // Opposing clash
     description: string;
   };
+  calculationContext?: {
+    birthTimeKnown: boolean;
+    utcInstantIso: string;
+    timeBasis: "civil-clock" | "local-mean-solar" | "local-apparent-solar";
+    dayBoundaryPolicy: "pure-zi" | "early-late-zi";
+    solarClockIso: string;
+    longitudeDegrees: number;
+    civilUtcOffsetSeconds?: number;
+    uncertainPillars: ("year" | "month" | "day" | "hour")[];
+    warnings: string[];
+  };
 }
 
 export const HEAVENLY_STEMS: StemData[] = [
@@ -222,7 +233,7 @@ function calculateHourPillar(dayStemIdx: number, hour: number): { stemIdx: numbe
   return { stemIdx, branchIdx };
 }
 
-const ANIMAL_PROFILES: Record<string, string> = {
+export const ANIMAL_PROFILES: Record<string, string> = {
   Rat: "Quick-witted, resourceful, charming, and highly perceptive. Masters of opportunity and social dexterity.",
   Ox: "Steadfast, patient, methodical, and deeply trustworthy. Unwavering integrity with heroic endurance.",
   Tiger: "Courageous, charismatic, rebellious, and fiercely independent. Natural leaders driven by heroic conviction.",
@@ -237,7 +248,7 @@ const ANIMAL_PROFILES: Record<string, string> = {
   Pig: "Generous, sincere, warmhearted, and deeply cultured. Genuine seekers of joy, harmony, and compassionate fellowship.",
 };
 
-const COMPATIBILITY_TABLE: Record<
+export const COMPATIBILITY_TABLE: Record<
   string,
   { trines: string[]; secretFriend: string; clash: string }
 > = {

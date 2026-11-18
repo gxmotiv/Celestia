@@ -17,7 +17,13 @@ export function ChineseView({ baziData }: ChineseViewProps) {
     Water: { bg: "bg-blue-500/10", text: "text-blue-400", bar: "bg-blue-500", border: "border-blue-500/30" },
   };
 
-  const renderPillarCard = (pillar: PillarData, isDayMaster = false) => {
+  const uncertainPillars = baziData.calculationContext?.uncertainPillars ?? [];
+
+  const renderPillarCard = (
+    pillar: PillarData,
+    isDayMaster = false,
+    isUncertain = false
+  ) => {
     const stemColor = elementColors[pillar.stem.element];
     const branchColor = elementColors[pillar.branch.element];
 
@@ -38,6 +44,11 @@ export function ChineseView({ baziData }: ChineseViewProps) {
         <span className="text-xs font-semibold text-slate-400 block mb-2">
           {pillar.pillarName} Pillar
         </span>
+        {isUncertain && (
+          <span className="text-[9px] font-bold uppercase tracking-wider text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded px-2 py-1">
+            Provisional
+          </span>
+        )}
 
         {/* Heavenly Stem */}
         <div className="my-2 space-y-1">
@@ -86,6 +97,28 @@ export function ChineseView({ baziData }: ChineseViewProps) {
 
   return (
     <div className="space-y-8">
+      {baziData.calculationContext && (
+        <section className="p-4 bg-amber-500/5 border border-amber-500/25 rounded-xl space-y-2">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-amber-300">
+              BaZi calculation context
+            </h3>
+            <span className="text-[10px] text-slate-400">
+              {baziData.calculationContext.timeBasis} · {baziData.calculationContext.dayBoundaryPolicy}
+            </span>
+          </div>
+          {uncertainPillars.length > 0 && (
+            <p className="text-xs text-amber-200">
+              Birth time is unknown. {uncertainPillars.join(" and ")} pillars and Day Master analysis are provisional noon-based estimates, not confirmed results.
+            </p>
+          )}
+          <ul className="list-disc pl-4 space-y-1 text-[11px] text-slate-400">
+            {baziData.calculationContext.warnings.map((warning, index) => (
+              <li key={index}>{warning}</li>
+            ))}
+          </ul>
+        </section>
+      )}
       {/* Overview Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="p-3.5 bg-slate-900/60 border border-slate-800 rounded-lg">
@@ -128,10 +161,10 @@ export function ChineseView({ baziData }: ChineseViewProps) {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {renderPillarCard(baziData.hourPillar)}
-          {renderPillarCard(baziData.dayPillar, true)}
-          {renderPillarCard(baziData.monthPillar)}
-          {renderPillarCard(baziData.yearPillar)}
+          {renderPillarCard(baziData.hourPillar, false, uncertainPillars.includes("hour"))}
+          {renderPillarCard(baziData.dayPillar, true, uncertainPillars.includes("day"))}
+          {renderPillarCard(baziData.monthPillar, false, uncertainPillars.includes("month"))}
+          {renderPillarCard(baziData.yearPillar, false, uncertainPillars.includes("year"))}
         </div>
       </div>
 
