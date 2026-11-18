@@ -17,6 +17,7 @@ import { buildPsychologyConsultationBrief, PSYCHOLOGY_TOPICS } from "../lib/cons
 import { buildInfluenceSafetyBrief, INFLUENCE_PATTERNS } from "../lib/consultation/desks/influenceSafety";
 import { buildLifeStrategyBrief, LIFE_STRATEGY_STEPS } from "../lib/consultation/desks/lifeStrategy";
 import { ASTROLOGY_SPECIALTIES, getAstrologySpecialties } from "../lib/consultation/astrologySpecialties";
+import { JaiminiKarakasEngine } from "../lib/vedic/jaiminiKarakas";
 
 interface TestResult {
   category: string;
@@ -850,6 +851,53 @@ assertTest(
   `Horary=${plannedHorary?.status}; Qi Men=${plannedQiMen?.status}`
 );
 
+// ======================================================================
+// CATEGORY 9: JAIMINI KARAKA AND KARAKAMSA VALIDATION
+// ======================================================================
+console.log("Running Category 9: Jaimini Karaka Calculation Tests...");
+
+const jaiminiEngine = new JaiminiKarakasEngine();
+const jaiminiFixture = [
+  { name: "Sun", siderealLongitude: 45, house: 11, rasiName: "Taurus" },
+  { name: "Moon", siderealLongitude: 32.5, house: 11, rasiName: "Taurus" },
+  { name: "Mars", siderealLongitude: 65, house: 12, rasiName: "Gemini" },
+  { name: "Mercury", siderealLongitude: 90, house: 1, rasiName: "Cancer" },
+  { name: "Jupiter", siderealLongitude: 125, house: 2, rasiName: "Leo" },
+  { name: "Venus", siderealLongitude: 155, house: 3, rasiName: "Virgo" },
+  { name: "Saturn", siderealLongitude: 185, house: 4, rasiName: "Libra" },
+  { name: "Ascendant", siderealLongitude: 100, house: 1, rasiName: "Cancer" },
+];
+const jaiminiResult = jaiminiEngine.calculate7Karakas(jaiminiFixture);
+assertTest(
+  "9.1 Jaimini Chara Karakas",
+  "Highest within-sign longitude receives Atmakaraka in the seven-graha scheme",
+  jaiminiResult.atmakaraka.planet === "Sun" && jaiminiResult.karakas.length === 7,
+  "Sun / 7 karakas",
+  `${jaiminiResult.atmakaraka.planet} / ${jaiminiResult.karakas.length} karakas`
+);
+assertTest(
+  "9.2 Jaimini Karakamsa",
+  "Karakamsa uses the movable/fixed/dual Navamsa mapping, not absolute 3°20' counting",
+  jaiminiResult.karakamsaSign === "Taurus" && jaiminiResult.karakamsaHouseFromLagna === 11,
+  "Taurus / 11th from Cancer Ascendant",
+  `${jaiminiResult.karakamsaSign} / house ${jaiminiResult.karakamsaHouseFromLagna}`
+);
+
+let jaiminiMissingPlanetRejected = false;
+try {
+  jaiminiEngine.calculate7Karakas(jaiminiFixture.filter((planet) => planet.name !== "Saturn"));
+} catch {
+  jaiminiMissingPlanetRejected = true;
+}
+assertTest(
+  "9.3 Jaimini Input Validation",
+  "Rejects incomplete classical graha input rather than returning undefined karakas",
+  jaiminiMissingPlanetRejected,
+  "Missing Saturn rejected",
+  jaiminiMissingPlanetRejected ? "Rejected" : "Accepted incomplete chart"
+);
+
+// ======================================================================
 // ======================================================================
 // SUMMARY OUTPUT
 // ======================================================================
