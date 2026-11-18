@@ -796,14 +796,15 @@ capabilityCases.forEach(({ question, action, canUseAI }) => {
   );
 });
 
-const plannedDeskRoute = prepareConsultationRoute("Explain my Jaimini Atmakaraka.");
+const jaiminiDeskRoute = prepareConsultationRoute("Explain my Jaimini Atmakaraka.");
 assertTest(
-  "7.2 Planned Desk Gate",
-  "Does not claim the planned Jaimini desk is ready",
-  plannedDeskRoute.blockedByPlannedDesks.includes("jaimini") &&
-    plannedDeskRoute.canUseExistingSpecialistAI === false,
-  "jaimini blocked; no existing specialist AI",
-  `${plannedDeskRoute.blockedByPlannedDesks.join(", ")} / canUseAI=${plannedDeskRoute.canUseExistingSpecialistAI}`
+  "7.2 Partial Jaimini Desk Gate",
+  "Recognizes the existing Jaimini calculation foundation without treating the full desk as AI-ready",
+  jaiminiDeskRoute.nextAction === "specialist-review-required" &&
+    jaiminiDeskRoute.desks.some((desk) => desk.id === "jaimini" && desk.status === "partial") &&
+    jaiminiDeskRoute.canUseExistingSpecialistAI === false,
+  "jaimini partial; specialist review required; no AI generation",
+  `${jaiminiDeskRoute.nextAction} / ${jaiminiDeskRoute.desks.find((desk) => desk.id === "jaimini")?.status} / canUseAI=${jaiminiDeskRoute.canUseExistingSpecialistAI}`
 );
 
 // ======================================================================
