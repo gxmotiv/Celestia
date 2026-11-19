@@ -1177,6 +1177,26 @@ assertTest(
   `Start ${earlyLuck.startDate.toISOString()}; end ${earlyLuck.endDate.toISOString()}; contiguous=${earlyLuck.endDate.getTime() === baziEarly.luckPillars[1].startDate.getTime()}`
 );
 
+assertTest(
+  "12.4 BaZi Day Pillar Reference Fixtures",
+  "Matches the independently retained 2024 Wu-Yin and Ji-Mao day-pillar fixtures",
+  baziSolar.calculateDayPillar(new Date("2024-03-15T12:00:00Z")).heavenlyStem.name === "Wu" &&
+    baziSolar.calculateDayPillar(new Date("2024-03-15T12:00:00Z")).earthlyBranch.name === "Yin" &&
+    baziSolar.calculateDayPillar(new Date("2024-05-15T12:00:00Z")).heavenlyStem.name === "Ji" &&
+    baziSolar.calculateDayPillar(new Date("2024-05-15T12:00:00Z")).earthlyBranch.name === "Mao",
+  "2024-03-15 Wu-Yin; 2024-05-15 Ji-Mao",
+  `March: ${baziSolar.calculateDayPillar(new Date("2024-03-15T12:00:00Z")).combinedName}; May: ${baziSolar.calculateDayPillar(new Date("2024-05-15T12:00:00Z")).combinedName}`
+);
+
+const baziFemaleForward = baziEngine.generateBaZiChart(new Date("2000-01-10T12:00:00Z"), "Female");
+assertTest(
+  "12.5 BaZi Female Yin-Year Forward Direction",
+  "Uses the next Jie for a female born in a Yin-stem solar year",
+  baziFemaleForward.luckPillars[0].startAge > earlyLuck.startAge,
+  "Forward interval to Lichun is longer than the backward interval to Xiaohan",
+  `Female forward start age=${baziFemaleForward.luckPillars[0].startAge.toFixed(3)}; male reverse=${earlyLuck.startAge.toFixed(3)}`
+);
+
 // ======================================================================
 console.log("Running Category 13: KP Placidus cusp preservation...");
 
