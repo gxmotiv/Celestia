@@ -80,7 +80,7 @@ Each division must have its own rule reference, selectable convention where trad
 | D30 Trimsamsa | Unequal odd/even intervals; do not use equal 1° segments |
 | D40 Khavedamsa | Odd/even start rule and all forty 45′ segments |
 | D45 Akshavedamsa | Modality start rule and all forty-five 40′ segments |
-| D60 Shashtiamsa | Odd/even start rule and all sixty 30′ segments; document birth-time sensitivity |
+| D60 Shashtiamsa | Explicitly select occupied-sign or Aries count; test all sixty 30′ parts; reverse deity-name order in even signs; document birth-time sensitivity |
 
 ## Safe implementation order
 
@@ -134,4 +134,24 @@ Sources:
 - [Parashara and Jaimini classical corpus notes](https://jatakaveda.com/library/parashara-jaimini/) — a secondary source explicitly distinguishes the D27 elemental mapping as an interpretation of the wording, rather than a fully spelled-out rule in the e-text transcription.
 
 These tests validate the selected sign assignment and segment boundaries only. They do not validate interpretive claims, divisional degree display, dignity, varga strength, or the full chart's independent agreement with a trusted reference implementation.
+
+## D60 sign-count convention correction
+
+The previous D60 implementation used the natal sign as the start for odd signs and the seventh sign for even signs. This mixed the even-sign reversal of the sixty-part **deity-name sequence** (BPHS 6.40) into the **D60 sign calculation** (BPHS 6.33). The reviewed sources do not support that seventh-sign offset as the general D60 sign formula.
+
+Two sign-counting readings are documented:
+
+1. **From occupied sign** (default): take the half-degree part index p = floor(2 × d), where d is the longitude within the natal sign, then place it at sign index (rasiIndex + (p mod 12)) mod 12. This is the convention attributed to P.V.R. Narasimha Rao and used by Jagannatha Hora's page.
+2. **From Aries** (explicit alternative): use (p mod 12) as the sign index. This is the literal Aries-count reading reported for BPHS 6.33 by the same software documentation and is also consistent with a literal translation that says the remainder plus one indicates the sign.
+
+The generic sign calculator and full chart calculator now accept an options.d60SignConvention setting ("from-sign" or "from-aries"). The default is "from-sign"; callers can select "from-aries" when following that reading. Neither is described as universally accepted. The old even-sign seventh-sign offset has been removed.
+
+The new D60 fixtures exercise both conventions across all 12 natal signs and all 60 half-degree parts, checking midpoints, exact starts and just-before-boundary positions. They also explicitly guard against the old Taurus-at-0° → Scorpio result.
+
+Sources:
+- [BPHS Chapter 6, verse 33 — Sanskrit, transliteration and word meanings](https://enjoylearningsanskrit.com/scriptures/parashara/chapter-6/verse-33/) — explains doubling degrees within the sign, division by 12 and remainder plus one.
+- [Jagannatha Hora — D60 computation and convention discussion](https://jagannathahora.com/shashtiamsa) — explicitly documents the occupied-sign convention and the alternative literal Aries reading.
+- [SIA Vigyan — BPHS D60 verse and rendering](https://siavigyan.com/learn/varga/d60-shashtiamsha) — provides the Sanskrit verse and its occupied-sign rendering.
+
+Important remaining limitation: Celestia currently computes D60 sign placement but does not yet calculate the sixty named Shashtiamsa deities and their benefic/malefic classification. The even-sign reversal in BPHS 6.40 applies to those names. Do not imply that D60 deity or benefic/malefic interpretation is implemented.
 
