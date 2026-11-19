@@ -62,6 +62,16 @@ export const DIVISIONAL_CHARTS_CONFIG: Record<
   D60: { name: "Shashtiamsa", harmonic: 60, significance: "Past life karma, root cause & micro-destiny", category: "Subtle" },
 };
 
+export type D60SignConvention = "from-sign" | "from-aries";
+
+export interface DivisionalChartOptions {
+  /**
+   * BPHS 6.33 has an Aries-count reading; a common lineage/software reading
+   * counts the remainder from the planet's occupied sign. Default: from-sign.
+   */
+  d60SignConvention?: D60SignConvention;
+}
+
 function normalizeDeg(deg: number): number {
   let d = deg % 360;
   if (d < 0) d += 360;
@@ -73,7 +83,8 @@ function normalizeDeg(deg: number): number {
  */
 export function calculateDivisionalSignIndex(
   siderealLon: number,
-  divisionCode: string
+  divisionCode: string,
+  options: DivisionalChartOptions = {}
 ): number {
   if (!Number.isFinite(siderealLon)) {
     throw new Error("Divisional-chart longitude must be a finite number of degrees.");
@@ -217,9 +228,16 @@ export function calculateDivisionalSignIndex(
     }
 
     case "D60": { // Shashtiamsa (0.5° each)
+      // BPHS 6.33: double degrees within the sign; each half-degree is a part.
+      // The sign-counting reference is disputed: from the occupied sign (common
+      // software/lineage convention) or from Aries (literal BPHS reading).
+      // BPHS 6.40 reverses the D60 NAME sequence in even signs; it does not
+      // establish a seventh-sign offset for the D60 sign calculation.
       const part = Math.floor(degInRasi / 0.5);
-      const startSign = isOddSign ? rasiIdx : (rasiIdx + 6) % 12;
-      return (startSign + part) % 12;
+      const offset = part % 12;
+      return options.d60SignConvention === "from-aries"
+        ? offset
+        : (rasiIdx + offset) % 12;
     }
 
     default:
@@ -233,12 +251,16 @@ export function calculateDivisionalSignIndex(
 export function calculateDivisionalChart(
   planets: VedicPlanet[],
   ascendantSiderealLon: number,
-  divisionCode: string
+  divisionCode: string,
+  options: DivisionalChartOptions = {}
 ): DivisionalChartResult {
-  const config = DIVISIONAL_CHARTS_CONFIG[divisionCode] || DIVISIONAL_CHARTS_CONFIG.D1;
+  if (!Object.prototype.hasOwnProperty.call(DIVISIONAL_CHARTS_CONFIG, divisionCode)) {
+    throw new Error(`Unsupported divisional chart code: ${divisionCode}`);
+  }
+  const config = DIVISIONAL_CHARTS_CONFIG[divisionCode];
 
   // 1. Ascendant in Division
-  const ascSignIdx = calculateDivisionalSignIndex(ascendantSiderealLon, divisionCode);
+  const ascSignIdx = calculateDivisionalSignIndex(ascendantSiderealLon, divisionCode, options);
   const ascSignName = VEDIC_RASIS[ascSignIdx].name;
 
   // 2. Planets in Division
@@ -246,7 +268,7 @@ export function calculateDivisionalChart(
 
   for (const p of planets) {
     if (p.name === "Ascendant") continue;
-    const signIdx = calculateDivisionalSignIndex(p.siderealLongitude, divisionCode);
+    const signIdx = calculateDivisionalSignIndex(p.siderealLongitude, divisionCode, options);
     const signName = VEDIC_RASIS[signIdx].name;
     const house = ((signIdx - ascSignIdx + 12) % 12) + 1;
 
