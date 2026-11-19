@@ -12,21 +12,29 @@ The current generic divisional calculator exposes D1, D2, D3, D4, D7, D9, D10, D
 
 ## Confirmed implementation risks
 
-### 1. Divisional degree is not calculated from the segment-local position
+### 1. Equal-part varga degree arithmetic is valid, but its convention must be explicit
 
-In `calculateDivisionalChart`, the displayed degree is currently:
+The displayed equal-part varga degree is currently calculated as:
 
 ```ts
 const degInSign = (p.siderealLongitude * config.harmonic) % 30;
 ```
 
-This multiplies the absolute sidereal longitude. Divisional degree should instead be derived from the planet's degree within its natal sign and its position within the selected varga segment, with the exact convention documented per varga. The current expression can therefore display a degree unrelated to the segment-local coordinate. The ascendant output is even coarser: it reports only the floored natal-sign degree.
+For an integer harmonic and a longitude expressed in degrees, this is mathematically equivalent modulo 30 to multiplying only the natal degree within the sign: the omitted sign offset is an integer multiple of 30 after multiplication. It is therefore not correct to describe the use of absolute longitude as an inherent arithmetic defect. For equal-part Vargas, this is the conventional thirtyfold/folded degree coordinate, subject to floating-point and longitude-normalization handling.
 
-Action: replace this with a shared, tested segment-coordinate result returned alongside the divisional sign calculation. Do not use a generic harmonic shortcut for unequal or convention-specific divisions.
+D30 is a special case in sign assignment because its five intervals are unequal. The generic harmonic degree display is a thirtyfold coordinate, not a normalized position through the unequal D30 interval. The UI and documentation must not imply that it is the local percentage through the D30 segment.
 
-### 2. D30 cannot be treated as an ordinary equal-part harmonic
+The ascendant display currently reports only the floored natal-sign degree. That is a precision/display limitation, not evidence that the divisional sign assignment is wrong.
 
-The sign assignment code correctly uses unequal traditional Trimsamsa intervals (5/5/8/7/5 degrees for odd signs and 5/7/8/5/5 for even signs). However, the generic `harmonic: 30` metadata and degree-display formula do not represent those unequal segments. D30 needs its own segment boundaries and local-degree calculation.
+Action: document the degree-coordinate convention clearly, add independent tests for representative equal-part Vargas and D30 boundaries, and keep the D30 sign lookup separate from equal-part segment indexing.
+
+### 2. D30 has unequal intervals and a confirmed odd-sign mapping defect
+
+The sign assignment code uses the traditional unequal Trimsamsa intervals (5/5/8/7/5 degrees for odd signs and 5/7/8/5/5 for even signs). It must not be replaced by a generic equal-part harmonic lookup.
+
+A concrete defect was found in the odd-sign 25°–30° interval: Venus's odd-sign Trimsamsa is Libra (sign index 6), but the implementation returned Taurus (index 1), which is the even-sign Venus result. This has now been corrected in the code; boundary regression tests are being added.
+
+D30's `harmonic: 30` metadata describes the traditional thirtyfold degree display only. It does not mean the sign assignment uses thirty equal one-degree intervals.
 
 ### 3. Unknown division identifiers silently fall back to D1
 
