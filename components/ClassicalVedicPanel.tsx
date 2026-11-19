@@ -10,11 +10,11 @@ interface ClassicalVedicPanelProps {
 
 export function ClassicalVedicPanel({ vedicData }: ClassicalVedicPanelProps) {
   const [activeSubTab, setActiveSubTab] = useState<"jaimini" | "tarabala" | "gocharvedha">("jaimini");
-  const [activeKarakaScheme, setActiveKarakaScheme] = useState<"jaimini-8" | "parashari-7">("jaimini-8");
+  const [activeKarakaScheme, setActiveKarakaScheme] = useState<"jaimini-8" | "seven-graha">("jaimini-8");
 
   const jaimini = activeKarakaScheme === "jaimini-8"
     ? vedicData.jaiminiKarakas
-    : vedicData.parashariKarakas;
+    : vedicData.sevenGrahaKarakas;
   const taraBala = vedicData.taraBala;
   const gochar = vedicData.gocharVedha;
 
@@ -82,9 +82,9 @@ export function ClassicalVedicPanel({ vedicData }: ClassicalVedicPanelProps) {
               Jaimini 8-Karaka · Rahu reverse-counted
             </button>
             <button
-              onClick={() => setActiveKarakaScheme("parashari-7")}
-              aria-pressed={activeKarakaScheme === "parashari-7"}
-              className={`px-3 py-2 rounded-lg text-xs font-semibold border ${activeKarakaScheme === "parashari-7" ? "bg-amber-500/20 text-amber-200 border-amber-500/40" : "bg-slate-950 text-slate-400 border-slate-800"}`}
+              onClick={() => setActiveKarakaScheme("seven-graha")}
+              aria-pressed={activeKarakaScheme === "seven-graha"}
+              className={`px-3 py-2 rounded-lg text-xs font-semibold border ${activeKarakaScheme === "seven-graha" ? "bg-amber-500/20 text-amber-200 border-amber-500/40" : "bg-slate-950 text-slate-400 border-slate-800"}`}
             >
               Seven-graha option · Matru/Putra merged
             </button>
