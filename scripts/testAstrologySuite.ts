@@ -1612,3 +1612,35 @@ console.log("====================================================\n");
 if (failCount > 0) {
   process.exit(1);
 }
+
+console.log("Running Category 23: D30 Trimsamsa mapping boundaries...");
+
+const oddD30Cases: Array<[number, number]> = [
+  [0, 0], [5, 10], [10, 8], [18, 2], [25, 6],
+];
+const evenD30Cases: Array<[number, number]> = [
+  [0, 1], [5, 5], [12, 11], [20, 9], [25, 7],
+];
+const d30BoundaryCasesPass = [...oddD30Cases, ...evenD30Cases].every(([degree, expectedSign], index) => {
+  const isOddCase = index < oddD30Cases.length;
+  const natalSign = isOddCase ? 0 : 1;
+  return calculateDivisionalSignIndex(natalSign * 30 + degree, "D30") === expectedSign;
+});
+assertTest(
+  "23.1 D30 Odd/Even Segment Starts",
+  "All five odd-sign and five even-sign Trimsamsa intervals map to the expected planetary-owned signs, including Libra for the final odd-sign Venus interval",
+  d30BoundaryCasesPass,
+  "Odd: Aries/Aquarius/Sagittarius/Gemini/Libra; even: Taurus/Virgo/Pisces/Capricorn/Scorpio",
+  d30BoundaryCasesPass ? "All ten segment starts matched" : "At least one D30 segment start mismatched"
+);
+
+const d30JustBeforeFinalOddBoundary = calculateDivisionalSignIndex(24.999999, "D30");
+const d30AtFinalOddBoundary = calculateDivisionalSignIndex(25, "D30");
+const d30FinalBoundaryPass = d30JustBeforeFinalOddBoundary === 2 && d30AtFinalOddBoundary === 6;
+assertTest(
+  "23.2 D30 Odd 25-Degree Boundary",
+  "The odd-sign D30 changes from Gemini to Libra exactly at 25 degrees",
+  d30FinalBoundaryPass,
+  "Before 25°: Gemini; at 25°: Libra",
+  d30FinalBoundaryPass ? "Gemini -> Libra" : `Before: ${d30JustBeforeFinalOddBoundary}; at: ${d30AtFinalOddBoundary}`
+);
