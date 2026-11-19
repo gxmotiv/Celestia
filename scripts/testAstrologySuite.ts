@@ -1699,7 +1699,7 @@ console.log("Running Category 25: D2, D12, D16 and D20 Parashara Varga fixtures.
 // Sign indices: Aries=0 ... Pisces=11. D2 maps the Sun/Moon Horas
 // to Leo/Cancer respectively; D12 starts from the natal sign.
 function checkVargaSequence(
-  code: "D2" | "D12" | "D16" | "D20",
+  code: "D2" | "D3" | "D4" | "D7" | "D10" | "D12" | "D16" | "D20" | "D24" | "D27" | "D40" | "D45",
   parts: number,
   expectedByNatal: number[][]
 ): { pass: boolean; checked: number; firstFailure: string } {
@@ -1797,6 +1797,60 @@ for (const fixture of higherVargaFixtures) {
     result.pass ? `${result.checked} checks passed` : result.firstFailure
   );
 }
+
+
+
+console.log("Running Category 27: D60 sign convention and boundary tests...");
+
+function checkD60Convention(
+  convention: "from-sign" | "from-aries"
+): { pass: boolean; checked: number; firstFailure: string } {
+  const epsilon = 1e-7;
+  let checked = 0;
+  for (let natal = 0; natal < 12; natal++) {
+    for (let part = 0; part < 60; part++) {
+      const expected = convention === "from-aries"
+        ? part % 12
+        : (natal + (part % 12)) % 12;
+      const midpoint = part * 0.5 + 0.25;
+      const midpointActual = calculateDivisionalSignIndex(natal * 30 + midpoint, "D60", { d60SignConvention: convention });
+      checked++;
+      if (midpointActual !== expected) return { pass: false, checked, firstFailure: `${convention} natal ${natal}, part ${part}: midpoint expected ${expected}, got ${midpointActual}` };
+      const exactActual = calculateDivisionalSignIndex(natal * 30 + part * 0.5, "D60", { d60SignConvention: convention });
+      checked++;
+      if (exactActual !== expected) return { pass: false, checked, firstFailure: `${convention} natal ${natal}, part ${part}: exact boundary expected ${expected}, got ${exactActual}` };
+      if (part > 0) {
+        const beforeActual = calculateDivisionalSignIndex(natal * 30 + part * 0.5 - epsilon, "D60", { d60SignConvention: convention });
+        const previous = convention === "from-aries"
+          ? (part - 1) % 12
+          : (natal + ((part - 1) % 12)) % 12;
+        checked++;
+        if (beforeActual !== previous) return { pass: false, checked, firstFailure: `${convention} natal ${natal}, before part ${part}: expected ${previous}, got ${beforeActual}` };
+      }
+    }
+  }
+  return { pass: true, checked, firstFailure: "" };
+}
+
+for (const convention of ["from-sign", "from-aries"] as const) {
+  const result = checkD60Convention(convention);
+  assertTest(
+    "27.1 D60 Sign Convention",
+    `D60 ${convention}: all 12 natal signs, 60 half-degree parts, exact starts and just-before checks`,
+    result.pass,
+    "All placements follow the explicitly selected sign-counting convention",
+    result.pass ? `${result.checked} checks passed` : result.firstFailure
+  );
+}
+
+const d60DefaultEvenSign = calculateDivisionalSignIndex(30, "D60");
+assertTest(
+  "27.2 D60 Even-Sign Start",
+  "Default from-sign convention begins Taurus D60 at Taurus, not the seventh sign",
+  d60DefaultEvenSign === 1,
+  "Taurus (index 1)",
+  `Got sign index ${d60DefaultEvenSign}`
+);
 
 // SUMMARY OUTPUT — deliberately last so every appended regression fixture is counted.
 console.log("\n=================== TEST RESULTS ===================");
