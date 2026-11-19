@@ -35,6 +35,19 @@ export const PYTHAGOREAN_TABLE: Record<string, number> = {
 export const VOWELS = new Set(["A", "E", "I", "O", "U"]);
 
 /**
+ * Practical Latin-name heuristic for Y: treat it as a vowel when it is
+ * adjacent to a consonant on either side, or appears at the end. This is a
+ * convention, not a phonetic/language-aware syllable parser; users should be
+ * able to review the normalized spelling used for name numerology.
+ */
+function isYVowel(name: string, index: number): boolean {
+  if (name[index] !== "Y") return false;
+  const previousIsConsonant = index > 0 && !VOWELS.has(name[index - 1]);
+  const nextIsConsonant = index < name.length - 1 && !VOWELS.has(name[index + 1]);
+  return previousIsConsonant || nextIsConsonant || index === name.length - 1;
+}
+
+/**
  * Reduce a number to single digit or Master Number (11, 22, 33)
  */
 export function reduceToSingleOrMaster(num: number): number {
@@ -103,12 +116,8 @@ export function calculateSoulUrge(name: string): number {
     const ch = clean[i];
     if (VOWELS.has(ch)) {
       sum += PYTHAGOREAN_TABLE[ch] || 0;
-    } else if (ch === "Y") {
-      const prevIsConsonant = i > 0 && !VOWELS.has(clean[i - 1]);
-      const nextIsConsonant = i < clean.length - 1 && !VOWELS.has(clean[i + 1]);
-      if (prevIsConsonant || nextIsConsonant || i === clean.length - 1) {
-        sum += PYTHAGOREAN_TABLE[ch] || 0;
-      }
+    } else if (ch === "Y" && isYVowel(clean, i)) {
+      sum += PYTHAGOREAN_TABLE[ch] || 0;
     }
   }
   return reduceToSingleOrMaster(sum || 1);
@@ -122,11 +131,7 @@ export function calculatePersonality(name: string): number {
   let sum = 0;
   for (let i = 0; i < clean.length; i++) {
     const ch = clean[i];
-    if (!VOWELS.has(ch)) {
-      if (ch === "Y") {
-        const prevIsConsonant = i > 0 && !VOWELS.has(clean[i - 1]);
-        if (prevIsConsonant) continue; // treated as vowel
-      }
+    if (!VOWELS.has(ch) && !(ch === "Y" && isYVowel(clean, i))) {
       sum += PYTHAGOREAN_TABLE[ch] || 0;
     }
   }
