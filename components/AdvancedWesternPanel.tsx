@@ -198,10 +198,13 @@ export function AdvancedWesternPanel({
         <div>
           <h3 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-amber-400" />
-            Complete Western Astrology Architecture
+            Advanced Western Techniques & Exploratory Modules
           </h3>
           <p className="text-[11px] text-slate-400">
             Asteroids · Shadow Axis · Arabian Parts · Midpoints · Harmonics · Declinations · Progressions · Profections · Releasing · Firdaria · Fixed Stars · Eclipses · Medical · Astrocartography
+          </p>
+          <p className="text-[10px] text-amber-200">
+            This is a technique directory, not a claim that every method is fully implemented or independently validated. Individual panels disclose their calculation limits.
           </p>
         </div>
 
