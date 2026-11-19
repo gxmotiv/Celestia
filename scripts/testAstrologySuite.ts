@@ -20,6 +20,7 @@ import { ASTROLOGY_SPECIALTIES, getAstrologySpecialties } from "../lib/consultat
 import { JaiminiKarakasEngine } from "../lib/vedic/jaiminiKarakas";
 import { calculateAnnualProfection, calculateCompletedAge } from "../lib/astronomy/annualProfections";
 import { SubLordCalculator } from "../lib/kp/subLordEngine";
+import { CompleteBaZiEngine, SolarTermCalculator } from "../lib/astronomy/baziEngine";
 
 interface TestResult {
   category: string;
@@ -1126,6 +1127,53 @@ assertTest(
 );
 
 // ======================================================================
+// ======================================================================
+console.log("Running Category 12: BaZi Da Yun start-age calculation...");
+
+const baziSolar = new SolarTermCalculator();
+const baziBirth = new Date("2000-01-15T12:00:00Z");
+const previousJie = baziSolar.getAdjacentJie(baziBirth, "backward");
+const nextJie = baziSolar.getAdjacentJie(baziBirth, "forward");
+assertTest(
+  "12.1 BaZi Adjacent Jie Selection",
+  "Selects the previous and next month-opening Jie terms, not arbitrary Zhongqi terms",
+  previousJie.term.isMajor &&
+    nextJie.term.isMajor &&
+    previousJie.date < baziBirth &&
+    nextJie.date > baziBirth &&
+    previousJie.term.longitude === 285 &&
+    nextJie.term.longitude === 315,
+  "Previous Xiaohan (285°); next Lichun (315°)",
+  `Previous ${previousJie.term.name} at ${previousJie.date.toISOString()}; next ${nextJie.term.name} at ${nextJie.date.toISOString()}`
+);
+
+const baziEngine = new CompleteBaZiEngine();
+const baziEarly = baziEngine.generateBaZiChart(new Date("2000-01-10T12:00:00Z"), "Male");
+const baziLater = baziEngine.generateBaZiChart(new Date("2000-01-20T12:00:00Z"), "Male");
+const earlyLuck = baziEarly.luckPillars[0];
+const laterLuck = baziLater.luckPillars[0];
+assertTest(
+  "12.2 BaZi Variable Da Yun Start Age",
+  "Start age changes with the exact birth-to-previous-Jie interval; it is not a fixed five-year constant",
+  earlyLuck.startAge !== laterLuck.startAge &&
+    earlyLuck.startAge > 0 &&
+    laterLuck.startAge > earlyLuck.startAge,
+  "Later birth in the same solar month has a later converted start age",
+  `Jan 10: ${earlyLuck.startAge.toFixed(3)} years; Jan 20: ${laterLuck.startAge.toFixed(3)} years`
+);
+
+assertTest(
+  "12.3 BaZi Da Yun Calendar Dates",
+  "Publishes real start/end instants and contiguous ten-year luck periods",
+  Number.isFinite(earlyLuck.startDate.getTime()) &&
+    Number.isFinite(earlyLuck.endDate.getTime()) &&
+    earlyLuck.startDate > new Date("2000-01-10T12:00:00Z") &&
+    earlyLuck.endDate.getTime() === baziEarly.luckPillars[1].startDate.getTime() &&
+    earlyLuck.endDate.getTime() - earlyLuck.startDate.getTime() > 9.9 * 365 * 86400000,
+  "Valid start after birth; next period begins exactly at prior exclusive end",
+  `Start ${earlyLuck.startDate.toISOString()}; end ${earlyLuck.endDate.toISOString()}; contiguous=${earlyLuck.endDate.getTime() === baziEarly.luckPillars[1].startDate.getTime()}`
+);
+
 // SUMMARY OUTPUT
 // ======================================================================
 console.log("\n=================== TEST RESULTS ===================");
