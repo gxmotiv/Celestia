@@ -132,7 +132,7 @@ function normalizePlanetName(name: string): string {
 }
 
 export class JaiminiKarakasEngine {
-  /** Parashari seven-karaka convention: excludes Rahu and Dara Karaka. */
+  /** Seven-graha variant with Matru/Putra merged: excludes Rahu and Dara Karaka. */
   public calculate7Karakas(planets: PlanetInput[], ascendantInput?: AscendantInput): JaiminiKarakasResult {
     return this.calculateScheme("Seven-Graha-Option", planets, ascendantInput);
   }
