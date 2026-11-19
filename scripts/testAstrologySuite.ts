@@ -1589,6 +1589,20 @@ assertTest(
   unknownVargaRejected ? "Rejected" : "Unknown division silently accepted"
 );
 
+let unknownChartCodeRejected = false;
+try {
+  calculateDivisionalChart([], 12.5, "D999");
+} catch {
+  unknownChartCodeRejected = true;
+}
+assertTest(
+  "22.3 Generic Varga Chart API Validation",
+  "Full chart API rejects an unknown division code instead of returning a mislabeled D1 chart",
+  unknownChartCodeRejected,
+  "Unknown division rejected",
+  unknownChartCodeRejected ? "Rejected" : "Unknown division silently accepted"
+);
+
 console.log("Running Category 24: D3, D4, D7 and D10 Parashara Varga fixtures...");
 
 // Independent rule tables transcribed from BPHS Chapter 6, verses 7-14.
