@@ -523,7 +523,7 @@ export class MultiSystemBenchmarkRunner {
       name: "Seven-graha Chara Karaka option (Matru/Putra merged)",
       category: "Parashari Astrology",
       classicalAuthority: "Brihat Parashara Hora Shastra, chapter 32, verses 1–2 and 13–17",
-      expectedFormula: "Sun through Saturn; AK, AmK, BK, MK, PiK, PK, GK",
+      expectedFormula: "Sun through Saturn; AK, AmK, BK, merged MK/PK, PiK, GK, DK",
       actualResult: parashari ? `${parashari.label}: ${parashari.karakas.length} roles` : "Missing",
       passed: parashari?.scheme === "Parashari-7" &&
         parashari.karakas.length === 7 &&
