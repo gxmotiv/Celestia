@@ -61,14 +61,17 @@ const PLANET_SYMBOLS: Record<string, string> = {
 
 export class PlanetaryHoursCalculator {
   /**
-   * Approximate sunrise and sunset times (in decimal hours 0..24)
-   * using solar declination and geographic latitude.
+   * Approximate sunrise and sunset in local clock time.
+   * Includes longitude, timezone meridian and a low-order equation of time;
+   * this remains an approximation, not an ephemeris-grade horizon solution.
    */
   public calculateSunTimes(
     year: number,
     month: number,
     day: number,
-    latitude: number
+    latitude: number,
+    longitude: number = 0,
+    timezoneOffsetHours: number = 0
   ): { sunrise: number; sunset: number } {
     // Day of the year
     const startOfYear = new Date(Date.UTC(year, 0, 1));
@@ -89,9 +92,18 @@ export class PlanetaryHoursCalculator {
 
     const H = Math.acos(cosH) * (180.0 / Math.PI) / 15.0; // hours from solar noon
 
-    const solarNoon = 12.0; // Mean solar noon approximation
-    const sunrise = Math.max(0, solarNoon - H);
-    const sunset = Math.min(24, solarNoon + H);
+    // Equation of Time (minutes), low-order NOAA-style approximation.
+    const B = (2 * Math.PI / 364) * (dayOfYear - 81);
+    const equationOfTimeMinutes =
+      9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
+
+    // Local apparent solar noon in local civil clock time. The timezone
+    // offset is hours east of UTC (e.g. IST = +5.5).
+    const solarNoon =
+      12 + (15 * timezoneOffsetHours - longitude) / 15 -
+      equationOfTimeMinutes / 60;
+    const sunrise = solarNoon - H;
+    const sunset = solarNoon + H;
 
     return { sunrise, sunset };
   }
@@ -102,10 +114,14 @@ export class PlanetaryHoursCalculator {
     day: number,
     hour: number,
     minute: number,
-    latitude: number
+    latitude: number,
+    longitude: number = 0,
+    timezoneOffsetHours: number = 0
   ): PlanetaryHoursResult {
     const birthTimeDecimal = hour + minute / 60.0;
-    const { sunrise, sunset } = this.calculateSunTimes(year, month, day, latitude);
+    const { sunrise, sunset } = this.calculateSunTimes(
+      year, month, day, latitude, longitude, timezoneOffsetHours
+    );
 
     // Day of the week: 0 = Sun, 1 = Mon, ..., 6 = Sat
     const dateObj = new Date(Date.UTC(year, month - 1, day));
