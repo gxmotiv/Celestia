@@ -1218,7 +1218,7 @@ assertTest(
   "Keeps the actual sidereal Placidus cusp at 29° instead of snapping it to 0° of the next sign",
   Math.abs(preservedKP.cusps[0] - 29) < 1e-8 &&
     Math.abs(preservedKP.houseDetails[0].degreeInSign - 29) < 1e-8,
-  "29°00'00" retained",
+  '29°00′00″ retained',
   `Cusp=${preservedKP.cusps[0].toFixed(8)}°; degree-in-sign=${preservedKP.houseDetails[0].degreeInSign.toFixed(8)}°`
 );
 
