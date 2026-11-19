@@ -22,7 +22,8 @@ import { calculateAnnualProfection, calculateCompletedAge } from "../lib/astrono
 import { SubLordCalculator } from "../lib/kp/subLordEngine";
 import { CompleteBaZiEngine, SolarTermCalculator } from "../lib/astronomy/baziEngine";
 import { KPCuspsCalculator } from "../lib/kp/kpCusps";
-import { calculateNumerologyAgreementIndex } from "../lib/numerology";
+import { calculateNumerologyAgreementIndex, calculateCompleteNumerologyReport } from "../lib/numerology";
+import { calculateSoulUrge, calculatePersonality } from "../lib/numerology/pythagorean";
 import { swissEphemeris } from "../lib/astronomy/swissEphemeris";
 import { PlanetaryHoursCalculator } from "../lib/astronomy/planetaryHours";
 import { EclipseAnalyzer, AstrocartographyEngine, FixedStarsEngine } from "../lib/astronomy/specializedWesternEngines";
@@ -1386,6 +1387,45 @@ assertTest(
   Math.abs(solarMidpoint(greenwichTimes) - solarMidpoint(east15LocalTimes)) < 1e-8,
   "Same local solar noon",
   `Difference=${(solarMidpoint(greenwichTimes) - solarMidpoint(east15LocalTimes)).toFixed(8)} hours`
+);
+
+// ======================================================================
+console.log("Running Category 19: Numerology name and input validation...");
+
+assertTest(
+  "19.1 Pythagorean Y Vowel Consistency",
+  "Yvonne treats Y as a vowel in Soul Urge and excludes it from Personality",
+  calculateSoulUrge("Yvonne") === 9 && calculatePersonality("Yvonne") === 5,
+  "Soul Urge 9; Personality 5",
+  `Soul Urge=${calculateSoulUrge("Yvonne")}; Personality=${calculatePersonality("Yvonne")}`
+);
+assertTest(
+  "19.2 Pythagorean Y Consonant Case",
+  "Yellow treats initial Y as a consonant while E and O contribute to Soul Urge",
+  calculatePersonality("Yellow") === 9 && calculateSoulUrge("Yellow") === 11,
+  "Personality 9; Soul Urge 11",
+  `Personality=${calculatePersonality("Yellow")}; Soul Urge=${calculateSoulUrge("Yellow")}`
+);
+
+const invalidNumerologyCases: Array<[string, number, number, number]> = [
+  ["", 2000, 1, 1],
+  ["Test Person", 2001, 2, 29],
+  ["测试", 2000, 1, 1],
+];
+const allInvalidNumerologyRejected = invalidNumerologyCases.every(([name, year, month, day]) => {
+  try {
+    calculateCompleteNumerologyReport(name, year, month, day);
+    return false;
+  } catch {
+    return true;
+  }
+});
+assertTest(
+  "19.3 Numerology Invalid Input Rejection",
+  "Rejects blank names, impossible Gregorian dates and unsupported non-Latin name alphabets",
+  allInvalidNumerologyRejected,
+  "All three invalid cases rejected",
+  allInvalidNumerologyRejected ? "All rejected" : "At least one invalid case accepted"
 );
 
 // SUMMARY OUTPUT
