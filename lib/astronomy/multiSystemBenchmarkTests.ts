@@ -497,7 +497,7 @@ export class MultiSystemBenchmarkRunner {
       notes: "Mathematical total of Sarvashtakavarga is universally invariant.",
     });
 
-    // 7. Jaimini eight-karaka and Parashari seven-karaka schemes are separate.
+    // 7. Jaimini eight-karaka and Seven-graha schemes are separate.
     const jaimini = vChart.jaiminiKarakas;
     const jaiminiAK = jaimini?.atmakaraka;
     list.push({
@@ -516,7 +516,7 @@ export class MultiSystemBenchmarkRunner {
       notes: "Rahu reverse-degree policy and the selected eight-role scheme are shown explicitly; exact ties emit warnings.",
     });
 
-    const parashari = vChart.parashariKarakas;
+    const sevenGraha = vChart.sevenGrahaKarakas;
     list.push({
       id: "V-PAR-01",
       system: "Vedic",
@@ -524,12 +524,12 @@ export class MultiSystemBenchmarkRunner {
       category: "Parashari Astrology",
       classicalAuthority: "Brihat Parashara Hora Shastra, chapter 32, verses 1–2 and 13–17",
       expectedFormula: "Sun through Saturn; AK, AmK, BK, merged MK/PK, PiK, GK, DK",
-      actualResult: parashari ? `${parashari.label}: ${parashari.karakas.length} roles` : "Missing",
+      actualResult: sevenGraha ? `${sevenGraha.label}: ${sevenGraha.karakas.length} roles` : "Missing",
       passed: parashari?.scheme === "Seven-Graha-Option" &&
-        parashari.karakas.length === 7 &&
-        parashari.karakas.some((karaka) => karaka.roleShort === "PiK") &&
-        parashari.karakas.some((karaka) => karaka.roleShort === "MK/PK") &&
-        parashari.karakas.some((karaka) => karaka.roleShort === "DK"),
+        sevenGraha.karakas.length === 7 &&
+        sevenGraha.karakas.some((karaka) => karaka.roleShort === "PiK") &&
+        sevenGraha.karakas.some((karaka) => karaka.roleShort === "MK/PK") &&
+        sevenGraha.karakas.some((karaka) => karaka.roleShort === "DK"),
       notes: "Kept separate from the Jaimini eight-karaka convention; no Rahu is included.",
     });
 
