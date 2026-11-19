@@ -13,6 +13,8 @@
  */
 
 import {
+  calculateSoulUrge,
+  calculatePersonality,
   calculateCompleteNumerologyReport,
   calculatePinnacles,
   calculateChallenges,
@@ -106,6 +108,30 @@ assert("Einstein dominant plane identified", planes.dominantPlane.length > 0);
 // "Albert Einstein" -> Initial A (1) + Initial E (5) = 6
 const bal = calculateBalanceNumber("Albert Einstein");
 assert("Einstein Balance Number from initials A(1)+E(5) is 6", bal.balanceNumber === 6, `Got ${bal.balanceNumber}`);
+
+// Y is classified once and the same classification is used by both
+// Soul Urge and Personality. "Yvonne" is a vowel-Y example; "Yellow" is a
+// consonant-Y example under the documented Latin-name heuristic.
+assert(
+  "Yvonne: Y is included in Soul Urge",
+  calculateSoulUrge("Yvonne") === 9,
+  `Got ${calculateSoulUrge("Yvonne")}`
+);
+assert(
+  "Yvonne: Y is excluded from Personality when treated as a vowel",
+  calculatePersonality("Yvonne") === 5,
+  `Got ${calculatePersonality("Yvonne")}`
+);
+assert(
+  "Yellow: initial Y is treated as a consonant",
+  calculatePersonality("Yellow") === 9,
+  `Got ${calculatePersonality("Yellow")}`
+);
+assert(
+  "Yellow: Soul Urge retains only E and O",
+  calculateSoulUrge("Yellow") === 11,
+  `Got ${calculateSoulUrge("Yellow")}`
+);
 
 // -----------------------------------------------------------------------------
 // 2. INDIAN VEDIC NUMEROLOGY (SANKHYA SHASTRA) TESTS
