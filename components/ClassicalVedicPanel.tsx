@@ -108,8 +108,13 @@ export function ClassicalVedicPanel({ vedicData }: ClassicalVedicPanelProps) {
                     {ak.planet} ({ak.roleName})
                   </h3>
                   <p className="text-xs text-amber-200/80">
-                    Highest Sidereal Arc: {ak.rasiDegreeFormatted} in {ak.sign} (House {ak.house})
+                    Actual longitude: {ak.rasiDegreeFormatted} in {ak.sign} (House {ak.house})
                   </p>
+                  {ak.isReverseCounted && (
+                    <p className="text-xs text-cyan-200/80">
+                      Rahu ranking degree: {ak.effectiveDegreeFormatted} (30° − actual degree)
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -178,7 +183,12 @@ export function ClassicalVedicPanel({ vedicData }: ClassicalVedicPanelProps) {
                         </div>
                       </td>
                       <td className="py-3 px-3 font-mono text-amber-300">
-                        {k.rasiDegreeFormatted} {k.sign}
+                        <div>{k.rasiDegreeFormatted} {k.sign}</div>
+                        {k.isReverseCounted && (
+                          <div className="text-[10px] text-cyan-300">
+                            Ranking degree: {k.effectiveDegreeFormatted} (reverse)
+                          </div>
+                        )}
                       </td>
                       <td className="py-3 px-2 text-center text-slate-300">House {k.house}</td>
                       <td className="py-3 px-3 font-medium text-cyan-300">{k.lifeDomain}</td>
