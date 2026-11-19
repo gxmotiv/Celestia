@@ -1521,8 +1521,11 @@ assertTest(
   validNavamsaRanges ? "All values in range" : "Out-of-range or non-finite value found"
 );
 
-const justBeforeNavamsaBoundary = navamsaCalculator.calculateNavamsa(3 + 1 / 3 - 1e-8, "Test");
-const atNavamsaBoundary = navamsaCalculator.calculateNavamsa(3 + 1 / 3, "Test");
+// Use 10/3 as the nearest IEEE-754 representation of the exact mathematical 3°20′ boundary.
+// The expression 3 + 1/3 rounds one ULP below that value and is therefore still before the boundary.
+const exactNavamsaBoundary = 10 / 3;
+const justBeforeNavamsaBoundary = navamsaCalculator.calculateNavamsa(exactNavamsaBoundary - 1e-8, "Test");
+const atNavamsaBoundary = navamsaCalculator.calculateNavamsa(exactNavamsaBoundary, "Test");
 assertTest(
   "21.3 D9 Exact 3°20′ Boundary",
   "Aries Navamsa changes from Aries to Taurus exactly at 3°20′",
