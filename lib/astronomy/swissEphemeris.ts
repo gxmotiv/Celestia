@@ -357,7 +357,8 @@ export class SwissEphemerisEngine {
       lon = ((lon - ayanamsa) % 360 + 360) % 360;
     }
 
-    // Rounding to 0.0001° gives true 0.001° accuracy while avoiding float jitter
+    // Round output to 0.0001° for stable display; this is numeric precision,
+    // not a claim that the underlying ephemeris is accurate to that tolerance.
     const round4 = (v: number) => Math.round(v * 10000) / 10000;
 
     return {
