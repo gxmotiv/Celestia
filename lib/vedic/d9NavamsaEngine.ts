@@ -175,6 +175,9 @@ export class NavamsaCalculator {
     longitude: number,
     planetName: string = "Point"
   ): NavamsaPosition {
+    if (!Number.isFinite(longitude)) {
+      throw new Error("Navamsa longitude must be a finite number of degrees.");
+    }
     const norm = (longitude % 360 + 360) % 360;
     const signIndex = Math.floor(norm / 30);
     const degreeInSign = norm % 30;
