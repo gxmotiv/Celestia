@@ -1428,6 +1428,78 @@ assertTest(
   allInvalidNumerologyRejected ? "All rejected" : "At least one invalid case accepted"
 );
 
+// ======================================================================
+// CATEGORY 20: WESTERN ANNUAL PROFECTIONS
+// ======================================================================
+console.log("Running Category 20: Annual Profection Boundary and Convention Tests...");
+
+const profectionBeforeBirthday = calculateCompletedAge("2000-06-15", "2024-06-14");
+const profectionOnBirthday = calculateCompletedAge("2000-06-15", "2024-06-15");
+const profectionAfterBirthday = calculateCompletedAge("2000-06-15", "2024-06-16");
+assertTest(
+  "20.1 Annual Profection Birthday Boundary",
+  "Completed age changes on the birthday, not one day before or after it",
+  profectionBeforeBirthday === 23 && profectionOnBirthday === 24 && profectionAfterBirthday === 24,
+  "23 / 24 / 24",
+  `${profectionBeforeBirthday} / ${profectionOnBirthday} / ${profectionAfterBirthday}`
+);
+
+const profectionYearOne = calculateAnnualProfection("2000-06-15", "2001-06-15", 6);
+assertTest(
+  "20.2 Annual Profection House and Time Lord",
+  "Age one activates the 2nd whole-sign house from Libra, Scorpio, with Mars as traditional ruler",
+  profectionYearOne.age === 1 &&
+    profectionYearOne.profectedHouse === 2 &&
+    profectionYearOne.profectedSign === "Scorpio" &&
+    profectionYearOne.timeLord === "Mars",
+  "Age 1 / 2nd house / Scorpio / Mars",
+  `Age ${profectionYearOne.age} / house ${profectionYearOne.profectedHouse} / ${profectionYearOne.profectedSign} / ${profectionYearOne.timeLord}`
+);
+
+const profectionTwelve = calculateAnnualProfection("2000-06-15", "2012-06-15", 6);
+assertTest(
+  "20.3 Annual Profection Twelve-Year Reset",
+  "Age twelve returns to the 1st house and natal Ascendant sign",
+  profectionTwelve.age === 12 &&
+    profectionTwelve.profectedHouse === 1 &&
+    profectionTwelve.profectedSign === "Libra" &&
+    profectionTwelve.timeLord === "Venus",
+  "Age 12 / 1st house / Libra / Venus",
+  `Age ${profectionTwelve.age} / house ${profectionTwelve.profectedHouse} / ${profectionTwelve.profectedSign} / ${profectionTwelve.timeLord}`
+);
+
+const leapDayBeforeMarch = calculateCompletedAge("2000-02-29", "2023-02-28");
+const leapDayOnMarchFirst = calculateCompletedAge("2000-02-29", "2023-03-01");
+assertTest(
+  "20.4 Leap-Day Birthday Convention",
+  "Declares and applies a March 1 birthday rollover in non-leap years for February 29 births",
+  leapDayBeforeMarch === 22 && leapDayOnMarchFirst === 23,
+  "22 on Feb 28 / 23 on Mar 1",
+  `${leapDayBeforeMarch} on Feb 28 / ${leapDayOnMarchFirst} on Mar 1`
+);
+
+const invalidProfectionInputs: Array<() => unknown> = [
+  () => calculateCompletedAge("2001-02-29", "2024-01-01"),
+  () => calculateCompletedAge("2000-01-02", "2000-01-01"),
+  () => calculateAnnualProfection("2000-01-01", "2024-01-01", -1),
+  () => calculateAnnualProfection("2000-01-01", "2024-01-01", 12),
+];
+const invalidProfectionsRejected = invalidProfectionInputs.every((run) => {
+  try {
+    run();
+    return false;
+  } catch {
+    return true;
+  }
+});
+assertTest(
+  "20.5 Annual Profection Invalid Input Rejection",
+  "Rejects impossible birth dates, target dates before birth and invalid Ascendant sign indices",
+  invalidProfectionsRejected,
+  "All four invalid inputs rejected",
+  invalidProfectionsRejected ? "All rejected" : "At least one invalid input accepted"
+);
+
 // SUMMARY OUTPUT
 // ======================================================================
 console.log("\n=================== TEST RESULTS ===================");
