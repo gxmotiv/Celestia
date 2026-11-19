@@ -525,7 +525,7 @@ export class MultiSystemBenchmarkRunner {
       classicalAuthority: "Brihat Parashara Hora Shastra, chapter 32, verses 1–2 and 13–17",
       expectedFormula: "Sun through Saturn; AK, AmK, BK, merged MK/PK, PiK, GK, DK",
       actualResult: sevenGraha ? `${sevenGraha.label}: ${sevenGraha.karakas.length} roles` : "Missing",
-      passed: parashari?.scheme === "Seven-Graha-Option" &&
+      passed: sevenGraha?.scheme === "Seven-Graha-Option" &&
         sevenGraha.karakas.length === 7 &&
         sevenGraha.karakas.some((karaka) => karaka.roleShort === "PiK") &&
         sevenGraha.karakas.some((karaka) => karaka.roleShort === "MK/PK") &&
