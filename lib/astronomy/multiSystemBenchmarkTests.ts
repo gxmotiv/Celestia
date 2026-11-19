@@ -520,7 +520,7 @@ export class MultiSystemBenchmarkRunner {
     list.push({
       id: "V-PAR-01",
       system: "Vedic",
-      name: "Parashari 7 Chara Karakas (Pitrikaraka included; Dara excluded)",
+      name: "Seven-graha Chara Karaka option (Matru/Putra merged)",
       category: "Parashari Astrology",
       classicalAuthority: "Brihat Parashara Hora Shastra, chapter 32 convention",
       expectedFormula: "Sun through Saturn; AK, AmK, BK, MK, PiK, PK, GK",
