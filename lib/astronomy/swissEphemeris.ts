@@ -283,7 +283,8 @@ export class SwissEphemerisEngine {
   }
 
   /**
-   * Calculate EXACT planetary position with 0.001° precision
+   * Calculate an apparent geocentric position using astronomy-engine.
+   * Decimal output rounding is not a guarantee of physical accuracy.
    */
   public calculatePlanetPosition(
     planet: number,
