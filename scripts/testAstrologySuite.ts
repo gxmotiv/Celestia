@@ -1613,6 +1613,78 @@ if (failCount > 0) {
   process.exit(1);
 }
 
+
+console.log("Running Category 24: D3, D4, D7 and D10 Parashara Varga fixtures...");
+
+// Independent rule tables transcribed from BPHS Chapter 6, verses 7-14.
+// Sign indices: Aries=0 ... Pisces=11. D7/D10 use inclusive ordinal
+// starts: same sign for odd signs; 7th / 9th respectively for even signs.
+const d3Offsets = [0, 4, 8];
+const d4Offsets = [0, 3, 6, 9];
+const d7Starts = [0, 7, 2, 9, 4, 11, 6, 1, 8, 3, 10, 5];
+const d10Starts = [0, 9, 2, 11, 4, 1, 6, 3, 8, 5, 10, 7];
+
+function checkEqualVargaBoundaries(
+  code: "D3" | "D4" | "D7" | "D10",
+  parts: number,
+  starts: number[],
+  offsets: number[] | null
+): { pass: boolean; checked: number; firstFailure: string } {
+  const width = 30 / parts;
+  const epsilon = 1e-7;
+  let checked = 0;
+  for (let natal = 0; natal < 12; natal++) {
+    const start = offsets ? (natal + offsets[0]) % 12 : starts[natal];
+    for (let part = 0; part < parts; part++) {
+      const expected = (start + (offsets ? offsets[part] : part)) % 12;
+      const midpoint = (part + 0.5) * width;
+      const midpointActual = calculateDivisionalSignIndex(natal * 30 + midpoint, code);
+      checked++;
+      if (midpointActual !== expected) {
+        return { pass: false, checked, firstFailure: `${code} natal ${natal}, part ${part}: midpoint expected ${expected}, got ${midpointActual}` };
+      }
+      const boundary = part * width;
+      const exactActual = calculateDivisionalSignIndex(natal * 30 + boundary, code);
+      checked++;
+      if (exactActual !== expected) {
+        return { pass: false, checked, firstFailure: `${code} natal ${natal}, part ${part}: exact boundary expected ${expected}, got ${exactActual}` };
+      }
+      if (part > 0) {
+        const beforeActual = calculateDivisionalSignIndex(natal * 30 + boundary - epsilon, code);
+        checked++;
+        const beforeExpected = (start + (offsets ? offsets[part - 1] : part - 1)) % 12;
+        if (beforeActual !== beforeExpected) {
+          return { pass: false, checked, firstFailure: `${code} natal ${natal}, before part ${part}: expected ${beforeExpected}, got ${beforeActual}` };
+        }
+      }
+    }
+  }
+  return { pass: true, checked, firstFailure: "" };
+}
+
+const vargaFixtures = [
+  { code: "D3" as const, parts: 3, starts: [], offsets: d3Offsets, label: "D3 same / 5th / 9th" },
+  { code: "D4" as const, parts: 4, starts: [], offsets: d4Offsets, label: "D4 four kendras" },
+  { code: "D7" as const, parts: 7, starts: d7Starts, offsets: null, label: "D7 odd/even starts" },
+  { code: "D10" as const, parts: 10, starts: d10Starts, offsets: null, label: "D10 odd/even starts" },
+];
+
+for (const fixture of vargaFixtures) {
+  const result = checkEqualVargaBoundaries(
+    fixture.code,
+    fixture.parts,
+    fixture.starts,
+    fixture.offsets
+  );
+  assertTest(
+    "24.1 Parashara Varga Mapping",
+    `${fixture.label}: all 12 natal signs, segment midpoints and exact boundaries`,
+    result.pass,
+    `All expected mappings pass; just-before checks at each internal boundary (${fixture.code})`,
+    result.pass ? `${result.checked} checks passed` : result.firstFailure
+  );
+}
+
 console.log("Running Category 23: D30 Trimsamsa mapping boundaries...");
 
 const oddD30Cases: Array<[number, number]> = [
