@@ -24,6 +24,7 @@ import { CompleteBaZiEngine, SolarTermCalculator } from "../lib/astronomy/baziEn
 import { KPCuspsCalculator } from "../lib/kp/kpCusps";
 import { calculateNumerologyAgreementIndex } from "../lib/numerology";
 import { swissEphemeris } from "../lib/astronomy/swissEphemeris";
+import { PlanetaryHoursCalculator } from "../lib/astronomy/planetaryHours";
 import { EclipseAnalyzer, AstrocartographyEngine, FixedStarsEngine } from "../lib/astronomy/specializedWesternEngines";
 
 interface TestResult {
@@ -1362,6 +1363,29 @@ assertTest(
     Math.abs(meanNodePair.rahu.speed - meanNodePair.ketu.speed) < 1e-8,
   "Opposite latitude; equal speed",
   `Latitude sum=${(meanNodePair.rahu.latitude + meanNodePair.ketu.latitude).toFixed(8)}; speed difference=${(meanNodePair.rahu.speed - meanNodePair.ketu.speed).toFixed(8)}`
+);
+
+// ======================================================================
+console.log("Running Category 18: Planetary-hour local solar time...");
+
+const planetaryHourCalc = new PlanetaryHoursCalculator();
+const greenwichTimes = planetaryHourCalc.calculateSunTimes(2024, 4, 8, 0, 0, 0);
+const east15Times = planetaryHourCalc.calculateSunTimes(2024, 4, 8, 0, 15, 0);
+const east15LocalTimes = planetaryHourCalc.calculateSunTimes(2024, 4, 8, 0, 15, 1);
+const solarMidpoint = (times: { sunrise: number; sunset: number }) => (times.sunrise + times.sunset) / 2;
+assertTest(
+  "18.1 Longitude Shifts Local Solar Noon",
+  "A location 15° east has local solar noon one clock hour earlier at the same UTC offset",
+  Math.abs((solarMidpoint(greenwichTimes) - solarMidpoint(east15Times)) - 1) < 1e-8,
+  "1 hour earlier",
+  `${(solarMidpoint(greenwichTimes) - solarMidpoint(east15Times)).toFixed(6)} hours earlier`
+);
+assertTest(
+  "18.2 Timezone Meridian Compensation",
+  "A +1-hour timezone offset compensates for a 15° east longitude shift",
+  Math.abs(solarMidpoint(greenwichTimes) - solarMidpoint(east15LocalTimes)) < 1e-8,
+  "Same local solar noon",
+  `Difference=${(solarMidpoint(greenwichTimes) - solarMidpoint(east15LocalTimes)).toFixed(8)} hours`
 );
 
 // SUMMARY OUTPUT
