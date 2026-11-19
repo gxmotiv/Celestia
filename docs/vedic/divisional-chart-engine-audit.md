@@ -118,3 +118,20 @@ These are source-backed implementation fixtures, not independent ephemeris/chart
 
 A structural issue was found while extending the suite: Categories 23 and 24 had been appended after the old summary and failure-exit block. Their assertions executed, but were not included in the printed totals or the final non-zero exit decision. The summary and failure gate have now been moved to the end of the test file so all varga assertions are counted and can fail CI. Earlier workflow success therefore validated the build pipeline but did **not** prove those post-summary fixtures were gating CI. Re-run the full workflow after this harness correction before treating the expanded varga suite as CI-verified.
 
+## Higher-varga mapping review: D24, D27, D40 and D45
+
+The current code's sign-start formulas were compared with BPHS Chapter 6 verses 22–26 and 29–32, using the Sanskrit/English verse presentation and a separate Santhanam-based transcription summary.
+
+- **D24 Chaturvimshamsa (6.22–23):** 24 equal parts of 1°15′. Odd signs start from Leo; even signs start from Cancer. The verse describes the deities and reverse order for even signs; the sign-start rule is explicit.
+- **D27 Saptavimshamsa / Bhamsa (6.24–26):** 27 equal parts of 1°06′40″. The text names the nakshatra deities and says the sequence is reckoned from Aries and the movable signs. A common implementation interprets this as elemental starts: fire signs from Aries, earth from Cancer, air from Libra, water from Capricorn. The text does not spell out that four-element mapping in the same explicit way as D24/D40, so Celestia's current elemental mapping is tested as a **documented interpretive convention**, not a universally settled literal reading.
+- **D40 Khavedamsa (6.29–30):** 40 equal parts of 45′. Odd signs start from Aries; even signs from Libra.
+- **D45 Akshavedamsa (6.31–32):** 45 equal parts of 40′. Movable signs start from Aries, fixed signs from Leo, and dual signs from Sagittarius.
+
+The production sign-mapping formulas already match these selected rules; this batch adds exhaustive mapping fixtures rather than changing formulas. Fixtures cover all 12 natal signs, all segment midpoints, exact segment starts, and positions immediately before internal boundaries (4,284 checks across D24/D27/D40/D45).
+
+Sources:
+- [BPHS Chapter 6 — Sanskrit verses and English translation](https://vedicpupil.in/library/books/brihat-parashara-hora-shastra/chapter-6) — see verses 6.22–6.32. The page presents its own English translation from Sanskrit; it should still be compared with printed editions/commentaries before making claims of universal textual consensus.
+- [Parashara and Jaimini classical corpus notes](https://jatakaveda.com/library/parashara-jaimini/) — a secondary source explicitly distinguishes the D27 elemental mapping as an interpretation of the wording, rather than a fully spelled-out rule in the e-text transcription.
+
+These tests validate the selected sign assignment and segment boundaries only. They do not validate interpretive claims, divisional degree display, dignity, varga strength, or the full chart's independent agreement with a trusted reference implementation.
+
