@@ -22,6 +22,7 @@ import { calculateAnnualProfection, calculateCompletedAge } from "../lib/astrono
 import { SubLordCalculator } from "../lib/kp/subLordEngine";
 import { CompleteBaZiEngine, SolarTermCalculator } from "../lib/astronomy/baziEngine";
 import { KPCuspsCalculator } from "../lib/kp/kpCusps";
+import { calculateNumerologyAgreementIndex } from "../lib/numerology";
 
 interface TestResult {
   category: string;
@@ -1198,6 +1199,39 @@ assertTest(
     Math.abs(preservedKP.houseDetails[0].degreeInSign - 29) < 1e-8,
   "29°00'00" retained",
   `Cusp=${preservedKP.cusps[0].toFixed(8)}°; degree-in-sign=${preservedKP.houseDetails[0].degreeInSign.toFixed(8)}°`
+);
+
+// ======================================================================
+console.log("Running Category 14: Numerology agreement-index integrity...");
+
+assertTest(
+  "14.1 Numerology Zero Agreement",
+  "Allows zero rule matches instead of forcing an artificial minimum score",
+  calculateNumerologyAgreementIndex(0) === 0,
+  "0",
+  String(calculateNumerologyAgreementIndex(0))
+);
+assertTest(
+  "14.2 Numerology Agreement Bounds",
+  "Clamps only to the declared 0–100 range",
+  calculateNumerologyAgreementIndex(-10) === 0 &&
+    calculateNumerologyAgreementIndex(45) === 45 &&
+    calculateNumerologyAgreementIndex(140) === 100,
+  "0 / 45 / 100",
+  `${calculateNumerologyAgreementIndex(-10)} / ${calculateNumerologyAgreementIndex(45)} / ${calculateNumerologyAgreementIndex(140)}`
+);
+let invalidAgreementScoreRejected = false;
+try {
+  calculateNumerologyAgreementIndex(Number.NaN);
+} catch {
+  invalidAgreementScoreRejected = true;
+}
+assertTest(
+  "14.3 Numerology Invalid Score Input",
+  "Rejects NaN rather than emitting a misleading index",
+  invalidAgreementScoreRejected,
+  "NaN rejected",
+  invalidAgreementScoreRejected ? "Rejected" : "Accepted"
 );
 
 // SUMMARY OUTPUT
