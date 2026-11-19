@@ -88,7 +88,8 @@ export interface VedicChartData {
   currentAntardasha: string;
   yogas: VedicYoga[];
   d9Chart?: D9Chart;
-  jaiminiKarakas?: JaiminiKarakasResult;
+  jaiminiKarakas?: JaiminiKarakasResult; // Jaimini eight-karaka convention
+  parashariKarakas?: JaiminiKarakasResult; // Parashari seven-karaka convention
   taraBala?: TaraBalaResult;
   gocharVedha?: GocharVedhaReport;
 }
@@ -703,9 +704,10 @@ export function calculateVedicChart(
     ),
   });
 
-  // Jaimini Chara Karakas (7-Karaka System)
+  // Keep the two source traditions as separately labelled, inspectable results.
   const jaiminiEngine = new JaiminiKarakasEngine();
-  const jaiminiKarakas = jaiminiEngine.calculate7Karakas(vedicPlanets, lagnaPlanet);
+  const jaiminiKarakas = jaiminiEngine.calculate8Karakas(vedicPlanets, lagnaPlanet);
+  const parashariKarakas = jaiminiEngine.calculate7Karakas(vedicPlanets, lagnaPlanet);
 
   // Tara Bala (9-Tara Chakra for birth Nakshatra)
   const taraBalaEngine = new TaraBalaEngine();
@@ -737,6 +739,7 @@ export function calculateVedicChart(
     yogas,
     d9Chart,
     jaiminiKarakas,
+    parashariKarakas,
     taraBala,
     gocharVedha,
   };
