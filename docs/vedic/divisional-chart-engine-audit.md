@@ -95,3 +95,26 @@ Each division must have its own rule reference, selectable convention where trad
 ## Non-claims
 
 This audit does not claim that every current sign-mapping formula is wrong. It identifies concrete API/metadata defects and missing verification. It also does not establish one universally accepted rule for every disputed varga convention. Primary textual editions, reputable commentaries, and independent calculation fixtures are still required before certification.
+
+## Additional source-backed mapping review: D2, D12, D16 and D20
+
+The existing sign-assignment branches for these four Vargas match the rules transcribed from BPHS Chapter 6 in the cited source texts:
+
+- **D2 Hora (6.5–6):** the two 15° halves are assigned to Sun and Moon Horas. In the Parashara mapping used here, the Sun Hora is represented by Leo and the Moon Hora by Cancer; odd signs take Sun then Moon, while even signs reverse the order. This is a specific Parashara Hora convention, not a claim that every Hora school uses the same chart construction.
+- **D12 Dwadasamsa (6.15):** twelve consecutive 2°30′ divisions begin from the natal sign and proceed zodiacally.
+- **D16 Shodasamsa (6.16):** sixteen 1°52′30″ divisions proceed from Aries for movable signs, Leo for fixed signs, and Sagittarius for dual signs.
+- **D20 Vimshamsa (6.17–21):** twenty 1°30′ divisions proceed from Aries for movable signs, Sagittarius for fixed signs, and Leo for dual signs.
+
+The implementation already matched these sign-placement rules, so this phase adds independent fixtures rather than changing the production mapping formulas. The new fixtures cover all 12 natal signs, every segment midpoint, each exact segment start, and a point immediately before every internal boundary (1,752 checks across D2/D12/D16/D20).
+
+Sources consulted:
+- [BPHS Chapter 6, English translation (Jyotish Vidya)](http://jyotishvidya.com/ch6.htm) — verses on Hora, Dvadasamsa, Shodasamsa and Vimshamsa.
+- [BPHS Chapter 6 Sanskrit text and verse divisions](https://astrologicalharsh.com/classics/bphs/chapter-6/) — useful for checking the underlying Sanskrit verses; the page itself notes that proof-reading against a printed edition remains incomplete and OCR/typing variants are possible.
+- [BPHS 6.15 Sanskrit and explanation](https://vedicpupil.in/library/books/brihat-parashara-hora-shastra/chapter-6/verse-15) — cross-check for D12's count from the respective natal sign. The page explicitly cautions that its Sanskrit-only explanation may contain errors.
+
+These are source-backed implementation fixtures, not independent ephemeris/chart-output certification. Translation, recension and lineage differences remain possible and should be selectable/documented where relevant.
+
+## Regression harness correction
+
+A structural issue was found while extending the suite: Categories 23 and 24 had been appended after the old summary and failure-exit block. Their assertions executed, but were not included in the printed totals or the final non-zero exit decision. The summary and failure gate have now been moved to the end of the test file so all varga assertions are counted and can fail CI. Earlier workflow success therefore validated the build pipeline but did **not** prove those post-summary fixtures were gating CI. Re-run the full workflow after this harness correction before treating the expanded varga suite as CI-verified.
+
