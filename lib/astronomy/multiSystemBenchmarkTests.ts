@@ -293,7 +293,17 @@ export class MultiSystemBenchmarkRunner {
       classicalAuthority: "Johannes Kepler (Harmonices Mundi, 1619)",
       expectedFormula: "Identifies 5th harmonic (72°/144°) and 8th harmonic (45°/135°)",
       actualResult: `${minorAsp.length} minor aspects identified`,
-      passed: minorAsp.length >= 0,
+      passed: minorAsp.length > 0 && minorAsp.every((aspect) =>
+        Number.isFinite(aspect.angle) &&
+        aspect.angle >= 0 && aspect.angle <= 180 &&
+        Number.isFinite(aspect.orb) &&
+        aspect.orb >= 0 &&
+        Number.isFinite(aspect.maxOrb) &&
+        aspect.maxOrb >= aspect.orb &&
+        Number.isFinite(aspect.strength) &&
+        aspect.strength >= 0 && aspect.strength <= 1 &&
+        Math.abs(Math.abs(aspect.angle - aspect.aspectType.angle) - aspect.orb) < 1e-6
+      ),
       notes: "Harmonic vibrational resonances captured.",
     });
 
@@ -666,7 +676,10 @@ export class MultiSystemBenchmarkRunner {
         classicalAuthority: "KP Reader 3 & 4 (Event Timing)",
         expectedFormula: "CSL houses evaluated against primary/supporting/detrimental houses",
         actualResult: `Status: ${pred.verdict} (${pred.probability}% probability)`,
-        passed: pred.verdict !== undefined && pred.probability >= 0,
+        passed: pred.verdict !== undefined &&
+        Number.isFinite(pred.probability) &&
+        pred.probability >= 0 && pred.probability <= 100 &&
+        Boolean(pred.primaryCuspalSubLord),
         notes: `House ${ev.house} CSL (${pred.primaryCuspalSubLord}) examined for event promise.`,
       });
     });
@@ -764,10 +777,13 @@ export class MultiSystemBenchmarkRunner {
       name: "Five Elements (Wu Xing 五行) Distribution Consistency",
       category: "Wu Xing Dynamics",
       classicalAuthority: "Classical Chinese Cosmology",
-      expectedFormula: "Wood + Fire + Earth + Metal + Water mapped across Stems & Branches",
+      expectedFormula: "All five element fields exist and contain finite non-negative values",
       actualResult: `Elements mapped: Wood(${bazi.elementsBalance.Wood}) Fire(${bazi.elementsBalance.Fire}) Earth(${bazi.elementsBalance.Earth}) Metal(${bazi.elementsBalance.Metal}) Water(${bazi.elementsBalance.Water})`,
-      passed: elemSum >= 4,
-      notes: "Productive (Sheng) and Destructive (Ke) cycles operational.",
+      passed: ["Wood", "Fire", "Earth", "Metal", "Water"].every((element) =>
+        Number.isFinite(bazi.elementsBalance[element as keyof typeof bazi.elementsBalance]) &&
+        bazi.elementsBalance[element as keyof typeof bazi.elementsBalance] >= 0
+      ),
+      notes: "Structural field validation only; this does not validate the element weighting model or Day Master strength.",
     });
 
     // 8. San He Trines & Liu He Secret Friend
