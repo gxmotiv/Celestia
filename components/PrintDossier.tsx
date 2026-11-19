@@ -244,7 +244,7 @@ export function PrintDossier({
                 Harmonic Resonance Rating
               </span>
               <div className="text-3xl font-serif font-bold text-slate-950">
-                {report?.crossSystemSynthesis?.resonanceScore || 88}% Cohesion
+                {report?.crossSystemSynthesis?.resonanceScore ?? 0}% Rule-match index
               </div>
               <p className="text-xs text-slate-600 max-w-md">
                 Exceptional cross-traditional alignment detected across Western, Vedic, BaZi, and Pythagorean calculations.
