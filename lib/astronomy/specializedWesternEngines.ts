@@ -8,8 +8,6 @@
 
 import {
   WesternChartData,
-  PlanetPosition,
-  normalizeDegrees,
   formatDegreeMinute,
   ZODIAC_SIGNS,
 } from "./ephemeris";
