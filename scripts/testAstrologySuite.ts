@@ -1602,18 +1602,6 @@ results.forEach((r) => {
   console.log(`   Actual:   ${r.actual}`);
 });
 
-console.log("\n====================================================");
-console.log(`TOTAL TESTS: ${results.length}`);
-console.log(`PASSED: ${passCount}`);
-console.log(`FAILED: ${failCount}`);
-console.log(`PASS RATE: ${((passCount / results.length) * 100).toFixed(1)}%`);
-console.log("====================================================\n");
-
-if (failCount > 0) {
-  process.exit(1);
-}
-
-
 console.log("Running Category 24: D3, D4, D7 and D10 Parashara Varga fixtures...");
 
 // Independent rule tables transcribed from BPHS Chapter 6, verses 7-14.
@@ -1716,3 +1704,83 @@ assertTest(
   "Before 25°: Gemini; at 25°: Libra",
   d30FinalBoundaryPass ? "Gemini -> Libra" : `Before: ${d30JustBeforeFinalOddBoundary}; at: ${d30AtFinalOddBoundary}`
 );
+
+
+console.log("Running Category 25: D2, D12, D16 and D20 Parashara Varga fixtures...");
+
+// Independent mapping rules from BPHS Chapter 6, verses 5-6 and 15-21.
+// Sign indices: Aries=0 ... Pisces=11. D2 maps the Sun/Moon Horas
+// to Leo/Cancer respectively; D12 starts from the natal sign.
+function checkVargaSequence(
+  code: "D2" | "D12" | "D16" | "D20",
+  parts: number,
+  expectedByNatal: number[][]
+): { pass: boolean; checked: number; firstFailure: string } {
+  const width = 30 / parts;
+  const epsilon = 1e-7;
+  let checked = 0;
+  for (let natal = 0; natal < 12; natal++) {
+    for (let part = 0; part < parts; part++) {
+      const expected = expectedByNatal[natal][part];
+      const midpoint = (part + 0.5) * width;
+      const midpointActual = calculateDivisionalSignIndex(natal * 30 + midpoint, code);
+      checked++;
+      if (midpointActual !== expected) return { pass: false, checked, firstFailure: `${code} natal ${natal}, part ${part}: midpoint expected ${expected}, got ${midpointActual}` };
+      const boundary = part * width;
+      const exactActual = calculateDivisionalSignIndex(natal * 30 + boundary, code);
+      checked++;
+      if (exactActual !== expected) return { pass: false, checked, firstFailure: `${code} natal ${natal}, part ${part}: exact boundary expected ${expected}, got ${exactActual}` };
+      if (part > 0) {
+        const beforeActual = calculateDivisionalSignIndex(natal * 30 + boundary - epsilon, code);
+        checked++;
+        if (beforeActual !== expectedByNatal[natal][part - 1]) return { pass: false, checked, firstFailure: `${code} natal ${natal}, before part ${part}: expected ${expectedByNatal[natal][part - 1]}, got ${beforeActual}` };
+      }
+    }
+  }
+  return { pass: true, checked, firstFailure: "" };
+}
+
+const d2Expected = Array.from({ length: 12 }, (_, natal) =>
+  natal % 2 === 0 ? [4, 3] : [3, 4]
+);
+const d12Expected = Array.from({ length: 12 }, (_, natal) =>
+  Array.from({ length: 12 }, (_, part) => (natal + part) % 12)
+);
+const d16Starts = [0, 4, 8];
+const d16Expected = Array.from({ length: 12 }, (_, natal) =>
+  Array.from({ length: 16 }, (_, part) => (d16Starts[natal % 3] + part) % 12)
+);
+const d20Starts = [0, 8, 4];
+const d20Expected = Array.from({ length: 12 }, (_, natal) =>
+  Array.from({ length: 20 }, (_, part) => (d20Starts[natal % 3] + part) % 12)
+);
+
+const additionalVargaFixtures = [
+  { code: "D2" as const, parts: 2, expected: d2Expected, label: "D2 odd/even Sun-Moon Hora halves" },
+  { code: "D12" as const, parts: 12, expected: d12Expected, label: "D12 sequential from natal sign" },
+  { code: "D16" as const, parts: 16, expected: d16Expected, label: "D16 movable/fixed/dual starts" },
+  { code: "D20" as const, parts: 20, expected: d20Expected, label: "D20 movable/fixed/dual starts" },
+];
+
+for (const fixture of additionalVargaFixtures) {
+  const result = checkVargaSequence(fixture.code, fixture.parts, fixture.expected);
+  assertTest(
+    "25.1 Parashara Varga Mapping",
+    `${fixture.label}: all 12 natal signs, midpoints, exact boundaries and just-before checks`,
+    result.pass,
+    `All ${fixture.parts} divisions in all 12 natal signs match BPHS Chapter 6 fixtures`,
+    result.pass ? `${result.checked} checks passed` : result.firstFailure
+  );
+}
+
+
+console.log("\n====================================================");
+console.log(`TOTAL TESTS: ${results.length}`);
+console.log(`PASSED: ${passCount}`);
+console.log(`FAILED: ${failCount}`);
+console.log(`PASS RATE: ${((passCount / results.length) * 100).toFixed(1)}%`);
+console.log("====================================================\n");
+
+if (failCount > 0) {
+  process.exit(1);
+}
