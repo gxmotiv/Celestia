@@ -915,7 +915,7 @@ const sevenGrahaResult = jaiminiEngine.calculate7Karakas(jaiminiFixture);
 const expectedSevenGrahaRoles = ["AK", "AmK", "BK", "MK/PK", "PiK", "GK", "DK"];
 assertTest(
   "9.1 Seven-Graha Option",
-  "Uses the seven-karaka Parashari role sequence, including Pitru and excluding Dara",
+  "Uses the seven-graha option with Matru/Putra merged and no Rahu",
   sevenGrahaResult.scheme === "Seven-Graha-Option" &&
     sevenGrahaResult.atmakaraka.planet === "Sun" &&
     sevenGrahaResult.karakas.length === 7 &&
