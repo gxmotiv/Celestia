@@ -239,6 +239,15 @@ These sources document historical texts, translations and practitioner interpret
 - **Medical astrology:** this remains a symbolic historical astrology panel only. The UI now explicitly states that it is not a medical assessment, diagnosis, risk screen or preventive-care recommendation and must not guide health decisions.
 - **Product naming:** the Western advanced panel is labelled a technique directory / exploratory modules, not a complete architecture. A panel's presence does not establish calculation or interpretation readiness.
 
+
+### Western calculation provenance and readiness audit (2026-11-19)
+
+- The file historically named `swissEphemeris.ts` is a compatibility adapter over `astronomy-engine`, not the Swiss Ephemeris library. The header and position comments have been corrected so display rounding is not presented as physical accuracy. Existing JPL comparison fixtures cover selected epochs only; they do not prove universal sub-arcsecond accuracy.
+- `calculateAllPlanets` now returns Rahu and Ketu as an exact opposing pair, with mean node as the default and an explicit optional true-node mode. A true ascending node is not itself Ketu; Ketu is the descending node 180° opposite. Regression tests cover both conventions, opposition, latitude symmetry and shared motion.
+- Planetary hours previously assumed solar noon at 12:00 for every longitude and timezone. It now uses longitude, the timezone meridian and a low-order equation-of-time correction. Sunrise/sunset remain approximate because the declination and horizon solution are low-order; this is not an ephemeris-grade sunrise calculation and polar day/night handling still needs a dedicated design.
+- The Western chart still includes a rough Chiron longitude shortcut rather than a validated Chiron ephemeris. Major asteroid positions use simplified orbital-element calculations, not the same validated planetary-vector pipeline. Fixed-star contacts are explicitly J2000 and unprecessed. Eclipse items are static sample data filtered by as-of date, not a complete computed eclipse catalogue. Astrocartography remains fail-closed / not implemented.
+- These points must remain visibly labelled as estimates, reference-epoch data or unavailable until independently validated. The natal chart's existing foundation must not be interpreted as proof that every optional object or advanced technique is calculation-ready.
+
 ### Implementation note
 
 This document is a product and engineering specification, not a clinical protocol. Any mental-health, domestic-abuse or crisis-support content must be reviewed by qualified domain professionals before the application presents it as authoritative guidance.
