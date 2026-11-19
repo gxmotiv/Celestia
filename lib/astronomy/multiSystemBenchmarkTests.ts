@@ -1,9 +1,9 @@
 /**
- * Unified Multi-System Astrological & Esoteric Benchmark Suite (108 Assertions)
+ * Unified Multi-System Astrological & Esoteric Benchmark Suite (implemented checks only; unverified advanced methods are excluded)
  * Rigorous mathematical assertions and empirical tests covering:
- * 1. Western Astrology (32 tests: Ephemeris, Houses, Aspects, Almuten, Progressions, Profections)
- * 2. Vedic Jyotish (32 tests: Ayanamsha, Shodashavargas, Vimshottari, Ashtakavarga, Shadbala, Jaimini, Tara Bala, Vedha)
- * 3. Krishnamurti Paddhati (16 tests: KP Placidus, 249 Sub-Lords, 4-fold Significators, Event Promise)
+ * 1. Western Astrology (implemented invariants; advanced techniques not independently validated)
+ * 2. Vedic Jyotish (tested foundations; advanced methods require independent fixtures)
+ * 3. Krishnamurti Paddhati (computed cusp, sub-lord and significator checks)
  * 4. Chinese BaZi (8 structural checks; advanced methods not yet independently validated)
  * 5. Universal Numerology (12 tests: Life Path Master Reduction, Expression, Soul Urge, Karmic Debts, Pinnacles)
  */
@@ -12,6 +12,7 @@ import { calculateWesternChart, WesternChartData, normalizeDegrees } from "./eph
 import { calculateVedicChart, VedicChartData } from "./vedic";
 import { KPEngine } from "../kp/kpEngine";
 import { KPPredictionEngine } from "../kp/kpPredictionEngine";
+import { SubLordCalculator } from "../kp/subLordEngine";
 import { calculateBaZiProfile, BaZiProfile } from "./chinese";
 import { calculateNumerologyProfile, NumerologyProfile } from "./numerology";
 import { AlmutenFigurisCalculator } from "./almutenFigurisCalculator";
@@ -386,25 +387,9 @@ export class MultiSystemBenchmarkRunner {
       notes: "Cardinal, Fixed, and Mutable dynamism balances verified.",
     });
 
-    // 27-32. Additional Classical Features Verification
-    for (let i = 27; i <= 32; i++) {
-      list.push({
-        id: `W-CLS-${i.toString().padStart(2, "0")}`,
-        system: "Western",
-        name: i === 27 ? "Declinations & Out-of-Bounds Detection" :
-              i === 28 ? "Precession-Corrected Fixed Stars Engine" :
-              i === 29 ? "Secondary Progressions Day-for-a-Year Rate" :
-              i === 30 ? "Annual Profections 12-Year Cycle" :
-              i === 31 ? "Zodiacal Releasing Loosening of the Helm" :
-              "Synastry / Composite Midpoint Calculation",
-        category: "Advanced Western Techniques",
-        classicalAuthority: "Ebertin / Vettius Valens / Abu Ma'shar",
-        expectedFormula: "Validated against classical algorithms",
-        actualResult: "Passed mathematical integrity verification",
-        passed: true,
-        notes: "Engine operational and tested.",
-      });
-    }
+    // Advanced Western methods are not asserted here without independent
+    // fixtures. Declinations, fixed stars, progressions, zodiacal releasing,
+    // and composite techniques remain separately gated/research-required.
   }
 
   // ------------------------------------------------------------
@@ -561,29 +546,9 @@ export class MultiSystemBenchmarkRunner {
       notes: "Sun-Saturn and Moon-Mercury father-son/mother-son exemptions enforced.",
     });
 
-    // 10-32. Additional Vedic Classical Invariants (Divisional Charts, Yogas, Shadbala)
-    for (let i = 10; i <= 32; i++) {
-      list.push({
-        id: `V-INV-${i.toString().padStart(2, "0")}`,
-        system: "Vedic",
-        name: i === 10 ? "Shadbala 6-Fold Virupa Calculation (Sthana, Dig, Kala, etc.)" :
-              i === 11 ? "Planetary Avasthas (Baaladi, Jagradadi, Deeptadi)" :
-              i === 12 ? "Pancha Mahapurusha & Raja Yogas Detection" :
-              i === 13 ? "Viparita Raja Yoga & Neecha Bhanga Detection" :
-              i === 14 ? "Trikona & Ekadhipatya Shodhana Reductions" :
-              i === 15 ? "Ashtakoota 36 Gunas Vivaha Melapak Scoring & Kutas Scaling" :
-              i === 16 ? "Kuja (Manglik) Dosha & Kuja Bhanga 8-Fold Classical Cancellations" :
-              i === 17 ? "Navamsa (D9) Marriage Synergy & Shukra/Brihaspati Karaka Dignity" :
-              i === 18 ? "Nadi & Bhakoot Classical Dosha Bhanga Cancellation Algorithms" :
-              `Vedic Divisional Vargas D${i - 12} Algorithm Verification`,
-        category: "Parashari Principles",
-        classicalAuthority: "Maharishi Parashara (BPHS)",
-        expectedFormula: "Verified against classical BPHS chapter rules",
-        actualResult: "Passed mathematical assertion",
-        passed: true,
-        notes: "Classical Jyotish doctrine verified.",
-      });
-    }
+    // Advanced Parashari methods (Shadbala, avasthas, yoga cancellations,
+    // Ashtakoota, and divisional Vargas beyond the tested foundations) are
+    // not marked passed without method-specific source fixtures.
   }
 
   // ------------------------------------------------------------
@@ -622,6 +587,14 @@ export class MultiSystemBenchmarkRunner {
     });
 
     // 3. 249 Sub-Divisions Non-Overlap Invariant
+    const kpSubs = SubLordCalculator.generate249Table();
+    const kpSubsContinuous =
+      kpSubs.length === 249 &&
+      Math.abs(kpSubs[0].startLongitude) < 1e-10 &&
+      Math.abs(kpSubs[kpSubs.length - 1].endLongitude - 360) < 1e-10 &&
+      kpSubs.every((entry, index) =>
+        index === 0 || Math.abs(kpSubs[index - 1].endLongitude - entry.startLongitude) < 1e-10
+      );
     list.push({
       id: "KP-SUB-01",
       system: "KP",
@@ -629,9 +602,9 @@ export class MultiSystemBenchmarkRunner {
       category: "Sub-Lord Geometry",
       classicalAuthority: "KP Reader 1 Table of 249 Subs",
       expectedFormula: "249 distinct stellar sub-divisions covering exactly 360°",
-      actualResult: "All 249 Sub boundaries continuous without gaps",
-      passed: true,
-      notes: "Vimshottari Dasha year-proportional partition verified.",
+      actualResult: `count=${kpSubs.length}; continuous=${kpSubsContinuous}`,
+      passed: kpSubsContinuous,
+      notes: "Computed from the engine's generated table; no hard-coded pass.",
     });
 
     // 4. 4-Fold Significators (Grades A, B, C, D)
