@@ -912,7 +912,7 @@ const jaiminiFixture = [
   { name: "Ascendant", siderealLongitude: 100, house: 1, rasiName: "Cancer" },
 ];
 const parashariResult = jaiminiEngine.calculate7Karakas(jaiminiFixture);
-const expectedParashariRoles = ["AK", "AmK", "BK", "MK", "PiK", "PK", "GK"];
+const expectedSevenGrahaRoles = ["AK", "AmK", "BK", "MK/PK", "PiK", "GK", "DK"];
 assertTest(
   "9.1 Parashari Seven Karakas",
   "Uses the seven-karaka Parashari role sequence, including Pitru and excluding Dara",
