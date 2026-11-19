@@ -1234,6 +1234,41 @@ assertTest(
   invalidAgreementScoreRejected ? "Rejected" : "Accepted"
 );
 
+// ======================================================================
+console.log("Running Category 15: KP Old ayanamsa epoch checks...");
+
+const kpOld1900 = KPCuspsCalculator.calculateKPAyanamsa(1900, 1, 1);
+const kpOld2000 = KPCuspsCalculator.calculateKPAyanamsa(2000, 1, 1);
+const kpOldExpected1900 = 22 + 21 / 60 + 50 / 3600;
+const kpOldExpected2000 = 23 + 45 / 60 + 37 / 3600;
+assertTest(
+  "15.1 KP Old Reference Epoch",
+  "Matches the declared 22°21'50'' KP Old table-derived epoch at 1900-01-01",
+  Math.abs(kpOld1900 - kpOldExpected1900) < 1e-10,
+  "22°21'50''",
+  `${kpOld1900.toFixed(8)}°`
+);
+assertTest(
+  "15.2 KP Old Modern Cross-Check",
+  "Tracks the published 1 Jan 2000 KP Old value within five arcseconds under the linear Newcomb approximation",
+  Math.abs(kpOld2000 - kpOldExpected2000) * 3600 <= 5,
+  "23°45'37'' ± 5 arcseconds",
+  `${kpOld2000.toFixed(8)}°; difference=${(Math.abs(kpOld2000 - kpOldExpected2000) * 3600).toFixed(2)} arcseconds`
+);
+let invalidKPAyanamsaDateRejected = false;
+try {
+  KPCuspsCalculator.calculateKPAyanamsa(2000, 2, 30);
+} catch {
+  invalidKPAyanamsaDateRejected = true;
+}
+assertTest(
+  "15.3 KP Ayanamsa Date Validation",
+  "Rejects impossible calendar dates",
+  invalidKPAyanamsaDateRejected,
+  "2000-02-30 rejected",
+  invalidKPAyanamsaDateRejected ? "Rejected" : "Accepted"
+);
+
 // SUMMARY OUTPUT
 // ======================================================================
 console.log("\n=================== TEST RESULTS ===================");
