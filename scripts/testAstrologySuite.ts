@@ -1589,19 +1589,6 @@ assertTest(
   unknownVargaRejected ? "Rejected" : "Unknown division silently accepted"
 );
 
-// SUMMARY OUTPUT
-// ======================================================================
-console.log("\n=================== TEST RESULTS ===================");
-let passCount = 0;
-let failCount = 0;
-results.forEach((r) => {
-  if (r.status === "PASS") passCount++;
-  else failCount++;
-  console.log(`[${r.status}] ${r.category} -> ${r.name}`);
-  console.log(`   Expected: ${r.expected}`);
-  console.log(`   Actual:   ${r.actual}`);
-});
-
 console.log("Running Category 24: D3, D4, D7 and D10 Parashara Varga fixtures...");
 
 // Independent rule tables transcribed from BPHS Chapter 6, verses 7-14.
@@ -1784,3 +1771,27 @@ console.log("====================================================\n");
 if (failCount > 0) {
   process.exit(1);
 }
+
+// SUMMARY OUTPUT — deliberately last so every appended regression fixture is counted.
+console.log("\n=================== TEST RESULTS ===================");
+let passCount = 0;
+let failCount = 0;
+results.forEach((r) => {
+  if (r.status === "PASS") passCount++;
+  else failCount++;
+  console.log(`[${r.status}] ${r.category} -> ${r.name}`);
+  console.log(`   Expected: ${r.expected}`);
+  console.log(`   Actual:   ${r.actual}`);
+});
+
+console.log("\n====================================================");
+console.log(`TOTAL TESTS: ${results.length}`);
+console.log(`PASSED: ${passCount}`);
+console.log(`FAILED: ${failCount}`);
+console.log(`PASS RATE: ${((passCount / results.length) * 100).toFixed(1)}%`);
+console.log("====================================================\n");
+
+if (failCount > 0) {
+  process.exit(1);
+}
+
