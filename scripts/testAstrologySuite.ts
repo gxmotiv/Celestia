@@ -18,6 +18,7 @@ import { buildInfluenceSafetyBrief, INFLUENCE_PATTERNS } from "../lib/consultati
 import { buildLifeStrategyBrief, LIFE_STRATEGY_STEPS } from "../lib/consultation/desks/lifeStrategy";
 import { ASTROLOGY_SPECIALTIES, getAstrologySpecialties } from "../lib/consultation/astrologySpecialties";
 import { JaiminiKarakasEngine } from "../lib/vedic/jaiminiKarakas";
+import { NavamsaCalculator } from "../lib/vedic/d9NavamsaEngine";
 import { calculateAnnualProfection, calculateCompletedAge } from "../lib/astronomy/annualProfections";
 import { SubLordCalculator } from "../lib/kp/subLordEngine";
 import { CompleteBaZiEngine, SolarTermCalculator } from "../lib/astronomy/baziEngine";
@@ -1498,6 +1499,82 @@ assertTest(
   invalidProfectionsRejected,
   "All four invalid inputs rejected",
   invalidProfectionsRejected ? "All rejected" : "At least one invalid input accepted"
+);
+
+// ======================================================================
+// CATEGORY 21: D9 NAVAMSA SEGMENT AND INPUT VALIDATION
+// ======================================================================
+console.log("Running Category 21: D9 Navamsa segment and boundary tests...");
+
+const navamsaCalculator = new NavamsaCalculator();
+let all108NavamsasCorrect = true;
+let validNavamsaRanges = true;
+for (let sign = 0; sign < 12; sign++) {
+  const signType = [0, 3, 6, 9].includes(sign)
+    ? "Movable"
+    : [1, 4, 7, 10].includes(sign)
+      ? "Fixed"
+      : "Dual";
+  const startOffset = signType === "Movable" ? 0 : signType === "Fixed" ? 8 : 4;
+  for (let part = 0; part < 9; part++) {
+    const longitude = sign * 30 + (part + 0.5) * (30 / 9);
+    const position = navamsaCalculator.calculateNavamsa(longitude, "Test");
+    const expectedSign = (sign + startOffset + part) % 12;
+    all108NavamsasCorrect =
+      all108NavamsasCorrect &&
+      position.originalSignIndex === sign &&
+      position.navamsaNumber === part + 1 &&
+      position.signIndex === expectedSign;
+    validNavamsaRanges =
+      validNavamsaRanges &&
+      position.degree >= 0 &&
+      position.degree < 30 &&
+      Number.isFinite(position.degree);
+  }
+}
+assertTest(
+  "21.1 Complete D9 108-Segment Mapping",
+  "All 108 sign/Navamsa combinations follow movable, fixed and dual starting-sign rules",
+  all108NavamsasCorrect,
+  "108 correct Navamsa placements",
+  all108NavamsasCorrect ? "All 108 placements matched" : "At least one placement mismatch"
+);
+assertTest(
+  "21.2 D9 Degree Range",
+  "Every tested Navamsa degree remains within 0° inclusive and 30° exclusive",
+  validNavamsaRanges,
+  "All D9 degrees in [0, 30)",
+  validNavamsaRanges ? "All values in range" : "Out-of-range or non-finite value found"
+);
+
+const justBeforeNavamsaBoundary = navamsaCalculator.calculateNavamsa(3 + 1 / 3 - 1e-8, "Test");
+const atNavamsaBoundary = navamsaCalculator.calculateNavamsa(3 + 1 / 3, "Test");
+assertTest(
+  "21.3 D9 Exact 3°20′ Boundary",
+  "Aries Navamsa changes from Aries to Taurus exactly at 3°20′",
+  justBeforeNavamsaBoundary.signIndex === 0 &&
+    justBeforeNavamsaBoundary.navamsaNumber === 1 &&
+    atNavamsaBoundary.signIndex === 1 &&
+    atNavamsaBoundary.navamsaNumber === 2,
+  "Before: Aries/Navamsa 1; at: Taurus/Navamsa 2",
+  `Before: ${justBeforeNavamsaBoundary.sign}/${justBeforeNavamsaBoundary.navamsaNumber}; at: ${atNavamsaBoundary.sign}/${atNavamsaBoundary.navamsaNumber}`
+);
+
+const invalidNavamsaLongitudes = [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY];
+const invalidNavamsaInputsRejected = invalidNavamsaLongitudes.every((longitude) => {
+  try {
+    navamsaCalculator.calculateNavamsa(longitude);
+    return false;
+  } catch {
+    return true;
+  }
+});
+assertTest(
+  "21.4 D9 Invalid Longitude Rejection",
+  "Rejects NaN and positive/negative infinite longitudes instead of emitting invalid chart coordinates",
+  invalidNavamsaInputsRejected,
+  "All non-finite longitudes rejected",
+  invalidNavamsaInputsRejected ? "All rejected" : "At least one invalid longitude accepted"
 );
 
 // SUMMARY OUTPUT
