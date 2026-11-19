@@ -346,7 +346,7 @@ export class AstrologyPDFGenerator {
       .fillColor(this.accentGold)
       .text("CROSS-SYSTEM RULE-MATCH INDEX (NOT A VALIDITY SCORE)", 60, 120);
 
-    const score = report?.crossSystemSynthesis?.resonanceScore || 88;
+    const score = report?.crossSystemSynthesis?.resonanceScore ?? 0;
     doc.fontSize(36)
       .font("Helvetica-Bold")
       .fillColor(this.primaryColor)
