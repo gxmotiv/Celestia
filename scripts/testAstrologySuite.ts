@@ -1761,17 +1761,6 @@ for (const fixture of additionalVargaFixtures) {
 }
 
 
-console.log("\n====================================================");
-console.log(`TOTAL TESTS: ${results.length}`);
-console.log(`PASSED: ${passCount}`);
-console.log(`FAILED: ${failCount}`);
-console.log(`PASS RATE: ${((passCount / results.length) * 100).toFixed(1)}%`);
-console.log("====================================================\n");
-
-if (failCount > 0) {
-  process.exit(1);
-}
-
 // SUMMARY OUTPUT — deliberately last so every appended regression fixture is counted.
 console.log("\n=================== TEST RESULTS ===================");
 let passCount = 0;
