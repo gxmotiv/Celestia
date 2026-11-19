@@ -546,6 +546,9 @@ export function AdvancedWesternPanel({
       {/* SUB-TAB 6: DECLINATIONS & PARALLELS */}
       {activeSubTab === "declinations" && (
         <div className="space-y-4">
+          <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/5 text-xs text-amber-200">
+            Important accuracy limit: the catalogue uses fixed J2000 reference longitudes without precession or proper-motion correction to the birth epoch. These contacts are exploratory only and must not be treated as verified star conjunctions.
+          </div>
           <div className="flex items-center justify-between text-xs px-3 py-2 bg-slate-950/80 border border-slate-800 rounded-lg text-slate-400">
             <span>
               Out of Bounds (OOB) Planets (&gt; 23°26&apos;):{" "}
@@ -907,10 +910,10 @@ export function AdvancedWesternPanel({
           <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
             <h4 className="text-xs font-bold text-rose-300 flex items-center gap-1.5">
               <Sun className="w-3.5 h-3.5 text-rose-400" />
-              Major Solar &amp; Lunar Eclipses Impacting Your Natal Houses
+              Eclipse sample list (not a live ephemeris)
             </h4>
             <p className="text-xs text-slate-300 leading-relaxed">
-              Eclipses act as cosmic wildcards, catalyzing non-negotiable course-corrections in the specific houses they touch over a 6 to 12 month cycle.
+              These are static sample events with approximate longitudes, not a complete or dynamically calculated eclipse ephemeris. Only dates after the selected as-of date are shown; astrological interpretations are symbolic, not guaranteed events.
             </p>
           </div>
 
@@ -937,6 +940,11 @@ export function AdvancedWesternPanel({
                 </ul>
               </div>
             ))}
+            {upcomingEclipses.length === 0 && (
+              <div className="col-span-2 p-5 rounded-lg border border-slate-700 bg-slate-950/50 text-xs text-slate-400">
+                No future events are available in the embedded sample list (it currently ends in August 2026). A live astronomical eclipse solver and updated event catalogue are still required.
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -951,6 +959,9 @@ export function AdvancedWesternPanel({
             </h4>
             <p className="text-xs text-slate-300 leading-relaxed">
               {medicalReport.vitalityConstitution}
+            </p>
+            <p className="text-[11px] text-amber-200 border-t border-slate-800 pt-2">
+              Traditional symbolic content only — not a medical assessment, diagnosis, risk screen or preventive-care recommendation. Do not use it to make health decisions or delay professional care.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-400 pt-1">
               <div>{medicalReport.sixthHouseNote}</div>
@@ -989,14 +1000,18 @@ export function AdvancedWesternPanel({
           <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
             <h4 className="text-xs font-bold text-cyan-300 flex items-center gap-1.5">
               <MapPin className="w-3.5 h-3.5 text-cyan-400" />
-              Astrocartography Planetary Power Lines
+              Astrocartography — calculation not yet available
             </h4>
             <p className="text-xs text-slate-300 leading-relaxed">
-              Where your planetary energies project onto terrestrial meridians, creating geographic hotspots for career, love, vitality, and sanctuary.
+              The previous coordinate shortcut was not a valid astrocartography calculation and has been disabled. Verified AC/DC/MC/IC lines require date-specific equatorial coordinates, sidereal time, latitude-dependent horizon solving and reference-chart tests.
             </p>
           </div>
 
-          {/* Top Recommendations */}
+          <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/5 text-xs text-amber-200">
+            <strong>Not available yet.</strong> Celestia will not show invented destinations or planetary lines until the astronomical geometry is implemented and independently validated.
+          </div>
+          {/* Top Recommendations — intentionally empty until the solver is verified */}
+          {astrocartographyReport.topDestinations.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
             {astrocartographyReport.topDestinations.map((t, i) => (
               <div key={i} className="p-3 bg-slate-950/60 border border-slate-800 rounded-xl space-y-1">
@@ -1006,6 +1021,7 @@ export function AdvancedWesternPanel({
               </div>
             ))}
           </div>
+          )}
 
           {/* Detailed Planetary Lines Grid */}
           <div className="overflow-x-auto">
