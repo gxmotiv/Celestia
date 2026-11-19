@@ -1,7 +1,7 @@
 /**
  * Chara Karaka engines for two explicitly separated classical conventions.
  *
- * Parashari seven-karaka: Sun through Saturn; no Rahu and no Dara Karaka.
+ * Seven-graha option: Sun through Saturn; the Matru/Putra significations are merged in this declared seven-role variant.
  * Jaimini eight-karaka: Sun through Saturn plus Rahu (counted in reverse
  * within its sign); Dara Karaka is the eighth role.
  *
@@ -10,11 +10,11 @@
  */
 import { NavamsaCalculator } from "./d9NavamsaEngine";
 
-export type CharaKarakaScheme = "Parashari-7" | "Jaimini-8";
+export type CharaKarakaScheme = "Seven-Graha-Option" | "Jaimini-8";
 
 export interface JaiminiKaraka {
   role: string;
-  roleShort: "AK" | "AmK" | "BK" | "MK" | "PiK" | "PK" | "GK" | "DK";
+  roleShort: "AK" | "AmK" | "BK" | "MK/PK" | "MK" | "PiK" | "PK" | "GK" | "DK";
   roleName: string;
   sanskritName: string;
   planet: string;
@@ -72,6 +72,11 @@ const ROLE_DEFINITIONS = {
     signification: "Significator for siblings and related themes.",
     lifeDomain: "Siblings, peers and courage",
   },
+  "MK/PK": {
+    role: "Matrikaraka / Putrakaraka (merged)", roleName: "Mother / Child Significator", sanskritName: "मातृकारक / पुत्रकारक",
+    signification: "A merged mother-and-child significator, reflecting the explicitly documented seven-graha variant.",
+    lifeDomain: "Mother, children and family foundations",
+  },
   MK: {
     role: "Matrikaraka", roleName: "Mother Significator", sanskritName: "मातृकारक",
     signification: "Significator for mother and nurturing foundations.",
@@ -99,7 +104,7 @@ const ROLE_DEFINITIONS = {
   },
 } as const;
 
-const PARASHARI_7_ROLES = ["AK", "AmK", "BK", "MK", "PiK", "PK", "GK"] as const;
+const SEVEN_GRAHA_ROLES = ["AK", "AmK", "BK", "MK/PK", "PiK", "GK", "DK"] as const;
 const JAIMINI_8_ROLES = ["AK", "AmK", "BK", "MK", "PiK", "PK", "GK", "DK"] as const;
 
 const PLANET_SYMBOLS: Record<string, string> = {
@@ -129,7 +134,7 @@ function normalizePlanetName(name: string): string {
 export class JaiminiKarakasEngine {
   /** Parashari seven-karaka convention: excludes Rahu and Dara Karaka. */
   public calculate7Karakas(planets: PlanetInput[], ascendantInput?: AscendantInput): JaiminiKarakasResult {
-    return this.calculateScheme("Parashari-7", planets, ascendantInput);
+    return this.calculateScheme("Seven-Graha-Option", planets, ascendantInput);
   }
 
   /** Jaimini eight-karaka convention: includes Rahu at reverse degree and Dara Karaka. */
@@ -144,7 +149,7 @@ export class JaiminiKarakasEngine {
   ): JaiminiKarakasResult {
     const includeRahu = scheme === "Jaimini-8";
     const requiredNames: readonly string[] = includeRahu ? VIMSHOTTARI_GRAHAS : CLASSICAL_GRAHAS;
-    const roles: readonly (keyof typeof ROLE_DEFINITIONS)[] = includeRahu ? JAIMINI_8_ROLES : PARASHARI_7_ROLES;
+    const roles: readonly (keyof typeof ROLE_DEFINITIONS)[] = includeRahu ? JAIMINI_8_ROLES : SEVEN_GRAHA_ROLES;
 
     const candidates = planets
       .filter((planet) => requiredNames.includes(normalizePlanetName(planet.name)))
@@ -234,7 +239,7 @@ export class JaiminiKarakasEngine {
     }
     const ascendantSignIndex = Math.floor(normalizeLongitude(ascendant.siderealLongitude) / 30);
     const karakamsaHouseFromLagna = ((karakamsaSignIndex - ascendantSignIndex + 12) % 12) + 1;
-    const label = includeRahu ? "Jaimini 8-Karaka (Rahu reverse-counted)" : "Parashari 7-Karaka";
+    const label = includeRahu ? "Eight-graha option (Jaimini; Rahu reverse-counted)" : "Seven-graha option (Matru/Putra merged)";
 
     return {
       scheme,
