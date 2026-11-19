@@ -19,6 +19,7 @@ import { buildLifeStrategyBrief, LIFE_STRATEGY_STEPS } from "../lib/consultation
 import { ASTROLOGY_SPECIALTIES, getAstrologySpecialties } from "../lib/consultation/astrologySpecialties";
 import { JaiminiKarakasEngine } from "../lib/vedic/jaiminiKarakas";
 import { calculateAnnualProfection, calculateCompletedAge } from "../lib/astronomy/annualProfections";
+import { SubLordCalculator } from "../lib/kp/subLordEngine";
 
 interface TestResult {
   category: string;
@@ -1047,6 +1048,81 @@ assertTest(
   invalidProfectionDateRejected,
   "Invalid date rejected",
   invalidProfectionDateRejected ? "Rejected" : "Accepted"
+);
+
+// ======================================================================
+// ======================================================================
+// CATEGORY 11: KP EXACT SUB / SUB-SUB BOUNDARIES
+// ======================================================================
+console.log("Running Category 11: KP Integer-Unit Boundary Tests...");
+
+const kp249 = SubLordCalculator.generate249Table();
+const kp2193 = SubLordCalculator.generate2193Table();
+const kp249Continuous =
+  kp249.length === 249 &&
+  Math.abs(kp249[0].startLongitude) < 1e-10 &&
+  Math.abs(kp249[kp249.length - 1].endLongitude - 360) < 1e-10 &&
+  kp249.every((entry, index) =>
+    index === 0 || Math.abs(kp249[index - 1].endLongitude - entry.startLongitude) < 1e-10
+  );
+assertTest(
+  "11.1 KP 249 Table Coverage",
+  "Builds exactly 249 non-overlapping, gap-free star/sub intervals covering 0° through 360°",
+  kp249Continuous,
+  "249 contiguous intervals from 0° to 360°",
+  "count=" + kp249.length + "; continuous=" + kp249Continuous
+);
+
+const kp2193Continuous =
+  kp2193.length === 2193 &&
+  Math.abs(kp2193[0].startLongitude) < 1e-10 &&
+  Math.abs(kp2193[kp2193.length - 1].endLongitude - 360) < 1e-10 &&
+  kp2193.every((entry, index) =>
+    index === 0 || Math.abs(kp2193[index - 1].endLongitude - entry.startLongitude) < 1e-10
+  );
+assertTest(
+  "11.2 KP 2193 Table Coverage",
+  "Builds 2,187 proportional sub-subs plus six sign-boundary splits, without multiplying the 249 base rows by nine",
+  kp2193Continuous,
+  "2193 contiguous intervals from 0° to 360°",
+  "count=" + kp2193.length + "; continuous=" + kp2193Continuous
+);
+
+const kp = new SubLordCalculator();
+const firstSubBoundary = (1200 * 7) / SubLordCalculator.UNITS_PER_DEGREE;
+const kpJustBeforeSubBoundary = kp.calculateSubLord(firstSubBoundary - 0.000001);
+const kpAtSubBoundary = kp.calculateSubLord(firstSubBoundary);
+assertTest(
+  "11.3 KP Sub Boundary Is Left-Closed / Right-Open",
+  "The exact Ashwini Ketu/Venus boundary belongs to Venus; the value just before remains Ketu",
+  kpJustBeforeSubBoundary.subLord === "Ketu" && kpAtSubBoundary.subLord === "Venus",
+  "just-before=Ketu; exact-boundary=Venus",
+  "just-before=" + kpJustBeforeSubBoundary.subLord + "; boundary=" + kpAtSubBoundary.subLord
+);
+
+const firstSubSubBoundary = (10 * 7 * 7) / SubLordCalculator.UNITS_PER_DEGREE;
+const kpJustBeforeSubSub = kp.calculateSubLord(firstSubSubBoundary - 0.000001);
+const kpAtSubSub = kp.calculateSubLord(firstSubSubBoundary);
+assertTest(
+  "11.4 KP Sub-Sub Boundary",
+  "Exact first Ketu/Ketu to Ketu/Venus sub-sub boundary advances to Venus",
+  kpJustBeforeSubSub.subSubLord === "Ketu" && kpAtSubSub.subSubLord === "Venus",
+  "just-before=Ketu; exact-boundary=Venus",
+  "just-before=" + kpJustBeforeSubSub.subSubLord + "; boundary=" + kpAtSubSub.subSubLord
+);
+
+let invalidKPLongitudeRejected = false;
+try {
+  kp.calculateSubLord(Number.NaN);
+} catch {
+  invalidKPLongitudeRejected = true;
+}
+assertTest(
+  "11.5 KP Invalid Input Validation",
+  "Rejects non-finite longitudes instead of silently returning a fabricated lord",
+  invalidKPLongitudeRejected,
+  "NaN rejected",
+  invalidKPLongitudeRejected ? "Rejected" : "Accepted"
 );
 
 // ======================================================================
