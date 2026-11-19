@@ -10,8 +10,11 @@ interface ClassicalVedicPanelProps {
 
 export function ClassicalVedicPanel({ vedicData }: ClassicalVedicPanelProps) {
   const [activeSubTab, setActiveSubTab] = useState<"jaimini" | "tarabala" | "gocharvedha">("jaimini");
+  const [activeKarakaScheme, setActiveKarakaScheme] = useState<"jaimini-8" | "parashari-7">("jaimini-8");
 
-  const jaimini = vedicData.jaiminiKarakas;
+  const jaimini = activeKarakaScheme === "jaimini-8"
+    ? vedicData.jaiminiKarakas
+    : vedicData.parashariKarakas;
   const taraBala = vedicData.taraBala;
   const gochar = vedicData.gocharVedha;
 
@@ -69,6 +72,24 @@ export function ClassicalVedicPanel({ vedicData }: ClassicalVedicPanelProps) {
       {/* 1. JAIMINI CHARA KARAKAS */}
       {activeSubTab === "jaimini" && (
         <div className="space-y-6">
+          {/* Explicitly separate the two Chara Karaka traditions. */}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setActiveKarakaScheme("jaimini-8")}
+              aria-pressed={activeKarakaScheme === "jaimini-8"}
+              className={`px-3 py-2 rounded-lg text-xs font-semibold border ${activeKarakaScheme === "jaimini-8" ? "bg-amber-500/20 text-amber-200 border-amber-500/40" : "bg-slate-950 text-slate-400 border-slate-800"}`}
+            >
+              Jaimini 8-Karaka · Rahu reverse-counted
+            </button>
+            <button
+              onClick={() => setActiveKarakaScheme("parashari-7")}
+              aria-pressed={activeKarakaScheme === "parashari-7"}
+              className={`px-3 py-2 rounded-lg text-xs font-semibold border ${activeKarakaScheme === "parashari-7" ? "bg-amber-500/20 text-amber-200 border-amber-500/40" : "bg-slate-950 text-slate-400 border-slate-800"}`}
+            >
+              Parashari 7-Karaka · no Rahu / Dara
+            </button>
+          </div>
+
           {/* Atmakaraka Hero Card */}
           <div className="p-6 bg-gradient-to-br from-amber-950/30 via-slate-900/80 to-slate-950/90 border border-amber-500/30 rounded-2xl shadow-xl space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -107,13 +128,18 @@ export function ClassicalVedicPanel({ vedicData }: ClassicalVedicPanelProps) {
             <p className="text-xs text-slate-300 leading-relaxed border-t border-slate-800/80 pt-3">
               {ak.signification} {jaimini.summary}
             </p>
+            {jaimini.warnings.length > 0 && (
+              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200 space-y-1">
+                {jaimini.warnings.map((warning, index) => <p key={index}>{warning}</p>)}
+              </div>
+            )}
           </div>
 
-          {/* 7 Karakas Grid */}
+          {/* Selected Chara Karaka scheme */}
           <div className="p-5 bg-slate-900/60 border border-slate-800 rounded-xl space-y-3">
             <h4 className="text-sm font-bold text-slate-100 flex items-center gap-2">
               <Award className="w-4 h-4 text-amber-400" />
-              Complete 7-Karaka Council (Jaimini Sutras)
+              {jaimini.label} · Chara Karaka sequence
             </h4>
 
             <div className="overflow-x-auto no-scrollbar">
