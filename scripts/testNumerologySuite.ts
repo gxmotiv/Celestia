@@ -56,6 +56,19 @@ console.log("\n[TEST GROUP 1] Pythagorean System - 14 Numbers & Calculations");
 // Life Path = 3 + 5 + 7 = 15 -> 1+5 = 6
 const einsteinReport = calculateCompleteNumerologyReport("Albert Einstein", 1879, 3, 14);
 
+function numerologyInputRejected(name: string, year: number, month: number, day: number): boolean {
+  try {
+    calculateCompleteNumerologyReport(name, year, month, day);
+    return false;
+  } catch {
+    return true;
+  }
+}
+assert("Rejects an empty name instead of fabricating default numerology numbers", numerologyInputRejected("", 2000, 1, 1));
+assert("Rejects impossible Gregorian birth dates", numerologyInputRejected("Test Person", 2001, 2, 29));
+assert("Rejects non-Latin names until the user supplies a reviewed transliteration", numerologyInputRejected("测试", 2000, 1, 1));
+
+
 assert(
   "Einstein Life Path is 6 (3 + 5 + 7 = 15 -> 6)",
   einsteinReport.pythagorean.lifePathNumber === 6,
