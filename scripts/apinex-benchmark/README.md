@@ -19,19 +19,21 @@ Never put the key in a file, commit, issue, prompt, or chat message.
 4. Keep `confirm_api_call` false to make a no-request dry safety run.
 5. Only when ready to spend free allowance, set `confirm_api_call` true and run.
 6. Download the resulting artifact from the workflow run.
+7. Score the response with [the shared model-scoring rubric](../../docs/benchmark/model-scoring-rubric.md).
 
-The workflow never loops over models or tasks. It does not retry failed API calls. It has no schedule or push trigger.
+The workflow never loops over models or tasks. It does not retry failed API calls. It has no schedule or push trigger. Run comparisons sequentially: keep the task and evidence identical when comparing models; keep the model and evidence identical when comparing tasks.
 
 ## Output ceilings
 
-| Task | max_tokens |
-|---|---:|
-| D — hallucination | 700 |
-| A — calculation integrity | 1400 |
-| B — engineering review | 1400 |
-| C — astrology reasoning | 1200 |
-| E — test architecture | 1400 |
-| F — research quality | 1200 |
+| Task | Purpose | max_tokens |
+|---|---|---:|
+| D | Hallucination / evidence discipline | 700 |
+| A | Calculation integrity audit | 1400 |
+| B | Engineering review and safe patch plan | 1400 |
+| C | Astrology domain reasoning | 1200 |
+| E | Test architecture | 1400 |
+| F | Research and evidence quality | 1200 |
+| G | Source-grounded repository code audit | 1700 |
 
 These are output ceilings only. Input tokens also consume allowance. The runner enforces a 45 KB serialized-request ceiling and one 100-second HTTP timeout.
 
