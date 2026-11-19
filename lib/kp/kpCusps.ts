@@ -22,15 +22,32 @@ export class KPCuspsCalculator {
   private subLordCalc = new SubLordCalculator();
 
   /**
-   * Krishnamurti Ayanamsa:
-   * Value at 1900.0 is 22° 22' 14" (22.370555°)
-   * Annual precession rate = 50.2388475 arcseconds/year
+   * KP Old table-derived approximation:
+   * 22°21'50" at JD 2415020.0 (1900-01-01 00:00 UT), carried with
+   * Newcomb's mean precession rate of 50.2388475 arcseconds/year.
+   *
+   * This is not native Swiss Ephemeris and is not KP New / VP291. The
+   * historical KP table itself has documented irregularities, so this
+   * linear model is explicitly labelled as an approximation.
    */
   public static calculateKPAyanamsa(year: number, month: number, day: number): number {
-    const fractionOfYear = (month - 1) / 12 + day / 365.25;
-    const decimalYear = year + fractionOfYear;
-    const diffYears = decimalYear - 1900.0;
-    const ayanamsaSeconds = 22 * 3600 + 22 * 60 + 14 + diffYears * 50.2388475;
+    if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+      throw new Error("KP ayanamsa date requires integer year, month and day.");
+    }
+    const date = new Date(Date.UTC(year, month - 1, day));
+    if (
+      !Number.isFinite(date.getTime()) ||
+      date.getUTCFullYear() !== year ||
+      date.getUTCMonth() + 1 !== month ||
+      date.getUTCDate() !== day
+    ) {
+      throw new Error("KP ayanamsa date is not a valid calendar date.");
+    }
+    const yearStart = Date.UTC(year, 0, 1);
+    const nextYearStart = Date.UTC(year + 1, 0, 1);
+    const fractionOfYear = (date.getTime() - yearStart) / (nextYearStart - yearStart);
+    const elapsedYears = year - 1900 + fractionOfYear;
+    const ayanamsaSeconds = 22 * 3600 + 21 * 60 + 50 + elapsedYears * 50.2388475;
     return ayanamsaSeconds / 3600;
   }
 
@@ -87,7 +104,7 @@ export class KPCuspsCalculator {
       houseSigns: houseDetails.map((h) => h.signName),
       houseLords: houseDetails.map((h) => h.signLord),
       ayanamsa: kpAyanamsa,
-      ayanamsaName: "KP (Krishnamurti) Standard",
+      ayanamsaName: "KP Old (table-derived linear approximation)",
     };
   }
 }
