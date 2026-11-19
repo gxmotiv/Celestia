@@ -23,6 +23,7 @@ import { SubLordCalculator } from "../lib/kp/subLordEngine";
 import { CompleteBaZiEngine, SolarTermCalculator } from "../lib/astronomy/baziEngine";
 import { KPCuspsCalculator } from "../lib/kp/kpCusps";
 import { calculateNumerologyAgreementIndex } from "../lib/numerology";
+import { EclipseAnalyzer, AstrocartographyEngine, FixedStarsEngine } from "../lib/astronomy/specializedWesternEngines";
 
 interface TestResult {
   category: string;
@@ -1267,6 +1268,45 @@ assertTest(
   invalidKPAyanamsaDateRejected,
   "2000-02-30 rejected",
   invalidKPAyanamsaDateRejected ? "Rejected" : "Accepted"
+);
+
+// ======================================================================
+console.log("Running Category 16: Western specialist data-readiness safeguards...");
+
+const eclipseAnalyzer = new EclipseAnalyzer();
+const eclipsesAsOf2025 = eclipseAnalyzer.analyzeEclipses(einsteinWestern, new Date("2025-01-01T00:00:00Z"));
+const eclipsesAsOfLate2026 = eclipseAnalyzer.analyzeEclipses(einsteinWestern, new Date("2026-11-19T00:00:00Z"));
+assertTest(
+  "16.1 Eclipse Sample Date Filter",
+  "Filters static eclipse samples against an explicit as-of date",
+  eclipsesAsOf2025.length > 0 &&
+    eclipsesAsOfLate2026.length === 0,
+  "2025 includes future samples; 2026-11-19 has no stale 2025/early-2026 events",
+  `2025 count=${eclipsesAsOf2025.length}; late-2026 count=${eclipsesAsOfLate2026.length}`
+);
+
+const astrocartographyReadiness = new AstrocartographyEngine().calculatePowerLines(einsteinWestern);
+assertTest(
+  "16.2 Astrocartography Fail-Closed Gate",
+  "Does not publish the previous unverified longitude shortcut as real planetary power lines",
+  astrocartographyReadiness.status === "not-implemented" &&
+    astrocartographyReadiness.powerLines.length === 0 &&
+    astrocartographyReadiness.topDestinations.length === 0 &&
+    astrocartographyReadiness.limitations.length >= 3,
+  "Not implemented; no invented lines or destinations",
+  `${astrocartographyReadiness.status}; lines=${astrocartographyReadiness.powerLines.length}; destinations=${astrocartographyReadiness.topDestinations.length}; limitations=${astrocartographyReadiness.limitations.length}`
+);
+
+const fixedStarContacts = new FixedStarsEngine().calculateStarContacts(einsteinWestern);
+assertTest(
+  "16.3 Fixed Star Epoch Disclosure",
+  "Labels every emitted fixed-star contact as an unprecessed J2000 reference",
+  fixedStarContacts.every((contact) =>
+    contact.coordinateEpoch === "J2000" &&
+    contact.precisionStatus === "unprecessed-reference"
+  ),
+  "All contacts declare J2000 unprecessed reference status",
+  `${fixedStarContacts.length} contacts; all labelled=${fixedStarContacts.every((contact) => contact.coordinateEpoch === "J2000" && contact.precisionStatus === "unprecessed-reference")}`
 );
 
 // SUMMARY OUTPUT
