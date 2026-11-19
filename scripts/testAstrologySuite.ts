@@ -21,6 +21,7 @@ import { JaiminiKarakasEngine } from "../lib/vedic/jaiminiKarakas";
 import { calculateAnnualProfection, calculateCompletedAge } from "../lib/astronomy/annualProfections";
 import { SubLordCalculator } from "../lib/kp/subLordEngine";
 import { CompleteBaZiEngine, SolarTermCalculator } from "../lib/astronomy/baziEngine";
+import { KPCuspsCalculator } from "../lib/kp/kpCusps";
 
 interface TestResult {
   category: string;
@@ -1172,6 +1173,31 @@ assertTest(
     earlyLuck.endDate.getTime() - earlyLuck.startDate.getTime() > 9.9 * 365 * 86400000,
   "Valid start after birth; next period begins exactly at prior exclusive end",
   `Start ${earlyLuck.startDate.toISOString()}; end ${earlyLuck.endDate.toISOString()}; contiguous=${earlyLuck.endDate.getTime() === baziEarly.luckPillars[1].startDate.getTime()}`
+);
+
+// ======================================================================
+console.log("Running Category 13: KP Placidus cusp preservation...");
+
+const kpCuspCalculator = new KPCuspsCalculator();
+const kpAyanamsa2000 = KPCuspsCalculator.calculateKPAyanamsa(2000, 1, 1);
+const syntheticWesternData = {
+  houses: Array.from({ length: 12 }, (_, index) => ({
+    longitude: index === 0 ? kpAyanamsa2000 + 29 : kpAyanamsa2000 + (index * 30 + 5) % 360,
+  })),
+} as any;
+const preservedKP = kpCuspCalculator.calculateKPCuspsFromWestern(
+  syntheticWesternData,
+  2000,
+  1,
+  1
+);
+assertTest(
+  "13.1 KP Cusp Longitude Preservation",
+  "Keeps the actual sidereal Placidus cusp at 29° instead of snapping it to 0° of the next sign",
+  Math.abs(preservedKP.cusps[0] - 29) < 1e-8 &&
+    Math.abs(preservedKP.houseDetails[0].degreeInSign - 29) < 1e-8,
+  "29°00'00" retained",
+  `Cusp=${preservedKP.cusps[0].toFixed(8)}°; degree-in-sign=${preservedKP.houseDetails[0].degreeInSign.toFixed(8)}°`
 );
 
 // SUMMARY OUTPUT
