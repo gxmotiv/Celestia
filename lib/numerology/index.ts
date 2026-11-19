@@ -37,12 +37,43 @@ export function calculateNumerologyAgreementIndex(points: number): number {
   return Math.max(0, Math.min(100, Math.round(points)));
 }
 
+function validateNumerologyInputs(
+  fullName: string,
+  birthYear: number,
+  birthMonth: number,
+  birthDay: number
+): void {
+  if (typeof fullName !== "string" || fullName.trim().length === 0) {
+    throw new Error("Numerology requires a non-empty name.");
+  }
+  if (/[^\x00-\x7F]/.test(fullName)) {
+    throw new Error(
+      "Numerology name engines currently use Latin A-Z tables only. Enter a user-reviewed Latin transliteration; Celestia will not guess one."
+    );
+  }
+  if (!/[A-Za-z]/.test(fullName)) {
+    throw new Error("Numerology name must contain at least one Latin letter A-Z.");
+  }
+  if (!Number.isInteger(birthYear) || birthYear < 1 ||
+      !Number.isInteger(birthMonth) || birthMonth < 1 || birthMonth > 12 ||
+      !Number.isInteger(birthDay)) {
+    throw new Error("Numerology birth date must use a valid positive year, month 1-12 and integer day.");
+  }
+  const leapYear = birthYear % 4 === 0 && (birthYear % 100 !== 0 || birthYear % 400 === 0);
+  const monthLengths = [31, leapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (birthDay < 1 || birthDay > monthLengths[birthMonth - 1]) {
+    throw new Error("Numerology birth date is not a valid Gregorian calendar date.");
+  }
+}
+
 export function calculateCompleteNumerologyReport(
   fullName: string,
   birthYear: number,
   birthMonth: number,
   birthDay: number
 ): CompleteNumerologyReport {
+  validateNumerologyInputs(fullName, birthYear, birthMonth, birthDay);
+
   // 1. Pythagorean Profile (All 14 Numbers)
   const pythagorean = calculateCompletePythagoreanProfile(fullName, birthYear, birthMonth, birthDay);
 
