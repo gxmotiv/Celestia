@@ -916,7 +916,7 @@ const expectedSevenGrahaRoles = ["AK", "AmK", "BK", "MK/PK", "PiK", "GK", "DK"];
 assertTest(
   "9.1 Parashari Seven Karakas",
   "Uses the seven-karaka Parashari role sequence, including Pitru and excluding Dara",
-  parashariResult.scheme === "Parashari-7" &&
+  parashariResult.scheme === "Seven-Graha-Option" &&
     parashariResult.atmakaraka.planet === "Sun" &&
     parashariResult.karakas.length === 7 &&
     parashariResult.karakas.map((karaka) => karaka.roleShort).join(",") === expectedParashariRoles.join(",") &&
