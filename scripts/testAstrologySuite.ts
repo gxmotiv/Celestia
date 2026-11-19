@@ -1002,24 +1002,24 @@ assertTest(
 // ======================================================================
 console.log("Running Category 10: Annual Profection Tests...");
 
-const profectionBeforeBirthday = calculateAnnualProfection("2008-11-05", "2026-11-04", 0);
-const profectionOnBirthday = calculateAnnualProfection("2008-11-05", "2026-11-05", 0);
+const completedAgeBeforeBirthday = calculateAnnualProfection("2008-11-05", "2026-11-04", 0);
+const completedAgeOnBirthday = calculateAnnualProfection("2008-11-05", "2026-11-05", 0);
 assertTest(
   "10.1 Annual Profection Birthday Boundary",
   "Age and profected house change on the birthday, not on January 1",
-  profectionBeforeBirthday.age === 17 &&
-    profectionBeforeBirthday.profectedHouse === 6 &&
-    profectionOnBirthday.age === 18 &&
-    profectionOnBirthday.profectedHouse === 7,
+  completedAgeBeforeBirthday.age === 17 &&
+    completedAgeBeforeBirthday.profectedHouse === 6 &&
+    completedAgeOnBirthday.age === 18 &&
+    completedAgeOnBirthday.profectedHouse === 7,
   "Before birthday: age 17 / house 6; on birthday: age 18 / house 7",
-  `Before: age ${profectionBeforeBirthday.age} / house ${profectionBeforeBirthday.profectedHouse}; on: age ${profectionOnBirthday.age} / house ${profectionOnBirthday.profectedHouse}`
+  `Before: age ${completedAgeBeforeBirthday.age} / house ${completedAgeBeforeBirthday.profectedHouse}; on: age ${completedAgeOnBirthday.age} / house ${completedAgeOnBirthday.profectedHouse}`
 );
 assertTest(
   "10.2 Annual Profection Time Lord",
   "Uses traditional domicile rulership for the profected sign",
-  profectionOnBirthday.profectedSign === "Libra" && profectionOnBirthday.timeLord === "Venus",
+  completedAgeOnBirthday.profectedSign === "Libra" && completedAgeOnBirthday.timeLord === "Venus",
   "Libra / Venus",
-  `${profectionOnBirthday.profectedSign} / ${profectionOnBirthday.timeLord}`
+  `${completedAgeOnBirthday.profectedSign} / ${completedAgeOnBirthday.timeLord}`
 );
 assertTest(
   "10.3 Completed Age",
@@ -1433,15 +1433,15 @@ assertTest(
 // ======================================================================
 console.log("Running Category 20: Annual Profection Boundary and Convention Tests...");
 
-const profectionBeforeBirthday = calculateCompletedAge("2000-06-15", "2024-06-14");
-const profectionOnBirthday = calculateCompletedAge("2000-06-15", "2024-06-15");
-const profectionAfterBirthday = calculateCompletedAge("2000-06-15", "2024-06-16");
+const completedAgeBeforeBirthday = calculateCompletedAge("2000-06-15", "2024-06-14");
+const completedAgeOnBirthday = calculateCompletedAge("2000-06-15", "2024-06-15");
+const completedAgeAfterBirthday = calculateCompletedAge("2000-06-15", "2024-06-16");
 assertTest(
   "20.1 Annual Profection Birthday Boundary",
   "Completed age changes on the birthday, not one day before or after it",
-  profectionBeforeBirthday === 23 && profectionOnBirthday === 24 && profectionAfterBirthday === 24,
+  completedAgeBeforeBirthday === 23 && completedAgeOnBirthday === 24 && completedAgeAfterBirthday === 24,
   "23 / 24 / 24",
-  `${profectionBeforeBirthday} / ${profectionOnBirthday} / ${profectionAfterBirthday}`
+  `${completedAgeBeforeBirthday} / ${completedAgeOnBirthday} / ${completedAgeAfterBirthday}`
 );
 
 const profectionYearOne = calculateAnnualProfection("2000-06-15", "2001-06-15", 6);
