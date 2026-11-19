@@ -1761,6 +1761,43 @@ for (const fixture of additionalVargaFixtures) {
 }
 
 
+
+
+console.log("Running Category 26: D24, D27, D40 and D45 Parashara Varga fixtures...");
+
+const d24Expected = Array.from({ length: 12 }, (_, natal) =>
+  Array.from({ length: 24 }, (_, part) => ((natal % 2 === 0 ? 4 : 3) + part) % 12)
+);
+const d27StartsByElement = [0, 3, 6, 9];
+const d27Expected = Array.from({ length: 12 }, (_, natal) =>
+  Array.from({ length: 27 }, (_, part) => (d27StartsByElement[natal % 4] + part) % 12)
+);
+const d40Expected = Array.from({ length: 12 }, (_, natal) =>
+  Array.from({ length: 40 }, (_, part) => ((natal % 2 === 0 ? 0 : 6) + part) % 12)
+);
+const d45Starts = [0, 4, 8];
+const d45Expected = Array.from({ length: 12 }, (_, natal) =>
+  Array.from({ length: 45 }, (_, part) => (d45Starts[natal % 3] + part) % 12)
+);
+
+const higherVargaFixtures = [
+  { code: "D24" as const, parts: 24, expected: d24Expected, label: "D24 odd/even Leo/Cancer starts" },
+  { code: "D27" as const, parts: 27, expected: d27Expected, label: "D27 elemental start convention (fire/earth/air/water)" },
+  { code: "D40" as const, parts: 40, expected: d40Expected, label: "D40 odd/even Aries/Libra starts" },
+  { code: "D45" as const, parts: 45, expected: d45Expected, label: "D45 movable/fixed/dual starts" },
+];
+
+for (const fixture of higherVargaFixtures) {
+  const result = checkVargaSequence(fixture.code, fixture.parts, fixture.expected);
+  assertTest(
+    "26.1 Parashara Varga Mapping",
+    `${fixture.label}: all 12 natal signs, midpoints, exact boundaries and just-before checks`,
+    result.pass,
+    `All ${fixture.parts} divisions in all 12 natal signs match the documented convention`,
+    result.pass ? `${result.checked} checks passed` : result.firstFailure
+  );
+}
+
 // SUMMARY OUTPUT — deliberately last so every appended regression fixture is counted.
 console.log("\n=================== TEST RESULTS ===================");
 let passCount = 0;
