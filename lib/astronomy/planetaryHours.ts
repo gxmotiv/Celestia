@@ -93,7 +93,7 @@ export class PlanetaryHoursCalculator {
     const H = Math.acos(cosH) * (180.0 / Math.PI) / 15.0; // hours from solar noon
 
     // Equation of Time (minutes), low-order NOAA-style approximation.
-    const B = (2 * Math.PI / 364) * (dayOfYear - 81);
+    const B = (2 * Math.PI / 365) * (dayOfYear - 81);
     const equationOfTimeMinutes =
       9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
 
