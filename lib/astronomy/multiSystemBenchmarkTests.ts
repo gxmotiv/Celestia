@@ -528,7 +528,8 @@ export class MultiSystemBenchmarkRunner {
       passed: parashari?.scheme === "Seven-Graha-Option" &&
         parashari.karakas.length === 7 &&
         parashari.karakas.some((karaka) => karaka.roleShort === "PiK") &&
-        !parashari.karakas.some((karaka) => karaka.roleShort === "DK"),
+        parashari.karakas.some((karaka) => karaka.roleShort === "MK/PK") &&
+        parashari.karakas.some((karaka) => karaka.roleShort === "DK"),
       notes: "Kept separate from the Jaimini eight-karaka convention; no Rahu is included.",
     });
 
