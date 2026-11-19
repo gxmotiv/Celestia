@@ -45,27 +45,17 @@ export class KPCuspsCalculator {
   ): KPCusps {
     const kpAyanamsa = KPCuspsCalculator.calculateKPAyanamsa(birthYear, birthMonth, birthDay);
 
-    // 1. Convert Western Tropical Placidus Cusps to KP Sidereal
-    const siderealPlacidusCusps = westernData.houses.map((h) => {
-      return normalizeDegrees(h.longitude - kpAyanamsa);
-    });
+    // KP uses the actual sidereal Placidus cusp longitude. Do not snap or
+    // advance a cusp that happens to fall in the last 3°20' of a sign:
+    // that would alter the house boundary and its star/sub-lord calculation.
+    const siderealPlacidusCusps = westernData.houses.map((h) =>
+      normalizeDegrees(h.longitude - kpAyanamsa)
+    );
 
-    // 2. Apply KP Cusp Corrections (as requested in KP specification:
-    // If cusp falls in last 3°20' (26°40' or 26.6667°) of sign, move to next sign)
-    const correctedCusps = siderealPlacidusCusps.map((cusp) => {
-      const signIndex = Math.floor(cusp / 30);
-      const degreeInSign = cusp % 30;
-
-      if (degreeInSign >= 26.6667) {
-        return normalizeDegrees((signIndex + 1) * 30);
-      }
-      return cusp;
-    });
-
-    // 3. Assemble detailed KPCusp objects
-    const houseDetails: KPCusp[] = correctedCusps.map((cuspLon, index) => {
+    // Assemble detailed KPCusp objects from the unmodified calculated cusps.
+    const houseDetails: KPCusp[] = siderealPlacidusCusps.map((cuspLon, index) => {
       const houseNum = index + 1;
-      const nextCuspLon = correctedCusps[index === 11 ? 0 : index + 1];
+      const nextCuspLon = siderealPlacidusCusps[index === 11 ? 0 : index + 1];
       const signIndex = Math.floor(cuspLon / 30);
       const signName = SubLordCalculator.getSignName(signIndex);
       const signLord = SubLordCalculator.getSignLord(signIndex);
@@ -92,7 +82,7 @@ export class KPCuspsCalculator {
     });
 
     return {
-      cusps: correctedCusps,
+      cusps: siderealPlacidusCusps,
       houseDetails,
       houseSigns: houseDetails.map((h) => h.signName),
       houseLords: houseDetails.map((h) => h.signLord),
