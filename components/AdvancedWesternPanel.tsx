@@ -877,7 +877,7 @@ export function AdvancedWesternPanel({
         <div className="space-y-4">
           <div className="flex items-center justify-between text-xs px-3 py-2 bg-slate-950/80 border border-slate-800 rounded-lg text-slate-400">
             <span>Tight Aspects to Fixed Stars (&lt; 1.25° orb): <strong className="text-amber-300 font-mono">{starContacts.length} active</strong></span>
-            <span>Including 4 Royal Archangel Stars &amp; Medusa Algol</span>
+            <span>20 J2000 reference stars · includes 4 Royal stars and Algol</span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
