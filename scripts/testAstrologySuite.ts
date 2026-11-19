@@ -919,7 +919,7 @@ assertTest(
   parashariResult.scheme === "Seven-Graha-Option" &&
     parashariResult.atmakaraka.planet === "Sun" &&
     parashariResult.karakas.length === 7 &&
-    parashariResult.karakas.map((karaka) => karaka.roleShort).join(",") === expectedParashariRoles.join(",") &&
+    parashariResult.karakas.map((karaka) => karaka.roleShort).join(",") === expectedSevenGrahaRoles.join(",") &&
     !parashariResult.karakas.some((karaka) => karaka.planet === "Rahu"),
   "Parashari-7 / AK,AmK,BK,MK,PiK,PK,GK",
   `${parashariResult.scheme} / ${parashariResult.karakas.map((karaka) => karaka.roleShort).join(",")}`
