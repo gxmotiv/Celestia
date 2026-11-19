@@ -230,6 +230,15 @@ These sources document historical texts, translations and practitioner interpret
 - **Numerology synthesis:** removed the forced 65% minimum. The displayed value is now a transparent 0–100 rule-match index from the app's selected cross-system comparisons. It is not a measure of truth, predictive accuracy, scientific validity, or a person's value. Zero agreement is a valid result.
 - **BaZi benchmark honesty:** removed eight placeholder assertions that unconditionally returned a passing result for Yong Shen, stem/branch transformations, monthly timing and other advanced methods. These methods remain unverified until they have independent fixtures and calculations; they are not green tests merely because the data structure exists.
 
+
+### Western advanced-engine audit (2026-11-19)
+
+- **Fixed stars:** the catalogue stores J2000 ecliptic longitudes but previously compared them directly with date-of-birth tropical positions. It does not yet precess the star coordinates or include proper motion. Every emitted contact is now explicitly labelled as an unprecessed J2000 reference and the UI warns that the contact is exploratory, not a verified conjunction.
+- **Eclipses:** the embedded event list is static and ends in August 2026. It is no longer allowed to show past events as upcoming; the analyzer filters against an explicit as-of date. When the sample list has no future events, the UI states that a live astronomical eclipse solver and refreshed catalogue are missing.
+- **Astrocartography:** the previous shortcut used direct ecliptic-longitude offsets as AC/DC/MC/IC terrestrial lines. That does not solve the required equatorial coordinates, local sidereal time, latitude-dependent horizon intersections or meridian crossings. The output is now fail-closed: no lines or destination recommendations are returned until the real geometry and reference-chart tests exist.
+- **Medical astrology:** this remains a symbolic historical astrology panel only. The UI now explicitly states that it is not a medical assessment, diagnosis, risk screen or preventive-care recommendation and must not guide health decisions.
+- **Product naming:** the Western advanced panel is labelled a technique directory / exploratory modules, not a complete architecture. A panel's presence does not establish calculation or interpretation readiness.
+
 ### Implementation note
 
 This document is a product and engineering specification, not a clinical protocol. Any mental-health, domestic-abuse or crisis-support content must be reviewed by qualified domain professionals before the application presents it as authoritative guidance.
