@@ -152,8 +152,13 @@ def main():
     print("Benchmark request completed.")
     print("Model:", model["id"])
     print("Task:", args.task, "| max output tokens:", cap)
-    print("Status:", result["status"], "| latency:", result["latency_seconds"], "seconds")
+    print("Status:", result["status"], "| HTTP:", result.get("http_status", "n/a"), "| latency:", result["latency_seconds"], "seconds")
     print("Token usage:", json.dumps(result["usage"], sort_keys=True))
+    if result.get("error"):
+        # run.py stores only sanitized gateway diagnostics; never print request headers or credentials.
+        print("Failure detail:", result["error"])
+    if result.get("cloudflare_ray_id"):
+        print("Cloudflare Ray ID:", result["cloudflare_ray_id"])
     print("Result file:", out_path)
     if result["status"] != "success":
         return 1
