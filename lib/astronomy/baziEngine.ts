@@ -100,8 +100,13 @@ export interface LuckPillar {
     pinyin: string;
     name: string;
   };
+  /** Decimal age at which this luck pillar starts (3 solar days = 1 year convention). */
   startAge: number;
   endAge: number;
+  /** Exact UTC instant for the start of this luck pillar. */
+  startDate: Date;
+  /** Exact UTC instant for the end of this luck pillar (exclusive). */
+  endDate: Date;
   startYear: number;
   endYear: number;
   isCurrent: boolean;
@@ -484,6 +489,71 @@ export class SolarTermCalculator {
       currentSunLongitude: Math.round(sunLon * 1000) / 1000,
       nextTerm: firstTerm,
       daysRemaining: 1,
+    };
+  }
+
+  /**
+   * Find the adjacent Jie (month-opening solar node) in the requested direction.
+   * The returned instant is solved against the engine's tropical geocentric Sun
+   * longitude; it is not a civil-date approximation.
+   */
+  public getAdjacentJie(date: Date, direction: "forward" | "backward"): {
+    term: SolarTerm;
+    date: Date;
+    intervalMilliseconds: number;
+  } {
+    if (!Number.isFinite(date.getTime())) {
+      throw new Error("BaZi birth date must be a valid Date.");
+    }
+
+    const startLongitude = this.getSunLongitude(date);
+    const jieTerms = SOLAR_TERMS.filter((term) => term.isMajor);
+    if (jieTerms.length !== 12) {
+      throw new Error(`Expected 12 Jie solar nodes; found ${jieTerms.length}.`);
+    }
+
+    const candidates = jieTerms.map((term) => {
+      const distance = direction === "forward"
+        ? normalizeDegrees(term.longitude - startLongitude)
+        : normalizeDegrees(startLongitude - term.longitude);
+      return { term, distance };
+    }).filter((candidate) => candidate.distance > 1e-8)
+      .sort((a, b) => a.distance - b.distance);
+
+    const target = candidates[0];
+    if (!target) throw new Error("Could not identify the adjacent Jie solar node.");
+
+    // Sun's apparent geocentric longitude advances monotonically over this
+    // short interval. The extra two days safely bracket the target crossing.
+    let low = 0;
+    let high = target.distance / 0.9856 + 2;
+    const directionSign = direction === "forward" ? 1 : -1;
+    const progressedLongitude = (days: number) => {
+      const instant = new Date(date.getTime() + directionSign * days * 86400000);
+      const longitude = this.getSunLongitude(instant);
+      return direction === "forward"
+        ? normalizeDegrees(longitude - startLongitude)
+        : normalizeDegrees(startLongitude - longitude);
+    };
+
+    if (progressedLongitude(high) < target.distance) {
+      high += 2;
+      if (progressedLongitude(high) < target.distance) {
+        throw new Error("Could not bracket the requested Jie solar-term crossing.");
+      }
+    }
+
+    for (let i = 0; i < 48; i++) {
+      const middle = (low + high) / 2;
+      if (progressedLongitude(middle) < target.distance) low = middle;
+      else high = middle;
+    }
+
+    const intervalMilliseconds = ((low + high) / 2) * 86400000;
+    return {
+      term: target.term,
+      date: new Date(date.getTime() + directionSign * intervalMilliseconds),
+      intervalMilliseconds,
     };
   }
 
@@ -900,20 +970,51 @@ export class BaZiTransitEngine {
     monthBranch: EarthlyBranch,
     targetDate: Date = new Date()
   ): LuckPillar[] {
+    if (!Number.isFinite(birthDate.getTime()) || !Number.isFinite(targetDate.getTime())) {
+      throw new Error("BaZi birth and target dates must be valid Date values.");
+    }
+
     const isYearYang = yearStem.yinYang === "Yang";
     const isForward = (gender === "Male" && isYearYang) || (gender === "Female" && !isYearYang);
+    const direction = isForward ? "forward" : "backward";
+    const adjacentJie = this.solarCalculator.getAdjacentJie(birthDate, direction);
 
-    // Starting age estimation (classical 3 to 8 years based on days to nearest solar node)
-    // Approximately 1 day = 120 days of life -> 3 days = 1 year of age
-    const startAge = 5;
+    // Classical proportional conversion: 3 days = 1 year, 1 day = 4 months,
+    // and one two-hour shichen = 10 days. Express the result in a 360-day
+    // traditional year so the remainder is retained instead of hard-coding 5.
+    const equivalentAgeDays =
+      (adjacentJie.intervalMilliseconds / (2 * 60 * 60 * 1000)) * 10;
+    const startAgeYears = Math.floor(equivalentAgeDays / 360);
+    const remainingAgeDays = equivalentAgeDays - startAgeYears * 360;
+    const startAgeMonths = Math.floor(remainingAgeDays / 30);
+    const startAgeDays = remainingAgeDays - startAgeMonths * 30;
+    const startAge = startAgeYears + startAgeMonths / 12 + startAgeDays / 360;
 
-    // Month pillar starting index in 60-cycle
+    const addAge = (date: Date, years: number, months = 0, days = 0): Date => {
+      const result = new Date(date.getTime());
+      const originalDay = result.getUTCDate();
+      result.setUTCDate(1);
+      result.setUTCFullYear(result.getUTCFullYear() + years);
+      result.setUTCMonth(result.getUTCMonth() + months);
+      const lastDay = new Date(Date.UTC(
+        result.getUTCFullYear(),
+        result.getUTCMonth() + 1,
+        0
+      )).getUTCDate();
+      result.setUTCDate(Math.min(originalDay, lastDay));
+      result.setTime(result.getTime() + days * 86400000);
+      return result;
+    };
+
+    const firstPillarStartDate = addAge(
+      birthDate,
+      startAgeYears,
+      startAgeMonths,
+      startAgeDays
+    );
+
     let currentStemIdx = monthStem.index;
     let currentBranchIdx = monthBranch.index;
-
-    const birthYear = birthDate.getUTCFullYear();
-    const currentYear = targetDate.getUTCFullYear();
-
     const luckPillars: LuckPillar[] = [];
 
     for (let i = 1; i <= 9; i++) {
@@ -927,13 +1028,13 @@ export class BaZiTransitEngine {
 
       const stem = HEAVENLY_STEMS[currentStemIdx];
       const branch = EARTHLY_BRANCHES[currentBranchIdx];
-
       const pStartAge = startAge + (i - 1) * 10;
-      const pEndAge = pStartAge + 9;
-      const pStartYear = birthYear + pStartAge;
-      const pEndYear = birthYear + pEndAge;
-
-      const isCurrent = currentYear >= pStartYear && currentYear <= pEndYear;
+      const pEndAge = startAge + i * 10;
+      const pStartDate = addAge(firstPillarStartDate, (i - 1) * 10);
+      const pEndDate = addAge(firstPillarStartDate, i * 10);
+      const pStartYear = pStartDate.getUTCFullYear();
+      const pEndYear = pEndDate.getUTCFullYear() - 1;
+      const isCurrent = targetDate >= pStartDate && targetDate < pEndDate;
 
       luckPillars.push({
         order: i,
@@ -946,6 +1047,8 @@ export class BaZiTransitEngine {
         },
         startAge: pStartAge,
         endAge: pEndAge,
+        startDate: pStartDate,
+        endDate: pEndDate,
         startYear: pStartYear,
         endYear: pEndYear,
         isCurrent,
