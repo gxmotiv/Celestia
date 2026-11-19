@@ -911,34 +911,80 @@ const jaiminiFixture = [
   { name: "Saturn", siderealLongitude: 185, house: 4, rasiName: "Libra" },
   { name: "Ascendant", siderealLongitude: 100, house: 1, rasiName: "Cancer" },
 ];
-const jaiminiResult = jaiminiEngine.calculate7Karakas(jaiminiFixture);
+const parashariResult = jaiminiEngine.calculate7Karakas(jaiminiFixture);
+const expectedParashariRoles = ["AK", "AmK", "BK", "MK", "PiK", "PK", "GK"];
 assertTest(
-  "9.1 Jaimini Chara Karakas",
-  "Highest within-sign longitude receives Atmakaraka in the seven-graha scheme",
-  jaiminiResult.atmakaraka.planet === "Sun" && jaiminiResult.karakas.length === 7,
-  "Sun / 7 karakas",
-  `${jaiminiResult.atmakaraka.planet} / ${jaiminiResult.karakas.length} karakas`
+  "9.1 Parashari Seven Karakas",
+  "Uses the seven-karaka Parashari role sequence, including Pitru and excluding Dara",
+  parashariResult.scheme === "Parashari-7" &&
+    parashariResult.atmakaraka.planet === "Sun" &&
+    parashariResult.karakas.length === 7 &&
+    parashariResult.karakas.map((karaka) => karaka.roleShort).join(",") === expectedParashariRoles.join(",") &&
+    !parashariResult.karakas.some((karaka) => karaka.planet === "Rahu"),
+  "Parashari-7 / AK,AmK,BK,MK,PiK,PK,GK",
+  `${parashariResult.scheme} / ${parashariResult.karakas.map((karaka) => karaka.roleShort).join(",")}`
 );
 assertTest(
   "9.2 Jaimini Karakamsa",
   "Karakamsa uses the movable/fixed/dual Navamsa mapping, not absolute 3°20' counting",
-  jaiminiResult.karakamsaSign === "Taurus" && jaiminiResult.karakamsaHouseFromLagna === 11,
+  parashariResult.karakamsaSign === "Taurus" && parashariResult.karakamsaHouseFromLagna === 11,
   "Taurus / 11th from Cancer Ascendant",
-  `${jaiminiResult.karakamsaSign} / house ${jaiminiResult.karakamsaHouseFromLagna}`
+  `${parashariResult.karakamsaSign} / house ${parashariResult.karakamsaHouseFromLagna}`
 );
 
-let jaiminiMissingPlanetRejected = false;
+const jaimini8Fixture = [
+  ...jaiminiFixture,
+  { name: "NorthNode", siderealLongitude: 330, house: 7, rasiName: "Capricorn" },
+];
+const jaimini8Result = jaiminiEngine.calculate8Karakas(jaimini8Fixture);
+assertTest(
+  "9.3 Jaimini Eight Karakas",
+  "Includes Rahu reverse-counted and assigns the eighth Dara Karaka role",
+  jaimini8Result.scheme === "Jaimini-8" &&
+    jaimini8Result.includesRahu &&
+    jaimini8Result.atmakaraka.planet === "Rahu" &&
+    jaimini8Result.atmakaraka.isReverseCounted &&
+    jaimini8Result.atmakaraka.effectiveDegree === 30 &&
+    jaimini8Result.karakas.length === 8 &&
+    jaimini8Result.karakas[7].roleShort === "DK",
+  "Jaimini-8 / Rahu effective 30° as AK / 8 roles ending DK",
+  `${jaimini8Result.scheme} / ${jaimini8Result.atmakaraka.planet} effective ${jaimini8Result.atmakaraka.effectiveDegree}° / ${jaimini8Result.karakas.length} / ${jaimini8Result.karakas[7].roleShort}`
+);
+
+assertTest(
+  "9.4 Chara Karaka Tie Disclosure",
+  "Reports exact ranking ties rather than silently presenting the order as unambiguous",
+  parashariResult.warnings.length > 0,
+  "At least one exact-degree tie warning",
+  String(parashariResult.warnings.length)
+);
+
+let missingParashariPlanetRejected = false;
 try {
   jaiminiEngine.calculate7Karakas(jaiminiFixture.filter((planet) => planet.name !== "Saturn"));
 } catch {
-  jaiminiMissingPlanetRejected = true;
+  missingParashariPlanetRejected = true;
 }
 assertTest(
-  "9.3 Jaimini Input Validation",
-  "Rejects incomplete classical graha input rather than returning undefined karakas",
-  jaiminiMissingPlanetRejected,
+  "9.5 Parashari Input Validation",
+  "Rejects incomplete seven-graha input",
+  missingParashariPlanetRejected,
   "Missing Saturn rejected",
-  jaiminiMissingPlanetRejected ? "Rejected" : "Accepted incomplete chart"
+  missingParashariPlanetRejected ? "Rejected" : "Accepted incomplete chart"
+);
+
+let missingRahuRejected = false;
+try {
+  jaiminiEngine.calculate8Karakas(jaiminiFixture);
+} catch {
+  missingRahuRejected = true;
+}
+assertTest(
+  "9.6 Jaimini Input Validation",
+  "Rejects an eight-karaka chart without the north lunar node",
+  missingRahuRejected,
+  "Missing Rahu rejected",
+  missingRahuRejected ? "Rejected" : "Accepted incomplete chart"
 );
 
 // ======================================================================
