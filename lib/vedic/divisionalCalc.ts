@@ -75,6 +75,13 @@ export function calculateDivisionalSignIndex(
   siderealLon: number,
   divisionCode: string
 ): number {
+  if (!Number.isFinite(siderealLon)) {
+    throw new Error("Divisional-chart longitude must be a finite number of degrees.");
+  }
+  if (!Object.prototype.hasOwnProperty.call(DIVISIONAL_CHARTS_CONFIG, divisionCode)) {
+    throw new Error(`Unsupported divisional chart code: ${divisionCode}`);
+  }
+
   const normLon = normalizeDeg(siderealLon);
   const rasiIdx = Math.floor(normLon / 30);
   const degInRasi = normLon - rasiIdx * 30;
