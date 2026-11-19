@@ -19,6 +19,7 @@ import { buildLifeStrategyBrief, LIFE_STRATEGY_STEPS } from "../lib/consultation
 import { ASTROLOGY_SPECIALTIES, getAstrologySpecialties } from "../lib/consultation/astrologySpecialties";
 import { JaiminiKarakasEngine } from "../lib/vedic/jaiminiKarakas";
 import { NavamsaCalculator } from "../lib/vedic/d9NavamsaEngine";
+import { calculateDivisionalSignIndex } from "../lib/vedic/divisionalCalc";
 import { calculateAnnualProfection, calculateCompletedAge } from "../lib/astronomy/annualProfections";
 import { SubLordCalculator } from "../lib/kp/subLordEngine";
 import { CompleteBaZiEngine, SolarTermCalculator } from "../lib/astronomy/baziEngine";
@@ -1552,6 +1553,40 @@ assertTest(
   invalidNavamsaInputsRejected,
   "All non-finite longitudes rejected",
   invalidNavamsaInputsRejected ? "All rejected" : "At least one invalid longitude accepted"
+);
+
+
+console.log("Running Category 22: Generic Varga API Validation...");
+
+const genericVargaInvalidValues = [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY];
+const genericVargaRejectsNonFinite = genericVargaInvalidValues.every((value) => {
+  try {
+    calculateDivisionalSignIndex(value, "D9");
+    return false;
+  } catch {
+    return true;
+  }
+});
+assertTest(
+  "22.1 Generic Varga Input Validation",
+  "Rejects NaN and positive/negative infinite longitudes",
+  genericVargaRejectsNonFinite,
+  "All non-finite longitudes rejected",
+  genericVargaRejectsNonFinite ? "All rejected" : "At least one invalid longitude accepted"
+);
+
+let unknownVargaRejected = false;
+try {
+  calculateDivisionalSignIndex(12.5, "D999");
+} catch {
+  unknownVargaRejected = true;
+}
+assertTest(
+  "22.2 Generic Varga Code Validation",
+  "Rejects unknown divisional chart identifiers instead of silently returning D1",
+  unknownVargaRejected,
+  "Unknown division rejected",
+  unknownVargaRejected ? "Rejected" : "Unknown division silently accepted"
 );
 
 // SUMMARY OUTPUT
