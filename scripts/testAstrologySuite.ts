@@ -23,6 +23,7 @@ import { SubLordCalculator } from "../lib/kp/subLordEngine";
 import { CompleteBaZiEngine, SolarTermCalculator } from "../lib/astronomy/baziEngine";
 import { KPCuspsCalculator } from "../lib/kp/kpCusps";
 import { calculateNumerologyAgreementIndex } from "../lib/numerology";
+import { swissEphemeris } from "../lib/astronomy/swissEphemeris";
 import { EclipseAnalyzer, AstrocartographyEngine, FixedStarsEngine } from "../lib/astronomy/specializedWesternEngines";
 
 interface TestResult {
@@ -1327,6 +1328,40 @@ assertTest(
   ),
   "All contacts declare J2000 unprecessed reference status",
   `${fixedStarContacts.length} contacts; all labelled=${fixedStarContacts.every((contact) => contact.coordinateEpoch === "J2000" && contact.precisionStatus === "unprecessed-reference")}`
+);
+
+// ======================================================================
+console.log("Running Category 17: Lunar node pair conventions...");
+
+const nodeEpoch = swissEphemeris.calculateJulianDay(2024, 4, 8, 18, 0, 0, 0);
+const meanNodePair = swissEphemeris.calculateAllPlanets(nodeEpoch, false, "mean");
+const trueNodePair = swissEphemeris.calculateAllPlanets(nodeEpoch, false, "true");
+const angularSeparation = (a: number, b: number) => {
+  const raw = Math.abs(a - b) % 360;
+  return Math.min(raw, 360 - raw);
+};
+assertTest(
+  "17.1 Mean Rahu-Ketu Opposition",
+  "Ketu is exactly 180° opposite the mean ascending node used for Rahu",
+  Math.abs(angularSeparation(meanNodePair.rahu.longitude, meanNodePair.ketu.longitude) - 180) < 1e-8,
+  "180°",
+  `${angularSeparation(meanNodePair.rahu.longitude, meanNodePair.ketu.longitude).toFixed(8)}°`
+);
+assertTest(
+  "17.2 True Rahu-Ketu Opposition",
+  "Selecting true-node mode still returns a true ascending/descending node pair",
+  Math.abs(angularSeparation(trueNodePair.rahu.longitude, trueNodePair.ketu.longitude) - 180) < 1e-8 &&
+    Math.abs(angularSeparation(trueNodePair.rahu.longitude, meanNodePair.rahu.longitude)) > 0.001,
+  "180° pair; true Rahu differs from mean Rahu",
+  `Pair=${angularSeparation(trueNodePair.rahu.longitude, trueNodePair.ketu.longitude).toFixed(8)}°; true-vs-mean=${angularSeparation(trueNodePair.rahu.longitude, meanNodePair.rahu.longitude).toFixed(6)}°`
+);
+assertTest(
+  "17.3 Node Latitude and Motion Symmetry",
+  "Descending node mirrors the ascending node latitude and shares its longitude speed",
+  Math.abs(meanNodePair.rahu.latitude + meanNodePair.ketu.latitude) < 1e-8 &&
+    Math.abs(meanNodePair.rahu.speed - meanNodePair.ketu.speed) < 1e-8,
+  "Opposite latitude; equal speed",
+  `Latitude sum=${(meanNodePair.rahu.latitude + meanNodePair.ketu.latitude).toFixed(8)}; speed difference=${(meanNodePair.rahu.speed - meanNodePair.ketu.speed).toFixed(8)}`
 );
 
 // SUMMARY OUTPUT
