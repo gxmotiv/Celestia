@@ -704,7 +704,7 @@ export function calculateVedicChart(
     ),
   });
 
-  // Keep the two source traditions as separately labelled, inspectable results.
+  // Keep the two seven/eight-graha source options as separately labelled, inspectable results.
   const jaiminiEngine = new JaiminiKarakasEngine();
   const jaiminiKarakas = jaiminiEngine.calculate8Karakas(vedicPlanets, lagnaPlanet);
   const parashariKarakas = jaiminiEngine.calculate7Karakas(vedicPlanets, lagnaPlanet);
