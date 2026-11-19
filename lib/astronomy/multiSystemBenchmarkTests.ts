@@ -497,19 +497,39 @@ export class MultiSystemBenchmarkRunner {
       notes: "Mathematical total of Sarvashtakavarga is universally invariant.",
     });
 
-    // 7. Jaimini 7 Chara Karakas Evaluation
+    // 7. Jaimini eight-karaka and Parashari seven-karaka schemes are separate.
     const jaimini = vChart.jaiminiKarakas;
-    const ak = jaimini?.atmakaraka;
+    const jaiminiAK = jaimini?.atmakaraka;
     list.push({
       id: "V-JAI-01",
       system: "Vedic",
-      name: "Jaimini 7 Chara Karakas (Atmakaraka through Darakaraka)",
+      name: "Jaimini 8 Chara Karakas (Rahu reverse-counted; Dara Karaka included)",
       category: "Jaimini Astrology",
-      classicalAuthority: "Maharishi Jaimini (Upadesha Sutras)",
-      expectedFormula: "7 planets ranked by decreasing degree within sign (0° to 30°)",
-      actualResult: ak ? `Atmakaraka = ${ak.planet} (${ak.rasiDegreeFormatted}) in ${ak.sign}` : "Missing",
-      passed: jaimini !== undefined && jaimini.karakas.length === 7,
-      notes: "King of the chart (Soul significator) identified with Karakamsa.",
+      classicalAuthority: "Jaimini Sutras (B. Suryanarain Rao translation, revised by B.V. Raman); declared 8-karaka convention",
+      expectedFormula: "Sun–Saturn plus Rahu ranked by effective degree; Rahu uses 30° − degree within sign; eight roles through DK",
+      actualResult: jaiminiAK ? `Atmakaraka = ${jaiminiAK.planet} (actual ${jaiminiAK.rasiDegreeFormatted}; rank ${jaiminiAK.effectiveDegreeFormatted}) in ${jaiminiAK.sign}` : "Missing",
+      passed: jaimini?.scheme === "Jaimini-8" &&
+        jaimini.includesRahu &&
+        jaimini.karakas.length === 8 &&
+        jaimini.karakas.some((karaka) => karaka.roleShort === "DK") &&
+        jaimini.karakas.some((karaka) => karaka.planet === "Rahu" && karaka.isReverseCounted),
+      notes: "Rahu reverse-degree policy and the selected eight-role scheme are shown explicitly; exact ties emit warnings.",
+    });
+
+    const parashari = vChart.parashariKarakas;
+    list.push({
+      id: "V-PAR-01",
+      system: "Vedic",
+      name: "Parashari 7 Chara Karakas (Pitrikaraka included; Dara excluded)",
+      category: "Parashari Astrology",
+      classicalAuthority: "Brihat Parashara Hora Shastra, chapter 32 convention",
+      expectedFormula: "Sun through Saturn; AK, AmK, BK, MK, PiK, PK, GK",
+      actualResult: parashari ? `${parashari.label}: ${parashari.karakas.length} roles` : "Missing",
+      passed: parashari?.scheme === "Parashari-7" &&
+        parashari.karakas.length === 7 &&
+        parashari.karakas.some((karaka) => karaka.roleShort === "PiK") &&
+        !parashari.karakas.some((karaka) => karaka.roleShort === "DK"),
+      notes: "Kept separate from the Jaimini eight-karaka convention; no Rahu is included.",
     });
 
     // 8. Tara Bala (9-Tara Chakra) Grid
