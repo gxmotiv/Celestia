@@ -26,6 +26,17 @@ export * from "./loshu";
 export * from "./kabbalah";
 export * from "./tamil";
 
+/**
+ * A transparent, rule-count agreement index for this app's chosen systems.
+ * It is not a measure of predictive accuracy, scientific validity or personal worth.
+ */
+export function calculateNumerologyAgreementIndex(points: number): number {
+  if (!Number.isFinite(points)) {
+    throw new Error("Numerology agreement points must be finite.");
+  }
+  return Math.max(0, Math.min(100, Math.round(points)));
+}
+
 export function calculateCompleteNumerologyReport(
   fullName: string,
   birthYear: number,
@@ -64,7 +75,7 @@ export function calculateCompleteNumerologyReport(
   if (tamilVidhi === vedicBhagyank) matchPoints += 25;
   if (loShu.arrowsOfStrength.some((a) => a.isPresent)) matchPoints += 20;
 
-  const resonanceScore = Math.min(98, Math.max(65, matchPoints));
+  const resonanceScore = calculateNumerologyAgreementIndex(matchPoints);
 
   const archetypesMap: Record<number, string> = {
     1: "The Sovereign Pioneer & Solar Luminary",
