@@ -935,8 +935,9 @@ export function TransitView({
                   </div>
 
                   <div className="pt-2 border-t border-slate-800 text-[10px] text-slate-400 space-y-0.5">
-                    <div>Ages {lp.startAge}–{lp.endAge}</div>
+                    <div>Ages {lp.startAge.toFixed(2)}–{lp.endAge.toFixed(2)}</div>
                     <div className="text-amber-400 font-medium">({lp.startYear}–{lp.endYear})</div>
+                    <div className="text-slate-500">Starts {lp.startDate.toISOString().slice(0, 10)}</div>
                   </div>
                 </div>
               ))}
