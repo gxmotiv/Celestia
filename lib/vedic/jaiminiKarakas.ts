@@ -116,7 +116,7 @@ function formatDegree(degree: number): string {
   const degrees = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
-  return \`\${degrees}°\${minutes.toString().padStart(2, "0")}'\${seconds.toString().padStart(2, "0")}\\\"\`;
+  return degrees + "°" + minutes.toString().padStart(2, "0") + "\u0027" + seconds.toString().padStart(2, "0") + "\u0022";
 }
 
 function normalizePlanetName(name: string): string {
@@ -151,10 +151,10 @@ export class JaiminiKarakasEngine {
       .map((planet) => {
         const canonicalName = normalizePlanetName(planet.name);
         if (!Number.isFinite(planet.siderealLongitude)) {
-          throw new Error(\`Invalid Chara Karaka longitude for \${planet.name}.\`);
+          throw new Error(`Invalid Chara Karaka longitude for ${planet.name}.`);
         }
         if (!Number.isInteger(planet.house) || planet.house < 1 || planet.house > 12) {
-          throw new Error(\`Invalid Chara Karaka house for \${planet.name}: expected an integer from 1 to 12.\`);
+          throw new Error(`Invalid Chara Karaka house for ${planet.name}: expected an integer from 1 to 12.`);
         }
         const longitude = normalizeLongitude(planet.siderealLongitude);
         const signIndex = Math.floor(longitude / 30);
@@ -178,7 +178,7 @@ export class JaiminiKarakasEngine {
     const invalid = requiredNames.filter((name) => counts.get(name) !== 1);
     if (invalid.length || candidates.length !== requiredNames.length) {
       throw new Error(
-        \`\${scheme} requires exactly one of each required graha. Missing/duplicate: \${invalid.join(", ") || "unexpected duplicate input"}.\`
+        `${scheme} requires exactly one of each required graha. Missing/duplicate: ${invalid.join(", ") || "unexpected duplicate input"}.`
       );
     }
 
@@ -191,7 +191,7 @@ export class JaiminiKarakasEngine {
     for (let i = 1; i < candidates.length; i++) {
       if (Math.abs(candidates[i - 1].effectiveDegree - candidates[i].effectiveDegree) < 1e-9) {
         warnings.push(
-          \`Exact Chara Karaka degree tie between \${candidates[i - 1].name} and \${candidates[i].name}; role ordering needs a declared tie rule.\`
+          `Exact Chara Karaka degree tie between ${candidates[i - 1].name} and ${candidates[i].name}; role ordering needs a declared tie rule.`
         );
       }
     }
@@ -246,7 +246,7 @@ export class JaiminiKarakasEngine {
       karakamsaSignIndex,
       karakamsaHouseFromLagna,
       warnings,
-      summary: \`\${label}: \${atmakaraka.planet} is Atmakaraka at \${atmakaraka.rasiDegreeFormatted} in \${atmakaraka.sign}. Its Navamsa sign is \${NavamsaCalculator.SIGN_NAMES[karakamsaSignIndex]} (Karakamsa).\`,
+      summary: `${label}: ${atmakaraka.planet} is Atmakaraka at ${atmakaraka.rasiDegreeFormatted} in ${atmakaraka.sign}. Its Navamsa sign is ${NavamsaCalculator.SIGN_NAMES[karakamsaSignIndex]} (Karakamsa).`,
     };
   }
 }
