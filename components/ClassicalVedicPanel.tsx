@@ -86,7 +86,7 @@ export function ClassicalVedicPanel({ vedicData }: ClassicalVedicPanelProps) {
               aria-pressed={activeKarakaScheme === "parashari-7"}
               className={`px-3 py-2 rounded-lg text-xs font-semibold border ${activeKarakaScheme === "parashari-7" ? "bg-amber-500/20 text-amber-200 border-amber-500/40" : "bg-slate-950 text-slate-400 border-slate-800"}`}
             >
-              Parashari 7-Karaka · no Rahu / Dara
+              Seven-graha option · Matru/Putra merged
             </button>
           </div>
 
