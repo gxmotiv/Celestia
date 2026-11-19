@@ -911,25 +911,25 @@ const jaiminiFixture = [
   { name: "Saturn", siderealLongitude: 185, house: 4, rasiName: "Libra" },
   { name: "Ascendant", siderealLongitude: 100, house: 1, rasiName: "Cancer" },
 ];
-const parashariResult = jaiminiEngine.calculate7Karakas(jaiminiFixture);
+const sevenGrahaResult = jaiminiEngine.calculate7Karakas(jaiminiFixture);
 const expectedSevenGrahaRoles = ["AK", "AmK", "BK", "MK/PK", "PiK", "GK", "DK"];
 assertTest(
-  "9.1 Parashari Seven Karakas",
+  "9.1 Seven-Graha Option",
   "Uses the seven-karaka Parashari role sequence, including Pitru and excluding Dara",
-  parashariResult.scheme === "Seven-Graha-Option" &&
-    parashariResult.atmakaraka.planet === "Sun" &&
-    parashariResult.karakas.length === 7 &&
-    parashariResult.karakas.map((karaka) => karaka.roleShort).join(",") === expectedSevenGrahaRoles.join(",") &&
-    !parashariResult.karakas.some((karaka) => karaka.planet === "Rahu"),
+  sevenGrahaResult.scheme === "Seven-Graha-Option" &&
+    sevenGrahaResult.atmakaraka.planet === "Sun" &&
+    sevenGrahaResult.karakas.length === 7 &&
+    sevenGrahaResult.karakas.map((karaka) => karaka.roleShort).join(",") === expectedSevenGrahaRoles.join(",") &&
+    !sevenGrahaResult.karakas.some((karaka) => karaka.planet === "Rahu"),
   "Seven-Graha-Option / AK,AmK,BK,MK/PK,PiK,GK,DK",
-  `${parashariResult.scheme} / ${parashariResult.karakas.map((karaka) => karaka.roleShort).join(",")}`
+  `${sevenGrahaResult.scheme} / ${sevenGrahaResult.karakas.map((karaka) => karaka.roleShort).join(",")}`
 );
 assertTest(
   "9.2 Jaimini Karakamsa",
   "Karakamsa uses the movable/fixed/dual Navamsa mapping, not absolute 3°20' counting",
-  parashariResult.karakamsaSign === "Taurus" && parashariResult.karakamsaHouseFromLagna === 11,
+  sevenGrahaResult.karakamsaSign === "Taurus" && sevenGrahaResult.karakamsaHouseFromLagna === 11,
   "Taurus / 11th from Cancer Ascendant",
-  `${parashariResult.karakamsaSign} / house ${parashariResult.karakamsaHouseFromLagna}`
+  `${sevenGrahaResult.karakamsaSign} / house ${sevenGrahaResult.karakamsaHouseFromLagna}`
 );
 
 const jaimini8Fixture = [
@@ -954,9 +954,9 @@ assertTest(
 assertTest(
   "9.4 Chara Karaka Tie Disclosure",
   "Reports exact ranking ties rather than silently presenting the order as unambiguous",
-  parashariResult.warnings.length > 0,
+  sevenGrahaResult.warnings.length > 0,
   "At least one exact-degree tie warning",
-  String(parashariResult.warnings.length)
+  String(sevenGrahaResult.warnings.length)
 );
 
 let missingParashariPlanetRejected = false;
@@ -966,7 +966,7 @@ try {
   missingParashariPlanetRejected = true;
 }
 assertTest(
-  "9.5 Parashari Input Validation",
+  "9.5 Seven-Graha Input Validation",
   "Rejects incomplete seven-graha input",
   missingParashariPlanetRejected,
   "Missing Saturn rejected",
