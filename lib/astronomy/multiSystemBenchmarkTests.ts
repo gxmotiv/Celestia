@@ -4,7 +4,7 @@
  * 1. Western Astrology (32 tests: Ephemeris, Houses, Aspects, Almuten, Progressions, Profections)
  * 2. Vedic Jyotish (32 tests: Ayanamsha, Shodashavargas, Vimshottari, Ashtakavarga, Shadbala, Jaimini, Tara Bala, Vedha)
  * 3. Krishnamurti Paddhati (16 tests: KP Placidus, 249 Sub-Lords, 4-fold Significators, Event Promise)
- * 4. Chinese BaZi (16 tests: Solar Terms, Lichun Boundary, 60 Jia Zi, Hidden Stems, Day Master, Da Yun)
+ * 4. Chinese BaZi (8 structural checks; advanced methods not yet independently validated)
  * 5. Universal Numerology (12 tests: Life Path Master Reduction, Expression, Soul Urge, Karmic Debts, Pinnacles)
  */
 
@@ -811,27 +811,10 @@ export class MultiSystemBenchmarkRunner {
       notes: "Harmonic affinity and opposition clash dynamics computed.",
     });
 
-    // 9-16. Additional BaZi Metaphysics Assertions
-    for (let i = 9; i <= 16; i++) {
-      list.push({
-        id: `BZ-MET-${i.toString().padStart(2, "0")}`,
-        system: "BaZi",
-        name: i === 9 ? "Day Master Useful God (Yong Shen 用神) Evaluation" :
-              i === 10 ? "Heavenly Stems Combinations and Clashes (He / Chong)" :
-              i === 11 ? "Earthly Branches Six Harmonies (Liu He)" :
-              i === 12 ? "Earthly Branches Three Harmonies (San He Element Frames)" :
-              i === 13 ? "Earthly Branches Clashes (Six Clashes - Liu Chong)" :
-              i === 14 ? "Annual Influence (Liu Nian 流年) Transition" :
-              i === 15 ? "Monthly Influence (Liu Yue 流月) Synchronization" :
-              "Yin/Yang Polarity Totality Invariant",
-        category: "Chinese Metaphysics",
-        classicalAuthority: "Zi Ping Zhen Quan",
-        expectedFormula: "Validated against classical BaZi texts",
-        actualResult: "Passed mathematical assertion",
-        passed: true,
-        notes: "Metaphysical engine verified.",
-      });
-    }
+    // Advanced methods are not independently tested here. Do not manufacture
+    // green assertions: Yong Shen, stem/branch transformations, monthly timing,
+    // and the advanced interaction matrix remain research/test work.
+
   }
 
   // ------------------------------------------------------------
