@@ -48,7 +48,11 @@ function parseCalendarDate(value: string, fieldName: string): Date {
   return date;
 }
 
-/** Calculate the completed age on a target calendar date. */
+/**
+ * Calculate completed age on a target calendar date.
+ * Explicit leap-day policy: a February 29 birth advances age on March 1
+ * in non-leap years (the month/day comparison below implements that rule).
+ */
 export function calculateCompletedAge(birthDate: string, targetDate: string): number {
   const birth = parseCalendarDate(birthDate, "birthDate");
   const target = parseCalendarDate(targetDate, "targetDate");
