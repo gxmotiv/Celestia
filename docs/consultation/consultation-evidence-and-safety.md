@@ -197,6 +197,22 @@ A successful routing test does not mean the advice, sources, calculations or saf
 22. He et al., Challenges to capture the big five personality traits in non-WEIRD populations, Science Advances: https://www.science.org/doi/full/10.1126/sciadv.aaw5226
 23. Fan et al., How well can an AI chatbot infer personality? Examining psychometric properties of machine-inferred personality scores, Journal of Applied Psychology, 2023: https://doi.org/10.1037/apl0001082
 
+
+24. B. Suryanarain Rao, *Jaimini Sutras*, English translation with notes and original Sanskrit, revised and annotated by B.V. Raman, fifth edition, 1955; Internet Archive transcription: https://archive.org/stream/Jaiminisutras1955EditionByBSRao/Jaiminisutras%201955%20Edition%20by%20B%20S%20Rao_djvu.txt
+25. Jatakaveda, *Parashara and Jaimini classical corpus*: cross-referenced notes on BPHS chapter 32 and Jaimini Sutras, with explicit discussion of seven/eight-karaka variants and Rahu: https://jatakaveda.com/library/parashara-jaimini/
+26. Shanmukha, *Real Jaimini Navamsa Revealed – 1*, Saptarishis Astrology, 15 November 2024; discusses the common Parashari Navamsa calculation and a distinct Krishna Mishra / Prakriti Chakra variant: https://saptarishisshop.com/real-jaimini-navamsa-revealed-1-north-indian-charts-by-shanmukha/
+27. Chris Brennan, *Annual Profections* lecture slides, 2018: https://theastrologypodcast.com/wp-content/uploads/2018/04/annual-profections-slides.pdf
+28. Skyscript Astrology Forum, *Calculating Profections in Hellenistic Astrology*, discussion of historical starting-point and annual-profection variants: https://skyscript.co.uk/forums/viewtopic.php?t=10387
+
+### Astrology method provenance and non-uniform traditions
+
+These sources document historical texts, translations and practitioner interpretations. They are not scientific evidence that astrological interpretations or predictions are valid.
+
+- Chara Karaka schemes are not interchangeable. Celestia labels the implemented seven-graha Parashari convention separately from the implemented eight-graha Jaimini convention. The latter includes Rahu with reverse-counted degrees and an eighth Dara Karaka role. The B.S. Rao / B.V. Raman translation itself discusses seven-or-eight grahas and historical commentary; later authors differ on whether Rahu is included unconditionally or used in specific tie/vacancy situations. The UI must preserve the chosen convention and must not claim it is the only Jaimini lineage.
+- In the current implementation, Parashari-7 uses Sun through Saturn and the role order AK, AmK, BK, MK, PiK, PK, GK. Jaimini-8 uses those seven grahas plus Rahu (North Node), computes Rahu's ranking degree as 30° minus its degree within the sign, and adds DK as the eighth role. Exact ranking ties are surfaced as warnings; the display sort order is not a traditional tie-resolution rule.
+- Karakamsa is currently derived from the Atmakaraka's Navamsa sign through the shared movable/fixed/dual Parashari Navamsa calculator. A separately discussed Krishna Mishra / Prakriti Chakra Navamsa variant is not implemented and must not be silently mixed into the result.
+- Annual profections currently use a birthday-to-birthday completed-calendar-age convention, whole-sign counting from the natal Ascendant sign and traditional domicile rulers. The exact solar-return instant, monthly profections, and other historical starting points (Sun, Moon, Lot of Fortune or other places in certain texts) are not implemented. The calculator returns the arithmetic only; it does not claim predictive validity.
+
 ### Implementation note
 
 This document is a product and engineering specification, not a clinical protocol. Any mental-health, domestic-abuse or crisis-support content must be reviewed by qualified domain professionals before the application presents it as authoritative guidance.
