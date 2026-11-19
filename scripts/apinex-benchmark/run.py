@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""One-request-at-a-time APInex benchmark runner. No retries; never prints secrets."""
+"""Sequential APInex benchmark runner with bounded transient-gateway retries; never prints secrets."""
 import argparse, datetime as dt, json, os, pathlib, re, sys, time, urllib.error, urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parent
@@ -81,11 +81,28 @@ def main():
         "error": None
     }
     try:
-        # Exactly one HTTP request. Deliberately no retry to avoid surprise quota use.
-        with urllib.request.urlopen(request, timeout=100) as response:
-            raw = response.read()
-            result["http_status"] = response.status
-            capture_response_diagnostics(result, response.headers)
+        # Retry only transient gateway/rate-limit responses. Never retry auth, model,
+        # validation, or other client errors. Two retries maximum; no blind retry loop.
+        raw = None
+        for attempt in range(3):
+            try:
+                with urllib.request.urlopen(request, timeout=100) as response:
+                    raw = response.read()
+                    result["http_status"] = response.status
+                    capture_response_diagnostics(result, response.headers)
+                break
+            except urllib.error.HTTPError as exc:
+                if exc.code not in (429, 502, 503, 504) or attempt >= 2:
+                    raise
+                result["automatic_retries"] += 1
+                retry_after = exc.headers.get("Retry-After") if exc.headers else None
+                try:
+                    delay = min(15.0, max(1.0, float(retry_after))) if retry_after else (2.0 ** (attempt + 1))
+                except (TypeError, ValueError):
+                    delay = 2.0 ** (attempt + 1)
+                print(f"Transient HTTP {exc.code}; retry {attempt + 1}/2 in {delay:g}s.")
+                exc.close()
+                time.sleep(delay)
         data = json.loads(raw.decode("utf-8"))
         choices = data.get("choices") or []
         if not choices:
@@ -152,8 +169,13 @@ def main():
     print("Benchmark request completed.")
     print("Model:", model["id"])
     print("Task:", args.task, "| max output tokens:", cap)
-    print("Status:", result["status"], "| latency:", result["latency_seconds"], "seconds")
+    print("Status:", result["status"], "| HTTP:", result.get("http_status", "n/a"), "| latency:", result["latency_seconds"], "seconds")
     print("Token usage:", json.dumps(result["usage"], sort_keys=True))
+    if result.get("error"):
+        # run.py stores only sanitized gateway diagnostics; never print request headers or credentials.
+        print("Failure detail:", result["error"])
+    if result.get("cloudflare_ray_id"):
+        print("Cloudflare Ray ID:", result["cloudflare_ray_id"])
     print("Result file:", out_path)
     if result["status"] != "success":
         return 1
