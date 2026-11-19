@@ -5,7 +5,7 @@
  * 2. Vedic Jyotish (tested foundations; advanced methods require independent fixtures)
  * 3. Krishnamurti Paddhati (computed cusp, sub-lord and significator checks)
  * 4. Chinese BaZi (8 structural checks; advanced methods not yet independently validated)
- * 5. Universal Numerology (12 tests: Life Path Master Reduction, Expression, Soul Urge, Karmic Debts, Pinnacles)
+ * 5. Universal Numerology (core output checks; compound/karmic-debt rules require additional validation)
  */
 
 import { calculateWesternChart, WesternChartData, normalizeDegrees } from "./ephemeris";
@@ -939,18 +939,8 @@ export class MultiSystemBenchmarkRunner {
       notes: "Karmic blind spots and areas of evolutionary soul stretching.",
     });
 
-    // 11. Karmic Debt Numbers Detection (13, 14, 16, 19)
-    list.push({
-      id: "NU-DEB-01",
-      system: "Numerology",
-      name: "Karmic Debt Intermediate Reductions (13, 14, 16, 19)",
-      category: "Karmic Analysis",
-      classicalAuthority: "Classical Esoteric Numerology",
-      expectedFormula: "Pre-reduction numbers monitored for karmic debt markers",
-      actualResult: "Karmic debt detection verified in core calculations",
-      passed: true,
-      notes: "13 (diligence), 14 (temperance), 16 (spiritual awakening), 19 (selflessness).",
-    });
+    // Karmic-debt intermediate reductions (13/14/16/19) are not asserted:
+    // the current profile does not expose a verified pre-reduction trace.
 
     // 12. Expression Planes of Expression
     const planes = num.expressionPlanes;
