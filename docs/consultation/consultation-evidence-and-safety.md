@@ -213,6 +213,19 @@ These sources document historical texts, translations and practitioner interpret
 - Karakamsa is currently derived from the Atmakaraka's Navamsa sign through the shared movable/fixed/dual Parashari Navamsa calculator. A separately discussed Krishna Mishra / Prakriti Chakra Navamsa variant is not implemented and must not be silently mixed into the result.
 - Annual profections currently use a birthday-to-birthday completed-calendar-age convention, whole-sign counting from the natal Ascendant sign and traditional domicile rulers. The exact solar-return instant, monthly profections, and other historical starting points (Sun, Moon, Lot of Fortune or other places in certain texts) are not implemented. The calculator returns the arithmetic only; it does not claim predictive validity.
 
+
+29. Wan Min-ying, *San Ming Tong Hui* (三命通會), Volume 2, “Lun Da Yun” (論大運), Ming dynasty text; primary Chinese text with translation: https://www.shidianguji.com/book/SK1610/chapter/1kf5v6ol1vhnp
+30. *San Ming Tong Hui*, Volume 2, “Lun Da Yun”, alternate transcription and edition notes: https://www.chenshupaipan.com/books/2/337.html
+31. KP method reference: Krishnamurti Paddhati uses sidereal Placidus cusps and the cusp degree's sign/star/sub-lord chain; technical explanation and references to Krishnamurti's Readers: https://udaya.app/method/
+32. KP cusp convention cross-check: Placidus cusps are retained as calculated and each cusp starts its house; no 26°40' snap-to-next-sign rule is documented: https://desiutils.in/astrology/kp-astrology-calculator
+
+### Calculation audit updates (2026-11-19)
+
+- **BaZi Da Yun:** the previous engine hard-coded a five-year start age. That was not a valid general calculation. It now finds the previous or next Jie boundary from the tropical geocentric Sun longitude, according to the year-stem polarity / gender direction rule, and solves the crossing numerically. It applies the classical proportional conversion (3 days = 1 year; 1 day = 4 months; 2 hours = 10 days), retains the fractional start age, and exposes start/end instants for each ten-year pillar. This follows the arithmetic described in *San Ming Tong Hui*, Volume 2, “Lun Da Yun”. This is a declared UTC-instant calculation: callers must resolve the recorded local birth time and any historical time-zone / local-mean-time / true-solar-time policy before passing the Date. Those clock policies are not inferred by this function.
+- **KP cusps:** removed an earlier custom rule that snapped a sidereal Placidus cusp in the final 3°20′ of a sign to the next sign boundary. The rule altered the actual Placidus cusp longitude and therefore could change the cusp's star/sub-lord. The engine now preserves the actual tropical Placidus cusp minus the selected KP ayanamsa. The former 26°40′ correction is treated as unsupported and is not applied.
+- **Numerology synthesis:** removed the forced 65% minimum. The displayed value is now a transparent 0–100 rule-match index from the app's selected cross-system comparisons. It is not a measure of truth, predictive accuracy, scientific validity, or a person's value. Zero agreement is a valid result.
+- **BaZi benchmark honesty:** removed eight placeholder assertions that unconditionally returned a passing result for Yong Shen, stem/branch transformations, monthly timing and other advanced methods. These methods remain unverified until they have independent fixtures and calculations; they are not green tests merely because the data structure exists.
+
 ### Implementation note
 
 This document is a product and engineering specification, not a clinical protocol. Any mental-health, domestic-abuse or crisis-support content must be reviewed by qualified domain professionals before the application presents it as authoritative guidance.
