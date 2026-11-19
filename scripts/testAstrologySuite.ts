@@ -921,7 +921,7 @@ assertTest(
     parashariResult.karakas.length === 7 &&
     parashariResult.karakas.map((karaka) => karaka.roleShort).join(",") === expectedSevenGrahaRoles.join(",") &&
     !parashariResult.karakas.some((karaka) => karaka.planet === "Rahu"),
-  "Parashari-7 / AK,AmK,BK,MK,PiK,PK,GK",
+  "Seven-Graha-Option / AK,AmK,BK,MK/PK,PiK,GK,DK",
   `${parashariResult.scheme} / ${parashariResult.karakas.map((karaka) => karaka.roleShort).join(",")}`
 );
 assertTest(
