@@ -59,6 +59,8 @@ def main():
 
     for index, alias in enumerate(aliases, start=1):
         print(f"\n[{index}/{len(aliases)}] Running {alias} (one request; no retries).", flush=True)
+        filename_pattern = "*" + re.sub(r"[^a-z0-9-]", "-", alias.lower()) + "_" + args.task + ".json"
+        before = {path.resolve() for path in out_dir.glob(filename_pattern)}
         completed = subprocess.run(
             [sys.executable, str(RUNNER), "--model", alias, "--task", args.task,
              "--output-dir", str(out_dir)],
@@ -67,7 +69,7 @@ def main():
         )
         summary["request_count_attempted"] += 1
         candidates = sorted(
-            out_dir.glob("*_" + re.sub(r"[^a-z0-9-]", "-", alias.lower()) + "_" + args.task + ".json"),
+            (path for path in out_dir.glob(filename_pattern) if path.resolve() not in before),
             key=lambda path: path.stat().st_mtime,
             reverse=True
         )
