@@ -184,14 +184,14 @@ export function calculateDivisionalSignIndex(
     }
 
     case "D30": { // Trimsamsa
-      // Odd signs: Mars (Aries=0, 0-5°), Saturn (Aquarius=10, 5-10°), Jupiter (Sagittarius=8, 10-18°), Mercury (Gemini=2, 18-25°), Venus (Taurus=1, 25-30°)
+      // Odd signs: Mars (Aries=0, 0-5°), Saturn (Aquarius=10, 5-10°), Jupiter (Sagittarius=8, 10-18°), Mercury (Gemini=2, 18-25°), Venus (Libra=6, 25-30°)
       // Even signs: Venus (Taurus=1, 0-5°), Mercury (Virgo=5, 5-12°), Jupiter (Pisces=11, 12-20°), Saturn (Capricorn=9, 20-25°), Mars (Scorpio=7, 25-30°)
       if (isOddSign) {
         if (degInRasi < 5) return 0; // Aries
         if (degInRasi < 10) return 10; // Aquarius
         if (degInRasi < 18) return 8; // Sagittarius
         if (degInRasi < 25) return 2; // Gemini
-        return 1; // Taurus
+        return 6; // Libra
       } else {
         if (degInRasi < 5) return 1; // Taurus
         if (degInRasi < 12) return 5; // Virgo
