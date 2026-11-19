@@ -102,6 +102,12 @@ export class SubLordCalculator {
   public static readonly TOTAL_DASHA_YEARS = 120;
   public static readonly NAKSHATRA_SPAN = 360 / 27; // 13.333333333333334° (13°20')
   public static readonly PADA_SPAN = 360 / 108; // 3.3333333333333335° (3°20')
+  // Exact rational partition units: 1 unit = 1/3 arc-second.
+  public static readonly UNITS_PER_DEGREE = 10800;
+  public static readonly NAKSHATRA_UNITS = 144000; // 13°20'
+  public static readonly PADA_UNITS = 36000; // 3°20'
+  public static readonly SIGN_UNITS = 324000; // 30°
+  public static readonly BOUNDARY_EPSILON = 1e-7;
 
   /**
    * Helper to get Sign Name from 0-indexed sign index
@@ -134,55 +140,61 @@ export class SubLordCalculator {
    * Calculate Star Lord, Sub Lord, and Sub-Sub Lord for any sidereal longitude (0 - 360°)
    */
   public calculateSubLord(longitude: number): SubLordResult {
-    const normLon = ((longitude % 360) + 360) % 360;
+    if (!Number.isFinite(longitude)) {
+      throw new Error("KP longitude must be a finite number.");
+    }
 
-    // 1. Find Nakshatra
-    const nakshatraIndex = Math.min(26, Math.floor(normLon / SubLordCalculator.NAKSHATRA_SPAN));
+    const normLon = ((longitude % 360) + 360) % 360;
+    const positionUnits = normLon * SubLordCalculator.UNITS_PER_DEGREE;
+    const nakshatraIndex = Math.min(
+      26,
+      Math.floor(positionUnits / SubLordCalculator.NAKSHATRA_UNITS)
+    );
     const nakshatra = NAKSHATRAS[nakshatraIndex];
     const starLord = nakshatra.lord;
-    const degreeInNakshatra = normLon - nakshatraIndex * SubLordCalculator.NAKSHATRA_SPAN;
+    const offsetUnits = positionUnits - nakshatraIndex * SubLordCalculator.NAKSHATRA_UNITS;
+    const degreeInNakshatra = offsetUnits / SubLordCalculator.UNITS_PER_DEGREE;
+    const pada = Math.min(
+      4,
+      Math.floor(offsetUnits / SubLordCalculator.PADA_UNITS) + 1
+    );
 
-    // 2. Find Pada (1 to 4)
-    const pada = Math.min(4, Math.floor(degreeInNakshatra / SubLordCalculator.PADA_SPAN) + 1);
-
-    // 3. Calculate Sub-Lord based on Vimshottari proportions
-    // Crucial KP Rule: The sequence begins with the Star Lord of the Nakshatra!
+    // Work in one-third arc-second units. A nakshatra is exactly 144,000
+    // units and each Vimshottari year owns exactly 1,200 units of it.
+    // Segments use left-closed, right-open boundaries.
     const starLordSequenceIndex = VIMSHOTTARI_CYCLE.indexOf(starLord as any);
-    let cumulativeSpan = 0;
+    let cumulativeUnits = 0;
     let subLord = starLord;
-    let degreeInSub = 0;
-    let activeSubSpan = 0;
+    let degreeInSubUnits = 0;
+    let activeSubSpanUnits = 0;
 
     for (let i = 0; i < 9; i++) {
       const planet = VIMSHOTTARI_CYCLE[(starLordSequenceIndex + i) % 9];
-      const planetYears = DASHA_YEARS[planet];
-      const subSpan = (planetYears / SubLordCalculator.TOTAL_DASHA_YEARS) * SubLordCalculator.NAKSHATRA_SPAN;
-
-      if (degreeInNakshatra < cumulativeSpan + subSpan || i === 8) {
+      const subSpanUnits = 1200 * DASHA_YEARS[planet];
+      const endUnits = cumulativeUnits + subSpanUnits;
+      if (offsetUnits < endUnits - SubLordCalculator.BOUNDARY_EPSILON || i === 8) {
         subLord = planet;
-        degreeInSub = degreeInNakshatra - cumulativeSpan;
-        activeSubSpan = subSpan;
+        degreeInSubUnits = Math.max(0, offsetUnits - cumulativeUnits);
+        activeSubSpanUnits = subSpanUnits;
         break;
       }
-      cumulativeSpan += subSpan;
+      cumulativeUnits = endUnits;
     }
 
-    // 4. Calculate Sub-Sub Lord
-    // The sub-sub division of a sub begins with the Sub Lord itself!
+    // Each sub's sub-sub cycle starts again with that sub's own lord.
     const subLordSequenceIndex = VIMSHOTTARI_CYCLE.indexOf(subLord as any);
-    let cumulativeSubSub = 0;
+    let cumulativeSubSubUnits = 0;
     let subSubLord = subLord;
 
     for (let j = 0; j < 9; j++) {
       const planet = VIMSHOTTARI_CYCLE[(subLordSequenceIndex + j) % 9];
-      const planetYears = DASHA_YEARS[planet];
-      const subSubSpan = (planetYears / SubLordCalculator.TOTAL_DASHA_YEARS) * activeSubSpan;
-
-      if (degreeInSub < cumulativeSubSub + subSubSpan || j === 8) {
+      const subSubSpanUnits = 10 * DASHA_YEARS[subLord] * DASHA_YEARS[planet];
+      const endUnits = cumulativeSubSubUnits + subSubSpanUnits;
+      if (degreeInSubUnits < endUnits - SubLordCalculator.BOUNDARY_EPSILON || j === 8) {
         subSubLord = planet;
         break;
       }
-      cumulativeSubSub += subSubSpan;
+      cumulativeSubSubUnits = endUnits;
     }
 
     return {
@@ -194,8 +206,8 @@ export class SubLordCalculator {
       nakshatraName: nakshatra.name,
       pada,
       degreeInNakshatra,
-      degreeInSub,
-      subDivisionSpan: activeSubSpan,
+      degreeInSub: degreeInSubUnits / SubLordCalculator.UNITS_PER_DEGREE,
+      subDivisionSpan: activeSubSpanUnits / SubLordCalculator.UNITS_PER_DEGREE,
     };
   }
 
@@ -218,76 +230,48 @@ export class SubLordCalculator {
     for (let nakIdx = 0; nakIdx < 27; nakIdx++) {
       const nakshatra = NAKSHATRAS[nakIdx];
       const starLord = nakshatra.lord;
-      const nakStartLon = nakIdx * SubLordCalculator.NAKSHATRA_SPAN;
       const starLordIdx = VIMSHOTTARI_CYCLE.indexOf(starLord as any);
-
-      let cumulativeSpan = 0;
+      let cumulativeUnits = 0;
+      const nakStartUnits = nakIdx * SubLordCalculator.NAKSHATRA_UNITS;
 
       for (let s = 0; s < 9; s++) {
         const subLord = VIMSHOTTARI_CYCLE[(starLordIdx + s) % 9];
-        const planetYears = DASHA_YEARS[subLord];
-        const subSpan = (planetYears / SubLordCalculator.TOTAL_DASHA_YEARS) * SubLordCalculator.NAKSHATRA_SPAN;
-        const subStartLon = nakStartLon + cumulativeSpan;
-        const subEndLon = subStartLon + subSpan;
+        const subSpanUnits = 1200 * DASHA_YEARS[subLord];
+        const subStartUnits = nakStartUnits + cumulativeUnits;
+        const subEndUnits = subStartUnits + subSpanUnits;
+        const startLongitude = subStartUnits / SubLordCalculator.UNITS_PER_DEGREE;
+        const endLongitude = subEndUnits / SubLordCalculator.UNITS_PER_DEGREE;
+        const startSign = Math.floor(subStartUnits / SubLordCalculator.SIGN_UNITS);
+        const endSign = Math.floor((subEndUnits - SubLordCalculator.BOUNDARY_EPSILON) / SubLordCalculator.SIGN_UNITS);
 
-        // Check if a 30° sign boundary cuts this sub
-        const startSign = Math.floor(subStartLon / 30);
-        const endSign = Math.floor((subEndLon - 0.0000001) / 30);
+        const pushEntry = (signIndex: number, startUnits: number, endUnits: number) => {
+          const start = startUnits / SubLordCalculator.UNITS_PER_DEGREE;
+          const end = endUnits / SubLordCalculator.UNITS_PER_DEGREE;
+          table.push({
+            seed: seedCounter++,
+            signIndex,
+            signName: SubLordCalculator.getSignName(signIndex),
+            signLord: SubLordCalculator.getSignLord(signIndex),
+            nakshatraIndex: nakIdx,
+            nakshatraName: nakshatra.name,
+            starLord,
+            subLord,
+            startLongitude: start,
+            endLongitude: end,
+            centerLongitude: (start + end) / 2,
+            spanDms: SubLordCalculator.formatDMS(start % 30) + " - " + SubLordCalculator.formatDMS(end % 30),
+          });
+        };
 
         if (startSign !== endSign) {
-          // Boundary crossed! Split into two entries:
-          const boundaryLon = endSign * 30;
-
-          // Part 1: in previous sign
-          table.push({
-            seed: seedCounter++,
-            signIndex: startSign,
-            signName: SubLordCalculator.getSignName(startSign),
-            signLord: SubLordCalculator.getSignLord(startSign),
-            nakshatraIndex: nakIdx,
-            nakshatraName: nakshatra.name,
-            starLord,
-            subLord,
-            startLongitude: subStartLon,
-            endLongitude: boundaryLon,
-            centerLongitude: (subStartLon + boundaryLon) / 2,
-            spanDms: `${SubLordCalculator.formatDMS(subStartLon % 30)} - 30° 00' 00"`,
-          });
-
-          // Part 2: in next sign
-          table.push({
-            seed: seedCounter++,
-            signIndex: endSign,
-            signName: SubLordCalculator.getSignName(endSign),
-            signLord: SubLordCalculator.getSignLord(endSign),
-            nakshatraIndex: nakIdx,
-            nakshatraName: nakshatra.name,
-            starLord,
-            subLord,
-            startLongitude: boundaryLon,
-            endLongitude: subEndLon,
-            centerLongitude: (boundaryLon + subEndLon) / 2,
-            spanDms: `0° 00' 00" - ${SubLordCalculator.formatDMS(subEndLon % 30)}`,
-          });
+          const boundaryUnits = (startSign + 1) * SubLordCalculator.SIGN_UNITS;
+          pushEntry(startSign, subStartUnits, boundaryUnits);
+          pushEntry(endSign, boundaryUnits, subEndUnits);
         } else {
-          // Normal single entry
-          table.push({
-            seed: seedCounter++,
-            signIndex: startSign,
-            signName: SubLordCalculator.getSignName(startSign),
-            signLord: SubLordCalculator.getSignLord(startSign),
-            nakshatraIndex: nakIdx,
-            nakshatraName: nakshatra.name,
-            starLord,
-            subLord,
-            startLongitude: subStartLon,
-            endLongitude: subEndLon,
-            centerLongitude: (subStartLon + subEndLon) / 2,
-            spanDms: `${SubLordCalculator.formatDMS(subStartLon % 30)} - ${SubLordCalculator.formatDMS(subEndLon % 30)}`,
-          });
+          pushEntry(startSign, subStartUnits, subEndUnits);
         }
 
-        cumulativeSpan += subSpan;
+        cumulativeUnits += subSpanUnits;
       }
     }
 
@@ -296,46 +280,73 @@ export class SubLordCalculator {
   }
 
   /**
-   * Generates the Modern KP 1 to 2193 Sub-Sub Lord Table.
+   * Generates the 2,193 KP sub-sub table: 2,187 proportional sub-subs plus
+   * the six sign-boundary splits. Build it from 243 unsplit nakshatra subs;
+   * subdividing an already split 249-row table would count the six splits
+   * nine times and incorrectly produce 2,241 rows.
    */
   public static generate2193Table(): KP2193Entry[] {
     if (SubLordCalculator.cached2193Table) {
       return SubLordCalculator.cached2193Table;
     }
 
-    const base249 = SubLordCalculator.generate249Table();
     const table: KP2193Entry[] = [];
     let seedCounter = 1;
 
-    for (const entry249 of base249) {
-      const subLordIdx = VIMSHOTTARI_CYCLE.indexOf(entry249.subLord as any);
-      const totalSpan = entry249.endLongitude - entry249.startLongitude;
-      let cumSubSub = 0;
+    for (let nakIdx = 0; nakIdx < 27; nakIdx++) {
+      const nakshatra = NAKSHATRAS[nakIdx];
+      const starLord = nakshatra.lord;
+      const starLordIdx = VIMSHOTTARI_CYCLE.indexOf(starLord as any);
+      const nakStartUnits = nakIdx * SubLordCalculator.NAKSHATRA_UNITS;
+      let cumulativeSubUnits = 0;
 
-      for (let ss = 0; ss < 9; ss++) {
-        const subSubLord = VIMSHOTTARI_CYCLE[(subLordIdx + ss) % 9];
-        const planetYears = DASHA_YEARS[subSubLord];
-        const ssSpan = (planetYears / SubLordCalculator.TOTAL_DASHA_YEARS) * totalSpan;
-        const ssStart = entry249.startLongitude + cumSubSub;
-        const ssEnd = ssStart + ssSpan;
+      for (let s = 0; s < 9; s++) {
+        const subLord = VIMSHOTTARI_CYCLE[(starLordIdx + s) % 9];
+        const subSpanUnits = 1200 * DASHA_YEARS[subLord];
+        const subStartUnits = nakStartUnits + cumulativeSubUnits;
+        let cumulativeSubSubUnits = 0;
+        const subLordIdx = VIMSHOTTARI_CYCLE.indexOf(subLord as any);
 
-        table.push({
-          seed: seedCounter++,
-          signIndex: entry249.signIndex,
-          signName: entry249.signName,
-          signLord: entry249.signLord,
-          nakshatraIndex: entry249.nakshatraIndex,
-          nakshatraName: entry249.nakshatraName,
-          starLord: entry249.starLord,
-          subLord: entry249.subLord,
-          subSubLord,
-          startLongitude: ssStart,
-          endLongitude: ssEnd,
-          centerLongitude: (ssStart + ssEnd) / 2,
-          spanDms: `${SubLordCalculator.formatDMS(ssStart % 30)} - ${SubLordCalculator.formatDMS(ssEnd % 30)}`,
-        });
+        for (let ss = 0; ss < 9; ss++) {
+          const subSubLord = VIMSHOTTARI_CYCLE[(subLordIdx + ss) % 9];
+          const subSubSpanUnits = 10 * DASHA_YEARS[subLord] * DASHA_YEARS[subSubLord];
+          const subSubStartUnits = subStartUnits + cumulativeSubSubUnits;
+          const subSubEndUnits = subSubStartUnits + subSubSpanUnits;
+          const startSign = Math.floor(subSubStartUnits / SubLordCalculator.SIGN_UNITS);
+          const endSign = Math.floor((subSubEndUnits - SubLordCalculator.BOUNDARY_EPSILON) / SubLordCalculator.SIGN_UNITS);
 
-        cumSubSub += ssSpan;
+          const pushEntry = (signIndex: number, startUnits: number, endUnits: number) => {
+            const start = startUnits / SubLordCalculator.UNITS_PER_DEGREE;
+            const end = endUnits / SubLordCalculator.UNITS_PER_DEGREE;
+            table.push({
+              seed: seedCounter++,
+              signIndex,
+              signName: SubLordCalculator.getSignName(signIndex),
+              signLord: SubLordCalculator.getSignLord(signIndex),
+              nakshatraIndex: nakIdx,
+              nakshatraName: nakshatra.name,
+              starLord,
+              subLord,
+              subSubLord,
+              startLongitude: start,
+              endLongitude: end,
+              centerLongitude: (start + end) / 2,
+              spanDms: SubLordCalculator.formatDMS(start % 30) + " - " + SubLordCalculator.formatDMS(end % 30),
+            });
+          };
+
+          if (startSign !== endSign) {
+            const boundaryUnits = (startSign + 1) * SubLordCalculator.SIGN_UNITS;
+            pushEntry(startSign, subSubStartUnits, boundaryUnits);
+            pushEntry(endSign, boundaryUnits, subSubEndUnits);
+          } else {
+            pushEntry(startSign, subSubStartUnits, subSubEndUnits);
+          }
+
+          cumulativeSubSubUnits += subSubSpanUnits;
+        }
+
+        cumulativeSubUnits += subSpanUnits;
       }
     }
 
