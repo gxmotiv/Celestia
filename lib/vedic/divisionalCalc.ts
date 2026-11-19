@@ -72,6 +72,17 @@ export interface DivisionalChartOptions {
   d60SignConvention?: D60SignConvention;
 }
 
+/**
+ * Assigns an equal-part varga segment with a tiny floating-point tolerance.
+ * Exact mathematical boundaries can arrive a few ULPs below the boundary
+ * after longitude normalization/subtraction. The tolerance is far smaller
+ * than any meaningful chart precision and does not mask the 1e-7° pre-boundary
+ * regression fixtures.
+ */
+function equalDivisionPart(degInSign: number, divisions: number): number {
+  return Math.min(divisions - 1, Math.floor((degInSign * divisions) / 30 + 1e-10));
+}
+
 function normalizeDeg(deg: number): number {
   let d = deg % 360;
   if (d < 0) d += 360;
@@ -117,7 +128,7 @@ export function calculateDivisionalSignIndex(
       // 0-10°: Same sign
       // 10-20°: 5th from it
       // 20-30°: 9th from it
-      const part = Math.floor(degInRasi / 10);
+      const part = equalDivisionPart(degInRasi, 3);
       if (part === 0) return rasiIdx;
       if (part === 1) return (rasiIdx + 4) % 12;
       return (rasiIdx + 8) % 12;
@@ -128,18 +139,18 @@ export function calculateDivisionalSignIndex(
       // Part 1 (7.5-15°): 4th from it
       // Part 2 (15-22.5°): 7th from it
       // Part 3 (22.5-30°): 10th from it
-      const part = Math.floor(degInRasi / 7.5);
+      const part = equalDivisionPart(degInRasi, 4);
       return (rasiIdx + part * 3) % 12;
     }
 
     case "D7": { // Saptamsa (30/7 = 4.2857° each)
-      const part = Math.floor(degInRasi / (30 / 7));
+      const part = equalDivisionPart(degInRasi, 7);
       const startSign = isOddSign ? rasiIdx : (rasiIdx + 6) % 12;
       return (startSign + part) % 12;
     }
 
     case "D9": { // Navamsa (3°20' = 3.3333° each)
-      const navPart = Math.floor(degInRasi / (30 / 9));
+      const navPart = equalDivisionPart(degInRasi, 9);
       // Movable (Chara: Aries, Cancer, Libra, Cap) -> starts from sign itself
       // Fixed (Sthira: Taurus, Leo, Scorpio, Aqu) -> starts from 9th from it
       // Dual (Dwisvabhava: Gemini, Virgo, Sag, Pis) -> starts from 5th from it
@@ -152,19 +163,19 @@ export function calculateDivisionalSignIndex(
     }
 
     case "D10": { // Dasamsa (3° each)
-      const part = Math.floor(degInRasi / 3);
+      const part = equalDivisionPart(degInRasi, 10);
       // Odd signs: from sign itself. Even signs: from 9th sign.
       const startSign = isOddSign ? rasiIdx : (rasiIdx + 8) % 12;
       return (startSign + part) % 12;
     }
 
     case "D12": { // Dwadasamsa (2°30' = 2.5° each)
-      const part = Math.floor(degInRasi / 2.5);
+      const part = equalDivisionPart(degInRasi, 12);
       return (rasiIdx + part) % 12;
     }
 
     case "D16": { // Shodashamsa (1°52'30" = 1.875° each)
-      const part = Math.floor(degInRasi / 1.875);
+      const part = equalDivisionPart(degInRasi, 16);
       // Movable: from Aries (0). Fixed: from Leo (4). Dual: from Sagittarius (8).
       const modality = rasiIdx % 3;
       const startSign = modality === 0 ? 0 : modality === 1 ? 4 : 8;
@@ -172,7 +183,7 @@ export function calculateDivisionalSignIndex(
     }
 
     case "D20": { // Vimsamsa (1.5° each)
-      const part = Math.floor(degInRasi / 1.5);
+      const part = equalDivisionPart(degInRasi, 20);
       // Movable: from Aries. Fixed: from Sag. Dual: from Leo.
       const modality = rasiIdx % 3;
       const startSign = modality === 0 ? 0 : modality === 1 ? 8 : 4;
@@ -180,14 +191,14 @@ export function calculateDivisionalSignIndex(
     }
 
     case "D24": { // Chaturvimsamsa (1.25° each)
-      const part = Math.floor(degInRasi / 1.25);
+      const part = equalDivisionPart(degInRasi, 24);
       // Odd: from Leo (4). Even: from Cancer (3).
       const startSign = isOddSign ? 4 : 3;
       return (startSign + part) % 12;
     }
 
     case "D27": { // Saptavimsamsa / Nakshatramsa (1°06'40" = 1.1111° each)
-      const part = Math.floor(degInRasi / (30 / 27));
+      const part = equalDivisionPart(degInRasi, 27);
       // Fire: Aries (0). Earth: Cancer (3). Air: Libra (6). Water: Capricorn (9).
       const element = rasiIdx % 4;
       const startSign = element === 0 ? 0 : element === 1 ? 3 : element === 2 ? 6 : 9;
@@ -214,14 +225,14 @@ export function calculateDivisionalSignIndex(
 
     case "D40": { // Khavedamsa (45' = 0.75° each)
       // Odd signs: from Aries (0). Even signs: from Libra (6).
-      const part = Math.floor(degInRasi / 0.75);
+      const part = equalDivisionPart(degInRasi, 40);
       const startSign = isOddSign ? 0 : 6;
       return (startSign + part) % 12;
     }
 
     case "D45": { // Akshavedamsa (40' = 0.6667° each)
       // Movable (Chara): Aries (0). Fixed (Sthira): Leo (4). Dual: Sagittarius (8).
-      const part = Math.floor(degInRasi / (30 / 45));
+      const part = equalDivisionPart(degInRasi, 45);
       const modality = rasiIdx % 3;
       const startSign = modality === 0 ? 0 : modality === 1 ? 4 : 8;
       return (startSign + part) % 12;
