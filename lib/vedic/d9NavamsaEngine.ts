@@ -178,7 +178,10 @@ export class NavamsaCalculator {
     if (!Number.isFinite(longitude)) {
       throw new Error("Navamsa longitude must be a finite number of degrees.");
     }
-    const norm = (longitude % 360 + 360) % 360;
+    // Avoid adding 360 to already-positive values: that round-trip can shift an exact
+    // IEEE-754 boundary (e.g. 10/3°) several ULPs below the boundary before division.
+    let norm = longitude % 360;
+    if (norm < 0) norm += 360;
     const signIndex = Math.floor(norm / 30);
     const degreeInSign = norm % 30;
 
