@@ -150,6 +150,8 @@ def main():
         f"- Reported responses: {combined['request_count_reported']}",
         f"- Successful responses: {combined['success_count']}",
         f"- Failed responses: {combined['failure_count']}",
+        f"- Not attempted: {combined['request_count_not_attempted']}",
+        f"- Stopped early: {bool(combined['stopped_early_reason'])}",
         "",
         "| Task | Successful | Failed |",
         "|---|---:|---:|",
