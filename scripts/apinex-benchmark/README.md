@@ -27,12 +27,12 @@ The single-run workflow sends one logical request per selected model and task. T
 
 | Task | Purpose | max_tokens |
 |---|---|---:|
-| D | Hallucination / evidence discipline | 700 |
-| A | Calculation integrity audit | 1400 |
-| B | Engineering review and safe patch plan | 1400 |
-| C | Astrology domain reasoning | 1200 |
-| E | Test architecture | 1400 |
-| F | Research and evidence quality | 1200 |
+| A | Calculation integrity audit | 2300 |
+| B | Engineering review and safe patch plan | 2300 |
+| C | Astrology domain reasoning | 1700 |
+| D | Hallucination / evidence discipline | 1200 |
+| E | Test architecture | 2400 |
+| F | Research and evidence quality | 2200 |
 | G | Source-grounded repository code audit | 2600 |
 | H | Provider identity and routing honesty | 900 |
 | I | Real user-facing answer quality | 1400 |
