@@ -73,3 +73,18 @@ Important boundaries:
 - A single observed placement means stable across the samples, not proof that the true birth time is correct.
 
 The sampling summary has deterministic tests for stable intervals, boundary-crossing intervals, sign-convention differences, empty inputs and invalid values.
+
+
+## Independent ephemeris reference chart (Swiss Ephemeris / DE441)
+
+An independent published check case is available from VedicBirth's methodology page:
+
+- Input: 1 January 1990, 12:00:00 local time, UTC+05:30, New Delhi, 28.6139° N, 77.2090° E.
+- Reference engine: Swiss Ephemeris 2.10.03 with compressed JPL DE441 files, sidereal Lahiri, mean node.
+- Published values (nutation included): ayanamsha 23.720706°; Ascendant 343.922640°; Sun 256.859923°; Moon 306.465258°; mean Rahu 294.726414°.
+- Published mean/no-nutation ayanamsha: 23.717417°. Celestia's current Lahiri formula is mean/no-nutation, so the test adjusts the published longitudes by the 0.003289° nutation difference before comparing, with a 0.02° tolerance.
+- Derived D60 signs under the occupied-sign/Jagannatha Hora convention: Ascendant Gemini, Sun Virgo, Moon Aquarius, Rahu Aquarius.
+
+Category 31 now runs this case through Celestia's own chart pipeline and checks the ayanamsha, sidereal Ascendant, Sun, Moon, mean Rahu and derived D60 signs. This is a genuine independent reference check, unlike the six synthetic D60 remapping fixtures above. It still does not turn the current `astronomy-engine`-backed `swissEphemeris` facade into native Swiss Ephemeris; differences are measured, not hidden.
+
+Source: [VedicBirth methodology and reproducible Swiss Ephemeris check case](https://www.vedicbirth.in/methodology).
