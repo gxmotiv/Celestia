@@ -52,3 +52,25 @@ NaraRouter advertises a free plan with daily quota and request limits; check its
 - A successful API response or valid JSON does not prove astrology correctness. Compare models using identical chart evidence and score calculation accuracy, tradition-specific rule adherence, unsupported-claim rate, reasoning quality, consistency, latency, and weighted token usage.
 
 For Cloudflare Workers, add secrets through the Worker secret configuration. Do not put credentials in `wrangler.jsonc`, `.env.example`, browser variables, or source code.
+
+
+## In-app model selector
+
+The AI Cosmic Synthesis screen provides one model selector shared by the Oracle Cockpit and Deep Blueprint Report. The selector currently exposes these APInex free-category IDs, with role descriptions and current published quota weights:
+
+| Model | APInex model ID | Weight | Suggested role |
+|---|---|---:|---|
+| DeepSeek V4.1 Flash | `free/deepseek-v4.1-flash` | ×3 | Default; passed Task C and scored 27/30 on Task D |
+| MiMo V2.6 Pro | `free/mimo-v2.6-pro` | ×2 | Lower-quota second opinion; Task D 28/30 |
+| MiniMax M3.1 Flash | `free/minimax-m3.1-flash` | ×2 | Fast routine work; Task D 27/30 |
+| Gemini 4 Hydrogen | `free/gemini-4-hydrogen` | ×5 | Advanced reasoning challenger; passed Task C |
+| Gemini 3.8 Flash | `free/gemini-3.8-flash` | ×3 | Research challenger; passed Task C |
+| Muse Spark 1.3 | `free/muse-spark-1.3` | ×3 | Honesty audit; Task D 28/30, but Task C JSON failure |
+| DeepSeek V4 Pro | `free/deepseek-v4-pro-0813` | ×3 | Difficult code/reasoning challenger; passed Task C |
+| HY4 Flash | `free/hy4-flash` | ×2 | Experimental fast challenger; distinct from Gemini 4 Hydrogen |
+| Kimi K3 | `free/kimi-k3` | ×3 | Long-context research challenger |
+| Qwen 3.8 Max | `free/qwen-3.8-max` | ×3 | Research challenger; Task C JSON failure |
+| GPT-6 Luna | `free/gpt-6-luna` | ×3 | General-purpose benchmark challenger |
+| GLM 5.3 Flash | `free/glm-5.3-flash` | ×3 | Alternative fast model |
+
+The default is DeepSeek V4.1 Flash. These descriptions are internal recommendations based on the currently available Celestia trial evidence, not guarantees of model quality. APInex quota weights can change; they are usage multipliers, not cash prices. The server validates every selected model ID against `lib/ai/modelCatalog.ts`. If APInex is unavailable, configured fallback providers use their own configured model rather than receiving an APInex-specific model ID.
