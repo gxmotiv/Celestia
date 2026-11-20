@@ -169,6 +169,13 @@ class RetryAndClassificationTests(unittest.TestCase):
         )
         self.assertEqual(status, "empty_response")
 
+    def test_clean_stop_at_output_cap_is_not_assumed_truncated(self):
+        status = runner.classify_response_status(
+            '{"valid":true}', 100, 100, "stop",
+            {"valid": True, "format": "valid"}, "exact_match",
+        )
+        self.assertEqual(status, "success")
+
 
 class RoutingTests(unittest.TestCase):
     def test_exact_returned_id_is_match(self):
