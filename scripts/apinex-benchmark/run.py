@@ -50,9 +50,11 @@ def classify_response_status(response_text, completion_tokens, cap, finish_reaso
     reason = str(finish_reason or "").strip().lower()
     if reason in {"length", "max_tokens", "max_output_tokens"}:
         return "token_limit_exceeded"
-    if (isinstance(completion_tokens, int) and not isinstance(completion_tokens, bool)
-            and completion_tokens >= cap and reason not in {"stop", "end_turn", "completed"}):
-        return "token_limit_suspected"
+    if isinstance(completion_tokens, int) and not isinstance(completion_tokens, bool):
+        if completion_tokens > cap:
+            return "token_limit_exceeded"
+        if completion_tokens == cap and reason not in {"stop", "end_turn", "completed"}:
+            return "token_limit_suspected"
     if validation.get("format") == "invalid_json":
         return "invalid_json"
     if not validation.get("valid"):
@@ -179,6 +181,9 @@ def main():
                 print(f"Transient HTTP {exc.code}; retry {attempt + 1}/2 in {delay:g}s.")
                 exc.close()
                 time.sleep(delay)
+            except urllib.error.URLError:
+                api_latency_total += time.monotonic() - attempt_started
+                raise
         data = json.loads(raw.decode("utf-8"))
         choices = data.get("choices") or []
         if not choices:
