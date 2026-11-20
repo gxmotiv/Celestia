@@ -19,7 +19,7 @@ import { buildLifeStrategyBrief, LIFE_STRATEGY_STEPS } from "../lib/consultation
 import { ASTROLOGY_SPECIALTIES, getAstrologySpecialties } from "../lib/consultation/astrologySpecialties";
 import { JaiminiKarakasEngine } from "../lib/vedic/jaiminiKarakas";
 import { NavamsaCalculator } from "../lib/vedic/d9NavamsaEngine";
-import { calculateDivisionalSignIndex } from "../lib/vedic/divisionalCalc";
+import { calculateDivisionalChart, calculateDivisionalSignIndex } from "../lib/vedic/divisionalCalc";
 import { calculateAnnualProfection, calculateCompletedAge } from "../lib/astronomy/annualProfections";
 import { SubLordCalculator } from "../lib/kp/subLordEngine";
 import { CompleteBaZiEngine, SolarTermCalculator } from "../lib/astronomy/baziEngine";

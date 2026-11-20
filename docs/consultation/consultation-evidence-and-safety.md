@@ -279,3 +279,30 @@ These sources document historical texts, translations and practitioner interpret
 ### Implementation note
 
 This document is a product and engineering specification, not a clinical protocol. Any mental-health, domestic-abuse or crisis-support content must be reviewed by qualified domain professionals before the application presents it as authoritative guidance.
+
+
+### D60 source cross-check and audit (2026-11-20)
+
+**Textual evidence and exact calculation.** The Sanskrit BPHS Chapter 6 transcription places the Shashtiamsa rule at 6.33, lists the sixty names in 6.34–39, and states the even-sign reversal rule at 6.40. Verse 6.33 describes doubling the planet's degrees within the sign and reducing by twelve; the sign origin is not unambiguously settled by the wording and its translations. The current implementation therefore retains two explicit, non-interchangeable conventions rather than claiming a universal answer:
+
+- Let `d` be the sidereal longitude within the natal sign, in degrees, and `p = floor(2 × d)`, giving segment indices 0–59.
+- **Occupied-sign convention (current default):** `D60Sign = (natalSignIndex + (p mod 12)) mod 12`.
+- **Aries-origin alternative:** `D60Sign = p mod 12`.
+- BPHS 6.40's even-sign reversal applies to the ordered Shashtiamsa lords/names. It is not a basis for adding a seventh-sign offset to the D60 sign placement. The implementation does not currently calculate the sixty names or their benefic/malefic classifications (6.34–41).
+
+**Audit findings and limitations.** The D60 sign branch in `lib/vedic/divisionalCalc.ts` implements both named conventions and defaults to occupied-sign. That default is a declared software/lineage choice, not a textual consensus. The configuration's current D60 significance string ("Past life karma, root cause & micro-destiny") is stronger than the classical domain statement: BPHS Chapter 7 groups D45 and D60 under general indications rather than assigning D60 a unique topic. Past-life/karma readings should be labelled as later interpretive practice, not as the explicit wording of the cited chapter. D60 remains **partial**: sign and whole-sign house placement only; no named amsa, benefic/malefic status, rectification, or independent chart-output certification. Its half-degree segments also make input-time and longitude uncertainty material; a valid segment mapping does not validate the recorded birth time.
+
+**Offline fixtures already present.** Category 27.1 checks both conventions over all 12 natal signs and all 60 half-degree segments, with midpoint, exact-start and just-before-boundary cases (2,148 checks per convention). Category 27.2 confirms that the default occupied-sign convention maps Taurus at 0° to Taurus. These are deterministic mapping fixtures, not independent reference-chart validation.
+
+**CI evidence at the audited head.** Workflow run 1281 for head `0398e9894630e0a63a84561617325ef3d4de7ff7` ran the astrology regression suite successfully: 150 passed, 0 failed. The subsequent Next.js build failed during TypeScript checking because `scripts/testAstrologySuite.ts` called the exported `calculateDivisionalChart` helper without importing it. OpenNext packaging and Worker dry-run were skipped after that build failure; the deployment job was skipped. This change adds the missing named import only. A fresh workflow must pass before the build or packaging can be called green.
+
+**Sources consulted (20 November 2026).**
+- [BPHS Chapter 6 Sanskrit text, Wikisource](https://sa.wikisource.org/wiki/बृहत्पाराशरहोराशास्त्रम्/अध्यायः_६_(षोडशवर्गाध्यायः)) — verses 6.33–41; primary-text transcription, not a critical-edition collation.
+- [BPHS 6.33 Sanskrit, transliteration and word-level rendering](https://enjoylearningsanskrit.com/scriptures/parashara/chapter-6/verse-33/) — supports the half-degree arithmetic and exposes the translation issue around sign origin.
+- [BPHS 6.40 Sanskrit, transliteration and word-level rendering](https://enjoylearningsanskrit.com/scriptures/parashara/chapter-6/verse-40/) — even-sign reversal wording; the page notes a probable textual/OCR correction in the final compound, so its grammatical analysis is not treated as definitive.
+- [BPHS Chapter 6, verses 31–35 translation](https://www.siva.sh/brihat-parashara-hora-shastra/6/31-35) — independent English rendering of the half-degree calculation.
+- [R. Santhanam, BPHS English translation and commentary, scanned volume](https://ia903205.us.archive.org/30/items/brihatparasarahorashastrabyr.santhanam/Brihat%20Par%C4%81%C5%9Bara%20Hor%C4%81%20%C5%9Ah%C4%81stra%20By%20R.%20Santhanam.pdf) — another translation lineage; still a translation/commentary rather than a critical Sanskrit edition.
+- [Parashari and Jaimini classical-corpus research notes](https://jatakaveda.com/library/parashara-jaimini/) — secondary cross-reference explicitly records the sign-independent reading of 6.33 and the 6.40 name-order rule; use as a research aid, not as primary authority.
+- [DesiUtils D60 method disclosure](https://desiutils.in/astrology/shashtiamsa-d60) — documents the occupied-sign default and the alternative literal reading; a contemporary implementation disclosure, not classical authority.
+
+No provider was called. No secrets, deployment, merge, or main-branch changes were involved.
