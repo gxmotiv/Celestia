@@ -51,7 +51,13 @@ class AllTasksSummaryTests(unittest.TestCase):
         }
         skipped = list("CDEFGHIJ")
         for task in skipped:
-            summaries[task] = {"results": []}
+            summaries[task] = {
+                "overall_status": "skipped_after_api_guard",
+                "results": [{
+                    "model_alias": "model-a", "trial": 1,
+                    "api_attempt_count": 0, "status": "skipped_after_api_guard",
+                }],
+            }
         combined = MODULE.build_combined_summary(
             summaries, ["model-a"], concurrency=4,
             stopped_early_reason={"http_status": 429},
@@ -60,6 +66,8 @@ class AllTasksSummaryTests(unittest.TestCase):
         self.assertEqual(combined["request_count_planned"], 10)
         self.assertEqual(combined["request_count_reported"], 2)
         self.assertEqual(combined["request_count_not_attempted"], 8)
+        self.assertEqual(combined["request_count_unknown"], 0)
+        self.assertEqual(combined["request_count_reported"], 10)
         self.assertEqual(combined["failure_count"], 1)
         self.assertEqual(combined["skipped_tasks"], skipped)
         self.assertEqual(combined["max_parallel_models_per_task"], 4)
