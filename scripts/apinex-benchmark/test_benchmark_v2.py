@@ -23,7 +23,8 @@ def sample_from_schema(schema):
             if key in schema.get("required", [])
         }
     if kind == "array":
-        return [sample_from_schema(schema.get("items", {"type": "string"}))]
+        count = schema.get("minItems", 1)
+        return [sample_from_schema(schema.get("items", {"type": "string"})) for _ in range(count)]
     if kind == "string":
         return "test"
     if kind == "boolean":
