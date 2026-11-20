@@ -269,8 +269,8 @@ export async function generateCelestiaText(
   const freeModelName = modelTier === "reasoning"
     ? process.env.FREEMODEL_REASONING_MODEL?.trim() || DEFAULT_FREEMODEL_REASONING_MODEL
     : process.env.FREEMODEL_MODEL?.trim() || DEFAULT_FREEMODEL_BUDGET_MODEL;
-  // Explicit model selection is an APInex catalogue ID. Do not forward it to
-  // unrelated fallback providers, which have their own model namespaces.
+  // These names are only for legacy automatic fallback when no model was selected.
+  // Explicit selections are resolved and routed directly above.
   const naraRouterName = modelTier === "reasoning"
     ? process.env.NARAROUTER_REASONING_MODEL?.trim() || process.env.NARAROUTER_MODEL?.trim() || "auto/bynara"
     : process.env.NARAROUTER_MODEL?.trim() || "auto/bynara";
