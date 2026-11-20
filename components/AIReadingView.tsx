@@ -567,7 +567,7 @@ export function AIReadingView({
             <div className="flex items-center gap-2">
               <span className="font-mono text-amber-400/90">
                 {isAiGenerated
-                  ? `Generated via ${aiProvider === "freemodel" ? "FreeModel" : aiProvider === "nararouter" ? "NaraRouter" : aiProvider === "gemini" ? "Gemini" : "AI"}${aiModel ? ` · ${aiModel}` : ""}`
+                  ? `Generated via ${aiProvider === "apinex" ? "APInex" : aiProvider === "freemodel" ? "FreeModel" : aiProvider === "nararouter" ? "NaraRouter" : aiProvider === "local-fallback" ? "Local fallback" : "Unknown provider"}${aiModel ? ` · ${aiModel}` : ""}`
                   : "Calculated via Astronomical Synthesizer"}
                 {aiUsageTokens !== null ? ` · ${aiUsageTokens.toLocaleString()} tokens` : ""}
               </span>
