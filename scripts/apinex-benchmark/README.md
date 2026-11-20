@@ -44,7 +44,9 @@ The concurrency setting is the **maximum number of in-flight workers**, not a re
 ## Fair-comparison controls and known limits
 
 - Every model within a selected task receives the same system prompt, task prompt, response schema, temperature (0), and output-token ceiling.
-- The benchmark records model alias, requested/returned model IDs, trial number, benchmark version/commit, timestamps, API latency, total elapsed time, pacing wait, retry wait/count, actual API attempts, token usage, HTTP status, finish reason, and validation result.
+- The benchmark records model alias, requested/returned model IDs, trial number, benchmark version/commit, UTC timestamps, API latency, total elapsed time, pacing wait, retry wait/count, actual API attempts, token usage, HTTP status, finish reason, and validation result.
+- Every result records SHA-256 fingerprints for the system prompt, task prompt, response schema, and combined prompt bundle. The summary carries these fingerprints so two model outputs can be verified as having received the same benchmark instructions.
+- The reasoning-effort policy is explicitly recorded as provider default / not explicitly set. This is deliberate because APInex documents that reasoning-effort support differs across model families; equal reasoning budgets are not claimed.
 - `reasoning_effort` is not explicitly set because APInex documents support only for some model families. Provider defaults are used and this is recorded as a known comparison limitation; identical reasoning budgets are not claimed.
 - JSON/schema validity, returned-ID routing evidence, and answer quality are separate concepts. A valid JSON response or HTTP 200 is not automatically a correct or high-quality answer.
 - Responses ending because of a length-related finish reason are incomplete even if partial text happens to parse as valid JSON. Responses reaching the output cap without a clear end-of-turn reason are marked as suspected truncations.
