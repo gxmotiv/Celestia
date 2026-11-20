@@ -21,7 +21,7 @@ Never put the key in a file, commit, issue, prompt, or chat message.
 6. Download the resulting artifact from the workflow run.
 7. Score the response with [the shared model-scoring rubric](../../docs/benchmark/model-scoring-rubric.md).
 
-The single-run workflow sends one logical request per selected model and task. The full-suite runner reads all configured tasks dynamically; the expanded suite is A–I. The runner retries only transient HTTP 429/502/503/504 responses, at most twice; it does not retry authentication, validation, or other client errors. It has no schedule or push trigger. Run comparisons sequentially: keep the task and evidence identical when comparing models; keep the model and evidence identical when comparing tasks.
+The single-run workflow sends one logical request per selected model and task. For the 12-model comparison, use Actions → **APInex Celestia Multi-Model Benchmark**. Choose `ALL` to run every configured task A–I for every selected model. With all 12 models selected, that is **108 logical requests** (before any bounded transient retries), so review your remaining free allowance first. The full-suite runner reads configured tasks dynamically. The runner retries only transient HTTP 429/502/503/504 responses, at most twice; it does not retry authentication, validation, or other client errors. It has no schedule or push trigger. Run comparisons sequentially: keep the task and evidence identical when comparing models; keep the model and evidence identical when comparing tasks.
 
 ## Output ceilings
 
@@ -37,7 +37,7 @@ The single-run workflow sends one logical request per selected model and task. T
 | H | Provider identity and routing honesty | 900 |
 | I | Real user-facing answer quality | 1400 |
 
-These are output ceilings only. Input tokens also consume allowance. The runner enforces a 45 KB serialized-request ceiling and one 100-second HTTP timeout.
+These are output ceilings only. Input tokens also consume allowance. The runner enforces a 45 KB serialized-request ceiling and one 100-second HTTP timeout. The multi-model `ALL` workflow has a 6-hour job ceiling.
 
 ## Allowance accounting
 
@@ -53,7 +53,7 @@ The response is saved only as a GitHub Actions artifact with 14-day retention; i
 
 - The runner validates strict JSON syntax and nested task-specific schemas. Invalid responses are preserved raw in the artifact but counted as failures. It does not semantically grade answer quality; use the shared scoring rubric separately.
 - A run is counted as successful only when the API `model` response field exactly matches the requested APInex model ID. Missing or mismatched IDs are marked `routing_unverified` or `model_id_mismatch` and must not enter quality rankings.
-- A matching API model field is gateway-reported routing evidence, not cryptographic proof of upstream model weights. Model self-introductions are never identity evidence.
+- A matching API model field is gateway-reported routing evidence, not cryptographic proof of upstream model weights. Model self-introductions are never identity evidence. A reply saying 'I am Google' or 'built by Google' is not accepted as proof; check the artifact's `requested_model_id`, `returned_model`, `routing_status` and provider metadata.
 - The workflow runs local Python unit tests before sending a quota-consuming request.
 - APInex aliases, weights, free quotas, and model availability can change. Re-check the APInex dashboard/catalogue before each test.
 - A successful HTTP response does not establish the upstream model's exact weights or independent quality.
