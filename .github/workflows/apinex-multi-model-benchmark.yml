@@ -9,13 +9,13 @@ on:
         type: string
         default: "deepseek-v4.1-flash,qwen-3.8-max,muse-spark-1.3,mimo-v2.6-pro,hy4-flash,minimax-m3.1-flash,gemini-3.8-flash,glm-5.3-flash,kimi-k3,deepseek-v4-pro,gpt-6-luna,gemini-4-hydrogen"
       task:
-        description: "Choose one task or run all ten tasks for every selected model"
+        description: "Choose one of five combined tasks or run all five for every selected model"
         required: true
         type: choice
         default: D
-        options: [D, A, B, C, E, F, G, H, I, J, ALL]
+        options: [D, A, B, C, E, ALL]
       confirm_api_call:
-        description: "Required: confirms one APInex request per selected model; ALL means 120 requests with 12 models"
+        description: "Required: confirms one APInex request per selected model; ALL means 60 requests with 12 models"
         required: true
         type: boolean
         default: false
