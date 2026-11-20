@@ -1,4 +1,5 @@
 import importlib.util
+import concurrent.futures
 import json
 import pathlib
 import threading
@@ -194,12 +195,13 @@ class RequestPacingTests(unittest.TestCase):
     def test_parallel_workers_reserve_distinct_global_request_slots(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             state_file = pathlib.Path(temp_dir) / "schedule.json"
-            with mock.patch.object(request_pacing.time, "sleep"):
-                with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
-                    waits = list(pool.map(
-                        lambda _index: request_pacing.wait_for_request_slot(state_file, 5.0),
-                        range(8),
-                    ))
+            with mock.patch.object(request_pacing.time, "time", return_value=1000.0):
+                with mock.patch.object(request_pacing.time, "sleep"):
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+                        waits = list(pool.map(
+                            lambda _index: request_pacing.wait_for_request_slot(state_file, 5.0),
+                            range(8),
+                        ))
             self.assertEqual(sorted(waits), [0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0])
             state = json.loads(state_file.read_text(encoding="utf-8"))
             self.assertEqual(state["next_request_at_epoch"] - state["updated_at_epoch"], 40.0)
