@@ -98,7 +98,7 @@ class AllTasksSummaryTests(unittest.TestCase):
 
     def test_missing_or_failed_results_cannot_be_reported_as_success(self):
         summaries = {
-            task: {"results": [{"model_alias": "model-a", "status": "success"}]}
+            task: {"results": [{"model_alias": "model-a", "api_attempt_count": 1, "status": "success"}]}
             for task in MODULE.TASKS[:-1]
         }
         summaries[MODULE.TASKS[-1]] = {
