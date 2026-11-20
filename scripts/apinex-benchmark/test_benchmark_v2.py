@@ -208,6 +208,7 @@ class ResponseValidationTests(unittest.TestCase):
         payload = valid_task_payload("G")
         self.assertTrue(validate_response("G", json.dumps(payload), CONFIG)["valid"])
         payload["evidence_levels"][1]["level"] = payload["evidence_levels"][0]["level"]
+        payload["evidence_levels"][1]["definition"] = "a different definition"
         result = validate_response("G", json.dumps(payload), CONFIG)
         self.assertFalse(result["valid"])
         self.assertTrue(any("six required evidence levels" in error for error in result["errors"]))
@@ -228,9 +229,11 @@ class ResponseValidationTests(unittest.TestCase):
         self.assertFalse(validate_response("I", json.dumps(payload), CONFIG)["valid"])
 
     def test_numeric_overflow_is_rejected(self):
-        payload = valid_task_payload("C")
-        payload["ayanamsha_difference_arcseconds"] = float("inf")
-        result = validate_response("C", json.dumps(payload), CONFIG)
+        raw = json.dumps(valid_task_payload("C")).replace(
+            '"ayanamsha_difference_arcseconds": 11.8404',
+            '"ayanamsha_difference_arcseconds": 1e999',
+        )
+        result = validate_response("C", raw, CONFIG)
         self.assertFalse(result["valid"])
         self.assertTrue(any("expected number" in error for error in result["errors"]))
 
