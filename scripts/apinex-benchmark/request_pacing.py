@@ -57,7 +57,7 @@ def wait_for_request_slot(state_file, minimum_interval_seconds=5.0):
             "updated_at_epoch": now,
         }
         temporary_path = state_path.with_name(state_path.name + f".{os.getpid()}.tmp")
-        temporary_path.write_text(json.dumps(state) + "\\n", encoding="utf-8")
+        temporary_path.write_text(json.dumps(state) + "\n", encoding="utf-8")
         os.replace(temporary_path, state_path)
     finally:
         os.close(descriptor)
