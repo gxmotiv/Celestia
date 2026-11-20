@@ -816,7 +816,7 @@ assertTest(
 assertTest(
   "31.2 Independent Ascendant Check",
   "New Delhi 1990-01-01 12:00 IST sidereal ascendant matches the independent reference within 0.001° after accounting for nutation",
-  angularDifference(independentReferenceVedic.lagna.siderealLongitude, adjustedExpected.ascendant) < 0.02,
+  angularDifference(independentReferenceVedic.lagna.siderealLongitude, adjustedExpected.ascendant) < 0.001,
   `${adjustedExpected.ascendant.toFixed(6)}° (Pisces 13°55′, adjusted to mean ayanamsa)`,
   `${independentReferenceVedic.lagna.siderealLongitude.toFixed(6)}°`
 );
@@ -831,7 +831,7 @@ assertTest(
 
 assertTest(
   "31.4 Independent Moon Longitude Check",
-  "The Moon's Lahiri sidereal longitude matches the independent Swiss Ephemeris reference within 0.02°",
+  "The Moon's Lahiri sidereal longitude matches the independent Swiss Ephemeris reference within 0.001°",
   !!referenceMoon && angularDifference(referenceMoon.siderealLongitude, adjustedExpected.moon) < 0.001,
   `${adjustedExpected.moon.toFixed(6)}° (Aquarius 6°27′, adjusted)`,
   referenceMoon ? `${referenceMoon.siderealLongitude.toFixed(6)}°` : "Moon not found"
@@ -839,9 +839,9 @@ assertTest(
 
 assertTest(
   "31.5 Independent Mean Rahu Longitude Check",
-  "The mean Rahu longitude matches the independent Swiss Ephemeris reference within 0.02°",
+  "The mean Rahu longitude matches the independent Swiss Ephemeris reference within 0.001°",
   !!referenceRahu && angularDifference(referenceRahu.siderealLongitude, adjustedExpected.rahu) < 0.001,
-  `${adjustedExpected.rahu.toFixed(6)}° (Capricorn 24°43′, adjusted)`,
+  `${adjustedExpected.rahu.toFixed(6)}° (Capricorn 24°43′, mean node; no nutation adjustment)`,
   referenceRahu ? `${referenceRahu.siderealLongitude.toFixed(6)}°` : "NorthNode/Rahu not found"
 );
 
