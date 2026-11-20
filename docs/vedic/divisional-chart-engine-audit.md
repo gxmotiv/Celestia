@@ -155,3 +155,24 @@ Sources:
 
 Important remaining limitation: Celestia currently computes D60 sign placement but does not yet calculate the sixty named Shashtiamsa deities and their benefic/malefic classification. The even-sign reversal in BPHS 6.40 applies to those names. Do not imply that D60 deity or benefic/malefic interpretation is implemented.
 
+
+
+## D60 named amsa and nature metadata (implementation update)
+
+The D60 calculator now exposes the degree-ordered half-degree segment, the selected BPHS amsa name, and its separately sourced Saumya/Krura nature for the ascendant and each planet.
+
+- **Name sequence:** the implementation uses a 60-entry BPHS-recompiled list based on Chapter 6.34–40. Odd signs use the listed order; even signs reverse it, following BPHS 6.40.
+- **Nature sequence:** the implementation uses the 24 odd-sign Krura ordinals in **Phaladeepika 3.5**: 1, 2, 8, 9, 10, 11, 12, 15, 16, 30, 31, 32, 33, 34, 35, 39, 40, 42, 43, 44, 48, 51, 52 and 59. The other 36 are Saumya. Phaladeepika explicitly reverses this classification in even signs. This is not a list supplied by BPHS 6.41; BPHS 6.41 states the general effect of benefic and malefic amsas.
+- **Source separation:** returned metadata identifies `nameSource: "BPHS 6.34-40"` and `natureSource: "Phaladeepika 3.5"`. The UI and downstream interpretations must preserve that distinction.
+- **Textual variants:** transliterations and recensions differ. Examples include Kulanasa/Kulanasha and the treatment of Mukhya around the 41st–42nd amsas; Bhramana/Brahmana at the end; and Dandayudha/Dhannayudha. The implementation selects one documented BPHS-recompiled 60-entry sequence for deterministic computation, but it does not claim every printed edition agrees. A future source-profile selector should be added before claiming universal textual consensus.
+- **D60 significance:** the previous “past life karma, root cause & micro-destiny” label was too specific. BPHS 7.6–8 groups D45 and D60 under “all indications”; the metadata now reflects that broader instruction.
+- **Birth-time sensitivity:** each D60 part spans 0.5° of the natal sign. The ascendant can therefore change amsa with small birth-time errors, but the minutes-per-part vary with latitude and the rising sign. Celestia must not use a universal “two minutes” guarantee. A future uncertainty feature should recompute the ascendant over the user's stated birth-time interval and report all possible D60 placements; that interval propagation is not implemented by this metadata helper.
+
+Sources:
+- [BPHS Chapter 6 Sanskrit text, verses 6.33–41](https://sa.wikisource.org/wiki/बृहत्पाराशरहोराशास्त्रम्/अध्यायः_६_(षोडशवर्गाध्यायः)) — primary Sanskrit verse sequence and names.
+- [BPHS 6.31–35 translation](https://www.siva.sh/brihat-parashara-hora-shastra/6/31-35) and [BPHS 6.36–40 translation](https://www.siva.sh/brihat-parashara-hora-shastra/6/36-40) — English rendering and name order.
+- [Phaladeepika 3.5](https://www.siva.sh/phaladeepika/3/5) — odd-sign Krura ordinals and reversal for even signs.
+- [Phaladeepika, V. Subrahmanya Sastri 1950 edition, Chapter 3](https://www.wisdomlib.org/hinduism/book/phaladeepika-by-mantreswara-text-and-translation/d/doc1621575.html) — independent printed-edition transcription and translation; OCR page should be checked against scan where exact typography matters.
+- [BPHS Chapter 7, verses 7.6–8](https://vedicpupil.in/library/books/brihat-parashara-hora-shastra/chapter-7) — D45/D60 “all indications” scope and the role of the Shashtiamsa lord.
+
+Verification added: Category 28 checks all 60 segments across all 12 natal signs (720 combinations), odd/even reversal, Phaladeepika nature assignment, the half-degree boundary and invalid input. These are deterministic rule fixtures, not independent reference-chart certification.
