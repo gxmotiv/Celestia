@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Sequential APInex batch runner. One request per selected model; no retries."""
+"""Sequential APInex batch runner with task-specific response validation."""
 import argparse
 import datetime as dt
 import json
@@ -58,7 +58,7 @@ def main():
     }
 
     for index, alias in enumerate(aliases, start=1):
-        print(f"\n[{index}/{len(aliases)}] Running {alias} (one request; no retries).", flush=True)
+        print(f"\n[{index}/{len(aliases)}] Running {alias} (one logical request; transient gateway retries only).", flush=True)
         filename_pattern = "*" + re.sub(r"[^a-z0-9-]", "-", alias.lower()) + "_" + args.task + ".json"
         before = {path.resolve() for path in out_dir.glob(filename_pattern)}
         completed = subprocess.run(
@@ -129,7 +129,7 @@ def main():
         "# APInex batch benchmark",
         "",
         f"- Task: {args.task}",
-        f"- Execution: sequential; no automatic retries",
+        f"- Execution: sequential; transient gateway retries only (maximum two retries per logical request)",
         f"- Overall: {summary['overall_status']} ({successes}/{len(aliases)} successful)",
         "",
         "| Model | Status | JSON/schema | HTTP | Latency (s) | Completion tokens | Warnings |",
