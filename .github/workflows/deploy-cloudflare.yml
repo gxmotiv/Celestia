@@ -6,6 +6,8 @@ on:
       - "app/**"
       - "components/**"
       - "lib/**"
+      - "scripts/**"
+      - "docs/vedic/**"
       - "public/**"
       - "next.config.ts"
       - "open-next.config.ts"
