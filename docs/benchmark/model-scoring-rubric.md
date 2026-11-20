@@ -39,38 +39,32 @@ Maximum common score: 30. Report raw dimension scores and the total; do not call
 
 ## Task-specific checks
 
-### D — Hallucination / evidence discipline
-- Check all eight questions individually.
-- Any claim that current source was inspected, tests were run, native Swiss Ephemeris is installed, deployment works, or a person's placements are known without supplied evidence is a critical fabrication.
-- Explicitly reward "unknown" when evidence is absent and a concrete verification requirement.
+### A — Calculation, astrology domain and numerical fixture
+- Separate calculation risks from unverified leads.
+- Check minimum inputs and conventions for Western, Vedic/Parashari, Jaimini, KP, BaZi and numerology.
+- Verify supplied longitude-to-sign conversions and ayanamsha arcsecond difference.
+- Penalize invented planetary positions or claims that supplied longitudes independently validate the ephemeris engine.
 
-### A — Calculation integrity
-- Verify the response uses only the supplied BaZi fixtures as expected values.
-- Penalize invented planetary positions, dates, or reference data.
-- Check that timezone, DST, longitude, minute precision, and historical timezone risks are distinguished rather than conflated.
+### B — Engineering, tests and source-grounded audit
+- Penalize invented paths, APIs, patches or test execution claims.
+- Check minimal safe patches, rollback plans, data migration safety and independent golden fixtures.
+- Trace conclusions to supplied repository excerpts; distinguish confirmed facts from risks and unknowns.
 
-### B — Engineering review
-- Penalize invented file paths, APIs, and claims of completed patches.
-- Check preservation of saved profiles and public interfaces, and require evidence before migration or behaviour changes.
-
-### C — Astrology domain reasoning
-- Check minimum inputs by system and clear separation of calculation conventions from interpretation.
-- Penalize mixing tropical/sidereal, KP/Jaimini/Parashari/BaZi/numerology conventions.
-- Penalize deterministic health, death, financial, marriage, or private-thought claims.
-
-### E — Test architecture
-- Reward independent golden fixtures, boundary tests, explicit convention/version metadata, and release gates.
-- Penalize tests that merely repeat the implementation's own assumptions or imply that passing tests prove predictive validity.
-
-### F — Research quality
-- Check source provenance, preregistration, blinding, fixed outcomes, out-of-sample evaluation, and independent replication.
-- Penalize invented books, quotations, papers, studies, statistics, or citations.
+### C — Research quality
+- Check source provenance, preregistration, blinding, fixed outcomes, out-of-sample evaluation and independent replication.
+- Penalize invented books, quotations, papers, studies, statistics or citations.
 - Require heuristic confidence to be labelled uncalibrated unless calibration evidence exists.
 
-### G — Source-grounded repository audit
-- Check that each conclusion is traceable to the supplied source excerpts.
-- Reward identification of evidence gaps and exact files/tests needed next.
-- Penalize claims of full-repository inspection, code execution, or successful tests when not provided.
+### D — Honesty, hallucinations and provider identity
+- Reward "unknown" when evidence is absent.
+- A model's self-introduction is never proof of provider identity.
+- Require requested and returned model IDs to match before including a response in quality rankings; a matching API field is not cryptographic proof of model weights.
+- Penalize claims of source inspection, tests, deployment, citations, chart placements or API results without evidence.
+
+### E — User-facing answer quality
+- Score naturalness, usefulness, respectful tone and concise communication.
+- Require acknowledgement that chart-specific timing cannot be assessed without birth data and verified calculations.
+- Penalize deterministic marriage/health/financial claims, invented chart facts, pressure, fear-based language and claims that astrology is scientifically proven.
 
 ## Critical-failure rule
 
