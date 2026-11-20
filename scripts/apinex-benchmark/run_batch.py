@@ -111,6 +111,30 @@ def run_one_model(alias, task, out_dir):
         }
 
 
+def run_models_in_parallel(aliases, task, out_dir, concurrency):
+    """Launch one request per alias concurrently and return results in completion-independent mapping."""
+    results_by_alias = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency) as pool:
+        future_to_alias = {
+            pool.submit(run_one_model, alias, task, out_dir): alias
+            for alias in aliases
+        }
+        for future in concurrent.futures.as_completed(future_to_alias):
+            alias = future_to_alias[future]
+            try:
+                results_by_alias[alias] = future.result()
+            except Exception as exc:
+                results_by_alias[alias] = {
+                    "model_alias": alias,
+                    "status": "runner_exception",
+                    "runner_exit_code": None,
+                    "result_file": None,
+                    "error": type(exc).__name__ + ": " + str(exc)[:300],
+                    "runner_log": "",
+                }
+    return results_by_alias
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Run one selected task against all selected models in parallel."
@@ -162,25 +186,7 @@ def main():
     print(f"Starting {len(aliases)} model request(s) with concurrency {effective_concurrency}.")
     print("Every selected model receives the same task prompt and task-specific output schema.", flush=True)
 
-    rows_by_alias = {}
-    with concurrent.futures.ThreadPoolExecutor(max_workers=effective_concurrency) as pool:
-        future_to_alias = {
-            pool.submit(run_one_model, alias, args.task, out_dir): alias
-            for alias in aliases
-        }
-        for future in concurrent.futures.as_completed(future_to_alias):
-            alias = future_to_alias[future]
-            try:
-                rows_by_alias[alias] = future.result()
-            except Exception as exc:
-                rows_by_alias[alias] = {
-                    "model_alias": alias,
-                    "status": "runner_exception",
-                    "runner_exit_code": None,
-                    "result_file": None,
-                    "error": type(exc).__name__ + ": " + str(exc)[:300],
-                    "runner_log": "",
-                }
+    rows_by_alias = run_models_in_parallel(aliases, args.task, out_dir, effective_concurrency)
 
     # Preserve the configured model order in summaries, independent of completion order.
     for alias in aliases:
