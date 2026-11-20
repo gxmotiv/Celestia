@@ -30,14 +30,18 @@ def parse_models(raw):
     return aliases
 
 
-def run_one_model(alias, task, out_dir):
+def run_one_model(alias, task, out_dir, pacing_file=None, minimum_interval=5.0):
     filename_pattern = "*" + re.sub(r"[^a-z0-9-]", "-", alias.lower()) + "_" + task + ".json"
     before = {path.resolve() for path in out_dir.glob(filename_pattern)}
     try:
         completed = subprocess.run(
             [sys.executable, str(RUNNER), "--model", alias, "--task", task,
              "--output-dir", str(out_dir)],
-            env=os.environ.copy(),
+            env={
+                **os.environ.copy(),
+                "APINEX_BENCHMARK_PACING_FILE": str(pacing_file or ""),
+                "APINEX_BENCHMARK_MIN_INTERVAL_SECONDS": str(minimum_interval),
+            },
             capture_output=True,
             text=True,
             check=False,
@@ -92,6 +96,10 @@ def run_one_model(alias, task, out_dir):
             "latency_seconds": result.get("latency_seconds"),
             "usage": usage,
             "automatic_retries": result.get("automatic_retries", 0),
+            "api_attempt_count": result.get("api_attempt_count", 0),
+            "pacing_wait_seconds": result.get("pacing_wait_seconds", 0),
+            "retry_wait_seconds": result.get("retry_wait_seconds", 0),
+            "total_elapsed_seconds": result.get("total_elapsed_seconds"),
             "warnings": warnings,
             "response_validation": result.get("response_validation"),
             "error": result.get("error"),
@@ -111,12 +119,12 @@ def run_one_model(alias, task, out_dir):
         }
 
 
-def run_models_in_parallel(aliases, task, out_dir, concurrency):
+def run_models_in_parallel(aliases, task, out_dir, concurrency, pacing_file=None, minimum_interval=5.0):
     """Launch one request per alias concurrently and return results in completion-independent mapping."""
     results_by_alias = {}
     with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency) as pool:
         future_to_alias = {
-            pool.submit(run_one_model, alias, task, out_dir): alias
+            pool.submit(run_one_model, alias, task, out_dir, pacing_file, minimum_interval): alias
             for alias in aliases
         }
         for future in concurrent.futures.as_completed(future_to_alias):
@@ -143,6 +151,11 @@ def main():
     parser.add_argument("--task", required=True, choices=sorted(CONFIG["tasks"]))
     parser.add_argument("--output-dir", default="benchmark-results")
     parser.add_argument(
+        "--schedule-state-file",
+        default=None,
+        help="Shared pacing state file used by the all-task runner; normally leave unset.",
+    )
+    parser.add_argument(
         "--concurrency", type=int, default=12,
         help="Maximum simultaneous model requests (1–12; default 12)",
     )
@@ -157,6 +170,10 @@ def main():
         print("ERROR: concurrency must be between 1 and 12.", file=sys.stderr)
         return 2
     effective_concurrency = min(args.concurrency, len(aliases))
+    minimum_interval = float(CONFIG.get("execution_policy", {}).get("min_request_interval_seconds", 5.0))
+    if minimum_interval < 4.0 or minimum_interval > 60.0:
+        print("ERROR: configured request interval must be between 4 and 60 seconds.", file=sys.stderr)
+        return 2
     if not os.environ.get("APINEX_API_KEY", "").strip():
         print("ERROR: APINEX_API_KEY is not configured; no requests sent.", file=sys.stderr)
         return 2
@@ -173,6 +190,8 @@ def main():
         "task_name": task_name,
         "execution": "parallel_models_one_task",
         "max_parallel_requests": effective_concurrency,
+        "minimum_request_interval_seconds": minimum_interval,
+        "rate_limit_policy": "Globally pace every API attempt, including retries, to leave headroom under the documented APInex Free-tier limit.",
         "automatic_retries_policy": "At most two retries for transient HTTP 429/502/503/504 responses per model request.",
         "selected_models": aliases,
         "request_count_planned": len(aliases),
@@ -183,10 +202,12 @@ def main():
     }
 
     print(f"Task {args.task}: {task_name}")
-    print(f"Starting {len(aliases)} model request(s) with concurrency {effective_concurrency}.")
+    pacing_file = pathlib.Path(args.schedule_state_file) if args.schedule_state_file else (out_dir / ".request_pacing.json")
+    print(f"Starting {len(aliases)} model request(s) with max in-flight concurrency {effective_concurrency}.")
+    print(f"Global API-attempt pacing: one request every {minimum_interval:g} seconds.", flush=True)
     print("Every selected model receives the same task prompt and task-specific output schema.", flush=True)
 
-    rows_by_alias = run_models_in_parallel(aliases, args.task, out_dir, effective_concurrency)
+    rows_by_alias = run_models_in_parallel(aliases, args.task, out_dir, effective_concurrency, pacing_file, minimum_interval)
 
     # Preserve the configured model order in summaries, independent of completion order.
     for alias in aliases:
@@ -206,7 +227,7 @@ def main():
         "success" if successes == len(aliases)
         else ("partial_success" if successes else "failed")
     )
-    stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     summary_path = out_dir / f"{stamp}_batch_{args.task}_summary.json"
     summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
@@ -214,24 +235,26 @@ def main():
         "# APInex parallel task benchmark",
         "",
         f"- Task: {args.task} — {task_name}",
-        f"- Execution: parallel model requests (concurrency {effective_concurrency})",
+        f"- Execution: paced API attempts; max in-flight concurrency {effective_concurrency}",
+        f"- Minimum request interval: {minimum_interval:g} seconds",
         f"- Overall: {summary['overall_status']} ({successes}/{len(aliases)} successful)",
         f"- Planned / attempted requests: {summary['request_count_planned']} / {summary['request_count_attempted']}",
         f"- Automatic transient retries: {summary['automatic_retries']}",
         "",
-        "| Model | Status | Routing | JSON/schema | HTTP | Latency (s) | Completion tokens | Retries |",
-        "|---|---|---:|---:|---:|---:|---:|---:|",
+        "| Model | Status | Routing | JSON/schema | HTTP | API latency (s) | Pacing wait (s) | Completion tokens | Retries |",
+        "|---|---|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for item in summary["results"]:
         usage = item.get("usage") or {}
         validation = item.get("response_validation") or {}
-        lines.append("| {model} | {status} | {routing} | {validation} | {http} | {latency} | {tokens} | {retries} |".format(
+        lines.append("| {model} | {status} | {routing} | {validation} | {http} | {latency} | {pacing} | {tokens} | {retries} |".format(
             model=item.get("model_alias", ""),
             status=item.get("status", ""),
             routing=item.get("routing_status", "unverified"),
             validation=validation.get("format", "n/a"),
             http=item.get("http_status") or "",
             latency=item.get("latency_seconds") if item.get("latency_seconds") is not None else "",
+            pacing=item.get("pacing_wait_seconds", 0),
             tokens=usage.get("completion_tokens") if usage.get("completion_tokens") is not None else "",
             retries=item.get("automatic_retries", 0),
         ))
@@ -239,6 +262,9 @@ def main():
 
     print(f"\nTask {args.task} finished: {successes}/{len(aliases)} successful.")
     print("Summary JSON:", summary_path)
+    if not args.schedule_state_file:
+        pacing_file.unlink(missing_ok=True)
+        pacing_file.with_name(pacing_file.name + ".lock").unlink(missing_ok=True)
     return 0 if successes == len(aliases) else 1
 
 
