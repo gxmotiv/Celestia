@@ -40,13 +40,22 @@ def build_combined_summary(task_summaries, models, concurrency=12, trials=1, sto
             rows.append(row)
     successes = sum(1 for row in rows if row.get("status") == "success")
     expected = len(TASKS) * len(models) * trials
-    attempted = sum(1 for row in rows if int(row.get("api_attempt_count") or 0) > 0)
+    attempted = sum(
+        1 for row in rows
+        if isinstance(row.get("api_attempt_count"), int) and row.get("api_attempt_count") > 0
+    )
+    skipped_count = sum(1 for row in rows if row.get("api_attempt_count") == 0)
+    unknown_count = expected - attempted - skipped_count
     failures = sum(
         1 for row in rows
-        if int(row.get("api_attempt_count") or 0) > 0 and row.get("status") != "success"
+        if isinstance(row.get("api_attempt_count"), int)
+        and row.get("api_attempt_count") > 0
+        and row.get("status") != "success"
     )
-    skipped_count = sum(1 for row in rows if int(row.get("api_attempt_count") or 0) == 0)
-    api_attempt_count = sum(int(row.get("api_attempt_count") or 0) for row in rows)
+    api_attempt_count = sum(
+        int(row.get("api_attempt_count") or 0)
+        for row in rows if isinstance(row.get("api_attempt_count"), int)
+    )
     automatic_retries = sum(int(row.get("automatic_retries") or 0) for row in rows)
     return {
         "benchmark_version": CONFIG.get("benchmark_version", "unknown"),
@@ -62,7 +71,8 @@ def build_combined_summary(task_summaries, models, concurrency=12, trials=1, sto
         "request_count_planned": expected,
         "request_count_reported": len(rows),
         "request_count_attempted": attempted,
-        "request_count_not_attempted": expected - attempted,
+        "request_count_not_attempted": skipped_count,
+        "request_count_unknown": unknown_count,
         "api_attempt_count_reported": api_attempt_count,
         "automatic_retries": automatic_retries,
         "success_count": successes,
@@ -175,12 +185,14 @@ def main():
         f"- Actual API attempts including retries: {combined['api_attempt_count_reported']}",
         f"- Automatic retries: {combined['automatic_retries']}",
         f"- Failed after sending / skipped before sending: {combined['failure_count']} / {combined['skipped_count']}",
+        f"- Request accounting unknown: {combined['request_count_unknown']}",
         f"- Minimum request interval: {combined['min_request_interval_seconds']} seconds",
         f"- Session folder: {combined['session_directory']}",
         f"- Reported responses: {combined['request_count_reported']}",
         f"- Successful responses: {combined['success_count']}",
         f"- Failed responses: {combined['failure_count']}",
-        f"- Not attempted: {combined['request_count_not_attempted']}",
+        f"- Known skipped before send: {combined['request_count_not_attempted']}",
+        f"- Unknown/unreported requests: {combined['request_count_unknown']}",
         f"- Stopped early: {bool(combined['stopped_early_reason'])}",
         "",
         "| Task | Successful | Failed |",
