@@ -125,8 +125,11 @@ def main():
         if total is not None:
             result["usage"]["estimated_weighted_tokens"] = total * model["weight"]
         result["response_validation"] = validate_response(args.task, result["response_text"], CONFIG)
+        completion_tokens = result["usage"].get("completion_tokens")
         if not result["response_text"]:
             result["status"] = "empty_response"
+        elif isinstance(completion_tokens, int) and completion_tokens > cap:
+            result["status"] = "token_limit_exceeded"
         elif result["response_validation"]["format"] == "invalid_json":
             result["status"] = "invalid_json"
         elif not result["response_validation"]["valid"]:
