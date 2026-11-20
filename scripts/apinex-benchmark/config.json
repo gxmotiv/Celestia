@@ -753,7 +753,7 @@
               },
               "additionalProperties": false
             },
-            "minItems": 1,
+            "minItems": 6,
             "maxItems": 6
           },
           "source_record_schema": {
@@ -849,9 +849,9 @@
                 "status": {
                   "type": "string",
                   "enum": [
+                    "unknown",
                     "verified",
-                    "inference",
-                    "unknown"
+                    "inference"
                   ],
                   "minLength": 1
                 },
@@ -866,8 +866,8 @@
               },
               "additionalProperties": false
             },
-            "minItems": 1,
-            "maxItems": 6
+            "minItems": 3,
+            "maxItems": 5
           },
           "fabrication_risks": {
             "type": "array",
