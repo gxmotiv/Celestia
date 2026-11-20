@@ -37,7 +37,7 @@ def _validate(value, schema, path, errors):
     if isinstance(value, dict):
         for key in schema.get("required", []):
             if key not in value:
-                errors.append(f"{path}: missing required key {key}")
+                errors.append(f"Missing required key: {key}" if path == "$" else f"{path}: missing required key {key}")
         props = schema.get("properties", {})
         for key, child in props.items():
             if key in value:
