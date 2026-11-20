@@ -26,7 +26,7 @@ on:
         required: true
         type: choice
         default: D
-        options: [D, A, B, C, E, F, G, H, I]
+        options: [D, A, B, C, E, F, G, H, I, J]
       confirm_api_call:
         description: "Set true only when you are ready to spend APInex free allowance on this ONE request"
         required: true
