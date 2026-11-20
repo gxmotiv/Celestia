@@ -5,6 +5,21 @@
 
 import { VEDIC_RASIS, VedicPlanet } from "@/lib/astronomy/vedic";
 
+export interface D60AmsaDetails {
+  /** Degree-ordered half-degree segment, numbered 1–60 within the natal sign. */
+  segmentNumber: number;
+  /** BPHS name-list ordinal after applying the even-sign reversal. */
+  nameOrdinal: number;
+  name: string;
+  /** Phaladeepika 3.5 ordinal used for the Saumya/Krura classification. */
+  natureOrdinal: number;
+  nature: "Saumya" | "Krura";
+  segmentStartDegree: number;
+  segmentEndDegree: number;
+  nameSource: "BPHS 6.34-40";
+  natureSource: "Phaladeepika 3.5";
+}
+
 export interface DivisionalPlanet {
   name: string;
   symbol: string;
@@ -16,6 +31,8 @@ export interface DivisionalPlanet {
   house: number;
   dignity: "Exalted" | "Own Sign" | "Friendly" | "Neutral" | "Debilitated";
   isRetrograde: boolean;
+  /** Present only for D60 charts; names and nature have separate textual sources. */
+  d60Amsa?: D60AmsaDetails;
 }
 
 export interface DivisionalHouse {
@@ -35,6 +52,7 @@ export interface DivisionalChartResult {
     sign: string;
     signIndex: number;
     degreeFormatted: string;
+    d60Amsa?: D60AmsaDetails;
   };
   planets: DivisionalPlanet[];
   houses: DivisionalHouse[];
@@ -59,7 +77,7 @@ export const DIVISIONAL_CHARTS_CONFIG: Record<
   D30: { name: "Trimsamsa", harmonic: 30, significance: "Misfortunes, arishta, health & karmic obstacles", category: "Higher" },
   D40: { name: "Khavedamsa", harmonic: 40, significance: "Auspicious & inauspicious karmic effects, spiritual blessings", category: "Subtle" },
   D45: { name: "Akshavedamsa", harmonic: 45, significance: "General character, purity, integrity & moral fiber", category: "Subtle" },
-  D60: { name: "Shashtiamsa", harmonic: 60, significance: "Past life karma, root cause & micro-destiny", category: "Subtle" },
+  D60: { name: "Shashtiamsa", harmonic: 60, significance: "All indications; assess with other Vargas (BPHS 7.6–8)", category: "Subtle" },
 };
 
 export type D60SignConvention = "from-sign" | "from-aries";
@@ -71,6 +89,34 @@ export interface DivisionalChartOptions {
    */
   d60SignConvention?: D60SignConvention;
 }
+
+/**
+ * BPHS 6.34–40 name sequence for odd signs. Textual spellings vary between
+ * editions/transliterations; see docs/vedic/divisional-chart-engine-audit.md.
+ */
+export const D60_AMSA_NAMES = [
+  "Ghora", "Rakshasa", "Deva", "Kubera", "Yaksha", "Kinnara",
+  "Bhrashta", "Kulaghna", "Garala", "Vahni", "Maya", "Purishaka",
+  "Apampati", "Marutvan", "Kala", "Sarpa", "Amrita", "Indu",
+  "Mridu", "Komala", "Heramba", "Brahma", "Vishnu", "Maheshwara",
+  "Deva", "Ardra", "Kalinasha", "Kshiteesha", "Kamalakara", "Gulika",
+  "Mrityu", "Kala", "Davagni", "Ghora", "Yama", "Kantaka",
+  "Sudha", "Amrita", "Purnachandra", "Vishadagdha", "Kulanasha", "Vamshakshaya",
+  "Utpata", "Kala", "Saumya", "Komala", "Sheetala", "Karaladamshtra",
+  "Chandramukhi", "Praveena", "Kalapavaka", "Dandayudha", "Nirmala", "Saumya",
+  "Krura", "Atisheetala", "Amrita", "Payodhi", "Bhramana", "Chandrarekha",
+] as const;
+
+/**
+ * Odd-sign Krura ordinals from Phaladeepika 3.5 (not BPHS 6.41).
+ * The remaining 36 are Saumya. Phaladeepika reverses this nature sequence
+ * in even signs, just as BPHS 6.40 reverses the names.
+ */
+export const D60_KRURA_AMSA_ORDINALS = [
+  1, 2, 8, 9, 10, 11, 12, 15, 16, 30, 31, 32,
+  33, 34, 35, 39, 40, 42, 43, 44, 48, 51, 52, 59,
+] as const;
+
 
 /**
  * Assigns an equal-part varga segment with a tiny floating-point tolerance.
@@ -87,6 +133,37 @@ function normalizeDeg(deg: number): number {
   let d = deg % 360;
   if (d < 0) d += 360;
   return d;
+}
+
+/**
+ * Returns the named half-degree amsa and its separately sourced nature.
+ * BPHS supplies the names/order; Phaladeepika 3.5 supplies the Krura/Saumya
+ * ordinal classification. Both sequences reverse in even natal signs.
+ */
+export function calculateD60AmsaDetails(siderealLon: number): D60AmsaDetails {
+  if (!Number.isFinite(siderealLon)) {
+    throw new Error("D60 longitude must be a finite number of degrees.");
+  }
+  const normalized = normalizeDeg(siderealLon);
+  const natalSignIndex = Math.floor(normalized / 30);
+  const degreeInSign = normalized - natalSignIndex * 30;
+  const segmentIndex = Math.min(59, Math.floor(degreeInSign * 2 + 1e-10));
+  const segmentNumber = segmentIndex + 1;
+  const oddSign = natalSignIndex % 2 === 0;
+  const ordinal = oddSign ? segmentNumber : 61 - segmentNumber;
+  const krura = (D60_KRURA_AMSA_ORDINALS as readonly number[]).includes(ordinal);
+
+  return {
+    segmentNumber,
+    nameOrdinal: ordinal,
+    name: D60_AMSA_NAMES[ordinal - 1],
+    natureOrdinal: ordinal,
+    nature: krura ? "Krura" : "Saumya",
+    segmentStartDegree: segmentIndex * 0.5,
+    segmentEndDegree: (segmentIndex + 1) * 0.5,
+    nameSource: "BPHS 6.34-40",
+    natureSource: "Phaladeepika 3.5",
+  };
 }
 
 /**
@@ -337,6 +414,7 @@ export function calculateDivisionalChart(
       house,
       dignity,
       isRetrograde: p.isRetrograde,
+      ...(divisionCode === "D60" ? { d60Amsa: calculateD60AmsaDetails(p.siderealLongitude) } : {}),
     });
   }
 
@@ -365,6 +443,7 @@ export function calculateDivisionalChart(
       sign: ascSignName,
       signIndex: ascSignIdx,
       degreeFormatted: `${Math.floor(ascendantSiderealLon % 30)}°`,
+      ...(divisionCode === "D60" ? { d60Amsa: calculateD60AmsaDetails(ascendantSiderealLon) } : {}),
     },
     planets: divisionalPlanets,
     houses,
