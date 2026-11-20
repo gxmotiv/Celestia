@@ -40,7 +40,7 @@ def _read_state(state_path):
 
 def _write_state(state_path, state):
     temporary_path = state_path.with_name(state_path.name + f".{os.getpid()}.tmp")
-    temporary_path.write_text(json.dumps(state) + "\\n", encoding="utf-8")
+    temporary_path.write_text(json.dumps(state) + "\n", encoding="utf-8")
     os.replace(temporary_path, state_path)
 
 
