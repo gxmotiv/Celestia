@@ -9,6 +9,13 @@ CAPS = {name: task["max_tokens"] for name, task in CONFIG["tasks"].items()}
 API_URL = "https://api.apinex.bond/v1/chat/completions"
 SAFE_RESPONSE_HEADERS = ("cf-ray", "cf-mitigated", "server", "content-type", "date", "retry-after")
 
+def evaluate_routing(requested_model_id, returned_model_id):
+    """A gateway-reported model ID is routing evidence, not cryptographic attestation."""
+    if not returned_model_id:
+        return "missing_returned_model"
+    return "exact_match" if returned_model_id == requested_model_id else "mismatch"
+
+
 def capture_response_diagnostics(result, headers, body_text=""):
     """Save only allowlisted response metadata; never save request headers or credentials."""
     safe = {}
@@ -117,7 +124,7 @@ def main():
             content = "\n".join(str(part.get("text", "")) for part in content if isinstance(part, dict))
         result["response_text"] = content if isinstance(content, str) else json.dumps(content, ensure_ascii=False)
         result["returned_model"] = data.get("model")
-        result["routing_status"] = "exact_match" if result["returned_model"] == model["id"] else ("mismatch" if result["returned_model"] else "missing_returned_model")
+        result["routing_status"] = evaluate_routing(model["id"], result["returned_model"])
         result["response_metadata"] = {k: data[k] for k in ("id", "object", "created", "system_fingerprint") if isinstance(data.get(k), (str, int, float, bool))}
         result["finish_reason"] = choice.get("finish_reason")
         usage = data.get("usage") or {}
