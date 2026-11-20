@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateCelestiaText } from "@/lib/ai/generateText";
+import { isCelestiaAIModelId } from "@/lib/ai/modelCatalog";
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,7 +16,12 @@ export async function POST(req: NextRequest) {
       readingMode = "holistic",
       readingLength = "detailed",
       userQuestion,
+      model,
     } = payload ?? {};
+
+    if (model !== undefined && !isCelestiaAIModelId(model)) {
+      return NextResponse.json({ error: "The selected AI model is not supported." }, { status: 400 });
+    }
 
     const fullName = typeof name === "string" && name.trim() ? name.trim() : "Querent";
     const question = typeof userQuestion === "string" ? userQuestion.slice(0, 2000) : "";
@@ -62,6 +68,7 @@ Format a useful, structured response with Markdown headings. Do not repeat the e
         maxOutputTokens: readingLength === "concise" ? 2048 : 4096,
         // Concise changes answer length, not the reasoning quality.
         modelTier: "reasoning",
+        ...(model ? { model } : {}),
       });
       return NextResponse.json({
         success: true,
