@@ -38,7 +38,7 @@ const POPULAR_YOGA_DIVISIONS = [
   { code: "D2", label: "D2 Hora", tag: "Wealth & Treasury" },
   { code: "D3", label: "D3 Drekkana", tag: "Courage & Siblings" },
   { code: "D7", label: "D7 Saptamsa", tag: "Children & Progeny" },
-  { code: "D60", label: "D60 Shashtiamsa", tag: "Past Life Karma" },
+  { code: "D60", label: "D60 Shashtiamsa", tag: "All indications" },
 ];
 
 export function MasterYogasPanel({ vedicData, fullName = "Seeker" }: MasterYogasPanelProps) {
