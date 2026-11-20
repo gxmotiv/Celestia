@@ -307,8 +307,8 @@ export function VedicKundliChart({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h4 className="text-sm font-semibold text-amber-200">Shashtiamsa (D60) — half-degree details</h4>
             <div className="flex flex-wrap gap-1" role="group" aria-label="D60 sign-counting convention">
-              <button type="button" onClick={() => setD60SignConvention("from-sign")} aria-pressed={d60SignConvention === "from-sign"} className={`rounded-md px-2 py-1 text-[10px] border ${d60SignConvention === "from-sign" ? "border-amber-400 bg-amber-500/20 text-amber-200" : "border-slate-700 text-slate-400"}`}>From occupied sign</button>
-              <button type="button" onClick={() => setD60SignConvention("from-aries")} aria-pressed={d60SignConvention === "from-aries"} className={`rounded-md px-2 py-1 text-[10px] border ${d60SignConvention === "from-aries" ? "border-amber-400 bg-amber-500/20 text-amber-200" : "border-slate-700 text-slate-400"}`}>From Aries</button>
+              <button type="button" onClick={() => setD60SignConvention("from-sign")} aria-pressed={d60SignConvention === "from-sign"} className={`rounded-md px-2 py-1 text-[10px] border ${d60SignConvention === "from-sign" ? "border-amber-400 bg-amber-500/20 text-amber-200" : "border-slate-700 text-slate-400"}`}>From natal sign (JHora)</button>
+              <button type="button" onClick={() => setD60SignConvention("from-aries")} aria-pressed={d60SignConvention === "from-aries"} className={`rounded-md px-2 py-1 text-[10px] border ${d60SignConvention === "from-aries" ? "border-amber-400 bg-amber-500/20 text-amber-200" : "border-slate-700 text-slate-400"}`}>From Aries (alternate reading)</button>
             </div>
             <span className="text-[10px] text-slate-400">Ascendant: {currentChart.ascendant.d60Amsa?.name ?? "Unavailable"} · {currentChart.ascendant.d60Amsa?.nature ?? "Unclassified"}</span>
           </div>
