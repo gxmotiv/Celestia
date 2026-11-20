@@ -30,13 +30,13 @@ def parse_models(raw):
     return aliases
 
 
-def run_one_model(alias, task, out_dir, pacing_file=None, minimum_interval=5.0):
-    filename_pattern = "*" + re.sub(r"[^a-z0-9-]", "-", alias.lower()) + "_" + task + ".json"
+def run_one_model(alias, task, out_dir, pacing_file=None, minimum_interval=5.0, trial=1):
+    filename_pattern = "*" + re.sub(r"[^a-z0-9-]", "-", alias.lower()) + "_" + task + f"_trial{trial}.json"
     before = {path.resolve() for path in out_dir.glob(filename_pattern)}
     try:
         completed = subprocess.run(
             [sys.executable, str(RUNNER), "--model", alias, "--task", task,
-             "--output-dir", str(out_dir)],
+             "--trial", str(trial), "--output-dir", str(out_dir)],
             env={
                 **os.environ.copy(),
                 "APINEX_BENCHMARK_PACING_FILE": str(pacing_file or ""),
@@ -87,6 +87,7 @@ def run_one_model(alias, task, out_dir, pacing_file=None, minimum_interval=5.0):
         result_path.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         row = {
             "model_alias": alias,
+            "trial": trial,
             "requested_model_id": result.get("requested_model_id"),
             "returned_model": result.get("returned_model"),
             "routing_status": result.get("routing_status", "unverified"),
@@ -119,21 +120,23 @@ def run_one_model(alias, task, out_dir, pacing_file=None, minimum_interval=5.0):
         }
 
 
-def run_models_in_parallel(aliases, task, out_dir, concurrency, pacing_file=None, minimum_interval=5.0):
+def run_models_in_parallel(aliases, task, out_dir, concurrency, pacing_file=None, minimum_interval=5.0, trials=1):
     """Launch one request per alias concurrently and return results in completion-independent mapping."""
     results_by_alias = {}
     with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency) as pool:
-        future_to_alias = {
-            pool.submit(run_one_model, alias, task, out_dir, pacing_file, minimum_interval): alias
-            for alias in aliases
+        work_items = [(alias, trial) for alias in aliases for trial in range(1, trials + 1)]
+        future_to_item = {
+            pool.submit(run_one_model, alias, task, out_dir, pacing_file, minimum_interval, trial): (alias, trial)
+            for alias, trial in work_items
         }
-        for future in concurrent.futures.as_completed(future_to_alias):
-            alias = future_to_alias[future]
+        for future in concurrent.futures.as_completed(future_to_item):
+            alias, trial = future_to_item[future]
             try:
-                results_by_alias[alias] = future.result()
+                results_by_alias[(alias, trial)] = future.result()
             except Exception as exc:
-                results_by_alias[alias] = {
+                results_by_alias[(alias, trial)] = {
                     "model_alias": alias,
+                    "trial": trial,
                     "status": "runner_exception",
                     "runner_exit_code": None,
                     "result_file": None,
@@ -149,6 +152,8 @@ def main():
     )
     parser.add_argument("--models", required=True, help="Comma-separated configured model aliases")
     parser.add_argument("--task", required=True, choices=sorted(CONFIG["tasks"]))
+    parser.add_argument("--trials", type=int, choices=(1, 3, 5), default=1,
+                        help="Repeat each selected model/task 1, 3, or 5 times (default 1).")
     parser.add_argument("--output-dir", default="benchmark-results")
     parser.add_argument(
         "--schedule-state-file",
@@ -188,13 +193,14 @@ def main():
         "created_at_utc": started.isoformat(),
         "task": args.task,
         "task_name": task_name,
+        "trials_per_model_task": args.trials,
         "execution": "parallel_models_one_task",
         "max_parallel_requests": effective_concurrency,
         "minimum_request_interval_seconds": minimum_interval,
         "rate_limit_policy": "Globally pace every API attempt, including retries, to leave headroom under the documented APInex Free-tier limit.",
         "automatic_retries_policy": "At most two retries for HTTP 502/503/504; HTTP 429 is recorded without automatic retry.",
         "selected_models": aliases,
-        "request_count_planned": len(aliases),
+        "request_count_planned": len(aliases) * args.trials,
         "request_count_attempted": 0,
         "automatic_retries": 0,
         "results": [],
@@ -207,18 +213,24 @@ def main():
     print(f"Global API-attempt pacing: one request every {minimum_interval:g} seconds.", flush=True)
     print("Every selected model receives the same task prompt and task-specific output schema.", flush=True)
 
-    rows_by_alias = run_models_in_parallel(aliases, args.task, out_dir, effective_concurrency, pacing_file, minimum_interval)
+    rows_by_alias = run_models_in_parallel(
+        aliases, args.task, out_dir, effective_concurrency, pacing_file, minimum_interval, args.trials
+    )
 
-    # Preserve the configured model order in summaries, independent of completion order.
+    # Preserve model order and trial order in summaries, independent of completion order.
     for alias in aliases:
-        row = rows_by_alias[alias]
+        for trial in range(1, args.trials + 1):
+            row = rows_by_alias[(alias, trial)]
         log = row.pop("runner_log", "")
         if log.strip():
             print(f"\n--- {alias} ---\n{log.rstrip()}")
-        summary["results"].append(row)
-        summary["request_count_attempted"] += 1
-        summary["automatic_retries"] += int(row.get("automatic_retries") or 0)
+            summary["results"].append(row)
+            summary["request_count_attempted"] += 1
+            summary["automatic_retries"] += int(row.get("automatic_retries") or 0)
 
+    summary["api_attempt_count_reported"] = sum(
+        int(item.get("api_attempt_count") or 0) for item in summary["results"]
+    )
     successes = sum(1 for item in summary["results"] if item.get("status") == "success")
     summary["success_count"] = successes
     summary["failure_count"] = len(summary["results"]) - successes
@@ -238,7 +250,9 @@ def main():
         f"- Execution: paced API attempts; max in-flight concurrency {effective_concurrency}",
         f"- Minimum request interval: {minimum_interval:g} seconds",
         f"- Overall: {summary['overall_status']} ({successes}/{len(aliases)} successful)",
-        f"- Planned / attempted requests: {summary['request_count_planned']} / {summary['request_count_attempted']}",
+        f"- Trials per model/task: {args.trials}",
+        f"- Planned / attempted model-task-trials: {summary['request_count_planned']} / {summary['request_count_attempted']}",
+        f"- Actual API attempts (including retries): {summary['api_attempt_count_reported']}",
         f"- Automatic transient retries: {summary['automatic_retries']}",
         "",
         "| Model | Status | Routing | JSON/schema | HTTP | API latency (s) | Pacing wait (s) | Completion tokens | Retries |",
