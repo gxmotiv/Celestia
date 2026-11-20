@@ -21,7 +21,7 @@ Never put the key in a file, commit, issue, prompt, or chat message.
 6. Download the resulting artifact from the workflow run.
 7. Score the response with [the shared model-scoring rubric](../../docs/benchmark/model-scoring-rubric.md).
 
-The workflow never loops over models or tasks. It does not retry failed API calls. It has no schedule or push trigger. Run comparisons sequentially: keep the task and evidence identical when comparing models; keep the model and evidence identical when comparing tasks.
+The workflow runs one logical request per selected model and task. The runner retries only transient HTTP 429/502/503/504 responses, at most twice; it does not retry authentication, validation, or other client errors. It has no schedule or push trigger. Run comparisons sequentially: keep the task and evidence identical when comparing models; keep the model and evidence identical when comparing tasks.
 
 ## Output ceilings
 
@@ -49,8 +49,8 @@ The response is saved only as a GitHub Actions artifact with 14-day retention; i
 
 ## Limitations
 
-- The runner does not grade answers automatically. Use the shared scoring rubric separately.
+- The runner validates strict JSON syntax and task-specific required top-level keys/types. Invalid responses are preserved raw in the artifact but counted as failures. It does not semantically grade answer quality; use the shared scoring rubric separately.
 - APInex aliases, weights, free quotas, and model availability can change. Re-check the APInex dashboard/catalogue before each test.
 - A successful HTTP response does not establish the upstream model's exact weights or independent quality.
 - No benchmark request is made until `confirm_api_call=true`.
-- The harness does not inspect Celestia source code or execute Celestia tests.
+- The harness does not inspect Celestia source code or execute Celestia tests. It runs only its own benchmark-runner unit tests before sending API requests.

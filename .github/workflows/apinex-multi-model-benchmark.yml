@@ -44,7 +44,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Verify Python
         run: python3 --version
-      - name: Run selected models sequentially (one request each, no retries)
+      - name: Validate benchmark runner and response-schema tests
+        run: python3 -m unittest discover -s scripts/apinex-benchmark/tests -v
+      - name: Run selected models sequentially (one logical request each; transient gateway retries only)
         env:
           APINEX_API_KEY: ${{ secrets.APINEX_API_KEY }}
           BENCHMARK_MODELS: ${{ inputs.models }}

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Sequential APInex benchmark runner with bounded transient-gateway retries; never prints secrets."""
 import argparse, datetime as dt, json, os, pathlib, re, sys, time, urllib.error, urllib.request
+from response_validation import validate_response
 
 ROOT = pathlib.Path(__file__).resolve().parent
 CONFIG = json.loads((ROOT / "config.json").read_text(encoding="utf-8"))
@@ -123,7 +124,15 @@ def main():
         total = result["usage"]["total_tokens"]
         if total is not None:
             result["usage"]["estimated_weighted_tokens"] = total * model["weight"]
-        result["status"] = "success" if result["response_text"] else "empty_response"
+        result["response_validation"] = validate_response(args.task, result["response_text"], CONFIG)
+        if not result["response_text"]:
+            result["status"] = "empty_response"
+        elif result["response_validation"]["format"] == "invalid_json":
+            result["status"] = "invalid_json"
+        elif not result["response_validation"]["valid"]:
+            result["status"] = "schema_invalid"
+        else:
+            result["status"] = "success"
     except urllib.error.HTTPError as exc:
         result["http_status"] = exc.code
         # Extract only short, non-secret diagnostic fields from the gateway error.
@@ -171,6 +180,10 @@ def main():
     print("Task:", args.task, "| max output tokens:", cap)
     print("Status:", result["status"], "| HTTP:", result.get("http_status", "n/a"), "| latency:", result["latency_seconds"], "seconds")
     print("Token usage:", json.dumps(result["usage"], sort_keys=True))
+    if result.get("response_validation") and not result["response_validation"]["valid"]:
+        print("Response validation:", result["response_validation"]["format"])
+        for validation_error in result["response_validation"]["errors"]:
+            print("Validation detail:", validation_error)
     if result.get("error"):
         # run.py stores only sanitized gateway diagnostics; never print request headers or credentials.
         print("Failure detail:", result["error"])
