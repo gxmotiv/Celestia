@@ -133,3 +133,10 @@ Do not produce one winner from a single task or a single run. First exclude inva
 8. Best overall Celestia model using the predeclared weighted score, sample count, critical-failure count, latency and quota cost.
 
 Use at least three independent repetitions per model/task before treating small score differences as meaningful. Keep prompts, temperature, output limits and evidence identical. A model with any critical fabrication cannot be named the overall winner regardless of its average score. Catalogue model IDs and provider availability must be rechecked; this harness cannot prove model weights.
+
+
+### J — Deterministic numeric conversion
+- Independently verify the four supplied longitude-to-sign conversions.
+- Require correct sign boundaries and degree offsets without rounding the input before conversion.
+- Check the ayanamsha difference in arcseconds (11.8404″, within the validator tolerance).
+- This task tests arithmetic and coordinate conversion only; it does not prove the ephemeris engine calculated the original longitudes correctly.
