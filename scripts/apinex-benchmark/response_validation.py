@@ -1,5 +1,6 @@
 """Strict recursive task-specific JSON validation; never repairs model output."""
 import json
+import math
 
 
 def _reject_constant(value):
@@ -21,7 +22,11 @@ def _matches_type(value, expected):
         "array": lambda v: isinstance(v, list),
         "string": lambda v: isinstance(v, str),
         "integer": lambda v: isinstance(v, int) and not isinstance(v, bool),
-        "number": lambda v: isinstance(v, (int, float)) and not isinstance(v, bool),
+        "number": lambda v: (
+            isinstance(v, (int, float))
+            and not isinstance(v, bool)
+            and (not isinstance(v, float) or math.isfinite(v))
+        ),
         "boolean": lambda v: isinstance(v, bool),
         "null": lambda v: v is None,
     }
@@ -55,6 +60,13 @@ def _validate(value, schema, path, errors):
             errors.append(f"{path}: fewer than minItems")
         if len(value) > schema.get("maxItems", 10**9):
             errors.append(f"{path}: exceeds maxItems")
+        if schema.get("uniqueItems") is True:
+            seen = set()
+            for index, item in enumerate(value):
+                key = json.dumps(item, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+                if key in seen:
+                    errors.append(f"{path}[{index}]: duplicate array item; uniqueItems is required")
+                seen.add(key)
         if isinstance(schema.get("items"), dict):
             for index, item in enumerate(value):
                 _validate(item, schema["items"], f"{path}[{index}]", errors)
