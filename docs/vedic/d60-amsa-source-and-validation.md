@@ -48,7 +48,7 @@ The Vedic chart now accepts a user-selected uncertainty range (±1, ±2, ±5, ±
 Important boundaries:
 - The interval is supplied by the user; Celestia does not infer the accuracy of a birth certificate or rectify the time.
 - The output is a sampled set, not a proof that no shorter intermediate placement occurred between sample points.
-- High-latitude rising motion can be unusually uneven and receives an explicit caution.
+- High-latitude rising motion can be unusually uneven and receives an explicit caution. The numeric timezone offset supplied with the birth data is held constant across the interval; historical DST or civil-time transitions are not inferred.
 - The check reuses Celestia's existing ascendant calculation. It is not independent validation against Swiss Ephemeris or another external reference implementation.
 - A single observed placement means stable across the samples, not proof that the true birth time is correct.
 
