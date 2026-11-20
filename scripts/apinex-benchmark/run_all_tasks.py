@@ -30,7 +30,7 @@ def find_suite_abort_condition(task_summary):
     return None
 
 
-def build_combined_summary(task_summaries, models, concurrency=12, stopped_early_reason=None, skipped_tasks=None, session_directory=None):
+def build_combined_summary(task_summaries, models, concurrency=12, trials=1, stopped_early_reason=None, skipped_tasks=None, session_directory=None):
     rows = []
     for task in TASKS:
         summary = task_summaries.get(task) or {}
@@ -39,15 +39,22 @@ def build_combined_summary(task_summaries, models, concurrency=12, stopped_early
             row["task"] = task
             rows.append(row)
     successes = sum(1 for row in rows if row.get("status") == "success")
-    expected = len(TASKS) * len(models)
-    attempted = len(rows)
-    failures = sum(1 for row in rows if row.get("status") != "success")
+    expected = len(TASKS) * len(models) * trials
+    attempted = sum(1 for row in rows if int(row.get("api_attempt_count") or 0) > 0)
+    failures = sum(
+        1 for row in rows
+        if int(row.get("api_attempt_count") or 0) > 0 and row.get("status") != "success"
+    )
+    skipped_count = sum(1 for row in rows if int(row.get("api_attempt_count") or 0) == 0)
+    api_attempt_count = sum(int(row.get("api_attempt_count") or 0) for row in rows)
+    automatic_retries = sum(int(row.get("automatic_retries") or 0) for row in rows)
     return {
         "benchmark_version": CONFIG.get("benchmark_version", "unknown"),
         "benchmark_commit": __import__("os").environ.get("GITHUB_SHA"),
         "created_at_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
         "execution": "sequential_tasks_parallel_models",
         "max_parallel_models_per_task": concurrency,
+        "trials_per_model_task": trials,
         "min_request_interval_seconds": CONFIG.get("execution_policy", {}).get("min_request_interval_seconds", 5.0),
         "session_directory": session_directory,
         "tasks": TASKS,
@@ -56,8 +63,11 @@ def build_combined_summary(task_summaries, models, concurrency=12, stopped_early
         "request_count_reported": len(rows),
         "request_count_attempted": attempted,
         "request_count_not_attempted": expected - attempted,
+        "api_attempt_count_reported": api_attempt_count,
+        "automatic_retries": automatic_retries,
         "success_count": successes,
         "failure_count": failures,
+        "skipped_count": skipped_count,
         "stopped_early_reason": stopped_early_reason,
         "skipped_tasks": skipped_tasks or [],
         "overall_status": "success" if len(rows) == expected and successes == expected else ("partial_success" if successes else "failed"),
@@ -70,7 +80,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--models", required=True, help="Comma-separated config aliases")
     parser.add_argument("--confirm-all", action="store_true", help="Explicitly confirm all configured task/model requests")
-    parser.add_argument("--concurrency", type=int, default=12, help="Parallel model requests per task (1–12)")
+    parser.add_argument("--concurrency", type=int, default=12, help="Maximum in-flight model requests (1–12)")
+    parser.add_argument("--trials", type=int, choices=(1, 3, 5), default=1,
+                        help="Repeat every model/task 1, 3, or 5 times (default 1)")
     parser.add_argument("--output-dir", default="benchmark-results")
     args = parser.parse_args()
     if not args.confirm_all:
@@ -107,7 +119,8 @@ def main():
         print(f"\n========== TASK {task} ({index}/{len(TASKS)}) ==========", flush=True)
         completed = subprocess.run(
             [sys.executable, str(BATCH_RUNNER), "--models", args.models,
-             "--task", task, "--concurrency", str(args.concurrency), "--output-dir", str(task_dir),
+             "--task", task, "--concurrency", str(args.concurrency), "--trials", str(args.trials),
+             "--output-dir", str(task_dir),
              "--schedule-state-file", str(schedule_state_file)],
             check=False,
         )
@@ -138,7 +151,7 @@ def main():
                 break
 
     combined = build_combined_summary(
-        task_summaries, models, args.concurrency,
+        task_summaries, models, args.concurrency, trials=args.trials,
         stopped_early_reason=stopped_early_reason,
         skipped_tasks=skipped_tasks,
         session_directory=str(session_dir.relative_to(out_dir)),
@@ -156,7 +169,12 @@ def main():
         f"- Overall: {combined['overall_status']}",
         f"- Tasks: {', '.join(TASKS)}",
         f"- Models: {len(models)}",
-        f"- Planned requests: {combined['request_count_planned']}",
+        f"- Trials per model/task: {args.trials}",
+        f"- Planned model/task/trial requests: {combined['request_count_planned']}",
+        f"- Model/task/trial requests sent: {combined['request_count_attempted']}",
+        f"- Actual API attempts including retries: {combined['api_attempt_count_reported']}",
+        f"- Automatic retries: {combined['automatic_retries']}",
+        f"- Failed after sending / skipped before sending: {combined['failure_count']} / {combined['skipped_count']}",
         f"- Minimum request interval: {combined['min_request_interval_seconds']} seconds",
         f"- Session folder: {combined['session_directory']}",
         f"- Reported responses: {combined['request_count_reported']}",
