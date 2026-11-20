@@ -1,76 +1,53 @@
 # Celestia AI provider setup
 
-Celestia uses APInex as its primary server-side AI provider. Gemini has been removed from the application provider chain. Optional FreeModel and NaraRouter integrations remain as fallbacks. API keys are read only on the server and are never returned to the browser.
+Celestia keeps provider credentials on the server. The website/app selector lets you choose a provider and model; an explicit selection is sent only to that provider. It does not silently switch to a different model or provider if the selected provider fails.
 
-## Primary APInex models
+## Free provider options checked on 20 November 2026
 
-Set `APINEX_API_KEY` as a server-side secret in the Cloudflare Worker (or the server-side secret manager used by the deployment). Never commit the key, place it in browser code, or paste it into chat.
+| Provider | Free API offer shown in official docs | Celestia option | Credential |
+|---|---|---|---|
+| APInex | Free-category catalogue IDs; account-specific quota and multiplier apply | 12 APInex model choices | `APINEX_API_KEY` |
+| FreeModel | 1M combined prompt/completion tokens per month, up to 60 requests/minute, no card; all catalogue models available | DeepSeek V4.1 Flash, GLM 5.3 Flash, MiMo V2.6 Pro, GPT-6 Luna | `FREEMODEL_API_KEY` |
+| NaraRouter | Free plan: Agnes 2.5 Flash, 7M tokens/day, 15 requests/minute, no card | Agnes 2.5 Flash | `NARAROUTER_API_KEY` |
+| OpenRouter | Free model variants; 20 requests/minute and 50 requests/day without purchased credits | Free-model auto-router (`openrouter/free`) | `OPENROUTER_API_KEY` |
 
-APInex uses the OpenAI-compatible endpoint `https://api.apinex.bond/v1/chat/completions`.
+Free allowances, rate limits, model IDs, and provider availability can change. Check each provider's own dashboard and live model list before relying on a particular model. FreeModel's allowance counts prompt and completion tokens together. OpenRouter's `openrouter/free` route is intentionally used without any paid fallback list. NaraRouter's authenticated `/v1/models` endpoint is the final authority for aliases available to your account.
 
-| Celestia tier | APInex model | Purpose |
-|---|---|---|
-| reasoning (detailed chart readings and Oracle work) | `free/deepseek-v4.1-flash` | Primary detailed-reasoning model; requests high reasoning effort |
-| budget (routine/short requests) | `free/mimo-v2.6-pro` | Lower-quota-weight alternative |
+Official references:
+- [APInex Chat Completions](https://apinex.bond/developers/models/chat)
+- [FreeModel free API and monthly allowance](https://freemodel.in/free-ai-api)
+- [FreeModel API documentation](https://freemodel.in/docs)
+- [NaraRouter plans](https://router.bynara.id/pricing)
+- [NaraRouter API documentation](https://router.bynara.id/docs)
+- [OpenRouter free-model collection](https://openrouter.ai/collections/free-models)
+- [OpenRouter free variants and limits](https://openrouter.ai/docs/api_reference/limits)
 
-Optional server-side overrides:
-- `APINEX_BASE_URL`: defaults to `https://api.apinex.bond/v1`.
-- `APINEX_REASONING_MODEL`: defaults to `free/deepseek-v4.1-flash`.
-- `APINEX_BUDGET_MODEL`: defaults to `free/mimo-v2.6-pro`.
+## Add provider secrets to the Cloudflare Worker
 
-The model IDs above match the APInex catalogue IDs used by the Celestia benchmark configuration. Confirm current availability and free-category eligibility in the APInex dashboard before relying on a fixed quota. APInex documents the OpenAI-compatible Chat Completions endpoint, Bearer authentication, `max_tokens`, and `reasoning_effort` values. See [APInex Chat Completions documentation](https://apinex.bond/developers/models/chat).
+Add only the provider keys you have chosen as **server-side Worker secrets**. Do not place them in source files, browser code, GitHub commits, public repository variables, or chat messages.
 
-## Provider fallback order
+| Secret name | Provider dashboard |
+|---|---|
+| `APINEX_API_KEY` | APInex |
+| `FREEMODEL_API_KEY` | FreeModel |
+| `NARAROUTER_API_KEY` | NaraRouter |
+| `OPENROUTER_API_KEY` | OpenRouter |
 
-1. APInex, when `APINEX_API_KEY` is configured.
-2. FreeModel, when `FREEMODEL_API_KEY` is configured and APInex is unavailable due to a transient/network/upstream failure or unavailable model.
-3. NaraRouter, when `NARAROUTER_API_KEY` is configured and the previous provider is unavailable.
+The in-app selector displays whether each provider secret is configured. It never returns a key or key fragment to the browser. After adding a secret, redeploy the Worker so the running deployment receives it.
 
-Gemini is not part of the provider chain. Authentication, permission, and billing errors are surfaced instead of being silently hidden by another provider.
+For Cloudflare Workers, add secrets through the Worker secret configuration. Do not put credentials in `wrangler.jsonc`, `.env.example`, or browser variables.
 
-## Optional FreeModel fallback
+## Routing and no-paid-fallback guarantee
 
-- `FREEMODEL_API_KEY`: server-side key.
-- `FREEMODEL_MODEL`: budget fallback model; defaults to `gpt-6-luna`.
-- `FREEMODEL_REASONING_MODEL`: reasoning fallback model; defaults to `claude-haiku-5.5`.
+- When a user chooses a model, Celestia routes to that exact provider and provider model ID.
+- If its server key is missing, Celestia returns a clear configuration error; it does not send the request to another provider.
+- If the provider rejects the request, Celestia surfaces the error; it does not retry with a paid model elsewhere.
+- OpenRouter uses only `openrouter/free`, with no paid fallback models in the request.
+- Do not add credits or paid balances to any provider account for this project. Stay within the published free allowance; a provider may reject requests after that allowance is exhausted.
+- Calls without an explicit model selection retain the legacy APInex → FreeModel → NaraRouter automatic fallback chain. The app's selector always sends an explicit selection.
 
-## Optional NaraRouter fallback
+## Existing model and research limitations
 
-- `NARAROUTER_API_KEY`: server-side key.
-- `NARAROUTER_BASE_URL`: defaults to `https://router.bynara.id/v1`.
-- `NARAROUTER_MODEL`: budget fallback alias; defaults to `auto/bynara`.
-- `NARAROUTER_REASONING_MODEL`: reasoning fallback alias; defaults to `NARAROUTER_MODEL`.
+A model passing a JSON fixture or returning HTTP 200 does not establish astrology accuracy. The 20 November 2026 benchmark run passed the numerical fixture task (Task C) for all 12 APInex models, but many free-form task responses failed the strict 1–6 item JSON schema. Do not use the earlier Task D score labels as a current overall ranking. More repeated, schema-valid A–J trials and human review are needed before ranking model quality.
 
-NaraRouter advertises a free plan with daily quota and request limits; check its current pricing/eligibility before relying on it.
-
-## Usage, safety, and testing
-
-- Celestia returns the actual provider, model returned by the gateway, and prompt/completion/total token usage when supplied by the upstream API.
-- Keys are never returned to the client.
-- The local data-only fallback remains available if no configured provider can produce a response.
-- APInex quota weights are provider-side allowance multipliers, not a direct cash-price guarantee. Check the live dashboard for the account's actual allowance and debit.
-- A successful API response or valid JSON does not prove astrology correctness. Compare models using identical chart evidence and score calculation accuracy, tradition-specific rule adherence, unsupported-claim rate, reasoning quality, consistency, latency, and weighted token usage.
-
-For Cloudflare Workers, add secrets through the Worker secret configuration. Do not put credentials in `wrangler.jsonc`, `.env.example`, browser variables, or source code.
-
-
-## In-app model selector
-
-The AI Cosmic Synthesis screen provides one model selector shared by the Oracle Cockpit and Deep Blueprint Report. The selector currently exposes these APInex free-category IDs, with role descriptions and current published quota weights:
-
-| Model | APInex model ID | Weight | Suggested role |
-|---|---|---:|---|
-| DeepSeek V4.1 Flash | `free/deepseek-v4.1-flash` | ×3 | Default; passed Task C and scored 27/30 on Task D |
-| MiMo V2.6 Pro | `free/mimo-v2.6-pro` | ×2 | Lower-quota second opinion; Task D 28/30 |
-| MiniMax M3.1 Flash | `free/minimax-m3.1-flash` | ×2 | Fast routine work; Task D 27/30 |
-| Gemini 4 Hydrogen | `free/gemini-4-hydrogen` | ×5 | Advanced reasoning challenger; passed Task C |
-| Gemini 3.8 Flash | `free/gemini-3.8-flash` | ×3 | Research challenger; passed Task C |
-| Muse Spark 1.3 | `free/muse-spark-1.3` | ×3 | Honesty audit; Task D 28/30, but Task C JSON failure |
-| DeepSeek V4 Pro | `free/deepseek-v4-pro-0813` | ×3 | Difficult code/reasoning challenger; passed Task C |
-| HY4 Flash | `free/hy4-flash` | ×2 | Experimental fast challenger; distinct from Gemini 4 Hydrogen |
-| Kimi K3 | `free/kimi-k3` | ×3 | Long-context research challenger |
-| Qwen 3.8 Max | `free/qwen-3.8-max` | ×3 | Research challenger; Task C JSON failure |
-| GPT-6 Luna | `free/gpt-6-luna` | ×3 | General-purpose benchmark challenger |
-| GLM 5.3 Flash | `free/glm-5.3-flash` | ×3 | Alternative fast model |
-
-The default is DeepSeek V4.1 Flash. These descriptions are internal recommendations based on the currently available Celestia trial evidence, not guarantees of model quality. APInex quota weights can change; they are usage multipliers, not cash prices. The server validates every selected model ID against `lib/ai/modelCatalog.ts`. If APInex is unavailable, configured fallback providers use their own configured model rather than receiving an APInex-specific model ID.
+Provider-specific quota weights are usage multipliers, not cash prices. Free API offers are not guarantees of uninterrupted availability or permanent model IDs.

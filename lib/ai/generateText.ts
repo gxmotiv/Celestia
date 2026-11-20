@@ -1,4 +1,6 @@
-export type CelestiaAIProvider = "apinex" | "freemodel" | "nararouter";
+import { getCelestiaAIModel } from "./modelCatalog";
+
+export type CelestiaAIProvider = "apinex" | "freemodel" | "nararouter" | "openrouter";
 export type CelestiaAIModelTier = "budget" | "reasoning";
 
 export interface CelestiaAIUsage {
@@ -141,6 +143,46 @@ async function generateWithFreeModel(
   };
 }
 
+async function generateWithOpenRouter(
+  apiKey: string,
+  model: string,
+  options: Required<Pick<GenerateTextOptions, "systemPrompt" | "userPrompt" | "maxOutputTokens" | "temperature">>
+): Promise<CelestiaAIResult> {
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: "Bearer " + apiKey,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://gxmotiv.github.io/Celestia",
+      "X-Title": "Celestia",
+    },
+    cache: "no-store",
+    signal: AbortSignal.timeout(45_000),
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: "system", content: options.systemPrompt },
+        { role: "user", content: options.userPrompt },
+      ],
+      temperature: options.temperature,
+      max_tokens: options.maxOutputTokens,
+      stream: false,
+    }),
+  });
+
+  const body = await response.json().catch(() => null) as
+    | { model?: string; choices?: Array<{ message?: { content?: string | null } }>; usage?: unknown; error?: { message?: string } }
+    | null;
+  if (!response.ok) {
+    const error = new Error(body?.error?.message || "OpenRouter request failed with HTTP " + response.status + ".") as ProviderError;
+    error.status = response.status;
+    throw error;
+  }
+  const text = body?.choices?.[0]?.message?.content;
+  if (typeof text !== "string" || !text.trim()) throw new Error("OpenRouter returned an empty or unsupported response.");
+  return { text: text.trim(), provider: "openrouter", model: body?.model || "unreported", usage: readUsage(body?.usage) };
+}
+
 async function generateWithNaraRouter(
   apiKey: string,
   model: string,
@@ -199,9 +241,9 @@ async function generateWithNaraRouter(
   };
 }
 /**
- * APInex is primary when configured: DeepSeek V4.1 Flash for detailed reasoning
- * and MiMo V2.6 Pro for the lower-quota budget tier. FreeModel and NaraRouter
- * remain optional fallbacks.
+ * Explicit catalogue selections are routed only to the selected provider/model.
+ * Calls without an explicit selection keep the legacy APInex -> FreeModel ->
+ * NaraRouter fallback order.
  */
 export async function generateCelestiaText(
   input: GenerateTextOptions
@@ -217,6 +259,7 @@ export async function generateCelestiaText(
   const apinexKey = process.env.APINEX_API_KEY?.trim();
   const freeModelKey = process.env.FREEMODEL_API_KEY?.trim();
   const naraRouterKey = process.env.NARAROUTER_API_KEY?.trim();
+  const openRouterKey = process.env.OPENROUTER_API_KEY?.trim();
 
   const apinexModelName = input.model?.trim() || (
     modelTier === "reasoning"
@@ -234,6 +277,28 @@ export async function generateCelestiaText(
   const naraRouterBaseUrl = (
     process.env.NARAROUTER_BASE_URL?.trim() || "https://router.bynara.id/v1"
   ).replace(/\/+$/, "");
+
+  const selectedModel = input.model ? getCelestiaAIModel(input.model) : undefined;
+  if (input.model && !selectedModel) {
+    throw new Error("The selected Celestia model is not in the supported provider catalogue.");
+  }
+
+  if (selectedModel) {
+    switch (selectedModel.providerId) {
+      case "apinex":
+        if (!apinexKey) throw new Error("APInex is not configured. Add the APINEX_API_KEY server secret.");
+        return generateWithApinex(apinexKey, selectedModel.providerModelId, options, modelTier === "reasoning" ? "high" : undefined);
+      case "freemodel":
+        if (!freeModelKey) throw new Error("FreeModel is not configured. Add the FREEMODEL_API_KEY server secret.");
+        return generateWithFreeModel(freeModelKey, selectedModel.providerModelId, options);
+      case "nararouter":
+        if (!naraRouterKey) throw new Error("NaraRouter is not configured. Add the NARAROUTER_API_KEY server secret.");
+        return generateWithNaraRouter(naraRouterKey, selectedModel.providerModelId, options, naraRouterBaseUrl, modelTier === "reasoning" ? "medium" : "low");
+      case "openrouter":
+        if (!openRouterKey) throw new Error("OpenRouter is not configured. Add the OPENROUTER_API_KEY server secret.");
+        return generateWithOpenRouter(openRouterKey, selectedModel.providerModelId, options);
+    }
+  }
 
   let lastProviderError: unknown;
 
@@ -297,5 +362,5 @@ export async function generateCelestiaText(
   }
 
   if (lastProviderError) throw lastProviderError;
-  throw new Error("No AI provider is configured. Set APINEX_API_KEY, FREEMODEL_API_KEY, or NARAROUTER_API_KEY.");
+  throw new Error("No AI provider is configured. Set APINEX_API_KEY, FREEMODEL_API_KEY, NARAROUTER_API_KEY, or OPENROUTER_API_KEY.");
 }
