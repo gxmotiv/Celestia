@@ -31,7 +31,7 @@ def build_combined_summary(task_summaries, models):
         "request_count_planned": expected,
         "request_count_reported": len(rows),
         "success_count": successes,
-        "failure_count": len(rows) - successes,
+        "failure_count": expected - successes,
         "overall_status": "success" if len(rows) == expected and successes == expected else ("partial_success" if successes else "failed"),
         "task_summaries": task_summaries,
         "results": rows,
