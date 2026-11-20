@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """APInex benchmark request runner with paced, bounded transient retries; never prints secrets."""
-import argparse, datetime as dt, email.utils, json, os, pathlib, random, re, sys, time, urllib.error, urllib.request
+import argparse, datetime as dt, email.utils, hashlib, json, os, pathlib, random, re, sys, time, urllib.error, urllib.request
 from response_validation import validate_response
 from request_pacing import BenchmarkHaltedError, mark_request_schedule_halted, wait_for_request_slot
 
@@ -10,6 +10,31 @@ CAPS = {name: task["max_tokens"] for name, task in CONFIG["tasks"].items()}
 API_URL = "https://api.apinex.bond/v1/chat/completions"
 RETRYABLE_HTTP_STATUSES = frozenset({502, 503, 504})
 SAFE_RESPONSE_HEADERS = ("cf-ray", "cf-mitigated", "server", "content-type", "date", "retry-after", "x-ratelimit-limit", "x-ratelimit-remaining", "x-ratelimit-reset")
+
+def sha256_text(value):
+    """Stable SHA-256 for exact prompt text or canonical JSON data."""
+    if isinstance(value, str):
+        encoded = value.encode("utf-8")
+    else:
+        encoded = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def benchmark_prompt_hashes(system_prompt, task_prompt, response_schema):
+    """Return hashes that identify every instruction and schema used for a request."""
+    system_hash = sha256_text(system_prompt)
+    task_hash = sha256_text(task_prompt)
+    schema_hash = sha256_text(response_schema)
+    bundle = "\\0".join((system_prompt, task_prompt, json.dumps(
+        response_schema, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    )))
+    return {
+        "system_prompt_sha256": system_hash,
+        "task_prompt_sha256": task_hash,
+        "response_schema_sha256": schema_hash,
+        "prompt_bundle_sha256": sha256_text(bundle),
+    }
+
 
 def evaluate_routing(requested_model_id, returned_model_id):
     """A gateway-reported model ID is routing evidence, not cryptographic attestation."""
@@ -96,6 +121,12 @@ def main():
     model = CONFIG["models"][args.model]
     task = CONFIG["tasks"][args.task]
     cap = CAPS[args.task]
+    prompt_hashes = benchmark_prompt_hashes(
+        CONFIG["system_prompt"], task["prompt"], task["response_schema"]
+    )
+    reasoning_effort_policy = CONFIG.get("execution_policy", {}).get(
+        "reasoning_effort", "not_set_provider_default"
+    )
     payload = {
         "model": model["id"],
         "messages": [
@@ -128,6 +159,8 @@ def main():
         "catalogue_allowance_weight": model["weight"],
         "task": args.task,
         "trial": args.trial,
+        **prompt_hashes,
+        "reasoning_effort_policy": reasoning_effort_policy,
         "max_output_tokens": cap,
         "temperature": 0,
         "automatic_retries": 0,
