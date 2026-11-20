@@ -133,15 +133,16 @@ def main():
         f"- Execution: sequential; transient gateway retries only (maximum two retries per logical request)",
         f"- Overall: {summary['overall_status']} ({successes}/{len(aliases)} successful)",
         "",
-        "| Model | Status | JSON/schema | HTTP | Latency (s) | Completion tokens | Warnings |",
+        "| Model | Status | Routing | JSON/schema | HTTP | Latency (s) | Completion tokens | Warnings |",
         "|---|---|---:|---:|---:|---:|---|"
     ]
     for item in summary["results"]:
         usage = item.get("usage") or {}
         validation = item.get("response_validation") or {}
-        lines.append("| {model} | {status} | {validation} | {http} | {latency} | {tokens} | {warnings} |".format(
+        lines.append("| {model} | {status} | {routing} | {validation} | {http} | {latency} | {tokens} | {warnings} |".format(
             model=item.get("model_alias", ""),
             status=item.get("status", ""),
+            routing=item.get("routing_status", "unverified"),
             validation=validation.get("format", "n/a"),
             http=item.get("http_status") or "",
             latency=item.get("latency_seconds") if item.get("latency_seconds") is not None else "",
