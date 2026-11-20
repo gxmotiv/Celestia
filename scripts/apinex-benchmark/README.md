@@ -1,6 +1,6 @@
 # APInex Celestia benchmark
 
-This harness sends **exactly one** Chat Completions request per confirmed workflow run.
+The harness sends one Chat Completions request per selected model/task pair. A single-model run sends one request; the 12-model × five-task comparison sends 60 requests.
 
 ## Secret
 
