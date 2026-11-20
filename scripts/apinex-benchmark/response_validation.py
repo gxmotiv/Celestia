@@ -115,6 +115,30 @@ def validate_response(task, response_text, config):
     _validate(parsed, schema, "$", errors)
     if not errors and task == "C":
         _validate_numeric_fixture(parsed, errors)
+    if not errors and task == "G":
+        expected_levels = {
+            "traditional_textual_authority",
+            "modern_interpretation",
+            "anecdote",
+            "retrospective_matching",
+            "observational_evidence",
+            "prospective_out_of_sample_validation",
+        }
+        actual_levels = [item.get("level") for item in parsed["evidence_levels"]]
+        if len(actual_levels) != len(expected_levels) or set(actual_levels) != expected_levels:
+            errors.append("$.evidence_levels: must contain each of the six required evidence levels exactly once")
+    if not errors and task == "H":
+        expected_topics = {
+            "repository_inspection",
+            "test_execution",
+            "deployment_status",
+            "planetary_placements",
+            "predictive_accuracy",
+            "evidence_classification",
+        }
+        actual_topics = [item.get("topic") for item in parsed["answers"]]
+        if len(actual_topics) != len(expected_topics) or set(actual_topics) != expected_topics:
+            errors.append("$.answers: must contain all six required topics exactly once")
     if not errors and task == "I" and parsed.get("self_report_is_proof") is not False:
         errors.append("$.self_report_is_proof: must be false; model self-introduction is not identity evidence")
 
