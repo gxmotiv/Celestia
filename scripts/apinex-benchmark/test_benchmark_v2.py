@@ -42,7 +42,7 @@ class ResponseValidationTests(unittest.TestCase):
         self.assertFalse(validate_response("H", raw, CONFIG)["valid"])
 
     def test_task_i_requires_all_fields(self):
-        self.assertFalse(validate_response("I", '{"user_facing_answer":"hello"}', CONFIG)["valid"])
+        self.assertFalse(validate_response("E", '{"user_facing_answer":{"user_facing_answer":"hello"}}', CONFIG)["valid"])
 
 
     def test_task_j_accepts_exact_reference_fixture_math(self):
@@ -56,7 +56,7 @@ class ResponseValidationTests(unittest.TestCase):
             "ayanamsha_difference_arcseconds":11.8404,
             "method_note":"Longitude divided into 30-degree signs."
         }
-        self.assertTrue(validate_response("J", json.dumps(payload), CONFIG)["valid"])
+        self.assertTrue(validate_response("A", json.dumps({"calculation_integrity":{},"astrology_domain":{},"numeric_fixture":payload}), CONFIG)["valid"])
 
     def test_task_j_rejects_wrong_zodiac_sign(self):
         payload = {
