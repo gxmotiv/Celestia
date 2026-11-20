@@ -379,7 +379,7 @@ export function VedicKundliChart({
             ) : null}
           </div>
           <p className="text-[10px] leading-relaxed text-slate-400">
-            Sign placement: {d60SignConvention === "from-sign" ? "count from the occupied sign" : "count from Aries"}. Name order: BPHS 6.34–40; nature: Phaladeepika 3.5 (separate text). This time-range check uses Celestia's current ascendant pipeline and the entered fixed timezone offset; it samples every 5 seconds and does not infer historical DST changes, rectify birth time or prove that no shorter intermediate interval exists.
+            Sign placement: {d60SignConvention === "from-sign" ? "count from the occupied sign" : "count from Aries"}. Name order: BPHS 6.34–40; nature: Phaladeepika 3.5 (separate text). This time-range check covers the D60 ascendant only; planet placements remain calculated at the recorded time. It uses Celestia's current ascendant pipeline and the entered fixed timezone offset, samples every 5 seconds, and does not infer historical DST changes, rectify birth time or prove that no shorter intermediate interval exists.
           </p>
         </section>
       )}
