@@ -13,7 +13,24 @@ CONFIG = json.loads((ROOT / "config.json").read_text(encoding="utf-8"))
 TASKS = list(CONFIG["tasks"].keys())
 
 
-def build_combined_summary(task_summaries, models, concurrency=12):
+
+STOP_SUITE_HTTP_STATUSES = {401, 402, 403, 429}
+
+
+def find_suite_abort_condition(task_summary):
+    """Stop launching later task batches on authentication, quota, or rate-limit failures."""
+    for row in (task_summary or {}).get("results", []):
+        status = row.get("http_status")
+        if status in STOP_SUITE_HTTP_STATUSES:
+            return {
+                "model_alias": row.get("model_alias"),
+                "http_status": status,
+                "reason": "Stop after HTTP " + str(status) + " to avoid repeated auth/quota/rate-limit failures.",
+            }
+    return None
+
+
+def build_combined_summary(task_summaries, models, concurrency=12, stopped_early_reason=None, skipped_tasks=None):
     rows = []
     for task in TASKS:
         summary = task_summaries.get(task) or {}
@@ -23,6 +40,8 @@ def build_combined_summary(task_summaries, models, concurrency=12):
             rows.append(row)
     successes = sum(1 for row in rows if row.get("status") == "success")
     expected = len(TASKS) * len(models)
+    attempted = len(rows)
+    failures = sum(1 for row in rows if row.get("status") != "success")
     return {
         "benchmark_version": CONFIG.get("benchmark_version", "unknown"),
         "benchmark_commit": __import__("os").environ.get("GITHUB_SHA"),
@@ -33,8 +52,12 @@ def build_combined_summary(task_summaries, models, concurrency=12):
         "selected_models": models,
         "request_count_planned": expected,
         "request_count_reported": len(rows),
+        "request_count_attempted": attempted,
+        "request_count_not_attempted": expected - attempted,
         "success_count": successes,
-        "failure_count": expected - successes,
+        "failure_count": failures,
+        "stopped_early_reason": stopped_early_reason,
+        "skipped_tasks": skipped_tasks or [],
         "overall_status": "success" if len(rows) == expected and successes == expected else ("partial_success" if successes else "failed"),
         "task_summaries": task_summaries,
         "results": rows,
@@ -69,6 +92,8 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     task_summaries = {}
     any_failure = False
+    stopped_early_reason = None
+    skipped_tasks = []
 
     for index, task in enumerate(TASKS, start=1):
         task_dir = out_dir / task
@@ -92,8 +117,24 @@ def main():
             task_summaries[task] = summary
             if completed.returncode != 0 or summary.get("overall_status") != "success":
                 any_failure = True
+            abort = find_suite_abort_condition(summary)
+            if abort:
+                stopped_early_reason = abort
+                any_failure = True
+                skipped_tasks = TASKS[index:]
+                for skipped_task in skipped_tasks:
+                    task_summaries[skipped_task] = {
+                        "overall_status": "skipped_after_api_guard",
+                        "results": [],
+                    }
+                print("Stopping full suite after gateway safety condition:", json.dumps(abort), flush=True)
+                break
 
-    combined = build_combined_summary(task_summaries, models, args.concurrency)
+    combined = build_combined_summary(
+        task_summaries, models, args.concurrency,
+        stopped_early_reason=stopped_early_reason,
+        skipped_tasks=skipped_tasks,
+    )
     stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     json_path = out_dir / f"{stamp}_all_tasks_summary.json"
     md_path = out_dir / f"{stamp}_all_tasks_summary.md"
