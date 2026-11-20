@@ -45,5 +45,31 @@ class ResponseValidationTests(unittest.TestCase):
         self.assertFalse(validate_response("I", '{"user_facing_answer":"hello"}', CONFIG)["valid"])
 
 
+    def test_task_j_accepts_exact_reference_fixture_math(self):
+        payload = {
+            "positions": {
+                "Ascendant": {"sign":"Pisces","degree_in_sign":13.925929,"longitude_decimal":343.925929},
+                "Sun": {"sign":"Sagittarius","degree_in_sign":16.863212,"longitude_decimal":256.863212},
+                "Moon": {"sign":"Aquarius","degree_in_sign":6.468547,"longitude_decimal":306.468547},
+                "Rahu": {"sign":"Capricorn","degree_in_sign":24.729703,"longitude_decimal":294.729703}
+            },
+            "ayanamsha_difference_arcseconds":11.8404,
+            "method_note":"Longitude divided into 30-degree signs."
+        }
+        self.assertTrue(validate_response("J", json.dumps(payload), CONFIG)["valid"])
+
+    def test_task_j_rejects_wrong_zodiac_sign(self):
+        payload = {
+            "positions": {
+                "Ascendant": {"sign":"Aquarius","degree_in_sign":13.925929,"longitude_decimal":343.925929},
+                "Sun": {"sign":"Sagittarius","degree_in_sign":16.863212,"longitude_decimal":256.863212},
+                "Moon": {"sign":"Aquarius","degree_in_sign":6.468547,"longitude_decimal":306.468547},
+                "Rahu": {"sign":"Capricorn","degree_in_sign":24.729703,"longitude_decimal":294.729703}
+            },
+            "ayanamsha_difference_arcseconds":11.8404,
+            "method_note":"test"
+        }
+        self.assertFalse(validate_response("J", json.dumps(payload), CONFIG)["valid"])
+
 if __name__ == "__main__":
     unittest.main()
