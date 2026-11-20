@@ -6,10 +6,10 @@ This document records the selected calculation conventions for Celestia's D60 di
 
 ## Classical sources and rule separation
 
-- **BPHS 6.33:** each sign is divided into sixty half-degree parts. The verse's wording supports a literal remainder-plus-one Aries-count reading; some software and lineages count the remainder from the occupied sign. Celestia exposes both as `from-aries` and `from-sign`; the compatibility default remains `from-sign`. The two interpretations must not be conflated.
+- **BPHS 6.33:** each sign is divided into sixty half-degree parts. The verse's wording supports a literal remainder-plus-one Aries-count reading; some software and lineages count the remainder from the occupied sign. Celestia exposes both as `from-aries` and `from-sign`; the selected default is `from-sign` and is user-selectable in the D60 panel. The two interpretations must not be conflated.
 - **BPHS 6.34–40:** supplies the names and says their order is reversed in even signs. It does not enumerate a numbered Saumya/Krura list.
 - **BPHS 6.41:** states the general distinction between benefic and malefic Shashtiamsas.
-- **Phaladeepika 3.5:** separately identifies the odd-sign Krura ordinals as 1, 2, 8, 9, 10, 11, 12, 15, 16, 30, 31, 32, 33, 34, 35, 39, 40, 42, 43, 44, 48, 51, 52 and 59; the remaining parts are Saumya. It reverses that classification for even signs. Celestia labels this source explicitly and does not attribute the numbered list to BPHS.
+- **Phaladeepika 3.5:** separately identifies the odd-sign Krura ordinals as 1, 2, 8, 9, 10, 11, 12, 15, 16, 30, 31, 32, 33, 34, 35, 39, 40, 42, 43, 44, 48, 51, 52 and 59; the remaining parts are Saumya. It reverses that classification for even signs. The Siva.sh rendering, Wisdomlib's Sastri 1950 translation and AstroJyoti agree on 16th and 51st; one G.S. Kapoor translation scan gives 18th instead of 16th, and a damaged VedicPupil transcription omits 51st. Celestia selects the convergent 16th/51st reading and records the textual discrepancy. Celestia labels this source explicitly and does not attribute the numbered list to BPHS.
 
 ## Name sequence selected for the implementation
 
