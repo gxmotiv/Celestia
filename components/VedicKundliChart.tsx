@@ -41,6 +41,7 @@ export function VedicKundliChart({
   const [showGrahaRays, setShowGrahaRays] = useState<boolean>(false);
   const [showRashiRays, setShowRashiRays] = useState<boolean>(false);
   const [selectedPlanet, setSelectedPlanet] = useState<string | null>(null);
+  const [d60SignConvention, setD60SignConvention] = useState<"from-sign" | "from-aries">("from-sign");
 
   const [prevInitialDivision, setPrevInitialDivision] = useState(initialDivision);
   const [selectedDivision, setSelectedDivision] = useState<string>(initialDivision);
@@ -70,9 +71,10 @@ export function VedicKundliChart({
     return calculateDivisionalChart(
       vedicData.planets,
       vedicData.lagna.siderealLongitude,
-      selectedDivision
+      selectedDivision,
+      { d60SignConvention }
     );
-  }, [vedicData, selectedDivision]);
+  }, [vedicData, selectedDivision, d60SignConvention]);
 
   // Calculate Drishti report for the active chart
   const drishtiReport = useMemo(() => {
@@ -214,6 +216,10 @@ export function VedicKundliChart({
         <section className="rounded-xl border border-amber-500/25 bg-slate-900/70 p-3 space-y-3" aria-label="D60 Shashtiamsa details">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h4 className="text-sm font-semibold text-amber-200">Shashtiamsa (D60) — half-degree details</h4>
+            <div className="flex flex-wrap gap-1" role="group" aria-label="D60 sign-counting convention">
+              <button type="button" onClick={() => setD60SignConvention("from-sign")} aria-pressed={d60SignConvention === "from-sign"} className={`rounded-md px-2 py-1 text-[10px] border ${d60SignConvention === "from-sign" ? "border-amber-400 bg-amber-500/20 text-amber-200" : "border-slate-700 text-slate-400"}`}>From occupied sign</button>
+              <button type="button" onClick={() => setD60SignConvention("from-aries")} aria-pressed={d60SignConvention === "from-aries"} className={`rounded-md px-2 py-1 text-[10px] border ${d60SignConvention === "from-aries" ? "border-amber-400 bg-amber-500/20 text-amber-200" : "border-slate-700 text-slate-400"}`}>From Aries</button>
+            </div>
             <span className="text-[10px] text-slate-400">Ascendant: {currentChart.ascendant.d60Amsa?.name ?? "Unavailable"} · {currentChart.ascendant.d60Amsa?.nature ?? "Unclassified"}</span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
@@ -233,7 +239,7 @@ export function VedicKundliChart({
             ))}
           </div>
           <p className="text-[10px] leading-relaxed text-slate-400">
-            Names/order: BPHS 6.34–40. Saumya/Krura classification: Phaladeepika 3.5 (a separate text). Textual variants exist. D60 is sensitive to birth-time accuracy; this display does not perform rectification or uncertainty-range analysis.
+            Sign placement: {d60SignConvention === "from-sign" ? "count from the occupied sign" : "count from Aries"}. Name order: BPHS 6.34–40; nature: Phaladeepika 3.5 (separate text). Textual variants exist. D60 is sensitive to birth-time accuracy; this display does not perform rectification or uncertainty-range analysis.
           </p>
         </section>
       )}
