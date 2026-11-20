@@ -25,7 +25,7 @@ To compare all 10 tasks across all 12 models in one workflow run, select **ALL**
 
 - Every model in a selected run receives the same system prompt, task prompt, task schema, temperature (0), and output-token ceiling.
 - The benchmark version, commit SHA, selected models, concurrency, timestamps, returned model ID, HTTP status, finish reason, prompt/completion/total tokens, latency, and retry counts are recorded.
-- Within each task batch, selected model requests are launched concurrently, up to the selected concurrency limit (default 12). In ALL mode, task batches run sequentially. Transient HTTP 429/502/503/504 errors may be retried at most twice; the retry count is recorded. Other failures are preserved, not silently repaired.
+- Within each task batch, selected model requests are launched concurrently, up to the selected concurrency limit (default 12). In ALL mode, task batches run sequentially. Transient HTTP 429/502/503/504 errors may be retried at most twice; the retry count is recorded. In ALL mode, any final HTTP 401/402/403/429 stops later task batches to avoid repeating authentication, quota, or rate-limit failures. Partial results and unattempted tasks are recorded. Other failures are preserved, not silently repaired.
 - JSON/schema validity, gateway-reported routing, and answer quality are separate concepts. A valid JSON response is not automatically a correct or high-quality answer.
 - The numerical fixture is checked against fixed expected values. Its validator is isolated to Task C; it no longer causes unrelated calculation-integrity answers to fail.
 - The task schemas reject duplicate keys, malformed JSON, missing required fields, wrong field types, and unexpected fields. Raw model responses remain in the run artifact for review.
