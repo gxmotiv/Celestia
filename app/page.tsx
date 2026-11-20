@@ -373,6 +373,9 @@ export default function HomePage() {
                 vedicData={vedicData}
                 birthDate={formData.birthDate}
                 birthTime={formData.birthTime}
+                latitude={formData.latitude}
+                longitude={formData.longitude}
+                timezoneOffset={formData.timezoneOffset}
                 westernData={westernData}
                 numerologyData={numerologyData}
                 baziData={baziData}
