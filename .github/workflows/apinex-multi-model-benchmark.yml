@@ -43,6 +43,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Verify Python
         run: python3 --version
+      - name: Compile benchmark Python scripts
+        run: python3 -m py_compile scripts/apinex-benchmark/*.py scripts/apinex-benchmark/tests/*.py
       - name: Validate benchmark JSON schemas and scoring guards
         run: python3 -m unittest discover -s scripts/apinex-benchmark/tests -v
       - name: Validate ten atomic tasks and routing checks
