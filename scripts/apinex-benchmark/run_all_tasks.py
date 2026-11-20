@@ -13,7 +13,7 @@ CONFIG = json.loads((ROOT / "config.json").read_text(encoding="utf-8"))
 TASKS = list(CONFIG["tasks"].keys())
 
 
-def build_combined_summary(task_summaries, models):
+def build_combined_summary(task_summaries, models, concurrency=12):
     rows = []
     for task in TASKS:
         summary = task_summaries.get(task) or {}
@@ -24,8 +24,11 @@ def build_combined_summary(task_summaries, models):
     successes = sum(1 for row in rows if row.get("status") == "success")
     expected = len(TASKS) * len(models)
     return {
+        "benchmark_version": CONFIG.get("benchmark_version", "unknown"),
+        "benchmark_commit": __import__("os").environ.get("GITHUB_SHA"),
         "created_at_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
         "execution": "sequential_tasks_parallel_models",
+        "max_parallel_models_per_task": concurrency,
         "tasks": TASKS,
         "selected_models": models,
         "request_count_planned": expected,
@@ -90,7 +93,7 @@ def main():
             if completed.returncode != 0 or summary.get("overall_status") != "success":
                 any_failure = True
 
-    combined = build_combined_summary(task_summaries, models)
+    combined = build_combined_summary(task_summaries, models, args.concurrency)
     stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     json_path = out_dir / f"{stamp}_all_tasks_summary.json"
     md_path = out_dir / f"{stamp}_all_tasks_summary.md"
