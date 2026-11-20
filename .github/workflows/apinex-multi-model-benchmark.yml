@@ -13,9 +13,9 @@ on:
         required: true
         type: choice
         default: A
-        options: [A, B, C, D, E, F, G, H, I, J]
+        options: [A, B, C, D, E, F, G, H, I, J, ALL]
       confirm_api_call:
-        description: "Required: confirms one request per selected model. All 12 models = 12 first-pass requests."
+        description: "Required: one task = up to 12 requests; ALL = 120 first-pass requests in ten controlled batches."
         required: true
         type: boolean
         default: false
@@ -55,11 +55,19 @@ jobs:
           BENCHMARK_MODELS: ${{ inputs.models }}
           BENCHMARK_TASK: ${{ inputs.task }}
         run: |
-          python3 scripts/apinex-benchmark/run_batch.py \
-            --models "$BENCHMARK_MODELS" \
-            --task "$BENCHMARK_TASK" \
-            --concurrency 12 \
-            --output-dir benchmark-results
+          if [ "$BENCHMARK_TASK" = "ALL" ]; then
+            python3 scripts/apinex-benchmark/run_all_tasks.py \
+              --models "$BENCHMARK_MODELS" \
+              --confirm-all \
+              --concurrency 12 \
+              --output-dir benchmark-results
+          else
+            python3 scripts/apinex-benchmark/run_batch.py \
+              --models "$BENCHMARK_MODELS" \
+              --task "$BENCHMARK_TASK" \
+              --concurrency 12 \
+              --output-dir benchmark-results
+          fi
       - name: Upload individual JSON and task summary
         if: always()
         uses: actions/upload-artifact@v4
