@@ -25,9 +25,12 @@ def benchmark_prompt_hashes(system_prompt, task_prompt, response_schema):
     system_hash = sha256_text(system_prompt)
     task_hash = sha256_text(task_prompt)
     schema_hash = sha256_text(response_schema)
-    bundle = "\\0".join((system_prompt, task_prompt, json.dumps(
-        response_schema, ensure_ascii=False, sort_keys=True, separators=(",", ":")
-    )))
+    bundle = json.dumps(
+        [system_prompt, task_prompt, response_schema],
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
     return {
         "system_prompt_sha256": system_hash,
         "task_prompt_sha256": task_hash,
