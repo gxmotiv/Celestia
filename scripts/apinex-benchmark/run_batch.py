@@ -221,9 +221,9 @@ def main():
     for alias in aliases:
         for trial in range(1, args.trials + 1):
             row = rows_by_alias[(alias, trial)]
-        log = row.pop("runner_log", "")
-        if log.strip():
-            print(f"\n--- {alias} ---\n{log.rstrip()}")
+            log = row.pop("runner_log", "")
+            if log.strip():
+                print(f"\n--- {alias} (trial {trial}) ---\n{log.rstrip()}")
             summary["results"].append(row)
             summary["request_count_attempted"] += 1
             summary["automatic_retries"] += int(row.get("automatic_retries") or 0)
@@ -235,8 +235,9 @@ def main():
     summary["success_count"] = successes
     summary["failure_count"] = len(summary["results"]) - successes
     summary["finished_at_utc"] = dt.datetime.now(dt.timezone.utc).isoformat()
+    expected_results = summary["request_count_planned"]
     summary["overall_status"] = (
-        "success" if successes == len(aliases)
+        "success" if successes == expected_results
         else ("partial_success" if successes else "failed")
     )
     stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
@@ -249,7 +250,7 @@ def main():
         f"- Task: {args.task} — {task_name}",
         f"- Execution: paced API attempts; max in-flight concurrency {effective_concurrency}",
         f"- Minimum request interval: {minimum_interval:g} seconds",
-        f"- Overall: {summary['overall_status']} ({successes}/{len(aliases)} successful)",
+        f"- Overall: {summary['overall_status']} ({successes}/{expected_results} successful)",
         f"- Trials per model/task: {args.trials}",
         f"- Planned / attempted model-task-trials: {summary['request_count_planned']} / {summary['request_count_attempted']}",
         f"- Actual API attempts (including retries): {summary['api_attempt_count_reported']}",
@@ -274,12 +275,12 @@ def main():
         ))
     (out_dir / f"{stamp}_batch_{args.task}_summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
-    print(f"\nTask {args.task} finished: {successes}/{len(aliases)} successful.")
+    print(f"\nTask {args.task} finished: {successes}/{expected_results} successful.")
     print("Summary JSON:", summary_path)
     if not args.schedule_state_file:
         pacing_file.unlink(missing_ok=True)
         pacing_file.with_name(pacing_file.name + ".lock").unlink(missing_ok=True)
-    return 0 if successes == len(aliases) else 1
+    return 0 if successes == expected_results else 1
 
 
 if __name__ == "__main__":
