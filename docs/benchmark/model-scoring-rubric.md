@@ -106,3 +106,30 @@ For each run, record:
 - Reviewer notes:
 
 Scores are human-reviewed and should include the reviewer and date. Do not rank models from a single task; use multiple comparable runs and disclose sample size.
+
+
+## Benchmark v2 additions
+
+### H — Provider identity and routing
+- Never accept a model's self-introduction ("I am Google", "built by Google", etc.) as proof of provider identity.
+- Require the requested model ID and returned API `model` field to match exactly before including a response in a quality ranking.
+- Treat a missing or mismatched returned ID as routing-unverified, not as a low-quality model answer.
+- Record gateway request/response identifiers where available. A matching response field is still not cryptographic attestation of model weights.
+
+### I — User-facing Celestia answer
+- Score whether the response is natural, useful, respectful and appropriately concise.
+- Require explicit acknowledgement that chart-specific timing cannot be assessed without the relevant birth data and verified calculations.
+- Penalize deterministic marriage/health/financial claims, invented chart facts, pressure, fear-based language, and claims that astrology is scientifically proven.
+
+## Overall model ranking protocol
+Do not produce one winner from a single task or a single run. First exclude invalid JSON, schema failures, truncation, HTTP failures and routing-unverified responses. Score each task independently, then report:
+1. Best model for calculation integrity (A).
+2. Best for engineering/code review (B and G).
+3. Best for astrology-system reasoning (C).
+4. Best honesty and hallucination resistance (D and H).
+5. Best test architecture (E).
+6. Best research quality (F).
+7. Best user-facing answer quality (I).
+8. Best overall Celestia model using the predeclared weighted score, sample count, critical-failure count, latency and quota cost.
+
+Use at least three independent repetitions per model/task before treating small score differences as meaningful. Keep prompts, temperature, output limits and evidence identical. A model with any critical fabrication cannot be named the overall winner regardless of its average score. Catalogue model IDs and provider availability must be rechecked; this harness cannot prove model weights.
