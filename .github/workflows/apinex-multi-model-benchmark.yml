@@ -15,13 +15,13 @@ on:
         default: A
         options: [A, B, C, D, E, F, G, H, I, J, ALL]
       concurrency:
-        description: "Maximum concurrent model requests per task. Lower this if APInex rate-limits."
+        description: "Maximum in-flight model workers; every API attempt is globally paced at least 5 seconds apart."
         required: true
         type: choice
         default: "12"
         options: ["1", "2", "4", "6", "12"]
       confirm_api_call:
-        description: "Required: one task = up to 12 requests; ALL = 120 first-pass requests in ten controlled batches."
+        description: "Required: one task = up to 12 first-pass requests; ALL = 120 first-pass requests. All attempts are paced; 429 stops ALL."
         required: true
         type: boolean
         default: false
