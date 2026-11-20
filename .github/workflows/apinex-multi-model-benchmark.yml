@@ -9,7 +9,7 @@ on:
         type: string
         default: "deepseek-v4.1-flash,qwen-3.8-max,muse-spark-1.3,mimo-v2.6-pro,hy4-flash,minimax-m3.1-flash,gemini-3.8-flash,glm-5.3-flash,kimi-k3,deepseek-v4-pro,gpt-6-luna,gemini-4-hydrogen"
       task:
-        description: "Choose exactly one independent task. All selected models receive this same task."
+        description: "Choose one: A calculation; B astrology systems; C numerical fixture; D engineering; E tests; F source audit; G research; H hallucination; I provider identity; J user answer. All models get the same task."
         required: true
         type: choice
         default: A
