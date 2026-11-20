@@ -1,13 +1,15 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import { VedicChartData, VedicPlanet } from "@/lib/astronomy/vedic";
+import { VedicChartData, VedicPlanet, calculateLahiriAyanamsa } from "@/lib/astronomy/vedic";
 import {
   calculateDivisionalChart,
   DIVISIONAL_CHARTS_CONFIG,
   DivisionalChartResult,
   DivisionalPlanet,
+  summarizeD60AscendantSamples,
 } from "@/lib/vedic/divisionalCalc";
+import { swissEphemeris } from "@/lib/astronomy/swissEphemeris";
 import { Sparkles, Compass, Info, Check, ChevronDown, Eye } from "lucide-react";
 import { VedicAspectRays } from "./VedicAspectRays";
 import { calculateDrishtiMatrix } from "@/lib/vedic/drishtiEngine";
@@ -17,6 +19,11 @@ interface VedicKundliChartProps {
   initialDivision?: string;
   initialStyle?: "NorthIndian" | "SouthIndian";
   onDivisionChange?: (division: string) => void;
+  birthDate?: string;
+  birthTime?: string;
+  latitude?: number;
+  longitude?: number;
+  timezoneOffset?: number;
 }
 
 const POPULAR_DIVISIONS = [
@@ -36,12 +43,18 @@ export function VedicKundliChart({
   initialDivision = "D1",
   initialStyle = "NorthIndian",
   onDivisionChange,
+  birthDate,
+  birthTime,
+  latitude,
+  longitude,
+  timezoneOffset,
 }: VedicKundliChartProps) {
   const [selectedHouse, setSelectedHouse] = useState<number | null>(null);
   const [showGrahaRays, setShowGrahaRays] = useState<boolean>(false);
   const [showRashiRays, setShowRashiRays] = useState<boolean>(false);
   const [selectedPlanet, setSelectedPlanet] = useState<string | null>(null);
   const [d60SignConvention, setD60SignConvention] = useState<"from-sign" | "from-aries">("from-sign");
+  const [birthTimeUncertaintyMinutes, setBirthTimeUncertaintyMinutes] = useState<number>(0);
 
   const [prevInitialDivision, setPrevInitialDivision] = useState(initialDivision);
   const [selectedDivision, setSelectedDivision] = useState<string>(initialDivision);
@@ -75,6 +88,83 @@ export function VedicKundliChart({
       { d60SignConvention }
     );
   }, [vedicData, selectedDivision, d60SignConvention]);
+
+  const d60TimeRangeAnalysis = useMemo(() => {
+    if (selectedDivision !== "D60" || birthTimeUncertaintyMinutes <= 0) return null;
+    if (
+      !birthDate ||
+      !birthTime ||
+      typeof latitude !== "number" ||
+      !Number.isFinite(latitude) ||
+      typeof longitude !== "number" ||
+      !Number.isFinite(longitude) ||
+      typeof timezoneOffset !== "number" ||
+      !Number.isFinite(timezoneOffset)
+    ) {
+      return { error: "Birth date, time, coordinates and numeric timezone offset are required.", summary: null, highLatitude: false };
+    }
+
+    const dateParts = birthDate.split("-").map(Number);
+    const timeParts = birthTime.split(":").map(Number);
+    if (
+      dateParts.length !== 3 ||
+      timeParts.length < 2 ||
+      [...dateParts, ...timeParts].some((value) => !Number.isFinite(value))
+    ) {
+      return { error: "Birth date or time is not in a supported format.", summary: null, highLatitude: false };
+    }
+
+    const [year, month, day] = dateParts as [number, number, number];
+    const [hour, minute] = timeParts as [number, number];
+    const rangeSeconds = birthTimeUncertaintyMinutes * 60;
+    const sampleStepSeconds = 5;
+    const siderealAscendants: number[] = [];
+
+    try {
+      for (let offsetSeconds = -rangeSeconds; offsetSeconds <= rangeSeconds; offsetSeconds += sampleStepSeconds) {
+        const julianDay = swissEphemeris.calculateJulianDay(
+          year,
+          month,
+          day,
+          hour,
+          minute,
+          offsetSeconds,
+          timezoneOffset
+        );
+        const tropicalAscendant = swissEphemeris.calculateHouses(
+          julianDay,
+          latitude,
+          longitude,
+          "P"
+        ).ascendant;
+        const siderealAscendant =
+          ((tropicalAscendant - calculateLahiriAyanamsa(julianDay)) % 360 + 360) % 360;
+        siderealAscendants.push(siderealAscendant);
+      }
+
+      if (siderealAscendants.length === 0) {
+        throw new Error("No ascendant samples were generated.");
+      }
+
+      return {
+        error: null,
+        summary: summarizeD60AscendantSamples(siderealAscendants, { d60SignConvention }),
+        sampleStepSeconds,
+        highLatitude: Math.abs(latitude) > 66,
+      };
+    } catch {
+      return { error: "Could not calculate the D60 time-range samples for these birth details.", summary: null, highLatitude: Math.abs(latitude) > 66 };
+    }
+  }, [
+    selectedDivision,
+    birthTimeUncertaintyMinutes,
+    birthDate,
+    birthTime,
+    latitude,
+    longitude,
+    timezoneOffset,
+    d60SignConvention,
+  ]);
 
   // Calculate Drishti report for the active chart
   const drishtiReport = useMemo(() => {
@@ -217,8 +307,8 @@ export function VedicKundliChart({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h4 className="text-sm font-semibold text-amber-200">Shashtiamsa (D60) — half-degree details</h4>
             <div className="flex flex-wrap gap-1" role="group" aria-label="D60 sign-counting convention">
-              <button type="button" onClick={() => setD60SignConvention("from-sign")} aria-pressed={d60SignConvention === "from-sign"} className={`rounded-md px-2 py-1 text-[10px] border ${d60SignConvention === "from-sign" ? "border-amber-400 bg-amber-500/20 text-amber-200" : "border-slate-700 text-slate-400"}`}>From occupied sign</button>
-              <button type="button" onClick={() => setD60SignConvention("from-aries")} aria-pressed={d60SignConvention === "from-aries"} className={`rounded-md px-2 py-1 text-[10px] border ${d60SignConvention === "from-aries" ? "border-amber-400 bg-amber-500/20 text-amber-200" : "border-slate-700 text-slate-400"}`}>From Aries</button>
+              <button type="button" onClick={() => setD60SignConvention("from-sign")} aria-pressed={d60SignConvention === "from-sign"} className={`rounded-md px-2 py-1 text-[10px] border ${d60SignConvention === "from-sign" ? "border-amber-400 bg-amber-500/20 text-amber-200" : "border-slate-700 text-slate-400"}`}>From natal sign (JHora)</button>
+              <button type="button" onClick={() => setD60SignConvention("from-aries")} aria-pressed={d60SignConvention === "from-aries"} className={`rounded-md px-2 py-1 text-[10px] border ${d60SignConvention === "from-aries" ? "border-amber-400 bg-amber-500/20 text-amber-200" : "border-slate-700 text-slate-400"}`}>From Aries (alternate reading)</button>
             </div>
             <span className="text-[10px] text-slate-400">Ascendant: {currentChart.ascendant.d60Amsa?.name ?? "Unavailable"} · {currentChart.ascendant.d60Amsa?.nature ?? "Unclassified"}</span>
           </div>
@@ -238,8 +328,58 @@ export function VedicKundliChart({
               </div>
             ))}
           </div>
+          <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-3 space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <label htmlFor="d60-birth-time-uncertainty" className="text-xs font-semibold text-slate-200">Birth-time uncertainty</label>
+              <select
+                id="d60-birth-time-uncertainty"
+                value={birthTimeUncertaintyMinutes}
+                onChange={(event) => setBirthTimeUncertaintyMinutes(Number(event.target.value))}
+                className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100"
+              >
+                <option value={0}>Not assessed</option>
+                <option value={1}>±1 minute</option>
+                <option value={2}>±2 minutes</option>
+                <option value={5}>±5 minutes</option>
+                <option value={10}>±10 minutes</option>
+                <option value={15}>±15 minutes</option>
+                <option value={30}>±30 minutes</option>
+              </select>
+            </div>
+            {birthTimeUncertaintyMinutes === 0 ? (
+              <p className="text-[10px] text-slate-400">Choose a time range to sample how the D60 ascendant changes around the recorded birth time.</p>
+            ) : d60TimeRangeAnalysis?.error ? (
+              <p className="text-[10px] text-rose-300">{d60TimeRangeAnalysis.error}</p>
+            ) : d60TimeRangeAnalysis?.summary ? (
+              <>
+                <p className="text-[10px] text-slate-400">
+                  ±{birthTimeUncertaintyMinutes} minutes · {d60TimeRangeAnalysis.summary.sampleCount} samples at 5-second intervals · {d60TimeRangeAnalysis.summary.placements.length} distinct placements observed
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {d60TimeRangeAnalysis.summary.placements.map((placement) => (
+                    <div key={`${placement.signIndex}-${placement.nameOrdinal}-${placement.nature}`} className="rounded-md border border-slate-800 bg-slate-900/70 px-2.5 py-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-semibold text-slate-100">{placement.signName}</span>
+                        <span className="text-[10px] text-slate-400">{placement.sampleCount} samples</span>
+                      </div>
+                      <div className="text-xs text-slate-200">{placement.amsaName} · {placement.nature}</div>
+                      <div className="text-[10px] text-slate-500">Part {placement.segmentNumber} · {placement.segmentStartDegree.toFixed(1)}°–{placement.segmentEndDegree.toFixed(1)}° within natal sign</div>
+                    </div>
+                  ))}
+                </div>
+                <p className={`text-[10px] ${d60TimeRangeAnalysis.summary.isStable ? "text-emerald-300" : "text-amber-300"}`}>
+                  {d60TimeRangeAnalysis.summary.isStable
+                    ? "One D60 ascendant placement was observed throughout this sampled interval."
+                    : "The D60 ascendant changes within this sampled interval; treat the exact D60 Lagna as time-sensitive."}
+                </p>
+                {d60TimeRangeAnalysis.highLatitude && (
+                  <p className="text-[10px] text-amber-300">High-latitude caution: ascendant motion can be unusually uneven. These samples are indicative, not exhaustive.</p>
+                )}
+              </>
+            ) : null}
+          </div>
           <p className="text-[10px] leading-relaxed text-slate-400">
-            Sign placement: {d60SignConvention === "from-sign" ? "count from the occupied sign" : "count from Aries"}. Name order: BPHS 6.34–40; nature: Phaladeepika 3.5 (separate text). Textual variants exist. D60 is sensitive to birth-time accuracy; this display does not perform rectification or uncertainty-range analysis.
+            Sign placement: {d60SignConvention === "from-sign" ? "count from the occupied sign" : "count from Aries"}. Name order: BPHS 6.34–40; nature: Phaladeepika 3.5 (separate text). This time-range check covers the D60 ascendant only; planet placements remain calculated at the recorded time. It uses Celestia's current ascendant pipeline and the entered fixed timezone offset, samples every 5 seconds, and does not infer historical DST changes, rectify birth time or prove that no shorter intermediate interval exists.
           </p>
         </section>
       )}

@@ -10,7 +10,7 @@ import {
   CompleteDashaOrchestrator,
 } from "../lib/vedic/completeDashaSystems";
 import { TransitEngine } from "../lib/astronomy/transits";
-import { calculateDivisionalChart, calculateDivisionalSignIndex, calculateD60AmsaDetails, D60_AMSA_NAMES, D60_KRURA_AMSA_ORDINALS } from "../lib/vedic/divisionalCalc";
+import { calculateDivisionalChart, calculateDivisionalSignIndex, calculateD60AmsaDetails, D60_AMSA_NAMES, D60_KRURA_AMSA_ORDINALS, summarizeD60AscendantSamples } from "../lib/vedic/divisionalCalc";
 
 interface TestResult {
   category: string;
@@ -688,6 +688,86 @@ assertTest(
   invalidD60Rejected,
   "NaN rejected",
   invalidD60Rejected ? "Rejected" : "NaN accepted"
+);
+
+
+console.log("Running Category 29: D60 ascendant uncertainty summary tests...");
+
+const stableD60Summary = summarizeD60AscendantSamples([0.1, 0.2, 0.3]);
+assertTest(
+  "29.1 D60 Stable Sample Range",
+  "A range whose samples remain in the same D60 sign and amsa is marked stable",
+  stableD60Summary.isStable && stableD60Summary.placements.length === 1 && stableD60Summary.sampleCount === 3,
+  "One placement across three samples",
+  `${stableD60Summary.placements.length} placements across ${stableD60Summary.sampleCount} samples`
+);
+
+const changingD60Summary = summarizeD60AscendantSamples([0.49, 0.51]);
+assertTest(
+  "29.2 D60 Boundary-Crossing Sample Range",
+  "Samples on either side of a half-degree boundary produce distinct observed placements",
+  !changingD60Summary.isStable && changingD60Summary.placements.length === 2,
+  "Two observed placements",
+  `${changingD60Summary.placements.length} observed placements`
+);
+
+const fromSignSummary = summarizeD60AscendantSamples([30.25], { d60SignConvention: "from-sign" });
+const fromAriesSummary = summarizeD60AscendantSamples([30.25], { d60SignConvention: "from-aries" });
+assertTest(
+  "29.3 D60 Uncertainty Convention",
+  "The selected D60 sign-count convention changes the divisional sign but not the BPHS name sequence",
+  fromSignSummary.placements[0]?.signIndex === 1 &&
+    fromAriesSummary.placements[0]?.signIndex === 0 &&
+    fromSignSummary.placements[0]?.amsaName === fromAriesSummary.placements[0]?.amsaName,
+  "From-sign Taurus; from-Aries Aries; same amsa name",
+  `From-sign ${fromSignSummary.placements[0]?.signName}; from-Aries ${fromAriesSummary.placements[0]?.signName}; names ${fromSignSummary.placements[0]?.amsaName}/${fromAriesSummary.placements[0]?.amsaName}`
+);
+
+const emptyD60Summary = summarizeD60AscendantSamples([]);
+assertTest(
+  "29.4 D60 Empty Sample Range",
+  "An empty sample set is not incorrectly reported as stable",
+  !emptyD60Summary.isStable && emptyD60Summary.sampleCount === 0 && emptyD60Summary.placements.length === 0,
+  "Zero samples; zero placements; not stable",
+  `${emptyD60Summary.sampleCount} samples; ${emptyD60Summary.placements.length} placements; stable=${emptyD60Summary.isStable}`
+);
+
+let invalidD60SummaryRejected = false;
+try { summarizeD60AscendantSamples([0.2, Number.NaN]); } catch { invalidD60SummaryRejected = true; }
+assertTest(
+  "29.5 D60 Invalid Sample Range",
+  "Non-finite ascendant samples are rejected",
+  invalidD60SummaryRejected,
+  "Invalid sample rejected",
+  invalidD60SummaryRejected ? "Rejected" : "Accepted"
+);
+
+
+console.log("Running Category 30: independent D60 sign-mapping reference fixtures...");
+
+const jhoraD60ReferenceFixtures = [
+  { body: "Ascendant", natalSign: 11, degreeInSign: 16.4685, expectedSign: 7, expectedName: "Scorpio" },
+  { body: "Sun", natalSign: 8, degreeInSign: 16.8657, expectedSign: 5, expectedName: "Virgo" },
+  { body: "Moon", natalSign: 10, degreeInSign: 6.4655, expectedSign: 10, expectedName: "Aquarius" },
+  { body: "Mars", natalSign: 7, degreeInSign: 16.1275, expectedSign: 3, expectedName: "Cancer" },
+  { body: "Mercury", natalSign: 9, degreeInSign: 2.0133, expectedSign: 1, expectedName: "Taurus" },
+  { body: "Jupiter", natalSign: 2, degreeInSign: 11.4557, expectedSign: 0, expectedName: "Aries" },
+];
+let jhoraD60ReferencePass = true;
+const jhoraD60Actual: string[] = [];
+for (const fixture of jhoraD60ReferenceFixtures) {
+  const longitude = fixture.natalSign * 30 + fixture.degreeInSign;
+  const actualIndex = calculateDivisionalSignIndex(longitude, "D60", { d60SignConvention: "from-sign" });
+  const actualName = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"][actualIndex];
+  if (actualIndex !== fixture.expectedSign) jhoraD60ReferencePass = false;
+  jhoraD60Actual.push(`${fixture.body}: ${actualName}`);
+}
+assertTest(
+  "30.1 Jagannatha Hora Published D60 Mapping Vector",
+  "Six published D1 longitudes map to the published D60 signs under the occupied-sign convention",
+  jhoraD60ReferencePass,
+  jhoraD60ReferenceFixtures.map((fixture) => `${fixture.body}: ${fixture.expectedName}`).join("; "),
+  jhoraD60Actual.join("; ")
 );
 
 // SUMMARY OUTPUT

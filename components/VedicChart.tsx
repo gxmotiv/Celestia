@@ -45,6 +45,9 @@ interface VedicChartProps {
   vedicData: VedicChartData;
   birthDate?: string;
   birthTime?: string;
+  latitude?: number;
+  longitude?: number;
+  timezoneOffset?: number;
   westernData?: WesternChartData;
   numerologyData?: NumerologyProfile;
   baziData?: BaZiProfile;
@@ -57,6 +60,9 @@ export function VedicChart({
   vedicData,
   birthDate = "1990-01-01",
   birthTime = "12:00",
+  latitude,
+  longitude,
+  timezoneOffset,
   westernData,
   numerologyData,
   baziData,
@@ -254,6 +260,11 @@ export function VedicChart({
         vedicData={vedicData}
         initialDivision={activeDivision}
         initialStyle={chartStyle}
+        birthDate={birthDate}
+        birthTime={birthTime}
+        latitude={latitude}
+        longitude={longitude}
+        timezoneOffset={timezoneOffset}
         onDivisionChange={(div) => {
           setActiveDivision(div);
           if (div === "D9") {

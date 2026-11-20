@@ -309,6 +309,69 @@ export function calculateDivisionalSignIndex(
   }
 }
 
+export interface D60AscendantSamplePlacement {
+  signIndex: number;
+  signName: string;
+  segmentNumber: number;
+  nameOrdinal: number;
+  amsaName: string;
+  nature: "Saumya" | "Krura";
+  segmentStartDegree: number;
+  segmentEndDegree: number;
+  sampleCount: number;
+}
+
+export interface D60AscendantUncertaintySummary {
+  sampleCount: number;
+  placements: D60AscendantSamplePlacement[];
+  /** True only when every supplied sample maps to the same D60 sign and amsa. */
+  isStable: boolean;
+}
+
+/**
+ * Summarizes sidereal ascendant samples across a user-supplied time interval.
+ * It reports observed samples, not a mathematical proof that no very short
+ * intermediate segment was crossed between samples.
+ */
+export function summarizeD60AscendantSamples(
+  siderealLongitudes: number[],
+  options: DivisionalChartOptions = {}
+): D60AscendantUncertaintySummary {
+  if (siderealLongitudes.some((longitude) => !Number.isFinite(longitude))) {
+    throw new Error("D60 ascendant samples must contain only finite longitudes.");
+  }
+
+  const grouped = new Map<string, D60AscendantSamplePlacement>();
+  for (const longitude of siderealLongitudes) {
+    const signIndex = calculateDivisionalSignIndex(longitude, "D60", options);
+    const amsa = calculateD60AmsaDetails(longitude);
+    const key = `${signIndex}:${amsa.nameOrdinal}:${amsa.nature}`;
+    const existing = grouped.get(key);
+    if (existing) {
+      existing.sampleCount++;
+    } else {
+      grouped.set(key, {
+        signIndex,
+        signName: VEDIC_RASIS[signIndex].name,
+        segmentNumber: amsa.segmentNumber,
+        nameOrdinal: amsa.nameOrdinal,
+        amsaName: amsa.name,
+        nature: amsa.nature,
+        segmentStartDegree: amsa.segmentStartDegree,
+        segmentEndDegree: amsa.segmentEndDegree,
+        sampleCount: 1,
+      });
+    }
+  }
+
+  const placements = [...grouped.values()];
+  return {
+    sampleCount: siderealLongitudes.length,
+    placements,
+    isStable: siderealLongitudes.length > 0 && placements.length === 1,
+  };
+}
+
 /**
  * Calculates a full divisional chart given Vedic planets & ascendant longitude
  */
