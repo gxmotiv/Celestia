@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Sequential APInex benchmark runner with bounded transient-gateway retries; never prints secrets."""
+"""APInex benchmark request runner with paced, bounded transient retries; never prints secrets."""
 import argparse, datetime as dt, email.utils, json, os, pathlib, random, re, sys, time, urllib.error, urllib.request
 from response_validation import validate_response
 from request_pacing import wait_for_request_slot
@@ -8,6 +8,7 @@ ROOT = pathlib.Path(__file__).resolve().parent
 CONFIG = json.loads((ROOT / "config.json").read_text(encoding="utf-8"))
 CAPS = {name: task["max_tokens"] for name, task in CONFIG["tasks"].items()}
 API_URL = "https://api.apinex.bond/v1/chat/completions"
+RETRYABLE_HTTP_STATUSES = frozenset({502, 503, 504})
 SAFE_RESPONSE_HEADERS = ("cf-ray", "cf-mitigated", "server", "content-type", "date", "retry-after", "x-ratelimit-limit", "x-ratelimit-remaining", "x-ratelimit-reset")
 
 def evaluate_routing(requested_model_id, returned_model_id):
@@ -166,7 +167,7 @@ def main():
                 # A 429 means the shared account limit was reached. Do not launch
                 # synchronized retries from every worker; preserve it for the
                 # suite guard and let the global scheduler protect future requests.
-                if exc.code not in (502, 503, 504) or attempt >= 2:
+                if exc.code not in RETRYABLE_HTTP_STATUSES or attempt >= 2:
                     raise
                 result["automatic_retries"] += 1
                 retry_after = exc.headers.get("Retry-After") if exc.headers else None
@@ -256,7 +257,7 @@ def main():
 
     out_dir = pathlib.Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    stamp = timestamp.strftime("%Y%m%dT%H%M%SZ")
+    stamp = timestamp.strftime("%Y%m%dT%H%M%S%fZ")
     safe_model = re.sub(r"[^a-z0-9-]", "-", args.model.lower())
     out_path = out_dir / f"{stamp}_{safe_model}_{args.task}.json"
     out_path.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
