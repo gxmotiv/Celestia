@@ -50,6 +50,7 @@ def run_one_model(alias, task, out_dir, pacing_file=None, minimum_interval=5.0, 
         return {
             "model_alias": alias,
             "status": "runner_exception",
+            "api_attempt_count": None,
             "runner_exit_code": None,
             "result_file": None,
             "error": type(exc).__name__ + ": " + str(exc)[:300],
@@ -65,6 +66,7 @@ def run_one_model(alias, task, out_dir, pacing_file=None, minimum_interval=5.0, 
         return {
             "model_alias": alias,
             "status": "runner_failed_without_json",
+            "api_attempt_count": None,
             "runner_exit_code": completed.returncode,
             "result_file": None,
             "error": (completed.stderr or "")[-500:],
@@ -113,6 +115,7 @@ def run_one_model(alias, task, out_dir, pacing_file=None, minimum_interval=5.0, 
         return {
             "model_alias": alias,
             "status": "result_parse_error",
+            "api_attempt_count": None,
             "runner_exit_code": completed.returncode,
             "result_file": result_path.name,
             "error": type(exc).__name__ + ": " + str(exc)[:300],
@@ -138,6 +141,7 @@ def run_models_in_parallel(aliases, task, out_dir, concurrency, pacing_file=None
                     "model_alias": alias,
                     "trial": trial,
                     "status": "runner_exception",
+                    "api_attempt_count": None,
                     "runner_exit_code": None,
                     "result_file": None,
                     "error": type(exc).__name__ + ": " + str(exc)[:300],
@@ -230,19 +234,28 @@ def main():
             summary["automatic_retries"] += int(row.get("automatic_retries") or 0)
 
     summary["request_count_reported"] = len(summary["results"])
-    summary["request_count_not_attempted"] = summary["request_count_planned"] - summary["request_count_attempted"]
     summary["api_attempt_count_reported"] = sum(
-        int(item.get("api_attempt_count") or 0) for item in summary["results"]
+        int(item.get("api_attempt_count") or 0)
+        for item in summary["results"]
+        if isinstance(item.get("api_attempt_count"), int)
+    )
+    summary["request_count_skipped_before_send"] = sum(
+        1 for item in summary["results"] if item.get("api_attempt_count") == 0
+    )
+    summary["request_count_unknown"] = (
+        summary["request_count_planned"]
+        - summary["request_count_attempted"]
+        - summary["request_count_skipped_before_send"]
     )
     successes = sum(1 for item in summary["results"] if item.get("status") == "success")
     summary["success_count"] = successes
     summary["failure_count"] = sum(
         1 for item in summary["results"]
-        if int(item.get("api_attempt_count") or 0) > 0 and item.get("status") != "success"
+        if isinstance(item.get("api_attempt_count"), int)
+        and item.get("api_attempt_count") > 0
+        and item.get("status") != "success"
     )
-    summary["skipped_count"] = sum(
-        1 for item in summary["results"] if int(item.get("api_attempt_count") or 0) == 0
-    )
+    summary["skipped_count"] = summary["request_count_skipped_before_send"]
     summary["finished_at_utc"] = dt.datetime.now(dt.timezone.utc).isoformat()
     expected_results = summary["request_count_planned"]
     summary["overall_status"] = (
@@ -262,7 +275,8 @@ def main():
         f"- Overall: {summary['overall_status']} ({successes}/{expected_results} successful)",
         f"- Trials per model/task: {args.trials}",
         f"- Planned / attempted model-task-trials: {summary['request_count_planned']} / {summary['request_count_attempted']}",
-        f"- Reported result rows / not attempted: {summary['request_count_reported']} / {summary['request_count_not_attempted']}",
+        f"- Reported result rows: {summary['request_count_reported']}",
+        f"- Known skipped before send / unknown accounting: {summary['request_count_skipped_before_send']} / {summary['request_count_unknown']}",
         f"- API attempts including retries: {summary['api_attempt_count_reported']}",
         f"- Failed after sending / skipped before sending: {summary['failure_count']} / {summary['skipped_count']}",
         f"- Automatic transient retries: {summary['automatic_retries']}",
