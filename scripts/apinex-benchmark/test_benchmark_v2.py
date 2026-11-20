@@ -132,6 +132,31 @@ class ParallelDispatchTests(unittest.TestCase):
         self.assertEqual({row["trial"] for row in results.values()}, {1, 2, 3})
 
 
+class RequestAccountingTests(unittest.TestCase):
+    def test_accounting_separates_sent_skipped_and_unknown_trials(self):
+        rows = [
+            {"api_attempt_count": 1, "automatic_retries": 1, "status": "success"},
+            {"api_attempt_count": 3, "automatic_retries": 2, "status": "http_error"},
+            {"api_attempt_count": 0, "status": "skipped_after_shared_guard"},
+            {"api_attempt_count": None, "status": "runner_failed_without_json"},
+        ]
+        result = batch_runner.summarize_request_accounting(rows, planned_requests=4)
+        self.assertEqual(result["request_count_planned"], 4)
+        self.assertEqual(result["request_count_reported"], 4)
+        self.assertEqual(result["request_count_attempted"], 2)
+        self.assertEqual(result["request_count_skipped_before_send"], 1)
+        self.assertEqual(result["request_count_unknown"], 1)
+        self.assertEqual(result["api_attempt_count_reported"], 4)
+        self.assertEqual(result["success_count"], 1)
+        self.assertEqual(result["failure_count"], 1)
+
+    def test_missing_result_rows_are_unknown_not_confirmed_skips(self):
+        result = batch_runner.summarize_request_accounting([], planned_requests=12)
+        self.assertEqual(result["request_count_attempted"], 0)
+        self.assertEqual(result["request_count_skipped_before_send"], 0)
+        self.assertEqual(result["request_count_unknown"], 12)
+
+
 class RequestPacingTests(unittest.TestCase):
     def test_request_schedule_is_shared_between_worker_processes(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -153,6 +178,31 @@ class RequestPacingTests(unittest.TestCase):
             request_pacing.mark_request_schedule_halted(state_file, "HTTP 429")
             with self.assertRaises(request_pacing.BenchmarkHaltedError):
                 request_pacing.wait_for_request_slot(state_file, 5.0)
+
+    def test_halt_during_reserved_wait_prevents_request_start(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_file = pathlib.Path(temp_dir) / "schedule.json"
+            request_pacing.wait_for_request_slot(state_file, 5.0)
+            with mock.patch.object(
+                request_pacing.time,
+                "sleep",
+                side_effect=lambda _delay: request_pacing.mark_request_schedule_halted(state_file, "HTTP 429"),
+            ):
+                with self.assertRaises(request_pacing.BenchmarkHaltedError):
+                    request_pacing.wait_for_request_slot(state_file, 5.0)
+
+    def test_parallel_workers_reserve_distinct_global_request_slots(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_file = pathlib.Path(temp_dir) / "schedule.json"
+            with mock.patch.object(request_pacing.time, "sleep"):
+                with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+                    waits = list(pool.map(
+                        lambda _index: request_pacing.wait_for_request_slot(state_file, 5.0),
+                        range(8),
+                    ))
+            self.assertEqual(sorted(waits), [0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0])
+            state = json.loads(state_file.read_text(encoding="utf-8"))
+            self.assertEqual(state["next_request_at_epoch"] - state["updated_at_epoch"], 40.0)
 
 
 class RetryAndClassificationTests(unittest.TestCase):
