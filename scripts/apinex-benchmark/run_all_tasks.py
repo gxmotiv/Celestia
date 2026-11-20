@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run every APInex benchmark task against the selected models sequentially."""
+"""Run all tasks sequentially while pacing every request across worker processes."""
 import argparse
 import datetime as dt
 import json
@@ -30,7 +30,7 @@ def find_suite_abort_condition(task_summary):
     return None
 
 
-def build_combined_summary(task_summaries, models, concurrency=12, stopped_early_reason=None, skipped_tasks=None):
+def build_combined_summary(task_summaries, models, concurrency=12, stopped_early_reason=None, skipped_tasks=None, session_directory=None):
     rows = []
     for task in TASKS:
         summary = task_summaries.get(task) or {}
@@ -48,6 +48,8 @@ def build_combined_summary(task_summaries, models, concurrency=12, stopped_early
         "created_at_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
         "execution": "sequential_tasks_parallel_models",
         "max_parallel_models_per_task": concurrency,
+        "min_request_interval_seconds": CONFIG.get("execution_policy", {}).get("min_request_interval_seconds", 5.0),
+        "session_directory": session_directory,
         "tasks": TASKS,
         "selected_models": models,
         "request_count_planned": expected,
@@ -90,18 +92,23 @@ def main():
 
     out_dir = pathlib.Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+    session_stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    session_dir = out_dir / ("all_tasks_" + session_stamp)
+    session_dir.mkdir(parents=True, exist_ok=False)
+    schedule_state_file = session_dir / ".request_pacing.json"
     task_summaries = {}
     any_failure = False
     stopped_early_reason = None
     skipped_tasks = []
 
     for index, task in enumerate(TASKS, start=1):
-        task_dir = out_dir / task
+        task_dir = session_dir / task
         task_dir.mkdir(parents=True, exist_ok=True)
         print(f"\n========== TASK {task} ({index}/{len(TASKS)}) ==========", flush=True)
         completed = subprocess.run(
             [sys.executable, str(BATCH_RUNNER), "--models", args.models,
-             "--task", task, "--concurrency", str(args.concurrency), "--output-dir", str(task_dir)],
+             "--task", task, "--concurrency", str(args.concurrency), "--output-dir", str(task_dir),
+             "--schedule-state-file", str(schedule_state_file)],
             check=False,
         )
         summaries = sorted(task_dir.glob(f"*_batch_{task}_summary.json"))
@@ -134,8 +141,11 @@ def main():
         task_summaries, models, args.concurrency,
         stopped_early_reason=stopped_early_reason,
         skipped_tasks=skipped_tasks,
+        session_directory=str(session_dir.relative_to(out_dir)),
     )
-    stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    schedule_state_file.unlink(missing_ok=True)
+    schedule_state_file.with_name(schedule_state_file.name + ".lock").unlink(missing_ok=True)
+    stamp = session_stamp
     json_path = out_dir / f"{stamp}_all_tasks_summary.json"
     md_path = out_dir / f"{stamp}_all_tasks_summary.md"
     json_path.write_text(json.dumps(combined, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -147,6 +157,8 @@ def main():
         f"- Tasks: {', '.join(TASKS)}",
         f"- Models: {len(models)}",
         f"- Planned requests: {combined['request_count_planned']}",
+        f"- Minimum request interval: {combined['min_request_interval_seconds']} seconds",
+        f"- Session folder: {combined['session_directory']}",
         f"- Reported responses: {combined['request_count_reported']}",
         f"- Successful responses: {combined['success_count']}",
         f"- Failed responses: {combined['failure_count']}",
