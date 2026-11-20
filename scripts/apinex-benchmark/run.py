@@ -1,19 +1,63 @@
 #!/usr/bin/env python3
 """Sequential APInex benchmark runner with bounded transient-gateway retries; never prints secrets."""
-import argparse, datetime as dt, json, os, pathlib, re, sys, time, urllib.error, urllib.request
+import argparse, datetime as dt, email.utils, json, os, pathlib, random, re, sys, time, urllib.error, urllib.request
 from response_validation import validate_response
+from request_pacing import wait_for_request_slot
 
 ROOT = pathlib.Path(__file__).resolve().parent
 CONFIG = json.loads((ROOT / "config.json").read_text(encoding="utf-8"))
 CAPS = {name: task["max_tokens"] for name, task in CONFIG["tasks"].items()}
 API_URL = "https://api.apinex.bond/v1/chat/completions"
-SAFE_RESPONSE_HEADERS = ("cf-ray", "cf-mitigated", "server", "content-type", "date", "retry-after")
+SAFE_RESPONSE_HEADERS = ("cf-ray", "cf-mitigated", "server", "content-type", "date", "retry-after", "x-ratelimit-limit", "x-ratelimit-remaining", "x-ratelimit-reset")
 
 def evaluate_routing(requested_model_id, returned_model_id):
     """A gateway-reported model ID is routing evidence, not cryptographic attestation."""
     if not returned_model_id:
         return "missing_returned_model"
     return "exact_match" if returned_model_id == requested_model_id else "mismatch"
+
+
+def retry_delay_seconds(retry_after, attempt, now=None):
+    """Respect Retry-After (seconds or HTTP date); otherwise use bounded exponential backoff.
+
+    A small positive jitter is added after the provider-requested delay to avoid
+    synchronized retries across model workers. The provider delay is never capped.
+    """
+    base_delay = None
+    if retry_after is not None:
+        try:
+            base_delay = max(0.0, float(str(retry_after).strip()))
+        except (TypeError, ValueError):
+            try:
+                retry_time = email.utils.parsedate_to_datetime(str(retry_after))
+                if retry_time.tzinfo is None:
+                    retry_time = retry_time.replace(tzinfo=dt.timezone.utc)
+                current = now if now is not None else dt.datetime.now(dt.timezone.utc)
+                base_delay = max(0.0, (retry_time - current).total_seconds())
+            except (TypeError, ValueError, OverflowError):
+                base_delay = None
+    if base_delay is None:
+        base_delay = float(2 ** (attempt + 1))
+    return round(base_delay + random.uniform(0.25, 1.0), 3)
+
+
+def classify_response_status(response_text, completion_tokens, cap, finish_reason,
+                             validation, routing_status):
+    """Classify transport/format completeness before accepting a response."""
+    if not isinstance(response_text, str) or not response_text.strip():
+        return "empty_response"
+    reason = str(finish_reason or "").strip().lower()
+    if reason in {"length", "max_tokens", "max_output_tokens"}:
+        return "token_limit_exceeded"
+    if isinstance(completion_tokens, int) and completion_tokens >= cap:
+        return "token_limit_suspected"
+    if validation.get("format") == "invalid_json":
+        return "invalid_json"
+    if not validation.get("valid"):
+        return "schema_invalid"
+    if routing_status != "exact_match":
+        return "routing_unverified" if routing_status == "missing_returned_model" else "model_id_mismatch"
+    return "success"
 
 
 def capture_response_diagnostics(result, headers, body_text=""):
@@ -67,7 +111,10 @@ def main():
         headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"},
         method="POST"
     )
-    started = time.monotonic()
+    overall_started = time.monotonic()
+    api_latency_total = 0.0
+    pacing_wait_total = 0.0
+    retry_wait_total = 0.0
     timestamp = dt.datetime.now(dt.timezone.utc)
     result = {
         "timestamp_utc": timestamp.isoformat(),
@@ -78,6 +125,11 @@ def main():
         "max_output_tokens": cap,
         "temperature": 0,
         "automatic_retries": 0,
+        "api_attempt_count": 0,
+        "min_request_interval_seconds": float(os.environ.get("APINEX_BENCHMARK_MIN_INTERVAL_SECONDS", "5.0")),
+        "pacing_wait_seconds": 0.0,
+        "retry_wait_seconds": 0.0,
+        "total_elapsed_seconds": None,
         "status": "unknown",
         "latency_seconds": None,
         "usage": {"prompt_tokens": None, "completion_tokens": None, "total_tokens": None,
@@ -95,21 +147,31 @@ def main():
         # validation, or other client errors. Two retries maximum; no blind retry loop.
         raw = None
         for attempt in range(3):
+            pacing_wait = wait_for_request_slot(
+                os.environ.get("APINEX_BENCHMARK_PACING_FILE"),
+                result["min_request_interval_seconds"],
+            )
+            pacing_wait_total += pacing_wait
+            result["api_attempt_count"] += 1
+            attempt_started = time.monotonic()
             try:
                 with urllib.request.urlopen(request, timeout=100) as response:
                     raw = response.read()
                     result["http_status"] = response.status
                     capture_response_diagnostics(result, response.headers)
+                api_latency_total += time.monotonic() - attempt_started
                 break
             except urllib.error.HTTPError as exc:
-                if exc.code not in (429, 502, 503, 504) or attempt >= 2:
+                api_latency_total += time.monotonic() - attempt_started
+                # A 429 means the shared account limit was reached. Do not launch
+                # synchronized retries from every worker; preserve it for the
+                # suite guard and let the global scheduler protect future requests.
+                if exc.code not in (502, 503, 504) or attempt >= 2:
                     raise
                 result["automatic_retries"] += 1
                 retry_after = exc.headers.get("Retry-After") if exc.headers else None
-                try:
-                    delay = min(15.0, max(1.0, float(retry_after))) if retry_after else (2.0 ** (attempt + 1))
-                except (TypeError, ValueError):
-                    delay = 2.0 ** (attempt + 1)
+                delay = retry_delay_seconds(retry_after, attempt)
+                retry_wait_total += delay
                 print(f"Transient HTTP {exc.code}; retry {attempt + 1}/2 in {delay:g}s.")
                 exc.close()
                 time.sleep(delay)
@@ -120,9 +182,16 @@ def main():
         choice = choices[0]
         message = choice.get("message") or {}
         content = message.get("content")
-        if isinstance(content, list):
-            content = "\n".join(str(part.get("text", "")) for part in content if isinstance(part, dict))
-        result["response_text"] = content if isinstance(content, str) else json.dumps(content, ensure_ascii=False)
+        if content is None:
+            result["response_text"] = ""
+        elif isinstance(content, list):
+            result["response_text"] = "\n".join(
+                str(part.get("text", "")) for part in content if isinstance(part, dict)
+            )
+        elif isinstance(content, str):
+            result["response_text"] = content
+        else:
+            result["response_text"] = json.dumps(content, ensure_ascii=False)
         result["returned_model"] = data.get("model")
         result["routing_status"] = evaluate_routing(model["id"], result["returned_model"])
         result["response_metadata"] = {k: data[k] for k in ("id", "object", "created", "system_fingerprint") if isinstance(data.get(k), (str, int, float, bool))}
@@ -137,18 +206,14 @@ def main():
             result["usage"]["estimated_weighted_tokens"] = total * model["weight"]
         result["response_validation"] = validate_response(args.task, result["response_text"], CONFIG)
         completion_tokens = result["usage"].get("completion_tokens")
-        if not result["response_text"]:
-            result["status"] = "empty_response"
-        elif isinstance(completion_tokens, int) and completion_tokens > cap:
-            result["status"] = "token_limit_exceeded"
-        elif result["response_validation"]["format"] == "invalid_json":
-            result["status"] = "invalid_json"
-        elif not result["response_validation"]["valid"]:
-            result["status"] = "schema_invalid"
-        elif result["routing_status"] != "exact_match":
-            result["status"] = "routing_unverified" if result["routing_status"] == "missing_returned_model" else "model_id_mismatch"
-        else:
-            result["status"] = "success"
+        result["status"] = classify_response_status(
+            result["response_text"],
+            completion_tokens,
+            cap,
+            result["finish_reason"],
+            result["response_validation"],
+            result["routing_status"],
+        )
     except urllib.error.HTTPError as exc:
         result["http_status"] = exc.code
         # Extract only short, non-secret diagnostic fields from the gateway error.
@@ -183,7 +248,11 @@ def main():
         result["error"] = type(exc).__name__ + ": " + str(exc)[:500]
         result["status"] = "parse_or_response_error"
     finally:
-        result["latency_seconds"] = round(time.monotonic() - started, 3)
+        result["latency_seconds"] = round(api_latency_total, 3)
+        result["api_latency_seconds"] = round(api_latency_total, 3)
+        result["pacing_wait_seconds"] = round(pacing_wait_total, 3)
+        result["retry_wait_seconds"] = round(retry_wait_total, 3)
+        result["total_elapsed_seconds"] = round(time.monotonic() - overall_started, 3)
 
     out_dir = pathlib.Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
