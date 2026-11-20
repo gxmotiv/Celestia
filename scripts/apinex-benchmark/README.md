@@ -38,9 +38,10 @@ Concurrent requests may expose APInex rate limits or shared gateway contention. 
 1. Open GitHub Actions → **APInex Celestia Multi-Model Benchmark**.
 2. Select all 12 model aliases (the default).
 3. Select exactly one task A–J.
-4. Set `confirm_api_call=true`.
-5. Run the workflow and download its artifact.
-6. Inspect the per-model JSON files and the task summary before starting the next task.
+4. Choose concurrency (default 12; lower it to reduce simultaneous load if needed).
+5. Set `confirm_api_call=true`.
+6. Run the workflow and download its artifact.
+7. Inspect the per-model JSON files and the task summary before starting the next task.
 
 The API key must remain in GitHub Actions Secrets under `APINEX_API_KEY`. Never put it in a file, commit, prompt, issue, or chat message.
 
