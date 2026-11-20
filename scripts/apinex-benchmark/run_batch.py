@@ -87,6 +87,7 @@ def main():
             completion = usage.get("completion_tokens")
             cap = result.get("max_output_tokens")
             warnings = list(result.get("warnings") or [])
+            summary["automatic_retries"] += int(result.get("automatic_retries") or 0)
             if isinstance(completion, int) and isinstance(cap, int) and completion > cap:
                 warning = f"completion_tokens_exceeded_cap:{completion}>{cap}"
                 if warning not in warnings:
@@ -103,6 +104,7 @@ def main():
                 "latency_seconds": result.get("latency_seconds"),
                 "usage": usage,
                 "warnings": warnings,
+                "response_validation": result.get("response_validation"),
                 "error": result.get("error"),
                 "runner_exit_code": completed.returncode,
                 "result_file": result_path.name
@@ -130,14 +132,16 @@ def main():
         f"- Execution: sequential; no automatic retries",
         f"- Overall: {summary['overall_status']} ({successes}/{len(aliases)} successful)",
         "",
-        "| Model | Status | HTTP | Latency (s) | Completion tokens | Warnings |",
-        "|---|---|---:|---:|---:|---|"
+        "| Model | Status | JSON/schema | HTTP | Latency (s) | Completion tokens | Warnings |",
+        "|---|---|---:|---:|---:|---:|---|"
     ]
     for item in summary["results"]:
         usage = item.get("usage") or {}
-        lines.append("| {model} | {status} | {http} | {latency} | {tokens} | {warnings} |".format(
+        validation = item.get("response_validation") or {}
+        lines.append("| {model} | {status} | {validation} | {http} | {latency} | {tokens} | {warnings} |".format(
             model=item.get("model_alias", ""),
             status=item.get("status", ""),
+            validation=validation.get("format", "n/a"),
             http=item.get("http_status") or "",
             latency=item.get("latency_seconds") if item.get("latency_seconds") is not None else "",
             tokens=usage.get("completion_tokens") if usage.get("completion_tokens") is not None else "",
