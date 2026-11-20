@@ -28,7 +28,7 @@ const POPULAR_DIVISIONS = [
   { code: "D2", label: "D2 Hora", tag: "Wealth" },
   { code: "D3", label: "D3 Drekkana", tag: "Courage" },
   { code: "D12", label: "D12 Dwadasamsa", tag: "Parents" },
-  { code: "D60", label: "D60 Shashtiamsa", tag: "Past Karma" },
+  { code: "D60", label: "D60 Shashtiamsa", tag: "All indications" },
 ];
 
 export function VedicKundliChart({
@@ -209,6 +209,34 @@ export function VedicKundliChart({
           </div>
         </div>
       </div>
+
+      {selectedDivision === "D60" && (
+        <section className="rounded-xl border border-amber-500/25 bg-slate-900/70 p-3 space-y-3" aria-label="D60 Shashtiamsa details">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h4 className="text-sm font-semibold text-amber-200">Shashtiamsa (D60) — half-degree details</h4>
+            <span className="text-[10px] text-slate-400">Ascendant: {currentChart.ascendant.d60Amsa?.name ?? "Unavailable"} · {currentChart.ascendant.d60Amsa?.nature ?? "Unclassified"}</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {currentChart.planets.map((planet) => (
+              <div key={planet.name} className="rounded-lg border border-slate-800 bg-slate-950/70 px-3 py-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-slate-100">{planet.symbol} {planet.name}</span>
+                  <span className={`text-[10px] font-semibold ${planet.d60Amsa?.nature === "Krura" ? "text-rose-300" : "text-emerald-300"}`}>
+                    {planet.d60Amsa?.nature ?? "Unavailable"}
+                  </span>
+                </div>
+                <div className="text-xs text-slate-200">{planet.d60Amsa?.name ?? "Amsa unavailable"}</div>
+                <div className="text-[10px] text-slate-500">
+                  Part {planet.d60Amsa?.segmentNumber ?? "—"} · {planet.d60Amsa?.segmentStartDegree.toFixed(1) ?? "—"}°–{planet.d60Amsa?.segmentEndDegree.toFixed(1) ?? "—"}°
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] leading-relaxed text-slate-400">
+            Names/order: BPHS 6.34–40. Saumya/Krura classification: Phaladeepika 3.5 (a separate text). Textual variants exist. D60 is sensitive to birth-time accuracy; this display does not perform rectification or uncertainty-range analysis.
+          </p>
+        </section>
+      )}
 
       {/* Quick Division Selector Pills & All 16 Vargas Dropdown */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-900 pb-2 text-xs">
