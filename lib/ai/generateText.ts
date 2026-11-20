@@ -226,11 +226,11 @@ export async function generateCelestiaText(
   const freeModelName = modelTier === "reasoning"
     ? process.env.FREEMODEL_REASONING_MODEL?.trim() || DEFAULT_FREEMODEL_REASONING_MODEL
     : process.env.FREEMODEL_MODEL?.trim() || DEFAULT_FREEMODEL_BUDGET_MODEL;
-  const naraRouterName = input.model?.trim() || (
-    modelTier === "reasoning"
-      ? process.env.NARAROUTER_REASONING_MODEL?.trim() || process.env.NARAROUTER_MODEL?.trim() || "auto/bynara"
-      : process.env.NARAROUTER_MODEL?.trim() || "auto/bynara"
-  );
+  // Explicit model selection is an APInex catalogue ID. Do not forward it to
+  // unrelated fallback providers, which have their own model namespaces.
+  const naraRouterName = modelTier === "reasoning"
+    ? process.env.NARAROUTER_REASONING_MODEL?.trim() || process.env.NARAROUTER_MODEL?.trim() || "auto/bynara"
+    : process.env.NARAROUTER_MODEL?.trim() || "auto/bynara";
   const naraRouterBaseUrl = (
     process.env.NARAROUTER_BASE_URL?.trim() || "https://router.bynara.id/v1"
   ).replace(/\/+$/, "");
