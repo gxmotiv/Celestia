@@ -12,6 +12,39 @@ from response_validation import validate_response
 CONFIG = json.loads((ROOT / "config.json").read_text(encoding="utf-8"))
 
 
+def sample_from_schema(schema):
+    kind = schema.get("type")
+    if kind == "object":
+        return {key: sample_from_schema(value) for key, value in schema.get("properties", {}).items() if key in schema.get("required", [])}
+    if kind == "array":
+        return []
+    if kind == "string":
+        return "test"
+    if kind == "boolean":
+        return False
+    if kind in ("number", "integer"):
+        return 0
+    if kind == "null":
+        return None
+    return None
+
+
+def valid_task_payload(task):
+    payload = sample_from_schema(CONFIG["tasks"][task]["response_schema"])
+    if task == "A":
+        payload["numeric_fixture"] = {
+            "positions": {
+                "Ascendant": {"sign":"Pisces","degree_in_sign":13.925929,"longitude_decimal":343.925929},
+                "Sun": {"sign":"Sagittarius","degree_in_sign":16.863212,"longitude_decimal":256.863212},
+                "Moon": {"sign":"Aquarius","degree_in_sign":6.468547,"longitude_decimal":306.468547},
+                "Rahu": {"sign":"Capricorn","degree_in_sign":24.729703,"longitude_decimal":294.729703}
+            },
+            "ayanamsha_difference_arcseconds":11.8404,
+            "method_note":"Reference longitude conversion."
+        }
+    return payload
+
+
 class RoutingTests(unittest.TestCase):
     def test_exact_returned_id_is_match(self):
         self.assertEqual(runner.evaluate_routing("free/model-a", "free/model-a"), "exact_match")
@@ -24,52 +57,35 @@ class RoutingTests(unittest.TestCase):
 
 
 class ResponseValidationTests(unittest.TestCase):
-    def test_task_h_valid_nested_schema(self):
-        payload = {"verified_identity":"UNKNOWN","self_report_is_proof":False,"evidence_ranking":["returned ID"],"mismatch_policy":"stop ranking","fallback_label_policy":"show fallback","remaining_limitations":["no attestation"]}
-        result = validate_response("H", json.dumps(payload), CONFIG)
-        self.assertTrue(result["valid"], result["errors"])
+    def test_every_composite_task_accepts_valid_schema_payload(self):
+        for task in CONFIG["tasks"]:
+            with self.subTest(task=task):
+                result = validate_response(task, json.dumps(valid_task_payload(task)), CONFIG)
+                self.assertTrue(result["valid"], result["errors"])
 
-    def test_task_h_rejects_wrong_boolean_type(self):
-        payload = {"verified_identity":"UNKNOWN","self_report_is_proof":"false","evidence_ranking":[],"mismatch_policy":"x","fallback_label_policy":"x","remaining_limitations":[]}
-        self.assertFalse(validate_response("H", json.dumps(payload), CONFIG)["valid"])
+    def test_task_a_rejects_wrong_zodiac_sign(self):
+        payload = valid_task_payload("A")
+        payload["numeric_fixture"]["positions"]["Ascendant"]["sign"] = "Aquarius"
+        self.assertFalse(validate_response("A", json.dumps(payload), CONFIG)["valid"])
 
-    def test_task_c_rejects_wrong_nested_array_item_type(self):
-        payload = {"minimum_inputs_by_system":{"western":[42],"vedic":[],"jaimini":[],"kp":[],"bazi":[],"numerology":[]},"calculation_vs_interpretation":[],"cross_system_conflict_policy":[],"uncertainty_standard":{"acceptable_phrases":[],"prohibited_or_misleading_phrases":[]},"phrasing_examples":[],"claims_not_possible_without_chart_data":[]}
-        self.assertFalse(validate_response("C", json.dumps(payload), CONFIG)["valid"])
+    def test_task_d_rejects_wrong_provider_honesty_boolean(self):
+        payload = valid_task_payload("D")
+        payload["provider_identity"]["self_report_is_proof"] = "false"
+        self.assertFalse(validate_response("D", json.dumps(payload), CONFIG)["valid"])
+
+    def test_task_a_rejects_wrong_nested_array_item_type(self):
+        payload = valid_task_payload("A")
+        payload["astrology_domain"]["minimum_inputs_by_system"]["western"] = [42]
+        self.assertFalse(validate_response("A", json.dumps(payload), CONFIG)["valid"])
 
     def test_duplicate_json_keys_are_rejected(self):
-        raw = '{"verified_identity":"UNKNOWN","verified_identity":"Google","self_report_is_proof":false,"evidence_ranking":[],"mismatch_policy":"x","fallback_label_policy":"x","remaining_limitations":[]}'
-        self.assertFalse(validate_response("H", raw, CONFIG)["valid"])
+        raw = '{"calculation_integrity":{},"calculation_integrity":{},"astrology_domain":{},"numeric_fixture":{}}'
+        self.assertFalse(validate_response("A", raw, CONFIG)["valid"])
 
-    def test_task_i_requires_all_fields(self):
-        self.assertFalse(validate_response("E", '{"user_facing_answer":{"user_facing_answer":"hello"}}', CONFIG)["valid"])
+    def test_task_e_requires_complete_user_answer(self):
+        payload = {"user_facing_answer":{"user_facing_answer":"hello"}}
+        self.assertFalse(validate_response("E", json.dumps(payload), CONFIG)["valid"])
 
-
-    def test_task_j_accepts_exact_reference_fixture_math(self):
-        payload = {
-            "positions": {
-                "Ascendant": {"sign":"Pisces","degree_in_sign":13.925929,"longitude_decimal":343.925929},
-                "Sun": {"sign":"Sagittarius","degree_in_sign":16.863212,"longitude_decimal":256.863212},
-                "Moon": {"sign":"Aquarius","degree_in_sign":6.468547,"longitude_decimal":306.468547},
-                "Rahu": {"sign":"Capricorn","degree_in_sign":24.729703,"longitude_decimal":294.729703}
-            },
-            "ayanamsha_difference_arcseconds":11.8404,
-            "method_note":"Longitude divided into 30-degree signs."
-        }
-        self.assertTrue(validate_response("A", json.dumps({"calculation_integrity":{},"astrology_domain":{},"numeric_fixture":payload}), CONFIG)["valid"])
-
-    def test_task_j_rejects_wrong_zodiac_sign(self):
-        payload = {
-            "positions": {
-                "Ascendant": {"sign":"Aquarius","degree_in_sign":13.925929,"longitude_decimal":343.925929},
-                "Sun": {"sign":"Sagittarius","degree_in_sign":16.863212,"longitude_decimal":256.863212},
-                "Moon": {"sign":"Aquarius","degree_in_sign":6.468547,"longitude_decimal":306.468547},
-                "Rahu": {"sign":"Capricorn","degree_in_sign":24.729703,"longitude_decimal":294.729703}
-            },
-            "ayanamsha_difference_arcseconds":11.8404,
-            "method_note":"test"
-        }
-        self.assertFalse(validate_response("J", json.dumps(payload), CONFIG)["valid"])
 
 if __name__ == "__main__":
     unittest.main()
