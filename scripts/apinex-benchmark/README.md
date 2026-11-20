@@ -4,7 +4,7 @@
 
 The benchmark has **10 independent tasks (A–J)**. The former five composite tasks bundled multiple skills together; those modules are now separated so each result has a clearer interpretation.
 
-Each GitHub Actions run selects **one task** and sends that exact task prompt to every selected model **concurrently**. With the default 12 models, one run makes **12 first-pass API requests**, not 60. The workflow offers A–J and an explicit `ALL` option. The default remains A. Selecting `ALL` deliberately starts the full 120-request first-pass comparison for 12 models.
+Each GitHub Actions run can select **one task** (A–J) or the complete **ALL** suite. A single-task run sends that exact prompt to every selected model concurrently. An ALL run processes the ten tasks sequentially, while sending each task to the selected models concurrently. With the default 12 models, one run makes **12 first-pass API requests**, not 60. The workflow offers A–J and an explicit `ALL` option. The default remains A. Selecting `ALL` deliberately starts the full 120-request first-pass comparison for 12 models.
 
 | Task | Independent capability | Output ceiling |
 |---|---|---:|
@@ -19,13 +19,13 @@ Each GitHub Actions run selects **one task** and sends that exact task prompt to
 | I | Provider identity and routing honesty | 1,400 |
 | J | User-facing Celestia response quality | 1,000 |
 
-To compare all 10 tasks across all 12 models, run A, then B, and so on through J as **10 separate workflow runs**: 120 first-pass requests in total. You can stop after any task, inspect the artifact, and decide whether to continue.
+To compare all 10 tasks across all 12 models in one workflow run, select **ALL**: the runner completes ten task batches sequentially, with model requests concurrent inside each batch. This is 120 first-pass requests in total. Alternatively, run A–J separately to inspect each artifact and stop between tasks.
 
 ## Fair-comparison controls
 
 - Every model in a selected run receives the same system prompt, task prompt, task schema, temperature (0), and output-token ceiling.
 - The benchmark version, commit SHA, selected models, concurrency, timestamps, returned model ID, HTTP status, finish reason, prompt/completion/total tokens, latency, and retry counts are recorded.
-- All 12 requests are launched concurrently (one per model). Transient HTTP 429/502/503/504 errors may be retried at most twice; the retry count is recorded. Other failures are preserved, not silently repaired.
+- Within each task batch, selected model requests are launched concurrently, up to the selected concurrency limit (default 12). In ALL mode, task batches run sequentially. Transient HTTP 429/502/503/504 errors may be retried at most twice; the retry count is recorded. Other failures are preserved, not silently repaired.
 - JSON/schema validity, gateway-reported routing, and answer quality are separate concepts. A valid JSON response is not automatically a correct or high-quality answer.
 - The numerical fixture is checked against fixed expected values. Its validator is isolated to Task C; it no longer causes unrelated calculation-integrity answers to fail.
 - The task schemas reject duplicate keys, malformed JSON, missing required fields, wrong field types, and unexpected fields. Raw model responses remain in the run artifact for review.
@@ -37,11 +37,11 @@ Concurrent requests may expose APInex rate limits or shared gateway contention. 
 
 1. Open GitHub Actions → **APInex Celestia Multi-Model Benchmark**.
 2. Select all 12 model aliases (the default).
-3. Select exactly one task A–J.
+3. Select one task A–J, or choose `ALL` for the complete 10-task run.
 4. Choose concurrency (default 12; lower it to reduce simultaneous load if needed).
 5. Set `confirm_api_call=true`.
 6. Run the workflow and download its artifact.
-7. Inspect the per-model JSON files and the task summary before starting the next task.
+7. Inspect the per-model JSON files and each task summary, plus the combined summary in ALL mode.
 
 The API key must remain in GitHub Actions Secrets under `APINEX_API_KEY`. Never put it in a file, commit, prompt, issue, or chat message.
 
