@@ -42,6 +42,7 @@ interface MasterAIAstrologerCockpitProps {
   compactMode?: boolean;
   activeDashas?: any[];
   onClose?: () => void;
+  selectedModel?: string;
 }
 
 interface ChatMessage {
@@ -204,6 +205,7 @@ export function MasterAIAstrologerCockpit({
   compactMode = false,
   activeDashas,
   onClose,
+  selectedModel,
 }: MasterAIAstrologerCockpitProps) {
   const effectiveName = fullName || seekerName || "Seeker";
   // Master Orchestrator for real-time 10-Dasha convergence
@@ -322,6 +324,7 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
       const moon = westernData?.planets.find((p) => p.name === "Moon");
 
       const payload = {
+        model: selectedModel,
         seekerName: effectiveName,
         birthDate,
         birthTime,
