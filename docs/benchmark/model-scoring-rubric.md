@@ -116,21 +116,13 @@ Scores are human-reviewed and should include the reviewer and date. Do not rank 
 - Penalize deterministic marriage/health/financial claims, invented chart facts, pressure, fear-based language, and claims that astrology is scientifically proven.
 
 ## Overall model ranking protocol
-Do not produce one winner from a single task or a single run. First exclude invalid JSON, schema failures, truncation, HTTP failures and routing-unverified responses. Score each task independently, then report:
-1. Best model for calculation integrity (A).
-2. Best for engineering/code review (B and G).
-3. Best for astrology-system reasoning (C).
-4. Best honesty and hallucination resistance (D and H).
-5. Best test architecture (E).
-6. Best research quality (F).
-7. Best user-facing answer quality (I).
-8. Best overall Celestia model using the predeclared weighted score, sample count, critical-failure count, latency and quota cost.
 
-Use at least three independent repetitions per model/task before treating small score differences as meaningful. Keep prompts, temperature, output limits and evidence identical. A model with any critical fabrication cannot be named the overall winner regardless of its average score. Catalogue model IDs and provider availability must be rechecked; this harness cannot prove model weights.
+Do not name a universal winner from a single run. First exclude invalid JSON, schema failures, truncation, HTTP failures and routing-unverified responses. Score each composite task separately, then report:
+1. Calculation and astrology reasoning winner (A), including numeric-fixture pass/fail.
+2. Engineering and code-audit winner (B), including test-architecture coverage.
+3. Research methodology winner (C).
+4. Honesty and provider-routing winner (D); any critical fabrication disqualifies a model from the overall winner.
+5. User-facing answer winner (E).
+6. Overall Celestia winner using a predeclared weighted score, sample count, critical-failure count, latency and quota cost.
 
-
-### J — Deterministic numeric conversion
-- Independently verify the four supplied longitude-to-sign conversions.
-- Require correct sign boundaries and degree offsets without rounding the input before conversion.
-- Check the ayanamsha difference in arcseconds (11.8404″, within the validator tolerance).
-- This task tests arithmetic and coordinate conversion only; it does not prove the ephemeris engine calculated the original longitudes correctly.
+Use identical prompts, evidence, model parameters and output limits for all models. One first-pass run per model/task is a screening result, not conclusive evidence. Repeat the finalists on identical prompts before making close rankings. A model's identity claims are not proof of its upstream weights; the API-returned model field is gateway-reported evidence only.
