@@ -27,6 +27,41 @@ class AllTasksSummaryTests(unittest.TestCase):
         self.assertEqual(combined["overall_status"], "success")
         self.assertEqual({row["task"] for row in combined["results"]}, set(MODULE.TASKS))
 
+    def test_suite_stops_on_quota_and_rate_limit_errors(self):
+        for code in (401, 402, 403, 429):
+            with self.subTest(http_status=code):
+                condition = MODULE.find_suite_abort_condition({
+                    "results": [{"model_alias": "model-a", "http_status": code, "status": "http_error"}]
+                })
+                self.assertIsNotNone(condition)
+                self.assertEqual(condition["http_status"], code)
+
+    def test_non_quota_response_failure_does_not_abort_other_tasks(self):
+        condition = MODULE.find_suite_abort_condition({
+            "results": [{"model_alias": "model-a", "http_status": 200, "status": "schema_invalid"}]
+        })
+        self.assertIsNone(condition)
+
+    def test_combined_summary_reports_skipped_requests_after_early_stop(self):
+        summaries = {
+            "A": {"results": [{"model_alias": "model-a", "status": "success"}]},
+            "B": {"results": [{"model_alias": "model-a", "status": "http_error", "http_status": 429}]},
+        }
+        skipped = list("CDEFGHIJ")
+        for task in skipped:
+            summaries[task] = {"results": []}
+        combined = MODULE.build_combined_summary(
+            summaries, ["model-a"], concurrency=4,
+            stopped_early_reason={"http_status": 429},
+            skipped_tasks=skipped,
+        )
+        self.assertEqual(combined["request_count_planned"], 10)
+        self.assertEqual(combined["request_count_reported"], 2)
+        self.assertEqual(combined["request_count_not_attempted"], 8)
+        self.assertEqual(combined["failure_count"], 1)
+        self.assertEqual(combined["skipped_tasks"], skipped)
+        self.assertEqual(combined["max_parallel_models_per_task"], 4)
+
     def test_full_twelve_model_suite_would_require_120_requests(self):
         combined = MODULE.build_combined_summary({}, [f"model-{i}" for i in range(12)])
         self.assertEqual(combined["request_count_planned"], 120)
