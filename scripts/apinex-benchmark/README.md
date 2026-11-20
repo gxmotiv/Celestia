@@ -36,6 +36,7 @@ The single-run workflow sends one logical request per selected model and task. F
 | G | Source-grounded repository code audit | 2600 |
 | H | Provider identity and routing honesty | 900 |
 | I | Real user-facing answer quality | 1400 |
+| J | Deterministic numeric astrology conversion | 1000 |
 
 These are output ceilings only. Input tokens also consume allowance. The runner enforces a 45 KB serialized-request ceiling and one 100-second HTTP timeout. The multi-model `ALL` workflow has a 6-hour job ceiling.
 
@@ -51,7 +52,7 @@ The response is saved only as a GitHub Actions artifact with 14-day retention; i
 
 ## Limitations
 
-- The runner validates strict JSON syntax and nested task-specific schemas. Invalid responses are preserved raw in the artifact but counted as failures. It does not semantically grade answer quality; use the shared scoring rubric separately.
+- The runner validates strict JSON syntax and nested task-specific schemas. Task J also receives deterministic semantic grading against the supplied numeric fixture (zodiac signs, degree offsets and ayanamsha arcseconds). Invalid responses are preserved raw in the artifact but counted as failures. It does not semantically grade answer quality; use the shared scoring rubric separately.
 - A run is counted as successful only when the API `model` response field exactly matches the requested APInex model ID. Missing or mismatched IDs are marked `routing_unverified` or `model_id_mismatch` and must not enter quality rankings.
 - A matching API model field is gateway-reported routing evidence, not cryptographic proof of upstream model weights. Model self-introductions are never identity evidence. A reply saying 'I am Google' or 'built by Google' is not accepted as proof; check the artifact's `requested_model_id`, `returned_model`, `routing_status` and provider metadata.
 - The workflow runs local Python unit tests before sending a quota-consuming request.
