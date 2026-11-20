@@ -25,7 +25,7 @@ def build_combined_summary(task_summaries, models):
     expected = len(TASKS) * len(models)
     return {
         "created_at_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
-        "execution": "sequential_tasks_and_models",
+        "execution": "sequential_tasks_parallel_models",
         "tasks": TASKS,
         "selected_models": models,
         "request_count_planned": expected,
@@ -41,8 +41,16 @@ def build_combined_summary(task_summaries, models):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--models", required=True, help="Comma-separated config aliases")
+    parser.add_argument("--confirm-all", action="store_true", help="Explicitly confirm all configured task/model requests")
+    parser.add_argument("--concurrency", type=int, default=12, help="Parallel model requests per task (1–12)")
     parser.add_argument("--output-dir", default="benchmark-results")
     args = parser.parse_args()
+    if not args.confirm_all:
+        print("No requests sent. Add --confirm-all to confirm the full task suite.")
+        return 2
+    if args.concurrency < 1 or args.concurrency > 12:
+        print("ERROR: concurrency must be between 1 and 12.", file=sys.stderr)
+        return 2
     models = [part.strip() for part in args.models.split(",") if part.strip()]
     unknown = [model for model in models if model not in CONFIG["models"]]
     if not models or len(set(models)) != len(models) or unknown:
@@ -65,7 +73,7 @@ def main():
         print(f"\n========== TASK {task} ({index}/{len(TASKS)}) ==========", flush=True)
         completed = subprocess.run(
             [sys.executable, str(BATCH_RUNNER), "--models", args.models,
-             "--task", task, "--output-dir", str(task_dir)],
+             "--task", task, "--concurrency", str(args.concurrency), "--output-dir", str(task_dir)],
             check=False,
         )
         summaries = sorted(task_dir.glob(f"*_batch_{task}_summary.json"))
