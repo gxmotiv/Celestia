@@ -10,7 +10,7 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parent
 BATCH_RUNNER = ROOT / "run_batch.py"
 CONFIG = json.loads((ROOT / "config.json").read_text(encoding="utf-8"))
-TASKS = ["A", "B", "C", "D", "E", "F", "G"]
+TASKS = list(CONFIG["tasks"].keys())
 
 
 def build_combined_summary(task_summaries, models):
