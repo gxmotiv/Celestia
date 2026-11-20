@@ -194,7 +194,7 @@ async function generateWithNaraRouter(
   return {
     text: text.trim(),
     provider: "nararouter",
-    model: body?.model || model,
+    model: body?.model || "unreported",
     usage: readUsage(body?.usage),
   };
 }
