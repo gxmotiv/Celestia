@@ -742,6 +742,34 @@ assertTest(
   invalidD60SummaryRejected ? "Rejected" : "Accepted"
 );
 
+
+console.log("Running Category 30: independent D60 sign-mapping reference fixtures...");
+
+const jhoraD60ReferenceFixtures = [
+  { body: "Ascendant", natalSign: 11, degreeInSign: 16.4685, expectedSign: 7, expectedName: "Scorpio" },
+  { body: "Sun", natalSign: 8, degreeInSign: 16.8657, expectedSign: 5, expectedName: "Virgo" },
+  { body: "Moon", natalSign: 10, degreeInSign: 6.4655, expectedSign: 10, expectedName: "Aquarius" },
+  { body: "Mars", natalSign: 7, degreeInSign: 16.1275, expectedSign: 3, expectedName: "Cancer" },
+  { body: "Mercury", natalSign: 9, degreeInSign: 2.0133, expectedSign: 1, expectedName: "Taurus" },
+  { body: "Jupiter", natalSign: 2, degreeInSign: 11.4557, expectedSign: 0, expectedName: "Aries" },
+];
+let jhoraD60ReferencePass = true;
+const jhoraD60Actual: string[] = [];
+for (const fixture of jhoraD60ReferenceFixtures) {
+  const longitude = fixture.natalSign * 30 + fixture.degreeInSign;
+  const actualIndex = calculateDivisionalSignIndex(longitude, "D60", { d60SignConvention: "from-sign" });
+  const actualName = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"][actualIndex];
+  if (actualIndex !== fixture.expectedSign) jhoraD60ReferencePass = false;
+  jhoraD60Actual.push(`${fixture.body}: ${actualName}`);
+}
+assertTest(
+  "30.1 Jagannatha Hora Published D60 Mapping Vector",
+  "Six published D1 longitudes map to the published D60 signs under the occupied-sign convention",
+  jhoraD60ReferencePass,
+  jhoraD60ReferenceFixtures.map((fixture) => `${fixture.body}: ${fixture.expectedName}`).join("; "),
+  jhoraD60Actual.join("; ")
+);
+
 // SUMMARY OUTPUT
 // ======================================================================
 console.log("\n=================== TEST RESULTS ===================");
