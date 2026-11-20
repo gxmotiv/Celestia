@@ -68,7 +68,8 @@ class AllTasksSummaryTests(unittest.TestCase):
         combined = MODULE.build_combined_summary({}, [f"model-{i}" for i in range(12)])
         self.assertEqual(combined["request_count_planned"], 120)
         self.assertEqual(combined["request_count_attempted"], 0)
-        self.assertEqual(combined["request_count_not_attempted"], 120)
+        self.assertEqual(combined["request_count_not_attempted"], 0)
+        self.assertEqual(combined["request_count_unknown"], 120)
         self.assertEqual(combined["request_count_reported"], 0)
         self.assertNotEqual(combined["overall_status"], "success")
 
@@ -78,7 +79,8 @@ class AllTasksSummaryTests(unittest.TestCase):
         )
         self.assertEqual(combined["trials_per_model_task"], 3)
         self.assertEqual(combined["request_count_planned"], 360)
-        self.assertEqual(combined["request_count_not_attempted"], 360)
+        self.assertEqual(combined["request_count_not_attempted"], 0)
+        self.assertEqual(combined["request_count_unknown"], 360)
 
     def test_shared_guard_skips_are_not_counted_as_api_failures(self):
         summaries = {
@@ -92,7 +94,8 @@ class AllTasksSummaryTests(unittest.TestCase):
             skipped_tasks=list("BCDEFGHIJ"),
         )
         self.assertEqual(combined["request_count_attempted"], 1)
-        self.assertEqual(combined["request_count_not_attempted"], 19)
+        self.assertEqual(combined["request_count_not_attempted"], 1)
+        self.assertEqual(combined["request_count_unknown"], 18)
         self.assertEqual(combined["failure_count"], 1)
         self.assertEqual(combined["skipped_count"], 1)
 
