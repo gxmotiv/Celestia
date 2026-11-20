@@ -484,6 +484,113 @@
           }
         }
       }
+    },
+    "J": {
+      "max_tokens": 1000,
+      "prompt": "TASK J — NUMERICAL ASTROLOGY/ASTRONOMY CONVERSION CHECK\n\nPurpose: test arithmetic and zodiac-boundary handling using supplied reference longitudes. Do NOT recalculate the sky or claim these values were independently measured by you.\n\nReference context: 1 January 1990, 12:00 IST, New Delhi (28.6139 N, 77.2090 E), Lahiri sidereal convention, mean node. The following are supplied sidereal ecliptic longitudes in degrees, normalized to [0,360):\n- Ascendant: 343.925929\n- Sun: 256.863212\n- Moon: 306.468547\n- Mean Rahu: 294.729703\n\nConvert each longitude into its 30-degree zodiac sign and degree within that sign. Use Aries 0–30, Taurus 30–60, Gemini 60–90, Cancer 90–120, Leo 120–150, Virgo 150–180, Libra 180–210, Scorpio 210–240, Sagittarius 240–270, Capricorn 270–300, Aquarius 300–330, Pisces 330–360. Do not round the input before conversion.\n\nAlso calculate the absolute ayanamsha difference in arcseconds between 23.720706 degrees (nutation-included reference value) and 23.717417 degrees (mean/no-nutation convention).\n\nReturn JSON only with this exact structure: {\"positions\":{\"Ascendant\":{\"sign\":\"\",\"degree_in_sign\":0,\"longitude_decimal\":0},\"Sun\":{\"sign\":\"\",\"degree_in_sign\":0,\"longitude_decimal\":0},\"Moon\":{\"sign\":\"\",\"degree_in_sign\":0,\"longitude_decimal\":0},\"Rahu\":{\"sign\":\"\",\"degree_in_sign\":0,\"longitude_decimal\":0}},\"ayanamsha_difference_arcseconds\":0,\"method_note\":\"\"}.\n\nUse decimal degrees for degree_in_sign and preserve the supplied longitude_decimal. No interpretations, no invented data, no extra keys.",
+      "response_schema": {
+        "type": "object",
+        "required": [
+          "positions",
+          "ayanamsha_difference_arcseconds",
+          "method_note"
+        ],
+        "properties": {
+          "positions": {
+            "type": "object",
+            "required": [
+              "Ascendant",
+              "Sun",
+              "Moon",
+              "Rahu"
+            ],
+            "properties": {
+              "Ascendant": {
+                "type": "object",
+                "required": [
+                  "sign",
+                  "degree_in_sign",
+                  "longitude_decimal"
+                ],
+                "properties": {
+                  "sign": {
+                    "type": "string"
+                  },
+                  "degree_in_sign": {
+                    "type": "number"
+                  },
+                  "longitude_decimal": {
+                    "type": "number"
+                  }
+                }
+              },
+              "Sun": {
+                "type": "object",
+                "required": [
+                  "sign",
+                  "degree_in_sign",
+                  "longitude_decimal"
+                ],
+                "properties": {
+                  "sign": {
+                    "type": "string"
+                  },
+                  "degree_in_sign": {
+                    "type": "number"
+                  },
+                  "longitude_decimal": {
+                    "type": "number"
+                  }
+                }
+              },
+              "Moon": {
+                "type": "object",
+                "required": [
+                  "sign",
+                  "degree_in_sign",
+                  "longitude_decimal"
+                ],
+                "properties": {
+                  "sign": {
+                    "type": "string"
+                  },
+                  "degree_in_sign": {
+                    "type": "number"
+                  },
+                  "longitude_decimal": {
+                    "type": "number"
+                  }
+                }
+              },
+              "Rahu": {
+                "type": "object",
+                "required": [
+                  "sign",
+                  "degree_in_sign",
+                  "longitude_decimal"
+                ],
+                "properties": {
+                  "sign": {
+                    "type": "string"
+                  },
+                  "degree_in_sign": {
+                    "type": "number"
+                  },
+                  "longitude_decimal": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          },
+          "ayanamsha_difference_arcseconds": {
+            "type": "number"
+          },
+          "method_note": {
+            "type": "string"
+          }
+        }
+      }
     }
   },
   "benchmark_version": "2.0.0"
