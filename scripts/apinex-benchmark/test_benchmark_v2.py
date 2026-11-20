@@ -98,7 +98,7 @@ class ParallelDispatchTests(unittest.TestCase):
         active = 0
         maximum_active = 0
 
-        def fake_run(alias, task, out_dir, pacing_file=None, minimum_interval=5.0):
+        def fake_run(alias, task, out_dir, pacing_file=None, minimum_interval=5.0, trial=1):
             nonlocal active, maximum_active
             self.assertEqual(task, "A")
             with lock:
@@ -107,15 +107,29 @@ class ParallelDispatchTests(unittest.TestCase):
             time.sleep(0.08)
             with lock:
                 active -= 1
-            return {"model_alias": alias, "status": "success"}
+            return {"model_alias": alias, "trial": trial, "status": "success"}
 
         aliases = ["m1", "m2", "m3", "m4"]
         with mock.patch.object(batch_runner, "run_one_model", side_effect=fake_run):
             results = batch_runner.run_models_in_parallel(aliases, "A", pathlib.Path("."), 4)
 
-        self.assertEqual(set(results), set(aliases))
+        self.assertEqual(set(results), {(alias, 1) for alias in aliases})
         self.assertTrue(all(row["status"] == "success" for row in results.values()))
         self.assertGreater(maximum_active, 1)
+
+    def test_repeat_trials_create_one_result_per_model_and_trial(self):
+        def fake_run(alias, task, out_dir, pacing_file=None, minimum_interval=5.0, trial=1):
+            return {"model_alias": alias, "trial": trial, "status": "success"}
+
+        aliases = ["m1", "m2"]
+        with mock.patch.object(batch_runner, "run_one_model", side_effect=fake_run):
+            results = batch_runner.run_models_in_parallel(
+                aliases, "B", pathlib.Path("."), 2, trials=3
+            )
+        expected = {(alias, trial) for alias in aliases for trial in (1, 2, 3)}
+        self.assertEqual(set(results), expected)
+        self.assertEqual(len(results), 6)
+        self.assertEqual({row["trial"] for row in results.values()}, {1, 2, 3})
 
 
 class RequestPacingTests(unittest.TestCase):
@@ -131,6 +145,14 @@ class RequestPacingTests(unittest.TestCase):
             state = json.loads(state_file.read_text(encoding="utf-8"))
             self.assertEqual(state["next_request_at_epoch"], 1010.0)
             self.assertFalse(state_file.with_name("schedule.json.lock").exists())
+
+    def test_halt_flag_stops_workers_before_they_send(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_file = pathlib.Path(temp_dir) / "schedule.json"
+            request_pacing.wait_for_request_slot(state_file, 5.0)
+            request_pacing.mark_request_schedule_halted(state_file, "HTTP 429")
+            with self.assertRaises(request_pacing.BenchmarkHaltedError):
+                request_pacing.wait_for_request_slot(state_file, 5.0)
 
 
 class RetryAndClassificationTests(unittest.TestCase):
