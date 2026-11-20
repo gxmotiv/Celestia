@@ -149,7 +149,7 @@ export function DeploymentModal({ isOpen, onClose }: DeploymentModalProps) {
                   Go to <strong className="text-amber-400">vercel.com/new</strong> and import your GitHub repo.
                 </li>
                 <li>
-                  Vercel auto-detects Next.js. Optionally add <code className="text-amber-300 font-mono">GEMINI_API_KEY</code> to the Environment Variables section if you want AI cosmic syntheses enabled.
+                  For a server deployment, configure <code className="text-amber-300 font-mono">APINEX_API_KEY</code> as a server-side secret to enable AI readings. Never expose the key in browser code.
                 </li>
                 <li>
                   Click <strong>Deploy</strong>. Your application is live within 60 seconds at a free <code className="text-amber-300 font-mono">.vercel.app</code> domain.
