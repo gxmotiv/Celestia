@@ -19,7 +19,7 @@ import { buildLifeStrategyBrief, LIFE_STRATEGY_STEPS } from "../lib/consultation
 import { ASTROLOGY_SPECIALTIES, getAstrologySpecialties } from "../lib/consultation/astrologySpecialties";
 import { JaiminiKarakasEngine } from "../lib/vedic/jaiminiKarakas";
 import { NavamsaCalculator } from "../lib/vedic/d9NavamsaEngine";
-import { calculateDivisionalChart, calculateDivisionalSignIndex } from "../lib/vedic/divisionalCalc";
+import { calculateDivisionalChart, calculateDivisionalSignIndex, calculateD60AmsaDetails, D60_AMSA_NAMES, D60_KRURA_AMSA_ORDINALS } from "../lib/vedic/divisionalCalc";
 import { calculateAnnualProfection, calculateCompletedAge } from "../lib/astronomy/annualProfections";
 import { SubLordCalculator } from "../lib/kp/subLordEngine";
 import { CompleteBaZiEngine, SolarTermCalculator } from "../lib/astronomy/baziEngine";
@@ -1864,6 +1864,72 @@ assertTest(
   d60DefaultEvenSign === 1,
   "Taurus (index 1)",
   `Got sign index ${d60DefaultEvenSign}`
+);
+
+console.log("Running Category 28: D60 named amsa and textual nature fixtures...");
+
+const expectedKrura = new Set<number>(D60_KRURA_AMSA_ORDINALS);
+let d60MetadataChecks = 0;
+let d60MetadataPass = D60_AMSA_NAMES.length === 60 && D60_KRURA_AMSA_ORDINALS.length === 24;
+for (let natal = 0; natal < 12; natal++) {
+  for (let part = 0; part < 60; part++) {
+    const details = calculateD60AmsaDetails(natal * 30 + part * 0.5 + 0.25);
+    const ordinal = natal % 2 === 0 ? part + 1 : 60 - part;
+    const expectedNature = expectedKrura.has(ordinal) ? "Krura" : "Saumya";
+    d60MetadataChecks++;
+    if (
+      details.segmentNumber !== part + 1 ||
+      details.nameOrdinal !== ordinal ||
+      details.natureOrdinal !== ordinal ||
+      details.name !== D60_AMSA_NAMES[ordinal - 1] ||
+      details.nature !== expectedNature ||
+      details.segmentStartDegree !== part * 0.5 ||
+      details.segmentEndDegree !== (part + 1) * 0.5
+    ) {
+      d60MetadataPass = false;
+    }
+  }
+}
+assertTest(
+  "28.1 D60 Amsa Names and Nature",
+  "All 60 half-degree segments across all 12 signs use BPHS name order and even-sign reversal, with Phaladeepika 3.5 nature ordinals reversed in even signs",
+  d60MetadataPass,
+  "720 sign/segment combinations; 60 names; 24 odd-sign Krura ordinals; exact 0.5° intervals",
+  d60MetadataPass ? `${d60MetadataChecks} combinations passed` : "At least one D60 name, nature, ordinal or interval mismatched"
+);
+
+const d60FirstOdd = calculateD60AmsaDetails(0.25);
+const d60FirstEven = calculateD60AmsaDetails(30.25);
+assertTest(
+  "28.2 D60 Even-Sign Name and Nature Reversal",
+  "The first half-degree of Taurus uses odd-sign ordinal 60 (Chandrarekha; Saumya)",
+  d60FirstEven.nameOrdinal === 60 && d60FirstEven.name === "Chandrarekha" && d60FirstEven.nature === "Saumya",
+  "60 / Chandrarekha / Saumya",
+  `${d60FirstEven.nameOrdinal} / ${d60FirstEven.name} / ${d60FirstEven.nature}`
+);
+
+const d60BoundaryBefore = calculateD60AmsaDetails(0.5 - 1e-7);
+const d60BoundaryAt = calculateD60AmsaDetails(0.5);
+assertTest(
+  "28.3 D60 Amsa Boundary",
+  "D60 amsa ordinal changes exactly at each half-degree boundary",
+  d60BoundaryBefore.segmentNumber === 1 && d60BoundaryAt.segmentNumber === 2,
+  "Before 0°30′: part 1; at 0°30′: part 2",
+  `Before: ${d60BoundaryBefore.segmentNumber}; at: ${d60BoundaryAt.segmentNumber}`
+);
+
+let invalidD60MetadataRejected = false;
+try {
+  calculateD60AmsaDetails(Number.NaN);
+} catch {
+  invalidD60MetadataRejected = true;
+}
+assertTest(
+  "28.4 D60 Amsa Invalid Input",
+  "D60 amsa metadata rejects non-finite longitudes",
+  invalidD60MetadataRejected,
+  "NaN rejected",
+  invalidD60MetadataRejected ? "Rejected" : "NaN accepted"
 );
 
 // SUMMARY OUTPUT — deliberately last so every appended regression fixture is counted.
