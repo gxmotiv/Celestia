@@ -302,14 +302,15 @@ def main():
         f"- Failed after sending / skipped before sending: {summary['failure_count']} / {summary['skipped_count']}",
         f"- Automatic transient retries: {summary['automatic_retries']}",
         "",
-        "| Model | Status | Routing | JSON/schema | HTTP | API latency (s) | Pacing wait (s) | Completion tokens | Retries |",
-        "|---|---|---:|---:|---:|---:|---:|---:|---:|",
+        "| Model | Trial | Status | Routing | JSON/schema | HTTP | API latency (s) | Pacing wait (s) | Completion tokens | Retries |",
+        "|---|---:|---|---|---|---:|---:|---:|---:|---:|",
     ]
     for item in summary["results"]:
         usage = item.get("usage") or {}
         validation = item.get("response_validation") or {}
-        lines.append("| {model} | {status} | {routing} | {validation} | {http} | {latency} | {pacing} | {tokens} | {retries} |".format(
+        lines.append("| {model} | {trial} | {status} | {routing} | {validation} | {http} | {latency} | {pacing} | {tokens} | {retries} |".format(
             model=item.get("model_alias", ""),
+            trial=item.get("trial", 1),
             status=item.get("status", ""),
             routing=item.get("routing_status", "unverified"),
             validation=validation.get("format", "n/a"),
