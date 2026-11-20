@@ -10,6 +10,7 @@ import {
   CompleteDashaOrchestrator,
 } from "../lib/vedic/completeDashaSystems";
 import { TransitEngine } from "../lib/astronomy/transits";
+import { calculateDivisionalChart, calculateDivisionalSignIndex, calculateD60AmsaDetails, D60_AMSA_NAMES, D60_KRURA_AMSA_ORDINALS } from "../lib/vedic/divisionalCalc";
 
 interface TestResult {
   category: string;
@@ -602,6 +603,88 @@ assertTest(
 );
 
 // ======================================================================
+
+console.log("Running Category 28: D60 sign, amsa-name and nature fixtures...");
+
+const d60Conventions = ["from-sign", "from-aries"] as const;
+let d60SignChecks = 0;
+let d60SignPass = true;
+for (const convention of d60Conventions) {
+  for (let natal = 0; natal < 12; natal++) {
+    for (let part = 0; part < 60; part++) {
+      const midpoint = natal * 30 + part * 0.5 + 0.25;
+      const expected = convention === "from-aries" ? part % 12 : (natal + part % 12) % 12;
+      if (calculateDivisionalSignIndex(midpoint, "D60", { d60SignConvention: convention }) !== expected) d60SignPass = false;
+      if (calculateDivisionalSignIndex(natal * 30 + part * 0.5, "D60", { d60SignConvention: convention }) !== expected) d60SignPass = false;
+      d60SignChecks += 2;
+    }
+  }
+}
+assertTest(
+  "28.1 D60 Sign Conventions",
+  "Both explicitly selectable BPHS sign-count readings map every half-degree part across all 12 signs",
+  d60SignPass,
+  "1,440 midpoint and exact-start mappings pass",
+  d60SignPass ? `${d60SignChecks} mappings passed` : "At least one D60 sign mapping failed"
+);
+
+const kruraOrdinals = new Set<number>(D60_KRURA_AMSA_ORDINALS);
+let d60MetadataPass = D60_AMSA_NAMES.length === 60 && D60_KRURA_AMSA_ORDINALS.length === 24;
+let d60MetadataChecks = 0;
+for (let natal = 0; natal < 12; natal++) {
+  for (let part = 0; part < 60; part++) {
+    const details = calculateD60AmsaDetails(natal * 30 + part * 0.5 + 0.25);
+    const ordinal = natal % 2 === 0 ? part + 1 : 60 - part;
+    const expectedNature = kruraOrdinals.has(ordinal) ? "Krura" : "Saumya";
+    if (
+      details.segmentNumber !== part + 1 ||
+      details.nameOrdinal !== ordinal ||
+      details.natureOrdinal !== ordinal ||
+      details.name !== D60_AMSA_NAMES[ordinal - 1] ||
+      details.nature !== expectedNature ||
+      details.segmentStartDegree !== part * 0.5 ||
+      details.segmentEndDegree !== (part + 1) * 0.5
+    ) d60MetadataPass = false;
+    d60MetadataChecks++;
+  }
+}
+assertTest(
+  "28.2 D60 Names and Phaladeepika Nature",
+  "All 60 half-degree segments across all 12 natal signs use BPHS name order and even-sign reversal, with separate Phaladeepika 3.5 nature ordinals",
+  d60MetadataPass,
+  "720 combinations; 60 names; 24 odd-sign Krura ordinals; exact 0.5° intervals",
+  d60MetadataPass ? `${d60MetadataChecks} combinations passed` : "At least one name, nature, ordinal or interval mismatched"
+);
+
+const firstTaurusAmsa = calculateD60AmsaDetails(30.25);
+assertTest(
+  "28.3 D60 Even-Sign Reversal",
+  "Taurus part 1 reverses to odd-sign ordinal 60, Chandrarekha, and Saumya",
+  firstTaurusAmsa.nameOrdinal === 60 && firstTaurusAmsa.name === "Chandrarekha" && firstTaurusAmsa.nature === "Saumya",
+  "60 / Chandrarekha / Saumya",
+  `${firstTaurusAmsa.nameOrdinal} / ${firstTaurusAmsa.name} / ${firstTaurusAmsa.nature}`
+);
+
+const beforeHalfDegree = calculateD60AmsaDetails(0.5 - 1e-7);
+const atHalfDegree = calculateD60AmsaDetails(0.5);
+assertTest(
+  "28.4 D60 Exact Boundary",
+  "Amsa number changes at exactly 0°30′",
+  beforeHalfDegree.segmentNumber === 1 && atHalfDegree.segmentNumber === 2,
+  "Part 1 before boundary; part 2 at boundary",
+  `Before: ${beforeHalfDegree.segmentNumber}; at: ${atHalfDegree.segmentNumber}`
+);
+
+let invalidD60Rejected = false;
+try { calculateD60AmsaDetails(Number.NaN); } catch { invalidD60Rejected = true; }
+assertTest(
+  "28.5 D60 Invalid Input",
+  "Rejects non-finite D60 longitudes",
+  invalidD60Rejected,
+  "NaN rejected",
+  invalidD60Rejected ? "Rejected" : "NaN accepted"
+);
+
 // SUMMARY OUTPUT
 // ======================================================================
 console.log("\n=================== TEST RESULTS ===================");
