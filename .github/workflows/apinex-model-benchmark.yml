@@ -22,11 +22,11 @@ on:
           - deepseek-v4-pro
           - gpt-6-luna
       task:
-        description: "Run exactly one task; start with D (hallucination check)"
+        description: "Run one of five composite tasks; start with D (honesty and routing)"
         required: true
         type: choice
         default: D
-        options: [D, A, B, C, E, F, G, H, I, J]
+        options: [D, A, B, C, E]
       confirm_api_call:
         description: "Set true only when you are ready to spend APInex free allowance on this ONE request"
         required: true
