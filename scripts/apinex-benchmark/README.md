@@ -4,7 +4,7 @@
 
 The benchmark has **10 independent tasks (A–J)**. The former five composite tasks bundled multiple skills together; those modules are now separated so each result has a clearer interpretation.
 
-Each GitHub Actions run selects **one task** and sends that exact task prompt to every selected model **concurrently**. With the default 12 models, one run makes **12 first-pass API requests**, not 60. There is no `ALL` choice in the workflow, so a task cannot accidentally trigger the entire suite.
+Each GitHub Actions run selects **one task** and sends that exact task prompt to every selected model **concurrently**. With the default 12 models, one run makes **12 first-pass API requests**, not 60. The workflow offers A–J and an explicit `ALL` option. The default remains A. Selecting `ALL` deliberately starts the full 120-request first-pass comparison for 12 models.
 
 | Task | Independent capability | Output ceiling |
 |---|---|---:|
