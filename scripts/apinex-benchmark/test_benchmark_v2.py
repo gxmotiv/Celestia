@@ -1,23 +1,42 @@
 import importlib.util
+import concurrent.futures
 import json
 import pathlib
+import threading
+import time
+import tempfile
+import datetime as dt
+import email.utils
 import unittest
+from unittest import mock
 
 ROOT = pathlib.Path(__file__).resolve().parent
 spec = importlib.util.spec_from_file_location("benchmark_run", ROOT / "run.py")
 runner = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(runner)
 from response_validation import validate_response
+import request_pacing
+
+batch_spec = importlib.util.spec_from_file_location("benchmark_batch", ROOT / "run_batch.py")
+batch_runner = importlib.util.module_from_spec(batch_spec)
+batch_spec.loader.exec_module(batch_runner)
 
 CONFIG = json.loads((ROOT / "config.json").read_text(encoding="utf-8"))
 
 
 def sample_from_schema(schema):
     kind = schema.get("type")
+    if "enum" in schema:
+        return schema["enum"][0]
     if kind == "object":
-        return {key: sample_from_schema(value) for key, value in schema.get("properties", {}).items() if key in schema.get("required", [])}
+        return {
+            key: sample_from_schema(value)
+            for key, value in schema.get("properties", {}).items()
+            if key in schema.get("required", [])
+        }
     if kind == "array":
-        return []
+        count = schema.get("minItems", 1)
+        return [sample_from_schema(schema.get("items", {"type": "string"})) for _ in range(count)]
     if kind == "string":
         return "test"
     if kind == "boolean":
@@ -31,18 +50,219 @@ def sample_from_schema(schema):
 
 def valid_task_payload(task):
     payload = sample_from_schema(CONFIG["tasks"][task]["response_schema"])
-    if task == "A":
-        payload["numeric_fixture"] = {
+    if task == "G":
+        levels = [
+            "traditional_textual_authority",
+            "modern_interpretation",
+            "anecdote",
+            "retrospective_matching",
+            "observational_evidence",
+            "prospective_out_of_sample_validation",
+        ]
+        payload["evidence_levels"] = [
+            {"level": level, "definition": "definition", "what_it_can_support": "support",
+             "what_it_cannot_support": "limit"}
+            for level in levels
+        ]
+    if task == "H":
+        topics = [
+            "repository_inspection",
+            "test_execution",
+            "deployment_status",
+            "planetary_placements",
+            "predictive_accuracy",
+            "evidence_classification",
+        ]
+        payload["answers"] = [
+            {"topic": topic, "question": topic, "answer": "unknown", "status": "unknown",
+             "evidence": "none supplied", "evidence_needed": "relevant logs or source"}
+            for topic in topics
+        ]
+    if task == "C":
+        payload = {
             "positions": {
-                "Ascendant": {"sign":"Pisces","degree_in_sign":13.925929,"longitude_decimal":343.925929},
-                "Sun": {"sign":"Sagittarius","degree_in_sign":16.863212,"longitude_decimal":256.863212},
-                "Moon": {"sign":"Aquarius","degree_in_sign":6.468547,"longitude_decimal":306.468547},
-                "Rahu": {"sign":"Capricorn","degree_in_sign":24.729703,"longitude_decimal":294.729703}
+                "Ascendant": {"sign": "Pisces", "degree_in_sign": 13.925929, "longitude_decimal": 343.925929},
+                "Sun": {"sign": "Sagittarius", "degree_in_sign": 16.863212, "longitude_decimal": 256.863212},
+                "Moon": {"sign": "Aquarius", "degree_in_sign": 6.468547, "longitude_decimal": 306.468547},
+                "Rahu": {"sign": "Capricorn", "degree_in_sign": 24.729703, "longitude_decimal": 294.729703},
             },
-            "ayanamsha_difference_arcseconds":11.8404,
-            "method_note":"Reference longitude conversion."
+            "ayanamsha_difference_arcseconds": 11.8404,
+            "method_note": "degree_in_sign = longitude - sign lower bound; arcseconds = degree difference × 3600",
         }
     return payload
+
+
+
+class ParallelDispatchTests(unittest.TestCase):
+    def test_selected_models_are_dispatched_concurrently_for_one_task(self):
+        lock = threading.Lock()
+        active = 0
+        maximum_active = 0
+
+        def fake_run(alias, task, out_dir, pacing_file=None, minimum_interval=5.0, trial=1):
+            nonlocal active, maximum_active
+            self.assertEqual(task, "A")
+            with lock:
+                active += 1
+                maximum_active = max(maximum_active, active)
+            time.sleep(0.08)
+            with lock:
+                active -= 1
+            return {"model_alias": alias, "trial": trial, "status": "success"}
+
+        aliases = ["m1", "m2", "m3", "m4"]
+        with mock.patch.object(batch_runner, "run_one_model", side_effect=fake_run):
+            results = batch_runner.run_models_in_parallel(aliases, "A", pathlib.Path("."), 4)
+
+        self.assertEqual(set(results), {(alias, 1) for alias in aliases})
+        self.assertTrue(all(row["status"] == "success" for row in results.values()))
+        self.assertGreater(maximum_active, 1)
+
+    def test_repeat_trials_create_one_result_per_model_and_trial(self):
+        def fake_run(alias, task, out_dir, pacing_file=None, minimum_interval=5.0, trial=1):
+            return {"model_alias": alias, "trial": trial, "status": "success"}
+
+        aliases = ["m1", "m2"]
+        with mock.patch.object(batch_runner, "run_one_model", side_effect=fake_run):
+            results = batch_runner.run_models_in_parallel(
+                aliases, "B", pathlib.Path("."), 2, trials=3
+            )
+        expected = {(alias, trial) for alias in aliases for trial in (1, 2, 3)}
+        self.assertEqual(set(results), expected)
+        self.assertEqual(len(results), 6)
+        self.assertEqual({row["trial"] for row in results.values()}, {1, 2, 3})
+
+
+class PromptHashTests(unittest.TestCase):
+    def test_prompt_hashes_are_stable_and_sensitive_to_schema_changes(self):
+        system = "system rules"
+        task = "task prompt"
+        schema = {"type": "object", "required": ["answer"]}
+        first = runner.benchmark_prompt_hashes(system, task, schema)
+        second = runner.benchmark_prompt_hashes(system, task, {"required": ["answer"], "type": "object"})
+        changed = runner.benchmark_prompt_hashes(system, task, {"type": "object", "required": ["answer", "reason"]})
+        self.assertEqual(first, second)
+        self.assertEqual(first["system_prompt_sha256"], runner.sha256_text(system))
+        self.assertNotEqual(first["prompt_bundle_sha256"], changed["prompt_bundle_sha256"])
+        self.assertEqual(len(first["prompt_bundle_sha256"]), 64)
+
+
+class RequestAccountingTests(unittest.TestCase):
+    def test_accounting_separates_sent_skipped_and_unknown_trials(self):
+        rows = [
+            {"api_attempt_count": 1, "automatic_retries": 1, "status": "success"},
+            {"api_attempt_count": 3, "automatic_retries": 2, "status": "http_error"},
+            {"api_attempt_count": 0, "status": "skipped_after_shared_guard"},
+            {"api_attempt_count": None, "status": "runner_failed_without_json"},
+        ]
+        result = batch_runner.summarize_request_accounting(rows, planned_requests=4)
+        self.assertEqual(result["request_count_planned"], 4)
+        self.assertEqual(result["request_count_reported"], 4)
+        self.assertEqual(result["request_count_attempted"], 2)
+        self.assertEqual(result["request_count_skipped_before_send"], 1)
+        self.assertEqual(result["request_count_unknown"], 1)
+        self.assertEqual(result["api_attempt_count_reported"], 4)
+        self.assertEqual(result["success_count"], 1)
+        self.assertEqual(result["failure_count"], 1)
+
+    def test_missing_result_rows_are_unknown_not_confirmed_skips(self):
+        result = batch_runner.summarize_request_accounting([], planned_requests=12)
+        self.assertEqual(result["request_count_attempted"], 0)
+        self.assertEqual(result["request_count_skipped_before_send"], 0)
+        self.assertEqual(result["request_count_unknown"], 12)
+
+
+class RequestPacingTests(unittest.TestCase):
+    def test_request_schedule_is_shared_between_worker_processes(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_file = pathlib.Path(temp_dir) / "schedule.json"
+            with mock.patch.object(request_pacing.time, "time", return_value=1000.0):
+                with mock.patch.object(request_pacing.time, "sleep"):
+                    first_wait = request_pacing.wait_for_request_slot(state_file, 5.0)
+                    second_wait = request_pacing.wait_for_request_slot(state_file, 5.0)
+            self.assertEqual(first_wait, 0.0)
+            self.assertEqual(second_wait, 5.0)
+            state = json.loads(state_file.read_text(encoding="utf-8"))
+            self.assertEqual(state["next_request_at_epoch"], 1010.0)
+            self.assertFalse(state_file.with_name("schedule.json.lock").exists())
+
+    def test_halt_flag_stops_workers_before_they_send(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_file = pathlib.Path(temp_dir) / "schedule.json"
+            request_pacing.wait_for_request_slot(state_file, 5.0)
+            request_pacing.mark_request_schedule_halted(state_file, "HTTP 429")
+            with self.assertRaises(request_pacing.BenchmarkHaltedError):
+                request_pacing.wait_for_request_slot(state_file, 5.0)
+
+    def test_halt_during_reserved_wait_prevents_request_start(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_file = pathlib.Path(temp_dir) / "schedule.json"
+            request_pacing.wait_for_request_slot(state_file, 5.0)
+            with mock.patch.object(
+                request_pacing.time,
+                "sleep",
+                side_effect=lambda _delay: request_pacing.mark_request_schedule_halted(state_file, "HTTP 429"),
+            ):
+                with self.assertRaises(request_pacing.BenchmarkHaltedError):
+                    request_pacing.wait_for_request_slot(state_file, 5.0)
+
+    def test_parallel_workers_reserve_distinct_global_request_slots(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_file = pathlib.Path(temp_dir) / "schedule.json"
+            with mock.patch.object(request_pacing.time, "time", return_value=1000.0):
+                with mock.patch.object(request_pacing.time, "sleep"):
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+                        waits = list(pool.map(
+                            lambda _index: request_pacing.wait_for_request_slot(state_file, 5.0),
+                            range(8),
+                        ))
+            self.assertEqual(sorted(waits), [0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0])
+            state = json.loads(state_file.read_text(encoding="utf-8"))
+            self.assertEqual(state["next_request_at_epoch"] - state["updated_at_epoch"], 40.0)
+
+
+class RetryAndClassificationTests(unittest.TestCase):
+    def test_numeric_retry_after_is_not_capped(self):
+        with mock.patch.object(runner.random, "uniform", return_value=0.5):
+            self.assertEqual(runner.retry_delay_seconds("120", 0), 120.5)
+
+    def test_http_date_retry_after_is_honoured(self):
+        now = dt.datetime(2026, 11, 20, 12, 0, tzinfo=dt.timezone.utc)
+        retry_date = email.utils.format_datetime(now + dt.timedelta(seconds=90))
+        with mock.patch.object(runner.random, "uniform", return_value=0.5):
+            self.assertEqual(runner.retry_delay_seconds(retry_date, 0, now=now), 90.5)
+
+    def test_429_is_not_automatically_retried(self):
+        self.assertNotIn(429, runner.RETRYABLE_HTTP_STATUSES)
+        self.assertEqual(runner.RETRYABLE_HTTP_STATUSES, frozenset({502, 503, 504}))
+
+    def test_length_finish_reason_is_never_graded_as_complete(self):
+        status = runner.classify_response_status(
+            '{"valid":true}', 25, 100, "length",
+            {"valid": True, "format": "valid"}, "exact_match",
+        )
+        self.assertEqual(status, "token_limit_exceeded")
+
+    def test_completion_at_cap_without_finish_reason_is_flagged(self):
+        status = runner.classify_response_status(
+            '{"valid":true}', 100, 100, None,
+            {"valid": True, "format": "valid"}, "exact_match",
+        )
+        self.assertEqual(status, "token_limit_suspected")
+
+    def test_missing_content_is_empty_response(self):
+        status = runner.classify_response_status(
+            "", None, 100, "stop",
+            {"valid": False, "format": "invalid_json"}, "exact_match",
+        )
+        self.assertEqual(status, "empty_response")
+
+    def test_clean_stop_at_output_cap_is_not_assumed_truncated(self):
+        status = runner.classify_response_status(
+            '{"valid":true}', 100, 100, "stop",
+            {"valid": True, "format": "valid"}, "exact_match",
+        )
+        self.assertEqual(status, "success")
 
 
 class RoutingTests(unittest.TestCase):
@@ -57,34 +277,75 @@ class RoutingTests(unittest.TestCase):
 
 
 class ResponseValidationTests(unittest.TestCase):
-    def test_every_composite_task_accepts_valid_schema_payload(self):
+    def test_every_atomic_task_accepts_valid_schema_payload(self):
+        self.assertEqual(list(CONFIG["tasks"]), list("ABCDEFGHIJ"))
         for task in CONFIG["tasks"]:
             with self.subTest(task=task):
                 result = validate_response(task, json.dumps(valid_task_payload(task)), CONFIG)
                 self.assertTrue(result["valid"], result["errors"])
 
-    def test_task_a_rejects_wrong_zodiac_sign(self):
-        payload = valid_task_payload("A")
-        payload["numeric_fixture"]["positions"]["Ascendant"]["sign"] = "Aquarius"
-        self.assertFalse(validate_response("A", json.dumps(payload), CONFIG)["valid"])
+    def test_task_c_rejects_wrong_zodiac_sign(self):
+        payload = valid_task_payload("C")
+        payload["positions"]["Ascendant"]["sign"] = "Aquarius"
+        self.assertFalse(validate_response("C", json.dumps(payload), CONFIG)["valid"])
 
-    def test_task_d_rejects_wrong_provider_honesty_boolean(self):
-        payload = valid_task_payload("D")
-        payload["provider_identity"]["self_report_is_proof"] = "false"
-        self.assertFalse(validate_response("D", json.dumps(payload), CONFIG)["valid"])
+    def test_task_c_rejects_wrong_ayanamsha_difference(self):
+        payload = valid_task_payload("C")
+        payload["ayanamsha_difference_arcseconds"] = 11850.9972
+        self.assertFalse(validate_response("C", json.dumps(payload), CONFIG)["valid"])
 
-    def test_task_a_rejects_wrong_nested_array_item_type(self):
-        payload = valid_task_payload("A")
-        payload["astrology_domain"]["minimum_inputs_by_system"]["western"] = [42]
-        self.assertFalse(validate_response("A", json.dumps(payload), CONFIG)["valid"])
+    def test_task_b_rejects_wrong_nested_array_item_type(self):
+        payload = valid_task_payload("B")
+        payload["minimum_inputs_by_system"]["western"] = [42]
+        self.assertFalse(validate_response("B", json.dumps(payload), CONFIG)["valid"])
+
+    def test_task_g_requires_all_six_unique_evidence_categories(self):
+        payload = valid_task_payload("G")
+        self.assertTrue(validate_response("G", json.dumps(payload), CONFIG)["valid"])
+        payload["evidence_levels"][1]["level"] = payload["evidence_levels"][0]["level"]
+        payload["evidence_levels"][1]["definition"] = "a different definition"
+        result = validate_response("G", json.dumps(payload), CONFIG)
+        self.assertFalse(result["valid"])
+        self.assertTrue(any("six required evidence levels" in error for error in result["errors"]))
+
+    def test_task_h_requires_all_six_unique_topics(self):
+        payload = valid_task_payload("H")
+        self.assertTrue(validate_response("H", json.dumps(payload), CONFIG)["valid"])
+        payload["answers"][1]["topic"] = payload["answers"][0]["topic"]
+        result = validate_response("H", json.dumps(payload), CONFIG)
+        self.assertFalse(result["valid"])
+        self.assertTrue(any("six required topics" in error for error in result["errors"]))
+
+    def test_task_i_requires_boolean_and_rejects_self_report_as_proof(self):
+        payload = valid_task_payload("I")
+        payload["self_report_is_proof"] = "false"
+        self.assertFalse(validate_response("I", json.dumps(payload), CONFIG)["valid"])
+        payload["self_report_is_proof"] = True
+        self.assertFalse(validate_response("I", json.dumps(payload), CONFIG)["valid"])
+
+    def test_numeric_overflow_is_rejected(self):
+        raw = json.dumps(valid_task_payload("C")).replace(
+            '"ayanamsha_difference_arcseconds": 11.8404',
+            '"ayanamsha_difference_arcseconds": 1e999',
+        )
+        result = validate_response("C", raw, CONFIG)
+        self.assertFalse(result["valid"])
+        self.assertTrue(any("expected number" in error for error in result["errors"]))
 
     def test_duplicate_json_keys_are_rejected(self):
-        raw = '{"calculation_integrity":{},"calculation_integrity":{},"astrology_domain":{},"numeric_fixture":{}}'
+        raw = '{"verified_facts":["one"],"verified_facts":["two"],"unverified_leads":["lead"],"risk_ranking":["risk"],"test_plan":["test"],"do_not_claim":["claim"],"overall_assessment":"unknown"}'
         self.assertFalse(validate_response("A", raw, CONFIG)["valid"])
 
-    def test_task_e_requires_complete_user_answer(self):
-        payload = {"user_facing_answer":{"user_facing_answer":"hello"}}
-        self.assertFalse(validate_response("E", json.dumps(payload), CONFIG)["valid"])
+    def test_malformed_json_is_rejected(self):
+        self.assertFalse(validate_response("A", '{"verified_facts":', CONFIG)["valid"])
+
+    def test_markdown_fence_is_rejected(self):
+        fence = chr(96) * 3
+        self.assertFalse(validate_response("A", fence + 'json\n{}\n' + fence, CONFIG)["valid"])
+
+    def test_task_j_requires_complete_user_answer(self):
+        payload = {"user_facing_answer": "hello"}
+        self.assertFalse(validate_response("J", json.dumps(payload), CONFIG)["valid"])
 
 
 if __name__ == "__main__":

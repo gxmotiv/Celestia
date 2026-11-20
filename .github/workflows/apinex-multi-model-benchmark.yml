@@ -9,13 +9,25 @@ on:
         type: string
         default: "deepseek-v4.1-flash,qwen-3.8-max,muse-spark-1.3,mimo-v2.6-pro,hy4-flash,minimax-m3.1-flash,gemini-3.8-flash,glm-5.3-flash,kimi-k3,deepseek-v4-pro,gpt-6-luna,gemini-4-hydrogen"
       task:
-        description: "Choose one of five combined tasks or run all five for every selected model"
+        description: "Choose one: A calculation; B astrology systems; C numerical fixture; D engineering; E tests; F source audit; G research; H hallucination; I provider identity; J user answer. All models get the same task."
         required: true
         type: choice
-        default: D
-        options: [D, A, B, C, E, ALL]
+        default: A
+        options: [A, B, C, D, E, F, G, H, I, J, ALL]
+      concurrency:
+        description: "Maximum in-flight model workers; every API attempt is globally paced at least 5 seconds apart."
+        required: true
+        type: choice
+        default: "12"
+        options: ["1", "2", "4", "6", "12"]
+      trials:
+        description: "Repeat each model/task 1, 3 or 5 times. Default 1; repeats increase requests and runtime."
+        required: true
+        type: choice
+        default: "1"
+        options: ["1", "3", "5"]
       confirm_api_call:
-        description: "Required: confirms one request per selected model/task pair; ALL means 60 requests with 12 models"
+        description: "Required: with 12 models, one task = 12×trials; ALL = 120×trials (120/360/600 for 1/3/5 trials). All attempts are paced; 429 halts queued work."
         required: true
         type: boolean
         default: false
@@ -43,31 +55,40 @@ jobs:
       - uses: actions/checkout@v4
       - name: Verify Python
         run: python3 --version
-      - name: Validate existing benchmark tests
+      - name: Compile benchmark Python scripts
+        run: python3 -m py_compile scripts/apinex-benchmark/*.py scripts/apinex-benchmark/tests/*.py
+      - name: Validate benchmark JSON schemas and scoring guards
         run: python3 -m unittest discover -s scripts/apinex-benchmark/tests -v
-      - name: Validate v2 routing and nested-schema tests
+      - name: Validate ten atomic tasks and routing checks
         run: python3 -m unittest discover -s scripts/apinex-benchmark -p 'test_benchmark_v2.py' -v
-      - name: Run selected models and tasks sequentially
+      - name: Run selected task or full suite with bounded model concurrency
         env:
           APINEX_API_KEY: ${{ secrets.APINEX_API_KEY }}
           BENCHMARK_MODELS: ${{ inputs.models }}
           BENCHMARK_TASK: ${{ inputs.task }}
+          BENCHMARK_CONCURRENCY: ${{ inputs.concurrency }}
+          BENCHMARK_TRIALS: ${{ inputs.trials }}
         run: |
           if [ "$BENCHMARK_TASK" = "ALL" ]; then
             python3 scripts/apinex-benchmark/run_all_tasks.py \
               --models "$BENCHMARK_MODELS" \
+              --confirm-all \
+              --concurrency "$BENCHMARK_CONCURRENCY" \
+              --trials "$BENCHMARK_TRIALS" \
               --output-dir benchmark-results
           else
             python3 scripts/apinex-benchmark/run_batch.py \
               --models "$BENCHMARK_MODELS" \
               --task "$BENCHMARK_TASK" \
+              --concurrency "$BENCHMARK_CONCURRENCY" \
+              --trials "$BENCHMARK_TRIALS" \
               --output-dir benchmark-results
           fi
-      - name: Upload individual JSON and combined summaries
+      - name: Upload individual JSON and task summary
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: apinex-celestia-batch-${{ inputs.task }}-${{ github.run_id }}
+          name: apinex-celestia-task-${{ inputs.task }}-${{ github.run_id }}
           path: benchmark-results/
           if-no-files-found: warn
           retention-days: 14
