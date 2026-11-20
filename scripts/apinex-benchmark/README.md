@@ -75,9 +75,12 @@ Reports distinguish:
 - planned model/task/trial requests;
 - result rows reported;
 - logical model/task/trial requests that actually sent at least one API call;
-- requests not attempted;
+- known skipped-before-send workers;
+- unknown/unreported results where the runner could not confirm whether a request was sent;
 - physical API attempts, including retries;
-- successful, failed-after-send, and skipped-before-send results.
+- successful, failed-after-send, skipped-before-send, and unknown-accounting results.
+
+A missing result file or runner exception is classified as **unknown**, not as a confirmed skip. A worker with a result showing `api_attempt_count=0` is a confirmed skip. This keeps the request accounting honest even when the runner crashes mid-request.
 
 API-reported prompt/completion/total tokens and estimated weighted tokens are recorded. Dashboard allowance before/after and actual debit remain null because the runner cannot independently verify those values through this API; check the APInex dashboard separately.
 
