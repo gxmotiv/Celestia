@@ -133,6 +133,20 @@ class ParallelDispatchTests(unittest.TestCase):
         self.assertEqual({row["trial"] for row in results.values()}, {1, 2, 3})
 
 
+class PromptHashTests(unittest.TestCase):
+    def test_prompt_hashes_are_stable_and_sensitive_to_schema_changes(self):
+        system = "system rules"
+        task = "task prompt"
+        schema = {"type": "object", "required": ["answer"]}
+        first = runner.benchmark_prompt_hashes(system, task, schema)
+        second = runner.benchmark_prompt_hashes(system, task, {"required": ["answer"], "type": "object"})
+        changed = runner.benchmark_prompt_hashes(system, task, {"type": "object", "required": ["answer", "reason"]})
+        self.assertEqual(first, second)
+        self.assertEqual(first["system_prompt_sha256"], runner.sha256_text(system))
+        self.assertNotEqual(first["prompt_bundle_sha256"], changed["prompt_bundle_sha256"])
+        self.assertEqual(len(first["prompt_bundle_sha256"]), 64)
+
+
 class RequestAccountingTests(unittest.TestCase):
     def test_accounting_separates_sent_skipped_and_unknown_trials(self):
         rows = [
