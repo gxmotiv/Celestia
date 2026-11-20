@@ -15,7 +15,7 @@ on:
         default: D
         options: [D, A, B, C, E, ALL]
       confirm_api_call:
-        description: "Required: confirms one APInex request per selected model; ALL means 60 requests with 12 models"
+        description: "Required: confirms one request per selected model/task pair; ALL means 60 requests with 12 models"
         required: true
         type: boolean
         default: false
