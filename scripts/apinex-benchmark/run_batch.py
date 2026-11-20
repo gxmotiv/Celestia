@@ -98,6 +98,7 @@ def main():
             summary["results"].append({
                 "model_alias": alias,
                 "returned_model": result.get("returned_model"),
+                "routing_status": result.get("routing_status", "unverified"),
                 "status": result.get("status", "unknown"),
                 "http_status": result.get("http_status"),
                 "finish_reason": result.get("finish_reason"),
