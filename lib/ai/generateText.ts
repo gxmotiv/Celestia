@@ -54,7 +54,8 @@ function readUsage(value: unknown): CelestiaAIUsage | undefined {
 }
 
 async function generateWithApinex(apiKey: string, model: string, options: Required<Pick<GenerateTextOptions, "systemPrompt" | "userPrompt" | "maxOutputTokens" | "temperature">>, reasoningEffort?: "low" | "medium" | "high"): Promise<CelestiaAIResult> {
-  const baseUrl = (process.env.APINEX_BASE_URL?.trim() || "https://api.apinex.bond/v1").replace(/\\/+$/, "");
+  let baseUrl = process.env.APINEX_BASE_URL?.trim() || "https://api.apinex.bond/v1";
+  while (baseUrl.endsWith("/")) baseUrl = baseUrl.slice(0, -1);
   const response = await fetch(baseUrl + "/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
