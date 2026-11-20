@@ -192,7 +192,7 @@ def main():
         "max_parallel_requests": effective_concurrency,
         "minimum_request_interval_seconds": minimum_interval,
         "rate_limit_policy": "Globally pace every API attempt, including retries, to leave headroom under the documented APInex Free-tier limit.",
-        "automatic_retries_policy": "At most two retries for transient HTTP 429/502/503/504 responses per model request.",
+        "automatic_retries_policy": "At most two retries for HTTP 502/503/504; HTTP 429 is recorded without automatic retry.",
         "selected_models": aliases,
         "request_count_planned": len(aliases),
         "request_count_attempted": 0,
