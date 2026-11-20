@@ -82,6 +82,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", required=True, choices=sorted(CONFIG["models"]))
     parser.add_argument("--task", required=True, choices=sorted(CONFIG["tasks"]))
+    parser.add_argument("--trial", type=int, default=1, choices=(1, 2, 3, 4, 5))
     parser.add_argument("--output-dir", default="benchmark-results")
     args = parser.parse_args()
 
@@ -124,6 +125,7 @@ def main():
         "requested_model_id": model["id"],
         "catalogue_allowance_weight": model["weight"],
         "task": args.task,
+        "trial": args.trial,
         "max_output_tokens": cap,
         "temperature": 0,
         "automatic_retries": 0,
@@ -260,7 +262,7 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     stamp = timestamp.strftime("%Y%m%dT%H%M%S%fZ")
     safe_model = re.sub(r"[^a-z0-9-]", "-", args.model.lower())
-    out_path = out_dir / f"{stamp}_{safe_model}_{args.task}.json"
+    out_path = out_dir / f"{stamp}_{safe_model}_{args.task}_trial{args.trial}.json"
     out_path.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print("Benchmark request completed.")
     print("Model:", model["id"])
