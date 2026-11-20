@@ -629,7 +629,7 @@ assertTest(
   "28.1 D60 Sign Conventions",
   "Both explicitly selectable BPHS sign-count readings map every half-degree part across all 12 signs",
   d60SignPass,
-  "2,856 midpoint, exact-start and just-before-boundary mappings pass",
+  "4,296 midpoint, exact-start and just-before-boundary mappings pass",
   d60SignPass ? `${d60SignChecks} mappings passed` : "At least one D60 sign mapping failed"
 );
 
