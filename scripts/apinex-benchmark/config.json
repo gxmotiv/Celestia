@@ -1019,7 +1019,7 @@
     "all_tasks_option": true,
     "all_tasks_execution": "ten task batches sequentially; selected models run concurrently subject to the global five-second request-attempt schedule",
     "reasoning_effort": "not_set_provider_default",
-    "note": "One task with 12 models schedules 12 first-pass requests. ALL schedules 120 first-pass requests over approximately 10 minutes before response time and any retries. Every first-pass and retry API attempt shares the same request-pacing file.",
+    "note": "With 12 models, one task plans 12 first-pass requests per trial; ALL plans 120 per trial. The supported 1/3/5 trials therefore plan 120/360/600 first-pass requests for ALL. Every first attempt and retry shares the global five-second request schedule.",
     "default_trials_per_model_task": 1,
     "allowed_trials_per_model_task": [
       1,
