@@ -225,15 +225,24 @@ def main():
             if log.strip():
                 print(f"\n--- {alias} (trial {trial}) ---\n{log.rstrip()}")
             summary["results"].append(row)
-            summary["request_count_attempted"] += 1
+            if int(row.get("api_attempt_count") or 0) > 0:
+                summary["request_count_attempted"] += 1
             summary["automatic_retries"] += int(row.get("automatic_retries") or 0)
 
+    summary["request_count_reported"] = len(summary["results"])
+    summary["request_count_not_attempted"] = summary["request_count_planned"] - summary["request_count_attempted"]
     summary["api_attempt_count_reported"] = sum(
         int(item.get("api_attempt_count") or 0) for item in summary["results"]
     )
     successes = sum(1 for item in summary["results"] if item.get("status") == "success")
     summary["success_count"] = successes
-    summary["failure_count"] = len(summary["results"]) - successes
+    summary["failure_count"] = sum(
+        1 for item in summary["results"]
+        if int(item.get("api_attempt_count") or 0) > 0 and item.get("status") != "success"
+    )
+    summary["skipped_count"] = sum(
+        1 for item in summary["results"] if int(item.get("api_attempt_count") or 0) == 0
+    )
     summary["finished_at_utc"] = dt.datetime.now(dt.timezone.utc).isoformat()
     expected_results = summary["request_count_planned"]
     summary["overall_status"] = (
@@ -253,7 +262,9 @@ def main():
         f"- Overall: {summary['overall_status']} ({successes}/{expected_results} successful)",
         f"- Trials per model/task: {args.trials}",
         f"- Planned / attempted model-task-trials: {summary['request_count_planned']} / {summary['request_count_attempted']}",
-        f"- Actual API attempts (including retries): {summary['api_attempt_count_reported']}",
+        f"- Reported result rows / not attempted: {summary['request_count_reported']} / {summary['request_count_not_attempted']}",
+        f"- API attempts including retries: {summary['api_attempt_count_reported']}",
+        f"- Failed after sending / skipped before sending: {summary['failure_count']} / {summary['skipped_count']}",
         f"- Automatic transient retries: {summary['automatic_retries']}",
         "",
         "| Model | Status | Routing | JSON/schema | HTTP | API latency (s) | Pacing wait (s) | Completion tokens | Retries |",
