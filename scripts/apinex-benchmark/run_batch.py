@@ -129,9 +129,10 @@ def main():
     except ValueError as exc:
         print("ERROR:", str(exc), file=sys.stderr)
         return 2
-    if args.concurrency < 1 or args.concurrency > min(12, len(aliases)):
-        print(f"ERROR: concurrency must be between 1 and {min(12, len(aliases))}.", file=sys.stderr)
+    if args.concurrency < 1 or args.concurrency > 12:
+        print("ERROR: concurrency must be between 1 and 12.", file=sys.stderr)
         return 2
+    effective_concurrency = min(args.concurrency, len(aliases))
     if not os.environ.get("APINEX_API_KEY", "").strip():
         print("ERROR: APINEX_API_KEY is not configured; no requests sent.", file=sys.stderr)
         return 2
@@ -147,7 +148,7 @@ def main():
         "task": args.task,
         "task_name": task_name,
         "execution": "parallel_models_one_task",
-        "max_parallel_requests": args.concurrency,
+        "max_parallel_requests": effective_concurrency,
         "automatic_retries_policy": "At most two retries for transient HTTP 429/502/503/504 responses per model request.",
         "selected_models": aliases,
         "request_count_planned": len(aliases),
@@ -158,11 +159,11 @@ def main():
     }
 
     print(f"Task {args.task}: {task_name}")
-    print(f"Starting {len(aliases)} model request(s) with concurrency {args.concurrency}.")
+    print(f"Starting {len(aliases)} model request(s) with concurrency {effective_concurrency}.")
     print("Every selected model receives the same task prompt and task-specific output schema.", flush=True)
 
     rows_by_alias = {}
-    with concurrent.futures.ThreadPoolExecutor(max_workers=args.concurrency) as pool:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=effective_concurrency) as pool:
         future_to_alias = {
             pool.submit(run_one_model, alias, args.task, out_dir): alias
             for alias in aliases
@@ -207,7 +208,7 @@ def main():
         "# APInex parallel task benchmark",
         "",
         f"- Task: {args.task} — {task_name}",
-        f"- Execution: parallel model requests (concurrency {args.concurrency})",
+        f"- Execution: parallel model requests (concurrency {effective_concurrency})",
         f"- Overall: {summary['overall_status']} ({successes}/{len(aliases)} successful)",
         f"- Planned / attempted requests: {summary['request_count_planned']} / {summary['request_count_attempted']}",
         f"- Automatic transient retries: {summary['automatic_retries']}",
