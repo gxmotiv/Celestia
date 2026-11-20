@@ -70,6 +70,7 @@ For every model/task, report:
 
 - planned, attempted, successful, failed, confirmed skipped-before-send, and unknown/unreported requests;
 - requested and returned model IDs plus routing classification;
+- system prompt, task prompt, response schema, and combined prompt SHA-256 fingerprints;
 - HTTP status, finish reason, response-validation result, and truncation classification;
 - API latency, total elapsed time, deliberate pacing wait, retry wait, and retry count;
 - prompt/completion/total tokens and estimated weighted tokens;
