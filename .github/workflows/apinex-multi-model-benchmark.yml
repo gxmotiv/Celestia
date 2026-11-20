@@ -15,7 +15,7 @@ on:
         default: D
         options: [D, A, B, C, E, F, G, ALL]
       confirm_api_call:
-        description: "Required: confirms one APInex request per selected model"
+        description: "Required: confirms one APInex request per selected model; ALL means 84 requests with 12 models"
         required: true
         type: boolean
         default: false
@@ -23,7 +23,6 @@ on:
 permissions:
   contents: read
 
-# Share the lock with the single-model workflow to avoid overlapping APInex runs.
 concurrency:
   group: apinex-celestia-benchmark
   cancel-in-progress: false
@@ -46,21 +45,27 @@ jobs:
         run: python3 --version
       - name: Validate benchmark runner and response-schema tests
         run: python3 -m unittest discover -s scripts/apinex-benchmark/tests -v
-      - name: Run selected models and tasks sequentially (transient gateway retries only)
+      - name: Run selected models and tasks sequentially
         env:
           APINEX_API_KEY: ${{ secrets.APINEX_API_KEY }}
           BENCHMARK_MODELS: ${{ inputs.models }}
           BENCHMARK_TASK: ${{ inputs.task }}
         run: |
-          python3 scripts/apinex-benchmark/run_batch.py \
-            --models "$BENCHMARK_MODELS" \
-            --task "$BENCHMARK_TASK" \
-            --output-dir benchmark-results
+          if [ "$BENCHMARK_TASK" = "ALL" ]; then
+            python3 scripts/apinex-benchmark/run_all_tasks.py \
+              --models "$BENCHMARK_MODELS" \
+              --output-dir benchmark-results
+          else
+            python3 scripts/apinex-benchmark/run_batch.py \
+              --models "$BENCHMARK_MODELS" \
+              --task "$BENCHMARK_TASK" \
+              --output-dir benchmark-results
+          fi
       - name: Upload individual JSON and combined summaries
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: apinex-celestia-batch-${{ inputs.task }}-${{ github.run_id }}
-          path: benchmark-results/**/*\n          include-hidden-files: true
+          path: benchmark-results/
           if-no-files-found: warn
           retention-days: 14
