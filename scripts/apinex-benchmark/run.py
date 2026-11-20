@@ -77,6 +77,8 @@ def main():
                   "estimated_weighted_tokens": None, "dashboard_allowance_before": None,
                   "dashboard_allowance_after": None, "actual_allowance_deducted": None},
         "returned_model": None,
+        "routing_status": "unverified",
+        "response_metadata": {},
         "finish_reason": None,
         "response_text": None,
         "error": None
@@ -115,6 +117,8 @@ def main():
             content = "\n".join(str(part.get("text", "")) for part in content if isinstance(part, dict))
         result["response_text"] = content if isinstance(content, str) else json.dumps(content, ensure_ascii=False)
         result["returned_model"] = data.get("model")
+        result["routing_status"] = "exact_match" if result["returned_model"] == model["id"] else ("mismatch" if result["returned_model"] else "missing_returned_model")
+        result["response_metadata"] = {k: data[k] for k in ("id", "object", "created", "system_fingerprint") if isinstance(data.get(k), (str, int, float, bool))}
         result["finish_reason"] = choice.get("finish_reason")
         usage = data.get("usage") or {}
         for source, target in (("prompt_tokens","prompt_tokens"),("completion_tokens","completion_tokens"),("total_tokens","total_tokens")):
@@ -134,6 +138,8 @@ def main():
             result["status"] = "invalid_json"
         elif not result["response_validation"]["valid"]:
             result["status"] = "schema_invalid"
+        elif result["routing_status"] != "exact_match":
+            result["status"] = "routing_unverified" if result["routing_status"] == "missing_returned_model" else "model_id_mismatch"
         else:
             result["status"] = "success"
     except urllib.error.HTTPError as exc:
