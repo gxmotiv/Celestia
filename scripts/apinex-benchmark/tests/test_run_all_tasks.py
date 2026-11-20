@@ -9,7 +9,7 @@ SPEC.loader.exec_module(MODULE)
 
 
 class AllTasksSummaryTests(unittest.TestCase):
-    def test_combines_all_configured_tasks_and_counts_results(self):
+    def test_combines_all_ten_configured_atomic_tasks_and_counts_results(self):
         summaries = {
             task: {
                 "success_count": 1,
@@ -19,20 +19,28 @@ class AllTasksSummaryTests(unittest.TestCase):
             for task in MODULE.TASKS
         }
         combined = MODULE.build_combined_summary(summaries, ["model-a"])
-        self.assertEqual(combined["tasks"], ["A", "B", "C", "D", "E"])
-        self.assertEqual(combined["request_count_planned"], 5)
-        self.assertEqual(combined["request_count_reported"], 5)
-        self.assertEqual(combined["success_count"], 5)
+        self.assertEqual(combined["tasks"], list("ABCDEFGHIJ"))
+        self.assertEqual(combined["request_count_planned"], 10)
+        self.assertEqual(combined["request_count_reported"], 10)
+        self.assertEqual(combined["success_count"], 10)
         self.assertEqual(combined["failure_count"], 0)
         self.assertEqual(combined["overall_status"], "success")
         self.assertEqual({row["task"] for row in combined["results"]}, set(MODULE.TASKS))
+
+    def test_full_twelve_model_suite_would_require_120_requests(self):
+        combined = MODULE.build_combined_summary({}, [f"model-{i}" for i in range(12)])
+        self.assertEqual(combined["request_count_planned"], 120)
+        self.assertEqual(combined["request_count_reported"], 0)
+        self.assertNotEqual(combined["overall_status"], "success")
 
     def test_missing_or_failed_results_cannot_be_reported_as_success(self):
         summaries = {
             task: {"results": [{"model_alias": "model-a", "status": "success"}]}
             for task in MODULE.TASKS[:-1]
         }
-        summaries[MODULE.TASKS[-1]] = {"results": [{"model_alias": "model-a", "status": "invalid_json"}]}
+        summaries[MODULE.TASKS[-1]] = {
+            "results": [{"model_alias": "model-a", "status": "invalid_json"}]
+        }
         combined = MODULE.build_combined_summary(summaries, ["model-a"])
         self.assertEqual(combined["success_count"], len(MODULE.TASKS) - 1)
         self.assertEqual(combined["failure_count"], 1)
