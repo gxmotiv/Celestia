@@ -65,6 +65,7 @@ def build_combined_summary(task_summaries, models, concurrency=12, trials=1, sto
         "max_parallel_models_per_task": concurrency,
         "trials_per_model_task": trials,
         "min_request_interval_seconds": CONFIG.get("execution_policy", {}).get("min_request_interval_seconds", 5.0),
+        "reasoning_effort_policy": CONFIG.get("execution_policy", {}).get("reasoning_effort", "not_set_provider_default"),
         "session_directory": session_directory,
         "tasks": TASKS,
         "selected_models": models,
