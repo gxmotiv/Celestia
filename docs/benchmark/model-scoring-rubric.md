@@ -68,7 +68,7 @@ A critical fail must be shown beside the numeric score and must not be averaged 
 
 For every model/task, report:
 
-- planned, attempted, successful, failed, and skipped requests;
+- planned, attempted, successful, failed, confirmed skipped-before-send, and unknown/unreported requests;
 - requested and returned model IDs plus routing classification;
 - HTTP status, finish reason, response-validation result, and truncation classification;
 - API latency, total elapsed time, deliberate pacing wait, retry wait, and retry count;
@@ -76,7 +76,7 @@ For every model/task, report:
 - rate-limit diagnostics when supplied by the gateway;
 - number of valid samples and any critical-failure flag.
 
-A rate-limit, authentication, quota, network, or upstream-server error belongs in reliability reporting. It must not be silently converted into a zero-quality answer.
+A rate-limit, authentication, quota, network, or upstream-server error belongs in reliability reporting. It must not be silently converted into a zero-quality answer. A missing result or worker crash is an unknown accounting outcome, not a confirmed skip or a confirmed model failure.
 
 ## Ranking policy
 
@@ -85,7 +85,7 @@ A rate-limit, authentication, quota, network, or upstream-server error belongs i
 3. Do not automatically average the ten task scores. They measure different constructs, and an arbitrary aggregate can hide an important weakness.
 4. If a project-level aggregate is later needed, declare task weights before examining finalist results, explain how the weights reflect Celestia's actual product priorities, and show all individual task scores beside the aggregate.
 5. A model with a critical failure should not be named the overall project winner, regardless of its numeric average.
-6. For close rankings, repeat finalists on identical prompts and report dispersion or confidence intervals appropriate to the number of trials. Temperature 0 does not eliminate all run-to-run variation.
+6. The workflow supports 1, 3, or 5 trials per model/task. Use 1 as an initial screen and 3 or 5 for finalist comparisons. For close rankings, repeat finalists on identical prompts and report dispersion or confidence intervals appropriate to the number of trials. Temperature 0 does not eliminate all run-to-run variation.
 7. APInex catalogue weights estimate allowance usage only; they are not model-quality weights.
 
 ## Protocol and interpretation limits
