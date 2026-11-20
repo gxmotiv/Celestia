@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateCelestiaText } from "@/lib/ai/generateText";
+import { isCelestiaAIModelId } from "@/lib/ai/modelCatalog";
 
 export async function POST(req: NextRequest) {
   try {
     const payload = await req.json();
+    if (payload?.model !== undefined && !isCelestiaAIModelId(payload.model)) {
+      return NextResponse.json({ error: "The selected AI model is not supported." }, { status: 400 });
+    }
     // Accept the live cockpit contract and legacy field names during migration.
     const seekerName = payload?.seekerName ?? payload?.name ?? "Querent";
     const question = String(payload?.query ?? payload?.question ?? "").slice(0, 2000);
@@ -44,6 +48,7 @@ Keep the answer focused, practical, respectful, and structured. If essential cha
         userPrompt,
         maxOutputTokens: 2048,
         modelTier: "reasoning",
+        ...(payload?.model ? { model: payload.model } : {}),
       });
       return NextResponse.json({
         success: true,
