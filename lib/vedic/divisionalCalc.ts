@@ -91,7 +91,7 @@ export type D60SignConvention = "from-sign" | "from-aries";
 export interface DivisionalChartOptions {
   /**
    * BPHS 6.33 has a literal Aries-count reading; some software/lineages count
-   * the remainder from the occupied sign. Default retained for compatibility.
+   * the remainder from the occupied sign. Default: from-sign.
    */
   d60SignConvention?: D60SignConvention;
 }
