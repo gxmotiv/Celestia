@@ -2,7 +2,7 @@
 """APInex benchmark request runner with paced, bounded transient retries; never prints secrets."""
 import argparse, datetime as dt, email.utils, json, os, pathlib, random, re, sys, time, urllib.error, urllib.request
 from response_validation import validate_response
-from request_pacing import wait_for_request_slot
+from request_pacing import BenchmarkHaltedError, mark_request_schedule_halted, wait_for_request_slot
 
 ROOT = pathlib.Path(__file__).resolve().parent
 CONFIG = json.loads((ROOT / "config.json").read_text(encoding="utf-8"))
@@ -220,6 +220,14 @@ def main():
         )
     except urllib.error.HTTPError as exc:
         result["http_status"] = exc.code
+        if exc.code in (401, 402, 403, 429):
+            try:
+                mark_request_schedule_halted(
+                    os.environ.get("APINEX_BENCHMARK_PACING_FILE"),
+                    "HTTP " + str(exc.code) + " from " + args.model + " on task " + args.task,
+                )
+            except Exception as halt_exc:
+                result["pacing_halt_error"] = type(halt_exc).__name__ + ": " + str(halt_exc)[:200]
         # Extract only short, non-secret diagnostic fields from the gateway error.
         # Never print request headers, credentials, or an unrestricted response body.
         detail = ""
@@ -245,6 +253,9 @@ def main():
             detail = ""
         result["error"] = "HTTP error " + str(exc.code) + ": " + exc.reason + ((" — " + detail) if detail else "")
         result["status"] = "http_error"
+    except BenchmarkHaltedError as exc:
+        result["error"] = "No API request sent; shared safety guard stopped this queued worker: " + str(exc)[:300]
+        result["status"] = "skipped_after_shared_guard"
     except urllib.error.URLError as exc:
         result["error"] = "Network error: " + str(exc.reason)
         result["status"] = "network_error"
