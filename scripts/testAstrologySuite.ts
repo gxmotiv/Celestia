@@ -617,6 +617,11 @@ for (const convention of d60Conventions) {
       if (calculateDivisionalSignIndex(midpoint, "D60", { d60SignConvention: convention }) !== expected) d60SignPass = false;
       if (calculateDivisionalSignIndex(natal * 30 + part * 0.5, "D60", { d60SignConvention: convention }) !== expected) d60SignPass = false;
       d60SignChecks += 2;
+      if (part > 0) {
+        const previous = convention === "from-aries" ? (part - 1) % 12 : (natal + (part - 1) % 12) % 12;
+        if (calculateDivisionalSignIndex(natal * 30 + part * 0.5 - 1e-7, "D60", { d60SignConvention: convention }) !== previous) d60SignPass = false;
+        d60SignChecks++;
+      }
     }
   }
 }
@@ -624,7 +629,7 @@ assertTest(
   "28.1 D60 Sign Conventions",
   "Both explicitly selectable BPHS sign-count readings map every half-degree part across all 12 signs",
   d60SignPass,
-  "1,440 midpoint and exact-start mappings pass",
+  "2,856 midpoint, exact-start and just-before-boundary mappings pass",
   d60SignPass ? `${d60SignChecks} mappings passed` : "At least one D60 sign mapping failed"
 );
 
