@@ -39,6 +39,8 @@ Each D60 segment spans 0.5° of the natal sign. The ascendant can change segment
 - [Phaladeepika, V. Subrahmanya Sastri 1950 edition, Chapter 3](https://www.wisdomlib.org/hinduism/book/phaladeepika-by-mantreswara-text-and-translation/d/doc1621575.html)
 - [BPHS Chapter 7, verses 7.6–8](https://vedicpupil.in/library/books/brihat-parashara-hora-shastra/chapter-7)
 - [Comparative discussion of D60 textual variants](https://srivarahamihira.medium.com/shashti%C4%81%C5%84%C5%9Ba-1-nature-of-the-shastiamsa-devatas-65d575940a24)
+- [Cosmic Squares D60 calculator and calculation notes](https://www.cosmicsquares.com/free-horoscope/shastiamsa-chart)
+- [Swarn Siddhi D60 calculator: birth-time sensitivity discussion](https://swarnsiddhi.com/d60-chart-calculator)
 
 
 ## User-entered D60 ascendant time-range sampling
@@ -47,7 +49,7 @@ The Vedic chart now accepts a user-selected uncertainty range (±1, ±2, ±5, ±
 
 Important boundaries:
 - The interval is supplied by the user; Celestia does not infer the accuracy of a birth certificate or rectify the time.
-- The output is a sampled set, not a proof that no shorter intermediate placement occurred between sample points.
+- The output is a sampled set, not a proof that no shorter intermediate placement occurred between sample points. It currently checks the D60 ascendant only; planet D60 placements remain calculated at the recorded birth time.
 - High-latitude rising motion can be unusually uneven and receives an explicit caution. The numeric timezone offset supplied with the birth data is held constant across the interval; historical DST or civil-time transitions are not inferred.
 - The check reuses Celestia's existing ascendant calculation. It is not independent validation against Swiss Ephemeris or another external reference implementation.
 - A single observed placement means stable across the samples, not proof that the true birth time is correct.
