@@ -94,8 +94,11 @@ export function VedicKundliChart({
     if (
       !birthDate ||
       !birthTime ||
+      typeof latitude !== "number" ||
       !Number.isFinite(latitude) ||
+      typeof longitude !== "number" ||
       !Number.isFinite(longitude) ||
+      typeof timezoneOffset !== "number" ||
       !Number.isFinite(timezoneOffset)
     ) {
       return { error: "Birth date, time, coordinates and numeric timezone offset are required.", summary: null, highLatitude: false };
