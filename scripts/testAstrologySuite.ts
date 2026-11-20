@@ -788,6 +788,13 @@ const angularDifference = (actual: number, expected: number) =>
   Math.abs(((actual - expected + 540) % 360) - 180);
 const noNutationAyanamsa = calculateLahiriAyanamsa(independentReferenceWestern.julianDay);
 const referenceNutationDelta = 23.720706 - 23.717417;
+assertTest(
+  "31.0 Independent UTC Conversion",
+  "12:00 IST on 1 January 1990 is converted to 06:30 UT",
+  Math.abs(independentReferenceWestern.julianDay - 2447892.7708333335) < 1e-7,
+  "JD 2447892.7708333335",
+  independentReferenceWestern.julianDay.toFixed(9)
+);
 const adjustedExpected = {
   ascendant: 343.922640 + referenceNutationDelta,
   sun: 256.859923 + referenceNutationDelta,
