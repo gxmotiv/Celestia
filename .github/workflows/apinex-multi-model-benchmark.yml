@@ -55,7 +55,7 @@ jobs:
         run: python3 -m unittest discover -s scripts/apinex-benchmark/tests -v
       - name: Validate ten atomic tasks and routing checks
         run: python3 -m unittest discover -s scripts/apinex-benchmark -p 'test_benchmark_v2.py' -v
-      - name: Run all selected models concurrently on the one selected task
+      - name: Run selected task or full suite with bounded model concurrency
         env:
           APINEX_API_KEY: ${{ secrets.APINEX_API_KEY }}
           BENCHMARK_MODELS: ${{ inputs.models }}
