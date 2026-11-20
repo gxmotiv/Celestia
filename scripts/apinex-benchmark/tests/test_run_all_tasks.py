@@ -64,7 +64,8 @@ class AllTasksSummaryTests(unittest.TestCase):
             skipped_tasks=skipped,
         )
         self.assertEqual(combined["request_count_planned"], 10)
-        self.assertEqual(combined["request_count_reported"], 2)
+        self.assertEqual(combined["request_count_reported"], 10)
+        self.assertEqual(combined["request_count_attempted"], 2)
         self.assertEqual(combined["request_count_not_attempted"], 8)
         self.assertEqual(combined["request_count_unknown"], 0)
         self.assertEqual(combined["request_count_reported"], 10)
