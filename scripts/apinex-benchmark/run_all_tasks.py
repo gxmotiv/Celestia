@@ -9,14 +9,8 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent
 BATCH_RUNNER = ROOT / "run_batch.py"
+CONFIG = json.loads((ROOT / "config.json").read_text(encoding="utf-8"))
 TASKS = ["A", "B", "C", "D", "E", "F", "G"]
-
-
-def collect_task_summary(task_dir, task):
-    summaries = sorted(task_dir.glob(f"*_batch_{task}_summary.json"))
-    if not summaries:
-        return None
-    return json.loads(summaries[-1].read_text(encoding="utf-8"))
 
 
 def build_combined_summary(task_summaries, models):
@@ -50,8 +44,14 @@ def main():
     parser.add_argument("--output-dir", default="benchmark-results")
     args = parser.parse_args()
     models = [part.strip() for part in args.models.split(",") if part.strip()]
-    if not models or len(set(models)) != len(models):
-        print("ERROR: model list must be non-empty and contain no duplicates.", file=sys.stderr)
+    unknown = [model for model in models if model not in CONFIG["models"]]
+    if not models or len(set(models)) != len(models) or unknown:
+        print("ERROR: provide a non-empty, duplicate-free list of configured model aliases.", file=sys.stderr)
+        if unknown:
+            print("Unknown model aliases: " + ", ".join(unknown), file=sys.stderr)
+        return 2
+    if not __import__("os").environ.get("APINEX_API_KEY", "").strip():
+        print("ERROR: APINEX_API_KEY is not configured; no requests sent.", file=sys.stderr)
         return 2
 
     out_dir = pathlib.Path(args.output_dir)
@@ -62,13 +62,14 @@ def main():
     for index, task in enumerate(TASKS, start=1):
         task_dir = out_dir / task
         task_dir.mkdir(parents=True, exist_ok=True)
-        print(f"\\n========== TASK {task} ({index}/{len(TASKS)}) ==========", flush=True)
+        print(f"\n========== TASK {task} ({index}/{len(TASKS)}) ==========", flush=True)
         completed = subprocess.run(
             [sys.executable, str(BATCH_RUNNER), "--models", args.models,
              "--task", task, "--output-dir", str(task_dir)],
             check=False,
         )
-        summary = collect_task_summary(task_dir, task)
+        summaries = sorted(task_dir.glob(f"*_batch_{task}_summary.json"))
+        summary = json.loads(summaries[-1].read_text(encoding="utf-8")) if summaries else None
         if summary is None:
             any_failure = True
             task_summaries[task] = {
@@ -85,7 +86,7 @@ def main():
     stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     json_path = out_dir / f"{stamp}_all_tasks_summary.json"
     md_path = out_dir / f"{stamp}_all_tasks_summary.md"
-    json_path.write_text(json.dumps(combined, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+    json_path.write_text(json.dumps(combined, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     lines = [
         "# APInex Celestia — all tasks benchmark",
@@ -105,8 +106,8 @@ def main():
         summary = task_summaries.get(task) or {}
         lines.append(f"| {task} | {summary.get('success_count', 0)} | {summary.get('failure_count', 0)} |")
     lines.extend(["", "Individual JSON files and per-task summaries are stored in their task subdirectories."])
-    md_path.write_text("\\n".join(lines) + "\\n", encoding="utf-8")
-    print(f"\\nAll-task benchmark: {combined['success_count']}/{combined['request_count_planned']} successful.")
+    md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(f"\nAll-task benchmark: {combined['success_count']}/{combined['request_count_planned']} successful.")
     print("Combined JSON:", json_path)
     print("Combined Markdown:", md_path)
     return 1 if any_failure or combined["overall_status"] != "success" else 0
