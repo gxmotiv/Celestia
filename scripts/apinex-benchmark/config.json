@@ -235,7 +235,7 @@
       }
     },
     "F": {
-      "max_tokens": 1200,
+      "max_tokens": 3200,
       "prompt": "TASK F — RESEARCH AND EVIDENCE QUALITY\n\nCelestia has a calculation app and a separate prediction-research platform. It may evaluate traditional astrology techniques, prediction rules, relationship indicators, timing systems, and numerology. No research dataset, bibliography, preregistered hypothesis, or validation result is supplied.\n\nTasks:\n1. Distinguish traditional textual authority, modern interpretation, anecdote, retrospective pattern matching, observational statistical evidence, and prospective out-of-sample validation.\n2. Design source records: author, title, publication date, tradition, edition, page/section, URL/identifier, supported claim.\n3. Explain selection bias, confirmation bias, multiple comparisons, and flexible interpretation.\n4. Design preregistered evaluation for a prediction claim.\n5. Include controls, blinded evaluation, fixed outcomes, missing-data handling, train/test separation, independent replication.\n6. Prevent heuristic confidence from being presented as calibrated probability.\n7. Define user-facing language for uncertain/disputed/unsupported claims.\n8. Do not invent books, quotations, studies, results, or citations.\n\nReturn JSON:\n{\"evidence_levels\":[{\"level\":\"\",\"definition\":\"\",\"what_it_can_support\":\"\",\"what_it_cannot_support\":\"\"}],\"source_record_schema\":[],\"bias_and_failure_modes\":[],\"prospective_validation_protocol\":[],\"confidence_score_policy\":[],\"user_facing_disclosure_policy\":[],\"claims_not_supported_by_current_evidence\":[]}",
       "response_schema": {
         "type": "object",
