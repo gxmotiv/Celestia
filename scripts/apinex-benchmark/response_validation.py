@@ -73,4 +73,22 @@ def validate_response(task, response_text, config):
         return {"valid": False, "format": "schema_missing", "errors": [f"No response schema configured for task {task}."]}
     errors = []
     _validate(parsed, schema, "$", errors)
+    if task == "J" and not errors:
+        expected = {
+            "Ascendant": ("Pisces", 13.925929, 343.925929),
+            "Sun": ("Sagittarius", 16.863212, 256.863212),
+            "Moon": ("Aquarius", 6.468547, 306.468547),
+            "Rahu": ("Capricorn", 24.729703, 294.729703),
+        }
+        positions = parsed["positions"]
+        for body, (sign, degree, longitude) in expected.items():
+            actual = positions[body]
+            if actual["sign"] != sign:
+                errors.append(f"$.positions.{body}.sign: expected {sign}")
+            if abs(actual["degree_in_sign"] - degree) > 0.0001:
+                errors.append(f"$.positions.{body}.degree_in_sign: outside 0.0001 degree tolerance")
+            if abs(actual["longitude_decimal"] - longitude) > 0.0000015:
+                errors.append(f"$.positions.{body}.longitude_decimal: does not preserve supplied fixture")
+        if abs(parsed["ayanamsha_difference_arcseconds"] - 11.8404) > 0.01:
+            errors.append("$.ayanamsha_difference_arcseconds: expected 11.8404 within 0.01 arcsecond")
     return {"valid": not errors, "format": "valid" if not errors else "schema_invalid", "errors": errors[:50]}
