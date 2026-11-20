@@ -1,0 +1,26 @@
+name: APInex Benchmark Harness Validation
+
+on:
+  pull_request:
+    paths:
+      - "scripts/apinex-benchmark/**"
+      - ".github/workflows/apinex-*-benchmark.yml"
+      - ".github/workflows/apinex-benchmark-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Python
+        run: python3 --version
+      - name: Run existing benchmark tests
+        run: python3 -m unittest discover -s scripts/apinex-benchmark/tests -v
+      - name: Run v2 routing and nested-schema tests
+        run: python3 -m unittest discover -s scripts/apinex-benchmark -p 'test_benchmark_v2.py' -v
+      - name: Validate benchmark configuration JSON
+        run: python3 -m json.tool scripts/apinex-benchmark/config.json > /dev/null

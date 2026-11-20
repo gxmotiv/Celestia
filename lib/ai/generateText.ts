@@ -83,7 +83,7 @@ async function generateWithApinex(apiKey: string, model: string, options: Requir
   }
   const text = body?.choices?.[0]?.message?.content;
   if (typeof text !== "string" || !text.trim()) throw new Error("APInex returned an empty or unsupported response.");
-  return { text: text.trim(), provider: "apinex", model: body?.model || model, usage: readUsage(body?.usage) };
+  return { text: text.trim(), provider: "apinex", model: body?.model || "unreported", usage: readUsage(body?.usage) };
 }
 
 async function generateWithFreeModel(
@@ -136,7 +136,7 @@ async function generateWithFreeModel(
   return {
     text: text.trim(),
     provider: "freemodel",
-    model: body?.model || model,
+    model: body?.model || "unreported",
     usage: readUsage(body?.usage),
   };
 }
@@ -194,7 +194,7 @@ async function generateWithNaraRouter(
   return {
     text: text.trim(),
     provider: "nararouter",
-    model: body?.model || model,
+    model: body?.model || "unreported",
     usage: readUsage(body?.usage),
   };
 }

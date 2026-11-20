@@ -9,7 +9,7 @@ SPEC.loader.exec_module(MODULE)
 
 
 class AllTasksSummaryTests(unittest.TestCase):
-    def test_combines_all_seven_tasks_and_counts_results(self):
+    def test_combines_all_configured_tasks_and_counts_results(self):
         summaries = {
             task: {
                 "success_count": 1,
@@ -19,10 +19,10 @@ class AllTasksSummaryTests(unittest.TestCase):
             for task in MODULE.TASKS
         }
         combined = MODULE.build_combined_summary(summaries, ["model-a"])
-        self.assertEqual(combined["tasks"], ["A", "B", "C", "D", "E", "F", "G"])
-        self.assertEqual(combined["request_count_planned"], 7)
-        self.assertEqual(combined["request_count_reported"], 7)
-        self.assertEqual(combined["success_count"], 7)
+        self.assertEqual(combined["tasks"], ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"])
+        self.assertEqual(combined["request_count_planned"], 10)
+        self.assertEqual(combined["request_count_reported"], 10)
+        self.assertEqual(combined["success_count"], 10)
         self.assertEqual(combined["failure_count"], 0)
         self.assertEqual(combined["overall_status"], "success")
         self.assertEqual({row["task"] for row in combined["results"]}, set(MODULE.TASKS))
@@ -32,9 +32,9 @@ class AllTasksSummaryTests(unittest.TestCase):
             task: {"results": [{"model_alias": "model-a", "status": "success"}]}
             for task in MODULE.TASKS[:-1]
         }
-        summaries["G"] = {"results": [{"model_alias": "model-a", "status": "invalid_json"}]}
+        summaries[MODULE.TASKS[-1]] = {"results": [{"model_alias": "model-a", "status": "invalid_json"}]}
         combined = MODULE.build_combined_summary(summaries, ["model-a"])
-        self.assertEqual(combined["success_count"], 6)
+        self.assertEqual(combined["success_count"], len(MODULE.TASKS) - 1)
         self.assertEqual(combined["failure_count"], 1)
         self.assertEqual(combined["overall_status"], "partial_success")
 

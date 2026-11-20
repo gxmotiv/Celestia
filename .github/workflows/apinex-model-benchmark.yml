@@ -26,7 +26,7 @@ on:
         required: true
         type: choice
         default: D
-        options: [D, A, B, C, E, F, G]
+        options: [D, A, B, C, E, F, G, H, I, J]
       confirm_api_call:
         description: "Set true only when you are ready to spend APInex free allowance on this ONE request"
         required: true
@@ -56,6 +56,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Verify Python
         run: python3 --version
+      - name: Validate benchmark harness before API request
+        run: python3 -m unittest discover -s scripts/apinex-benchmark -p 'test_*.py'
       - name: Run one selected model/task request
         env:
           APINEX_API_KEY: ${{ secrets.APINEX_API_KEY }}
