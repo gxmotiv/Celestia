@@ -50,7 +50,8 @@ def classify_response_status(response_text, completion_tokens, cap, finish_reaso
     reason = str(finish_reason or "").strip().lower()
     if reason in {"length", "max_tokens", "max_output_tokens"}:
         return "token_limit_exceeded"
-    if isinstance(completion_tokens, int) and completion_tokens >= cap:
+    if (isinstance(completion_tokens, int) and not isinstance(completion_tokens, bool)
+            and completion_tokens >= cap and reason not in {"stop", "end_turn", "completed"}):
         return "token_limit_suspected"
     if validation.get("format") == "invalid_json":
         return "invalid_json"
@@ -144,8 +145,8 @@ def main():
         "error": None
     }
     try:
-        # Retry only transient gateway/rate-limit responses. Never retry auth, model,
-        # validation, or other client errors. Two retries maximum; no blind retry loop.
+        # Retry only transient upstream 502/503/504 failures. A 429 is retained
+        # without retry so concurrent workers do not create a rate-limit retry storm.
         raw = None
         for attempt in range(3):
             pacing_wait = wait_for_request_slot(
