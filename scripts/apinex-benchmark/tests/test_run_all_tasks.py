@@ -19,10 +19,10 @@ class AllTasksSummaryTests(unittest.TestCase):
             for task in MODULE.TASKS
         }
         combined = MODULE.build_combined_summary(summaries, ["model-a"])
-        self.assertEqual(combined["tasks"], ["A", "B", "C", "D", "E", "F", "G", "H", "I"])
-        self.assertEqual(combined["request_count_planned"], 9)
-        self.assertEqual(combined["request_count_reported"], 9)
-        self.assertEqual(combined["success_count"], 9)
+        self.assertEqual(combined["tasks"], ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"])
+        self.assertEqual(combined["request_count_planned"], 10)
+        self.assertEqual(combined["request_count_reported"], 10)
+        self.assertEqual(combined["success_count"], 10)
         self.assertEqual(combined["failure_count"], 0)
         self.assertEqual(combined["overall_status"], "success")
         self.assertEqual({row["task"] for row in combined["results"]}, set(MODULE.TASKS))
