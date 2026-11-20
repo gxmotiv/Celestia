@@ -153,9 +153,24 @@ def main():
                 any_failure = True
                 skipped_tasks = TASKS[index:]
                 for skipped_task in skipped_tasks:
+                    skipped_rows = [
+                        {
+                            "model_alias": alias,
+                            "trial": trial,
+                            "status": "skipped_after_api_guard",
+                            "api_attempt_count": 0,
+                            "automatic_retries": 0,
+                            "error": "No API request sent because an earlier task triggered the shared safety guard.",
+                        }
+                        for alias in models
+                        for trial in range(1, args.trials + 1)
+                    ]
                     task_summaries[skipped_task] = {
                         "overall_status": "skipped_after_api_guard",
-                        "results": [],
+                        "request_count_planned": len(skipped_rows),
+                        "request_count_attempted": 0,
+                        "request_count_skipped_before_send": len(skipped_rows),
+                        "results": skipped_rows,
                     }
                 print("Stopping full suite after gateway safety condition:", json.dumps(abort), flush=True)
                 break
