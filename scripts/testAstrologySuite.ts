@@ -1,5 +1,5 @@
 import { calculateWesternChart } from "../lib/astronomy/ephemeris";
-import { calculateVedicChart, calculateVimshottariDashas } from "../lib/astronomy/vedic";
+import { calculateVedicChart, calculateVimshottariDashas, calculateLahiriAyanamsa } from "../lib/astronomy/vedic";
 import { ExtendedDashaCalculator } from "../lib/vedic/extendedDashaLevels";
 import {
   PranaCalculator,
@@ -768,6 +768,91 @@ assertTest(
   jhoraD60ReferencePass,
   jhoraD60ReferenceFixtures.map((fixture) => `${fixture.body}: ${fixture.expectedName}`).join("; "),
   jhoraD60Actual.join("; ")
+);
+
+
+console.log("Running Category 31: independent Lahiri ephemeris reference chart...");
+
+const independentReferenceWestern = calculateWesternChart(
+  1990, 1, 1, 12, 0,
+  28.6139, 77.2090,
+  5.5,
+  "WholeSign",
+  0
+);
+const independentReferenceVedic = calculateVedicChart(
+  independentReferenceWestern,
+  new Date(Date.UTC(1990, 0, 1, 6, 30, 0))
+);
+const angularDifference = (actual: number, expected: number) =>
+  Math.abs(((actual - expected + 540) % 360) - 180);
+const noNutationAyanamsa = calculateLahiriAyanamsa(independentReferenceWestern.julianDay);
+const referenceNutationDelta = 23.720706 - 23.717417;
+const adjustedExpected = {
+  ascendant: 343.922640 + referenceNutationDelta,
+  sun: 256.859923 + referenceNutationDelta,
+  moon: 306.465258 + referenceNutationDelta,
+  rahu: 294.726414 + referenceNutationDelta,
+};
+const referenceSun = independentReferenceVedic.planets.find((planet) => planet.name === "Sun");
+const referenceMoon = independentReferenceVedic.planets.find((planet) => planet.name === "Moon");
+const referenceRahu = independentReferenceVedic.planets.find((planet) => planet.id === "NorthNode");
+
+assertTest(
+  "31.1 Independent Lahiri Ayanamsa Check",
+  "Celestia's mean/no-nutation Lahiri formula matches the independent Swiss Ephemeris reference",
+  Math.abs(noNutationAyanamsa - 23.717417) < 0.0001,
+  "23.717417° (mean/no nutation)",
+  `${noNutationAyanamsa.toFixed(6)}°`
+);
+
+assertTest(
+  "31.2 Independent Ascendant Check",
+  "New Delhi 1990-01-01 12:00 IST sidereal ascendant matches the independent reference within 0.02° after accounting for nutation",
+  angularDifference(independentReferenceVedic.lagna.siderealLongitude, adjustedExpected.ascendant) < 0.02,
+  `${adjustedExpected.ascendant.toFixed(6)}° (Pisces 13°55′, adjusted to mean ayanamsa)`,
+  `${independentReferenceVedic.lagna.siderealLongitude.toFixed(6)}°`
+);
+
+assertTest(
+  "31.3 Independent Sun Longitude Check",
+  "The Sun's Lahiri sidereal longitude matches the independent Swiss Ephemeris reference within 0.02°",
+  !!referenceSun && angularDifference(referenceSun.siderealLongitude, adjustedExpected.sun) < 0.02,
+  `${adjustedExpected.sun.toFixed(6)}° (Sagittarius 16°51′, adjusted)`,
+  referenceSun ? `${referenceSun.siderealLongitude.toFixed(6)}°` : "Sun not found"
+);
+
+assertTest(
+  "31.4 Independent Moon Longitude Check",
+  "The Moon's Lahiri sidereal longitude matches the independent Swiss Ephemeris reference within 0.02°",
+  !!referenceMoon && angularDifference(referenceMoon.siderealLongitude, adjustedExpected.moon) < 0.02,
+  `${adjustedExpected.moon.toFixed(6)}° (Aquarius 6°27′, adjusted)`,
+  referenceMoon ? `${referenceMoon.siderealLongitude.toFixed(6)}°` : "Moon not found"
+);
+
+assertTest(
+  "31.5 Independent Mean Rahu Longitude Check",
+  "The mean Rahu longitude matches the independent Swiss Ephemeris reference within 0.02°",
+  !!referenceRahu && angularDifference(referenceRahu.siderealLongitude, adjustedExpected.rahu) < 0.02,
+  `${adjustedExpected.rahu.toFixed(6)}° (Capricorn 24°43′, adjusted)`,
+  referenceRahu ? `${referenceRahu.siderealLongitude.toFixed(6)}°` : "NorthNode/Rahu not found"
+);
+
+const independentD60Signs = {
+  ascendant: calculateDivisionalSignIndex(independentReferenceVedic.lagna.siderealLongitude, "D60", { d60SignConvention: "from-sign" }),
+  sun: referenceSun ? calculateDivisionalSignIndex(referenceSun.siderealLongitude, "D60", { d60SignConvention: "from-sign" }) : -1,
+  moon: referenceMoon ? calculateDivisionalSignIndex(referenceMoon.siderealLongitude, "D60", { d60SignConvention: "from-sign" }) : -1,
+  rahu: referenceRahu ? calculateDivisionalSignIndex(referenceRahu.siderealLongitude, "D60", { d60SignConvention: "from-sign" }) : -1,
+};
+assertTest(
+  "31.6 Independent Reference D60 Signs",
+  "The independently benchmarked ascendant, Sun, Moon and Rahu map to their derived D60 signs",
+  independentD60Signs.ascendant === 2 &&
+    independentD60Signs.sun === 5 &&
+    independentD60Signs.moon === 10 &&
+    independentD60Signs.rahu === 10,
+  "Ascendant Gemini; Sun Virgo; Moon Aquarius; Rahu Aquarius",
+  `Ascendant ${independentD60Signs.ascendant}; Sun ${independentD60Signs.sun}; Moon ${independentD60Signs.moon}; Rahu ${independentD60Signs.rahu}`
 );
 
 // SUMMARY OUTPUT
