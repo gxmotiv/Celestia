@@ -128,6 +128,13 @@ def run_one_model(alias, task, out_dir, pacing_file=None, minimum_interval=5.0, 
         }
 
 
+def overall_status(success_count, planned_count):
+    """Classify a batch using the validated success count."""
+    if success_count == planned_count:
+        return "success"
+    return "partial_success" if success_count else "failed"
+
+
 def summarize_request_accounting(results, planned_requests):
     """Separate sent, confirmed skipped, unknown and failed model/trial requests."""
     attempts = [
@@ -276,13 +283,11 @@ def main():
         summary["results"], summary["request_count_planned"]
     )
     summary.update(accounting)
+    successes = accounting["success_count"]
     summary["request_count_skipped_before_send"] = accounting["request_count_skipped_before_send"]
     summary["finished_at_utc"] = dt.datetime.now(dt.timezone.utc).isoformat()
     expected_results = summary["request_count_planned"]
-    summary["overall_status"] = (
-        "success" if successes == expected_results
-        else ("partial_success" if successes else "failed")
-    )
+    summary["overall_status"] = overall_status(successes, expected_results)
     stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     summary_path = out_dir / f"{stamp}_batch_{args.task}_summary.json"
     summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

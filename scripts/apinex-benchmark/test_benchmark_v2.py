@@ -133,6 +133,17 @@ class ParallelDispatchTests(unittest.TestCase):
         self.assertEqual({row["trial"] for row in results.values()}, {1, 2, 3})
 
 
+class BatchSummaryStatusTests(unittest.TestCase):
+    def test_all_successful_responses_produce_success(self):
+        self.assertEqual(batch_runner.overall_status(12, 12), "success")
+
+    def test_mixed_responses_produce_partial_success(self):
+        self.assertEqual(batch_runner.overall_status(4, 12), "partial_success")
+
+    def test_zero_successful_responses_produce_failed(self):
+        self.assertEqual(batch_runner.overall_status(0, 12), "failed")
+
+
 class PromptHashTests(unittest.TestCase):
     def test_prompt_hashes_are_stable_and_sensitive_to_schema_changes(self):
         system = "system rules"
