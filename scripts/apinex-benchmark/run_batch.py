@@ -123,6 +123,39 @@ def run_one_model(alias, task, out_dir, pacing_file=None, minimum_interval=5.0, 
         }
 
 
+def summarize_request_accounting(results, planned_requests):
+    """Separate sent, confirmed skipped, unknown and failed model/trial requests."""
+    attempts = [
+        row.get("api_attempt_count")
+        for row in results
+        if isinstance(row.get("api_attempt_count"), int)
+        and not isinstance(row.get("api_attempt_count"), bool)
+    ]
+    sent = sum(1 for count in attempts if count > 0)
+    skipped = sum(1 for count in attempts if count == 0)
+    unknown = max(0, planned_requests - sent - skipped)
+    successes = sum(1 for row in results if row.get("status") == "success")
+    failures = sum(
+        1 for row in results
+        if isinstance(row.get("api_attempt_count"), int)
+        and not isinstance(row.get("api_attempt_count"), bool)
+        and row.get("api_attempt_count") > 0
+        and row.get("status") != "success"
+    )
+    return {
+        "request_count_planned": planned_requests,
+        "request_count_reported": len(results),
+        "request_count_attempted": sent,
+        "request_count_skipped_before_send": skipped,
+        "request_count_not_attempted": skipped,
+        "request_count_unknown": unknown,
+        "api_attempt_count_reported": sum(attempts),
+        "success_count": successes,
+        "failure_count": failures,
+        "skipped_count": skipped,
+    }
+
+
 def run_models_in_parallel(aliases, task, out_dir, concurrency, pacing_file=None, minimum_interval=5.0, trials=1):
     """Launch one request per alias concurrently and return results in completion-independent mapping."""
     results_by_alias = {}
@@ -233,29 +266,11 @@ def main():
                 summary["request_count_attempted"] += 1
             summary["automatic_retries"] += int(row.get("automatic_retries") or 0)
 
-    summary["request_count_reported"] = len(summary["results"])
-    summary["api_attempt_count_reported"] = sum(
-        int(item.get("api_attempt_count") or 0)
-        for item in summary["results"]
-        if isinstance(item.get("api_attempt_count"), int)
+    accounting = summarize_request_accounting(
+        summary["results"], summary["request_count_planned"]
     )
-    summary["request_count_skipped_before_send"] = sum(
-        1 for item in summary["results"] if item.get("api_attempt_count") == 0
-    )
-    summary["request_count_unknown"] = (
-        summary["request_count_planned"]
-        - summary["request_count_attempted"]
-        - summary["request_count_skipped_before_send"]
-    )
-    successes = sum(1 for item in summary["results"] if item.get("status") == "success")
-    summary["success_count"] = successes
-    summary["failure_count"] = sum(
-        1 for item in summary["results"]
-        if isinstance(item.get("api_attempt_count"), int)
-        and item.get("api_attempt_count") > 0
-        and item.get("status") != "success"
-    )
-    summary["skipped_count"] = summary["request_count_skipped_before_send"]
+    summary.update(accounting)
+    summary["request_count_skipped_before_send"] = accounting["request_count_skipped_before_send"]
     summary["finished_at_utc"] = dt.datetime.now(dt.timezone.utc).isoformat()
     expected_results = summary["request_count_planned"]
     summary["overall_status"] = (
