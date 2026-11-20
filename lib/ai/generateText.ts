@@ -1,6 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
-
-export type CelestiaAIProvider = "freemodel" | "nararouter" | "gemini";
+export type CelestiaAIProvider = "apinex" | "freemodel" | "nararouter";
 export type CelestiaAIModelTier = "budget" | "reasoning";
 
 export interface CelestiaAIUsage {
@@ -27,8 +25,10 @@ interface GenerateTextOptions {
 
 type ProviderError = Error & { status?: number };
 
-const DEFAULT_BUDGET_MODEL = "gpt-6-luna";
-const DEFAULT_REASONING_MODEL = "claude-haiku-5.5";
+const DEFAULT_APINEX_BUDGET_MODEL = "free/mimo-v2.6-pro";
+const DEFAULT_APINEX_REASONING_MODEL = "free/deepseek-v4.1-flash";
+const DEFAULT_FREEMODEL_BUDGET_MODEL = "gpt-6-luna";
+const DEFAULT_FREEMODEL_REASONING_MODEL = "claude-haiku-5.5";
 
 function isRetryableProviderFailure(error: unknown): boolean {
   const status = (error as ProviderError | null)?.status;
@@ -51,6 +51,39 @@ function readUsage(value: unknown): CelestiaAIUsage | undefined {
     return undefined;
   }
   return { promptTokens, completionTokens, totalTokens };
+}
+
+async function generateWithApinex(apiKey: string, model: string, options: Required<Pick<GenerateTextOptions, "systemPrompt" | "userPrompt" | "maxOutputTokens" | "temperature">>, reasoningEffort?: "low" | "medium" | "high"): Promise<CelestiaAIResult> {
+  let baseUrl = process.env.APINEX_BASE_URL?.trim() || "https://api.apinex.bond/v1";
+  while (baseUrl.endsWith("/")) baseUrl = baseUrl.slice(0, -1);
+  const response = await fetch(baseUrl + "/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    cache: "no-store",
+    signal: AbortSignal.timeout(45_000),
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: "system", content: options.systemPrompt },
+        { role: "user", content: options.userPrompt },
+      ],
+      temperature: options.temperature,
+      max_tokens: options.maxOutputTokens,
+      ...(reasoningEffort ? { reasoning_effort: reasoningEffort } : {}),
+      stream: false,
+    }),
+  });
+  const body = await response.json().catch(() => null) as
+    | { model?: string; choices?: Array<{ message?: { content?: string | null } }>; usage?: unknown; error?: { message?: string; code?: string } }
+    | null;
+  if (!response.ok) {
+    const error = new Error(body?.error?.message || `APInex request failed with HTTP ${response.status}.`) as ProviderError;
+    error.status = response.status;
+    throw error;
+  }
+  const text = body?.choices?.[0]?.message?.content;
+  if (typeof text !== "string" || !text.trim()) throw new Error("APInex returned an empty or unsupported response.");
+  return { text: text.trim(), provider: "apinex", model: body?.model || model, usage: readUsage(body?.usage) };
 }
 
 async function generateWithFreeModel(
@@ -166,12 +199,9 @@ async function generateWithNaraRouter(
   };
 }
 /**
- * FreeModel is selected per task:
- * - budget: GPT-6 Luna for short, routine responses
- * - reasoning: Claude Haiku 5.5 for detailed chart synthesis and Oracle work
- *
- * FREEMODEL_MODEL and FREEMODEL_REASONING_MODEL can override these public
- * catalogue IDs. The API key is read only on the server and is never returned.
+ * APInex is primary when configured: DeepSeek V4.1 Flash for detailed reasoning
+ * and MiMo V2.6 Pro for the lower-quota budget tier. FreeModel and NaraRouter
+ * remain optional fallbacks.
  */
 export async function generateCelestiaText(
   input: GenerateTextOptions
@@ -184,15 +214,18 @@ export async function generateCelestiaText(
   };
 
   const modelTier = input.modelTier ?? "budget";
+  const apinexKey = process.env.APINEX_API_KEY?.trim();
   const freeModelKey = process.env.FREEMODEL_API_KEY?.trim();
   const naraRouterKey = process.env.NARAROUTER_API_KEY?.trim();
-  const geminiKey = process.env.GEMINI_API_KEY?.trim();
 
-  const freeModelName = input.model?.trim() || (
+  const apinexModelName = input.model?.trim() || (
     modelTier === "reasoning"
-      ? process.env.FREEMODEL_REASONING_MODEL?.trim() || DEFAULT_REASONING_MODEL
-      : process.env.FREEMODEL_MODEL?.trim() || DEFAULT_BUDGET_MODEL
+      ? process.env.APINEX_REASONING_MODEL?.trim() || DEFAULT_APINEX_REASONING_MODEL
+      : process.env.APINEX_BUDGET_MODEL?.trim() || DEFAULT_APINEX_BUDGET_MODEL
   );
+  const freeModelName = modelTier === "reasoning"
+    ? process.env.FREEMODEL_REASONING_MODEL?.trim() || DEFAULT_FREEMODEL_REASONING_MODEL
+    : process.env.FREEMODEL_MODEL?.trim() || DEFAULT_FREEMODEL_BUDGET_MODEL;
   const naraRouterName = input.model?.trim() || (
     modelTier === "reasoning"
       ? process.env.NARAROUTER_REASONING_MODEL?.trim() || process.env.NARAROUTER_MODEL?.trim() || "auto/bynara"
@@ -204,17 +237,32 @@ export async function generateCelestiaText(
 
   let lastProviderError: unknown;
 
-  // Keep the existing FreeModel primary route. NaraRouter is the next provider
-  // so a configured free-plan router can cover FreeModel outages/quota limits.
+  // APInex is primary. Detailed work uses DeepSeek V4.1 Flash at high reasoning
+  // effort; the budget tier uses MiMo V2.6 Pro.
+  if (apinexKey) {
+    try {
+      return await generateWithApinex(apinexKey, apinexModelName, options, modelTier === "reasoning" ? "high" : undefined);
+    } catch (error) {
+      const status = (error as ProviderError | null)?.status;
+      if (isRetryableProviderFailure(error) || status === 404) {
+        lastProviderError = error;
+        console.warn("APInex failed; trying the next configured provider:", error);
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  // Existing providers remain optional fallbacks when APInex is unavailable.
   if (freeModelKey) {
     try {
       return await generateWithFreeModel(freeModelKey, freeModelName, options);
     } catch (error) {
       const status = (error as ProviderError | null)?.status;
-      if (status === 404 && freeModelName !== DEFAULT_BUDGET_MODEL) {
-        console.warn("FreeModel model " + freeModelName + " was not found; retrying with " + DEFAULT_BUDGET_MODEL + ".");
+      if (status === 404 && freeModelName !== DEFAULT_FREEMODEL_BUDGET_MODEL) {
+        console.warn("FreeModel model " + freeModelName + " was not found; retrying with " + DEFAULT_FREEMODEL_BUDGET_MODEL + ".");
         try {
-          return await generateWithFreeModel(freeModelKey, DEFAULT_BUDGET_MODEL, options);
+          return await generateWithFreeModel(freeModelKey, DEFAULT_FREEMODEL_BUDGET_MODEL, options);
         } catch (retryError) {
           const retryStatus = (retryError as ProviderError | null)?.status;
           if (![404, 408, 425, 429, 500, 502, 503, 504, 529].includes(retryStatus ?? -1)) {
@@ -248,33 +296,6 @@ export async function generateCelestiaText(
     }
   }
 
-  if (geminiKey) {
-    const ai = new GoogleGenAI({ apiKey: geminiKey });
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: options.systemPrompt + "\n\n" + options.userPrompt,
-      config: {
-        temperature: options.temperature,
-        maxOutputTokens: options.maxOutputTokens,
-      },
-    });
-
-    if (response.text?.trim()) {
-      const metadata = response.usageMetadata;
-      return {
-        text: response.text.trim(),
-        provider: "gemini",
-        model: "gemini-2.5-flash",
-        usage: metadata ? {
-          promptTokens: metadata.promptTokenCount,
-          completionTokens: metadata.candidatesTokenCount,
-          totalTokens: metadata.totalTokenCount,
-        } : undefined,
-      };
-    }
-    throw new Error("Gemini returned an empty response.");
-  }
-
   if (lastProviderError) throw lastProviderError;
-  throw new Error("No AI provider is configured. Set FREEMODEL_API_KEY, NARAROUTER_API_KEY, or GEMINI_API_KEY.");
+  throw new Error("No AI provider is configured. Set APINEX_API_KEY, FREEMODEL_API_KEY, or NARAROUTER_API_KEY.");
 }
