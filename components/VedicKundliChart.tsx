@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import { VedicChartData, VedicPlanet } from "@/lib/astronomy/vedic";
+import { VedicChartData, VedicPlanet, calculateLahiriAyanamsa } from "@/lib/astronomy/vedic";
 import {
   calculateDivisionalChart,
   DIVISIONAL_CHARTS_CONFIG,
@@ -9,7 +9,6 @@ import {
   DivisionalPlanet,
   summarizeD60AscendantSamples,
 } from "@/lib/vedic/divisionalCalc";
-import { calculateLahiriAyanamsa } from "@/lib/astronomy/vedic";
 import { swissEphemeris } from "@/lib/astronomy/swissEphemeris";
 import { Sparkles, Compass, Info, Check, ChevronDown, Eye } from "lucide-react";
 import { VedicAspectRays } from "./VedicAspectRays";
@@ -112,8 +111,8 @@ export function VedicKundliChart({
       return { error: "Birth date or time is not in a supported format.", summary: null, highLatitude: false };
     }
 
-    const [year, month, day] = dateParts;
-    const [hour, minute] = timeParts;
+    const [year, month, day] = dateParts as [number, number, number];
+    const [hour, minute] = timeParts as [number, number];
     const rangeSeconds = birthTimeUncertaintyMinutes * 60;
     const sampleStepSeconds = 5;
     const siderealAscendants: number[] = [];
