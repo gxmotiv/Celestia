@@ -1616,7 +1616,7 @@ export function NumerologyView({ numerologyData, fullName }: NumerologyViewProps
               </p>
             </div>
             <div className="text-xs text-amber-300 bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/20">
-              Universal Resonance: <strong>{report.crossSystemSynthesis.resonanceScore}%</strong>
+              Rule-match index: <strong>{report.crossSystemSynthesis.resonanceScore}%</strong>
             </div>
           </div>
 

@@ -13,6 +13,8 @@
  */
 
 import {
+  calculateSoulUrge,
+  calculatePersonality,
   calculateCompleteNumerologyReport,
   calculatePinnacles,
   calculateChallenges,
@@ -53,6 +55,19 @@ console.log("\n[TEST GROUP 1] Pythagorean System - 14 Numbers & Calculations");
 // Month = 3, Day = 14 (1+4=5), Year = 1879 (1+8+7+9 = 25 -> 2+5 = 7)
 // Life Path = 3 + 5 + 7 = 15 -> 1+5 = 6
 const einsteinReport = calculateCompleteNumerologyReport("Albert Einstein", 1879, 3, 14);
+
+function numerologyInputRejected(name: string, year: number, month: number, day: number): boolean {
+  try {
+    calculateCompleteNumerologyReport(name, year, month, day);
+    return false;
+  } catch {
+    return true;
+  }
+}
+assert("Rejects an empty name instead of fabricating default numerology numbers", numerologyInputRejected("", 2000, 1, 1));
+assert("Rejects impossible Gregorian birth dates", numerologyInputRejected("Test Person", 2001, 2, 29));
+assert("Rejects non-Latin names until the user supplies a reviewed transliteration", numerologyInputRejected("测试", 2000, 1, 1));
+
 
 assert(
   "Einstein Life Path is 6 (3 + 5 + 7 = 15 -> 6)",
@@ -106,6 +121,30 @@ assert("Einstein dominant plane identified", planes.dominantPlane.length > 0);
 // "Albert Einstein" -> Initial A (1) + Initial E (5) = 6
 const bal = calculateBalanceNumber("Albert Einstein");
 assert("Einstein Balance Number from initials A(1)+E(5) is 6", bal.balanceNumber === 6, `Got ${bal.balanceNumber}`);
+
+// Y is classified once and the same classification is used by both
+// Soul Urge and Personality. "Yvonne" is a vowel-Y example; "Yellow" is a
+// consonant-Y example under the documented Latin-name heuristic.
+assert(
+  "Yvonne: Y is included in Soul Urge",
+  calculateSoulUrge("Yvonne") === 9,
+  `Got ${calculateSoulUrge("Yvonne")}`
+);
+assert(
+  "Yvonne: Y is excluded from Personality when treated as a vowel",
+  calculatePersonality("Yvonne") === 5,
+  `Got ${calculatePersonality("Yvonne")}`
+);
+assert(
+  "Yellow: initial Y is treated as a consonant",
+  calculatePersonality("Yellow") === 9,
+  `Got ${calculatePersonality("Yellow")}`
+);
+assert(
+  "Yellow: Soul Urge retains only E and O",
+  calculateSoulUrge("Yellow") === 11,
+  `Got ${calculateSoulUrge("Yellow")}`
+);
 
 // -----------------------------------------------------------------------------
 // 2. INDIAN VEDIC NUMEROLOGY (SANKHYA SHASTRA) TESTS

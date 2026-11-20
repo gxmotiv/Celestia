@@ -642,7 +642,7 @@ export function calculateWesternChart(
   houseSystem: WesternHouseSystemPreference = "Placidus",
   second: number = 0
 ): WesternChartData {
-  // High-precision Swiss Ephemeris calculation (0.001° accuracy)
+  // astronomy-engine-backed apparent geocentric positions; see engine provenance.
   // Unambiguously normalizes local birth time and timezone offset to UTC and computes Julian Day
   const jd = swissEphemeris.calculateJulianDay(year, month, day, hour, minute, second, timezoneOffsetHours);
   const calculationSystem = houseSystem === "Auto" ? "Placidus" : houseSystem;
@@ -748,7 +748,7 @@ export function calculateWesternChart(
 
   // Calculate Traditional Planetary Hours and Day Ruler
   const planetaryHoursCalc = new PlanetaryHoursCalculator();
-  const planetaryHours = planetaryHoursCalc.calculate(year, month, day, hour, minute, latitude);
+  const planetaryHours = planetaryHoursCalc.calculate(year, month, day, hour, minute, latitude, longitude, timezoneOffsetHours);
 
   // Calculate Ibn Ezra / Lilly Almuten Figuris (Ruler of Geniture)
   const almutenCalc = new AlmutenFigurisCalculator();

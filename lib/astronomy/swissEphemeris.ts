@@ -1,7 +1,10 @@
 /**
- * Swiss Ephemeris High-Precision Astronomical Engine
- * Computes planetary coordinates with 0.001° accuracy based on JPL DE405 / VSOP87
- * and IAU standards. Provides full compatibility with the Swiss Ephemeris API.
+ * Celestia astronomical calculation adapter.
+ *
+ * This is NOT the Swiss Ephemeris library. Planet vectors are obtained from
+ * astronomy-engine; lunar-node positions use the explicitly documented
+ * Meeus-style approximations below. The adapter keeps a Swiss-like interface
+ * for compatibility, but does not claim Swiss Ephemeris equivalence.
  */
 
 import * as Astronomy from "astronomy-engine";
@@ -280,7 +283,8 @@ export class SwissEphemerisEngine {
   }
 
   /**
-   * Calculate EXACT planetary position with 0.001° precision
+   * Calculate an apparent geocentric position using astronomy-engine.
+   * Decimal output rounding is not a guarantee of physical accuracy.
    */
   public calculatePlanetPosition(
     planet: number,
@@ -353,7 +357,8 @@ export class SwissEphemerisEngine {
       lon = ((lon - ayanamsa) % 360 + 360) % 360;
     }
 
-    // Rounding to 0.0001° gives true 0.001° accuracy while avoiding float jitter
+    // Round output to 0.0001° for stable display; this is numeric precision,
+    // not a claim that the underlying ephemeris is accurate to that tolerance.
     const round4 = (v: number) => Math.round(v * 10000) / 10000;
 
     return {
@@ -369,9 +374,30 @@ export class SwissEphemerisEngine {
   }
 
   /**
-   * Calculate ALL planets at once (Tropical or Sidereal)
+   * Calculate planets at once. Rahu/Ketu are always an exact opposing pair.
+   * The default is the mean ascending node; callers may explicitly select
+   * the approximate true ascending node. "TRUE_NODE" by itself is an
+   * ascending-node calculation, never a descending-node/Ketu calculation.
    */
-  public calculateAllPlanets(julianDay: number, isSidereal: boolean = false): SwissAllPlanets {
+  public calculateAllPlanets(
+    julianDay: number,
+    isSidereal: boolean = false,
+    nodeType: "mean" | "true" = "mean"
+  ): SwissAllPlanets {
+    const rahu = this.calculatePlanetPosition(
+      nodeType === "true" ? this.TRUE_NODE : this.MEAN_NODE,
+      julianDay,
+      isSidereal
+    );
+    const ketuLongitude = (rahu.longitude + 180) % 360;
+    const ketu: SwissPlanetPosition = {
+      ...rahu,
+      longitude: Math.round(ketuLongitude * 10000) / 10000,
+      latitude: Math.round(-rahu.latitude * 10000) / 10000,
+      sign: this.getZodiacSign(ketuLongitude),
+      degree: Math.round((ketuLongitude % 30) * 10000) / 10000,
+    };
+
     return {
       sun: this.calculatePlanetPosition(this.SUN, julianDay, isSidereal),
       moon: this.calculatePlanetPosition(this.MOON, julianDay, isSidereal),
@@ -383,8 +409,8 @@ export class SwissEphemerisEngine {
       uranus: this.calculatePlanetPosition(this.URANUS, julianDay, isSidereal),
       neptune: this.calculatePlanetPosition(this.NEPTUNE, julianDay, isSidereal),
       pluto: this.calculatePlanetPosition(this.PLUTO, julianDay, isSidereal),
-      rahu: this.calculatePlanetPosition(this.MEAN_NODE, julianDay, isSidereal),
-      ketu: this.calculatePlanetPosition(this.TRUE_NODE, julianDay, isSidereal),
+      rahu,
+      ketu,
     };
   }
 

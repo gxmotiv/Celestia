@@ -10,8 +10,11 @@ interface ClassicalVedicPanelProps {
 
 export function ClassicalVedicPanel({ vedicData }: ClassicalVedicPanelProps) {
   const [activeSubTab, setActiveSubTab] = useState<"jaimini" | "tarabala" | "gocharvedha">("jaimini");
+  const [activeKarakaScheme, setActiveKarakaScheme] = useState<"jaimini-8" | "seven-graha">("jaimini-8");
 
-  const jaimini = vedicData.jaiminiKarakas;
+  const jaimini = activeKarakaScheme === "jaimini-8"
+    ? vedicData.jaiminiKarakas
+    : vedicData.sevenGrahaKarakas;
   const taraBala = vedicData.taraBala;
   const gochar = vedicData.gocharVedha;
 
@@ -69,6 +72,24 @@ export function ClassicalVedicPanel({ vedicData }: ClassicalVedicPanelProps) {
       {/* 1. JAIMINI CHARA KARAKAS */}
       {activeSubTab === "jaimini" && (
         <div className="space-y-6">
+          {/* Explicitly separate the two Chara Karaka traditions. */}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setActiveKarakaScheme("jaimini-8")}
+              aria-pressed={activeKarakaScheme === "jaimini-8"}
+              className={`px-3 py-2 rounded-lg text-xs font-semibold border ${activeKarakaScheme === "jaimini-8" ? "bg-amber-500/20 text-amber-200 border-amber-500/40" : "bg-slate-950 text-slate-400 border-slate-800"}`}
+            >
+              Jaimini 8-Karaka · Rahu reverse-counted
+            </button>
+            <button
+              onClick={() => setActiveKarakaScheme("seven-graha")}
+              aria-pressed={activeKarakaScheme === "seven-graha"}
+              className={`px-3 py-2 rounded-lg text-xs font-semibold border ${activeKarakaScheme === "seven-graha" ? "bg-amber-500/20 text-amber-200 border-amber-500/40" : "bg-slate-950 text-slate-400 border-slate-800"}`}
+            >
+              Seven-graha option · Matru/Putra merged
+            </button>
+          </div>
+
           {/* Atmakaraka Hero Card */}
           <div className="p-6 bg-gradient-to-br from-amber-950/30 via-slate-900/80 to-slate-950/90 border border-amber-500/30 rounded-2xl shadow-xl space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -87,8 +108,13 @@ export function ClassicalVedicPanel({ vedicData }: ClassicalVedicPanelProps) {
                     {ak.planet} ({ak.roleName})
                   </h3>
                   <p className="text-xs text-amber-200/80">
-                    Highest Sidereal Arc: {ak.rasiDegreeFormatted} in {ak.sign} (House {ak.house})
+                    Actual longitude: {ak.rasiDegreeFormatted} in {ak.sign} (House {ak.house})
                   </p>
+                  {ak.isReverseCounted && (
+                    <p className="text-xs text-cyan-200/80">
+                      Rahu ranking degree: {ak.effectiveDegreeFormatted} (30° − actual degree)
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -107,13 +133,18 @@ export function ClassicalVedicPanel({ vedicData }: ClassicalVedicPanelProps) {
             <p className="text-xs text-slate-300 leading-relaxed border-t border-slate-800/80 pt-3">
               {ak.signification} {jaimini.summary}
             </p>
+            {jaimini.warnings.length > 0 && (
+              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200 space-y-1">
+                {jaimini.warnings.map((warning, index) => <p key={index}>{warning}</p>)}
+              </div>
+            )}
           </div>
 
-          {/* 7 Karakas Grid */}
+          {/* Selected Chara Karaka scheme */}
           <div className="p-5 bg-slate-900/60 border border-slate-800 rounded-xl space-y-3">
             <h4 className="text-sm font-bold text-slate-100 flex items-center gap-2">
               <Award className="w-4 h-4 text-amber-400" />
-              Complete 7-Karaka Council (Jaimini Sutras)
+              {jaimini.label} · Chara Karaka sequence
             </h4>
 
             <div className="overflow-x-auto no-scrollbar">
@@ -152,7 +183,12 @@ export function ClassicalVedicPanel({ vedicData }: ClassicalVedicPanelProps) {
                         </div>
                       </td>
                       <td className="py-3 px-3 font-mono text-amber-300">
-                        {k.rasiDegreeFormatted} {k.sign}
+                        <div>{k.rasiDegreeFormatted} {k.sign}</div>
+                        {k.isReverseCounted && (
+                          <div className="text-[10px] text-cyan-300">
+                            Ranking degree: {k.effectiveDegreeFormatted} (reverse)
+                          </div>
+                        )}
                       </td>
                       <td className="py-3 px-2 text-center text-slate-300">House {k.house}</td>
                       <td className="py-3 px-3 font-medium text-cyan-300">{k.lifeDomain}</td>

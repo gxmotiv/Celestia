@@ -305,7 +305,7 @@ export interface CompleteNumerologyReport {
   kabbalah: KabbalahProfile;
   tamil: TamilNumerologyProfile;
   crossSystemSynthesis: {
-    resonanceScore: number; // 0 - 100
+    resonanceScore: number; // 0-100 rule-match index; not predictive accuracy or scientific validity
     unifiedArchetype: string;
     coreKarmicTheme: string;
     actionableDirectives: string[];

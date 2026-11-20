@@ -344,9 +344,9 @@ export class AstrologyPDFGenerator {
     doc.fontSize(10)
       .font("Helvetica-Bold")
       .fillColor(this.accentGold)
-      .text("CROSS-SYSTEM COSMIC RESONANCE SCORE", 60, 120);
+      .text("CROSS-SYSTEM RULE-MATCH INDEX (NOT A VALIDITY SCORE)", 60, 120);
 
-    const score = report?.crossSystemSynthesis?.resonanceScore || 88;
+    const score = report?.crossSystemSynthesis?.resonanceScore ?? 0;
     doc.fontSize(36)
       .font("Helvetica-Bold")
       .fillColor(this.primaryColor)

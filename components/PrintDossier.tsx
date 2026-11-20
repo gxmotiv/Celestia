@@ -244,7 +244,7 @@ export function PrintDossier({
                 Harmonic Resonance Rating
               </span>
               <div className="text-3xl font-serif font-bold text-slate-950">
-                {report?.crossSystemSynthesis?.resonanceScore || 88}% Cohesion
+                {report?.crossSystemSynthesis?.resonanceScore ?? 0}% Rule-match index
               </div>
               <p className="text-xs text-slate-600 max-w-md">
                 Exceptional cross-traditional alignment detected across Western, Vedic, BaZi, and Pythagorean calculations.
@@ -254,7 +254,7 @@ export function PrintDossier({
             <div className="w-full sm:w-64 bg-slate-200 rounded-full h-3 overflow-hidden p-0.5 border border-slate-300">
               <div
                 className="bg-amber-600 h-full rounded-full transition-all"
-                style={{ width: `${report?.crossSystemSynthesis?.resonanceScore || 88}%` }}
+                style={{ width: `${report?.crossSystemSynthesis?.resonanceScore ?? 0}%` }}
               />
             </div>
           </div>

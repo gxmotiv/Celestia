@@ -5,6 +5,8 @@ import { VedicChartData } from "@/lib/astronomy/vedic";
 import { WesternChartData } from "@/lib/astronomy/ephemeris";
 import { NumerologyProfile } from "@/lib/astronomy/numerology";
 import { BaZiProfile } from "@/lib/astronomy/chinese";
+import { CONSULTATION_DESKS } from "@/lib/consultation/deskRegistry";
+import { ASTROLOGY_SPECIALTIES } from "@/lib/consultation/astrologySpecialties";
 import { CompleteDashaOrchestrator, AllDashaSystems } from "@/lib/vedic/completeDashaSystems";
 import {
   Sparkles,
@@ -318,6 +320,48 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
     setIsConsulting(true);
 
     try {
+      // Route every question before it reaches the astrology-only Oracle prompt.
+      // Planned/partial desks, safety cases and exploitative requests must not
+      // be answered by an unrelated astrology prompt.
+      const routeResponse = await fetch("/api/consultation/route", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: textToSend }),
+      });
+      const routeData = await routeResponse.json();
+      if (!routeResponse.ok || !routeData?.route || routeData?.canUseExistingSpecialistAI !== true) {
+        const deskLabels = Array.isArray(routeData?.desks)
+          ? routeData.desks.map((desk: { label?: string; status?: string }) =>
+              `${desk.label ?? "Specialist desk"} (${desk.status ?? "status unknown"})`
+            ).join(", ")
+          : "No reliable specialist route was returned";
+        const specialtyLabels = Array.isArray(routeData?.specialties)
+          ? routeData.specialties.map((specialty: { label?: string; status?: string }) =>
+              `${specialty.label ?? "Astrology method"} (${specialty.status ?? "status unknown"})`
+            ).join(", ")
+          : "";
+        const action = routeData?.nextAction ?? "routing-unavailable";
+        const explanation = action === "urgent-support"
+          ? "This may involve immediate danger. Please contact local emergency services or a trusted person who can help you now. Celestia will not treat this as an astrology question."
+          : action === "refuse-exploitation"
+          ? "I cannot help with coercion or psychological exploitation. I can help with respectful communication or ways to protect yourself."
+          : action === "planned-desk-unavailable"
+          ? "The relevant specialist desk is not implemented yet. I will not send this question to an unrelated astrology prompt or pretend that desk is ready."
+          : action === "specialist-review-required"
+          ? "This question needs a specialist method review before AI interpretation is enabled. The current desk is only partially implemented."
+          : "The consultation router could not verify a safe specialist route. Please try again later.";
+        const oracleMsg: ChatMessage = {
+          id: "oracle-" + Date.now(),
+          sender: "oracle",
+          text: `### Consultation routing\n\n${explanation}\n\n**Selected desk(s):** ${deskLabels}${specialtyLabels ? `\n\n**Selected astrology method(s):** ${specialtyLabels}` : ""}\n\n**Routing status:** ${action}`,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          isAiGenerated: false,
+          provider: "local-router",
+        };
+        setMessages((prev) => [...prev, oracleMsg]);
+        return;
+      }
+
       const sun = westernData?.planets.find((p) => p.name === "Sun");
       const moon = westernData?.planets.find((p) => p.name === "Moon");
 
@@ -398,10 +442,10 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
       const fallbackMsg: ChatMessage = {
         id: "oracle-" + Date.now(),
         sender: "oracle",
-        text: `### Guidance from Acharya Celestia
-In reviewing your chart, your active **${currentMD?.planet || "Jupiter"} Mahadasha** and **${currentAD?.planet || "Saturn"} Antardasha** demand mindful discipline. Propitiate your active Dasha lord by chanting **${activeRemedy.beejaMantra}** 108 times daily and offering charitable daan of **${activeRemedy.charity}** on ${activeRemedy.fastingDay}s.`,
+        text: `### Consultation unavailable\n\nThe consultation router or specialist service could not be reached. To avoid sending your question to the wrong desk or inventing guidance, no astrology fallback was generated. Please try again later.`,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         isAiGenerated: false,
+        provider: "local-safety-fallback",
       };
       setMessages((prev) => [...prev, fallbackMsg]);
     } finally {
@@ -641,10 +685,10 @@ In reviewing your chart, your active **${currentMD?.planet || "Jupiter"} Mahadas
                     <div className="w-5 h-5 rounded-full border-2 border-amber-500/30 border-t-amber-500 animate-spin shrink-0" />
                     <div className="space-y-1">
                       <span className="text-xs font-semibold text-amber-300">
-                        Acharya Celestia is consulting the 10-Dasha ephemeris...
+                        Celestia is checking the specialist desk...
                       </span>
                       <p className="text-[11px] text-slate-400">
-                        Calculating active house activations, planetary aspects, and classical remedial alignment.
+                        Matching your question to available methods and safety boundaries before generating a response.
                       </p>
                     </div>
                   </div>
@@ -658,7 +702,7 @@ In reviewing your chart, your active **${currentMD?.planet || "Jupiter"} Mahadas
                   value={inputQuery}
                   onChange={(e) => setInputQuery(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSendQuery()}
-                  placeholder="Ask Acharya Celestia anything about your chart, dasha timing, or remedies..."
+                  placeholder="Ask about your chart, timing or remedies. Other desks show their readiness above."
                   className="flex-1 px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-500 transition-colors"
                 />
                 <button
@@ -675,6 +719,61 @@ In reviewing your chart, your active **${currentMD?.planet || "Jupiter"} Mahadas
 
           {/* Quick Consultation Sidebar (Col 3) */}
           <div className="space-y-4">
+            {/* Specialist Desk Directory */}
+            <div className="p-4 bg-slate-950 border border-slate-800 rounded-2xl space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-bold text-slate-200 uppercase tracking-wider font-mono">
+                  Specialist Consultation Desks
+                </span>
+                <span className="text-[10px] text-slate-500 font-mono">12 desks</span>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Questions are routed to the relevant desk. Partial and planned desks are not treated as ready AI services.
+              </p>
+              <div className="space-y-1.5 max-h-80 overflow-y-auto pr-1">
+                {CONSULTATION_DESKS.map((desk) => (
+                  <div key={desk.id} className="flex items-start justify-between gap-2 p-2 rounded-lg bg-slate-900/70 border border-slate-800/80">
+                    <div className="min-w-0">
+                      <div className="text-[11px] font-semibold text-slate-200">{desk.label}</div>
+                      <div className="text-[10px] text-slate-500 leading-snug">{desk.purpose}</div>
+                    </div>
+                    <span className={`shrink-0 text-[9px] uppercase tracking-wide font-mono px-1.5 py-0.5 rounded ${
+                      desk.status === "existing-system"
+                        ? "text-emerald-300 bg-emerald-500/10 border border-emerald-500/20"
+                        : desk.status === "partial"
+                        ? "text-amber-300 bg-amber-500/10 border border-amber-500/20"
+                        : "text-slate-400 bg-slate-800 border border-slate-700"
+                    }`}>
+                      {desk.status === "existing-system" ? "Existing" : desk.status === "partial" ? "Partial" : "Planned"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="pt-3 border-t border-slate-800 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-bold text-amber-200 uppercase tracking-wider">Astrology specialist methods</span>
+                  <span className="text-[10px] text-slate-500 font-mono">{ASTROLOGY_SPECIALTIES.length} specialties</span>
+                </div>
+                <p className="text-[10px] text-slate-500 leading-relaxed">
+                  Expanded method directory. These labels describe scope and readiness; they do not mean every technique is already calculation- or AI-ready.
+                </p>
+                <div className="space-y-1.5 max-h-96 overflow-y-auto pr-1">
+                  {ASTROLOGY_SPECIALTIES.map((specialty) => (
+                    <div key={specialty.id} className="p-2 rounded-lg bg-slate-900/50 border border-slate-800/70">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="text-[10px] font-semibold text-slate-200">{specialty.label}</div>
+                          <div className="text-[9px] text-slate-500">{specialty.parentDesk.replace(/-/g, " ")}</div>
+                        </div>
+                        <span className="shrink-0 text-[8px] uppercase font-mono text-slate-400">{specialty.status.replace(/-/g, " ")}</span>
+                      </div>
+                      <div className="text-[9px] text-slate-400 mt-1 leading-snug">{specialty.methods.join(" · ")}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
             {/* Exemplary Master Inquiries */}
             <div className="p-4 bg-slate-950 border border-slate-800 rounded-2xl space-y-3">
               <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5 uppercase tracking-wider font-mono">

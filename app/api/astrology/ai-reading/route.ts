@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateCelestiaText } from "@/lib/ai/generateText";
+import { prepareConsultationRoute } from "@/lib/consultation/consultationService";
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,6 +20,19 @@ export async function POST(req: NextRequest) {
 
     const fullName = typeof name === "string" && name.trim() ? name.trim() : "Querent";
     const question = typeof userQuestion === "string" ? userQuestion.slice(0, 2000) : "";
+
+    // A custom question must pass the same capability gate as the Oracle chat.
+    // Prebuilt chart reports remain available without a free-form question.
+    if (question.trim()) {
+      const consultation = prepareConsultationRoute(question);
+      if (!consultation.canUseExistingSpecialistAI) {
+        return NextResponse.json({
+          success: false,
+          error: "This question is not supported by the current astrology-only report generator.",
+          consultation,
+        }, { status: 409 });
+      }
+    }
     const westernPlanets = western?.planets && typeof western.planets === "object"
       ? Object.entries(western.planets).slice(0, 15).map(([planet, value]) => {
           const position = value as { sign?: string; degree?: string; house?: number; isRetrograde?: boolean };

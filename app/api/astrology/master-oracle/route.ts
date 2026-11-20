@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateCelestiaText } from "@/lib/ai/generateText";
+import { prepareConsultationRoute } from "@/lib/consultation/consultationService";
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,6 +17,16 @@ export async function POST(req: NextRequest) {
 
     if (!question.trim()) {
       return NextResponse.json({ error: "A question is required." }, { status: 400 });
+    }
+
+    // Enforce the desk capability and safety gate at the server boundary too.
+    const consultation = prepareConsultationRoute(question);
+    if (!consultation.canUseExistingSpecialistAI) {
+      return NextResponse.json({
+        success: false,
+        error: "This question is not supported by the current astrology-only Oracle. Use the relevant specialist desk when it becomes available.",
+        consultation,
+      }, { status: 409 });
     }
 
     const systemPrompt = `You are Acharya Celestia, a careful multi-tradition astrological research assistant.

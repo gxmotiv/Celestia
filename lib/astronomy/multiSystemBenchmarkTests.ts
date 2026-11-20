@@ -1,17 +1,18 @@
 /**
- * Unified Multi-System Astrological & Esoteric Benchmark Suite (108 Assertions)
+ * Unified Multi-System Astrological & Esoteric Benchmark Suite (implemented checks only; unverified advanced methods are excluded)
  * Rigorous mathematical assertions and empirical tests covering:
- * 1. Western Astrology (32 tests: Ephemeris, Houses, Aspects, Almuten, Progressions, Profections)
- * 2. Vedic Jyotish (32 tests: Ayanamsha, Shodashavargas, Vimshottari, Ashtakavarga, Shadbala, Jaimini, Tara Bala, Vedha)
- * 3. Krishnamurti Paddhati (16 tests: KP Placidus, 249 Sub-Lords, 4-fold Significators, Event Promise)
- * 4. Chinese BaZi (16 tests: Solar Terms, Lichun Boundary, 60 Jia Zi, Hidden Stems, Day Master, Da Yun)
- * 5. Universal Numerology (12 tests: Life Path Master Reduction, Expression, Soul Urge, Karmic Debts, Pinnacles)
+ * 1. Western Astrology (implemented invariants; advanced techniques not independently validated)
+ * 2. Vedic Jyotish (tested foundations; advanced methods require independent fixtures)
+ * 3. Krishnamurti Paddhati (computed cusp, sub-lord and significator checks)
+ * 4. Chinese BaZi (8 structural checks; advanced methods not yet independently validated)
+ * 5. Universal Numerology (core output checks; compound/karmic-debt rules require additional validation)
  */
 
 import { calculateWesternChart, WesternChartData, normalizeDegrees } from "./ephemeris";
 import { calculateVedicChart, VedicChartData } from "./vedic";
 import { KPEngine } from "../kp/kpEngine";
 import { KPPredictionEngine } from "../kp/kpPredictionEngine";
+import { SubLordCalculator } from "../kp/subLordEngine";
 import { calculateBaZiProfile, BaZiProfile } from "./chinese";
 import { calculateNumerologyProfile, NumerologyProfile } from "./numerology";
 import { AlmutenFigurisCalculator } from "./almutenFigurisCalculator";
@@ -292,7 +293,17 @@ export class MultiSystemBenchmarkRunner {
       classicalAuthority: "Johannes Kepler (Harmonices Mundi, 1619)",
       expectedFormula: "Identifies 5th harmonic (72°/144°) and 8th harmonic (45°/135°)",
       actualResult: `${minorAsp.length} minor aspects identified`,
-      passed: minorAsp.length >= 0,
+      passed: minorAsp.length > 0 && minorAsp.every((aspect) =>
+        Number.isFinite(aspect.angle) &&
+        aspect.angle >= 0 && aspect.angle <= 180 &&
+        Number.isFinite(aspect.orb) &&
+        aspect.orb >= 0 &&
+        Number.isFinite(aspect.maxOrb) &&
+        aspect.maxOrb >= aspect.orb &&
+        Number.isFinite(aspect.strength) &&
+        aspect.strength >= 0 && aspect.strength <= 1 &&
+        Math.abs(Math.abs(aspect.angle - aspect.aspectType.angle) - aspect.orb) < 1e-6
+      ),
       notes: "Harmonic vibrational resonances captured.",
     });
 
@@ -386,25 +397,9 @@ export class MultiSystemBenchmarkRunner {
       notes: "Cardinal, Fixed, and Mutable dynamism balances verified.",
     });
 
-    // 27-32. Additional Classical Features Verification
-    for (let i = 27; i <= 32; i++) {
-      list.push({
-        id: `W-CLS-${i.toString().padStart(2, "0")}`,
-        system: "Western",
-        name: i === 27 ? "Declinations & Out-of-Bounds Detection" :
-              i === 28 ? "Precession-Corrected Fixed Stars Engine" :
-              i === 29 ? "Secondary Progressions Day-for-a-Year Rate" :
-              i === 30 ? "Annual Profections 12-Year Cycle" :
-              i === 31 ? "Zodiacal Releasing Loosening of the Helm" :
-              "Synastry / Composite Midpoint Calculation",
-        category: "Advanced Western Techniques",
-        classicalAuthority: "Ebertin / Vettius Valens / Abu Ma'shar",
-        expectedFormula: "Validated against classical algorithms",
-        actualResult: "Passed mathematical integrity verification",
-        passed: true,
-        notes: "Engine operational and tested.",
-      });
-    }
+    // Advanced Western methods are not asserted here without independent
+    // fixtures. Declinations, fixed stars, progressions, zodiacal releasing,
+    // and composite techniques remain separately gated/research-required.
   }
 
   // ------------------------------------------------------------
@@ -497,19 +492,40 @@ export class MultiSystemBenchmarkRunner {
       notes: "Mathematical total of Sarvashtakavarga is universally invariant.",
     });
 
-    // 7. Jaimini 7 Chara Karakas Evaluation
+    // 7. Jaimini eight-karaka and Seven-graha schemes are separate.
     const jaimini = vChart.jaiminiKarakas;
-    const ak = jaimini?.atmakaraka;
+    const jaiminiAK = jaimini?.atmakaraka;
     list.push({
       id: "V-JAI-01",
       system: "Vedic",
-      name: "Jaimini 7 Chara Karakas (Atmakaraka through Darakaraka)",
+      name: "Jaimini 8 Chara Karakas (Rahu reverse-counted; Dara Karaka included)",
       category: "Jaimini Astrology",
-      classicalAuthority: "Maharishi Jaimini (Upadesha Sutras)",
-      expectedFormula: "7 planets ranked by decreasing degree within sign (0° to 30°)",
-      actualResult: ak ? `Atmakaraka = ${ak.planet} (${ak.rasiDegreeFormatted}) in ${ak.sign}` : "Missing",
-      passed: jaimini !== undefined && jaimini.karakas.length === 7,
-      notes: "King of the chart (Soul significator) identified with Karakamsa.",
+      classicalAuthority: "Jaimini Sutras (B. Suryanarain Rao translation, revised by B.V. Raman); declared 8-karaka convention",
+      expectedFormula: "Sun–Saturn plus Rahu ranked by effective degree; Rahu uses 30° − degree within sign; eight roles through DK",
+      actualResult: jaiminiAK ? `Atmakaraka = ${jaiminiAK.planet} (actual ${jaiminiAK.rasiDegreeFormatted}; rank ${jaiminiAK.effectiveDegreeFormatted}) in ${jaiminiAK.sign}` : "Missing",
+      passed: jaimini?.scheme === "Jaimini-8" &&
+        jaimini.includesRahu &&
+        jaimini.karakas.length === 8 &&
+        jaimini.karakas.some((karaka) => karaka.roleShort === "DK") &&
+        jaimini.karakas.some((karaka) => karaka.planet === "Rahu" && karaka.isReverseCounted),
+      notes: "Rahu reverse-degree policy and the selected eight-role scheme are shown explicitly; exact ties emit warnings.",
+    });
+
+    const sevenGraha = vChart.sevenGrahaKarakas;
+    list.push({
+      id: "V-PAR-01",
+      system: "Vedic",
+      name: "Seven-graha Chara Karaka option (Matru/Putra merged)",
+      category: "Parashari Astrology",
+      classicalAuthority: "Brihat Parashara Hora Shastra, chapter 32, verses 1–2 and 13–17",
+      expectedFormula: "Sun through Saturn; AK, AmK, BK, merged MK/PK, PiK, GK, DK",
+      actualResult: sevenGraha ? `${sevenGraha.label}: ${sevenGraha.karakas.length} roles` : "Missing",
+      passed: sevenGraha?.scheme === "Seven-Graha-Option" &&
+        sevenGraha.karakas.length === 7 &&
+        sevenGraha.karakas.some((karaka) => karaka.roleShort === "PiK") &&
+        sevenGraha.karakas.some((karaka) => karaka.roleShort === "MK/PK") &&
+        sevenGraha.karakas.some((karaka) => karaka.roleShort === "DK"),
+      notes: "Kept separate from the Jaimini eight-karaka convention; no Rahu is included.",
     });
 
     // 8. Tara Bala (9-Tara Chakra) Grid
@@ -540,29 +556,9 @@ export class MultiSystemBenchmarkRunner {
       notes: "Sun-Saturn and Moon-Mercury father-son/mother-son exemptions enforced.",
     });
 
-    // 10-32. Additional Vedic Classical Invariants (Divisional Charts, Yogas, Shadbala)
-    for (let i = 10; i <= 32; i++) {
-      list.push({
-        id: `V-INV-${i.toString().padStart(2, "0")}`,
-        system: "Vedic",
-        name: i === 10 ? "Shadbala 6-Fold Virupa Calculation (Sthana, Dig, Kala, etc.)" :
-              i === 11 ? "Planetary Avasthas (Baaladi, Jagradadi, Deeptadi)" :
-              i === 12 ? "Pancha Mahapurusha & Raja Yogas Detection" :
-              i === 13 ? "Viparita Raja Yoga & Neecha Bhanga Detection" :
-              i === 14 ? "Trikona & Ekadhipatya Shodhana Reductions" :
-              i === 15 ? "Ashtakoota 36 Gunas Vivaha Melapak Scoring & Kutas Scaling" :
-              i === 16 ? "Kuja (Manglik) Dosha & Kuja Bhanga 8-Fold Classical Cancellations" :
-              i === 17 ? "Navamsa (D9) Marriage Synergy & Shukra/Brihaspati Karaka Dignity" :
-              i === 18 ? "Nadi & Bhakoot Classical Dosha Bhanga Cancellation Algorithms" :
-              `Vedic Divisional Vargas D${i - 12} Algorithm Verification`,
-        category: "Parashari Principles",
-        classicalAuthority: "Maharishi Parashara (BPHS)",
-        expectedFormula: "Verified against classical BPHS chapter rules",
-        actualResult: "Passed mathematical assertion",
-        passed: true,
-        notes: "Classical Jyotish doctrine verified.",
-      });
-    }
+    // Advanced Parashari methods (Shadbala, avasthas, yoga cancellations,
+    // Ashtakoota, and divisional Vargas beyond the tested foundations) are
+    // not marked passed without method-specific source fixtures.
   }
 
   // ------------------------------------------------------------
@@ -601,6 +597,14 @@ export class MultiSystemBenchmarkRunner {
     });
 
     // 3. 249 Sub-Divisions Non-Overlap Invariant
+    const kpSubs = SubLordCalculator.generate249Table();
+    const kpSubsContinuous =
+      kpSubs.length === 249 &&
+      Math.abs(kpSubs[0].startLongitude) < 1e-10 &&
+      Math.abs(kpSubs[kpSubs.length - 1].endLongitude - 360) < 1e-10 &&
+      kpSubs.every((entry, index) =>
+        index === 0 || Math.abs(kpSubs[index - 1].endLongitude - entry.startLongitude) < 1e-10
+      );
     list.push({
       id: "KP-SUB-01",
       system: "KP",
@@ -608,9 +612,9 @@ export class MultiSystemBenchmarkRunner {
       category: "Sub-Lord Geometry",
       classicalAuthority: "KP Reader 1 Table of 249 Subs",
       expectedFormula: "249 distinct stellar sub-divisions covering exactly 360°",
-      actualResult: "All 249 Sub boundaries continuous without gaps",
-      passed: true,
-      notes: "Vimshottari Dasha year-proportional partition verified.",
+      actualResult: `count=${kpSubs.length}; continuous=${kpSubsContinuous}`,
+      passed: kpSubsContinuous,
+      notes: "Computed from the engine's generated table; no hard-coded pass.",
     });
 
     // 4. 4-Fold Significators (Grades A, B, C, D)
@@ -672,7 +676,10 @@ export class MultiSystemBenchmarkRunner {
         classicalAuthority: "KP Reader 3 & 4 (Event Timing)",
         expectedFormula: "CSL houses evaluated against primary/supporting/detrimental houses",
         actualResult: `Status: ${pred.verdict} (${pred.probability}% probability)`,
-        passed: pred.verdict !== undefined && pred.probability >= 0,
+        passed: pred.verdict !== undefined &&
+        Number.isFinite(pred.probability) &&
+        pred.probability >= 0 && pred.probability <= 100 &&
+        Boolean(pred.primaryCuspalSubLord),
         notes: `House ${ev.house} CSL (${pred.primaryCuspalSubLord}) examined for event promise.`,
       });
     });
@@ -770,10 +777,13 @@ export class MultiSystemBenchmarkRunner {
       name: "Five Elements (Wu Xing 五行) Distribution Consistency",
       category: "Wu Xing Dynamics",
       classicalAuthority: "Classical Chinese Cosmology",
-      expectedFormula: "Wood + Fire + Earth + Metal + Water mapped across Stems & Branches",
+      expectedFormula: "All five element fields exist and contain finite non-negative values",
       actualResult: `Elements mapped: Wood(${bazi.elementsBalance.Wood}) Fire(${bazi.elementsBalance.Fire}) Earth(${bazi.elementsBalance.Earth}) Metal(${bazi.elementsBalance.Metal}) Water(${bazi.elementsBalance.Water})`,
-      passed: elemSum >= 4,
-      notes: "Productive (Sheng) and Destructive (Ke) cycles operational.",
+      passed: ["Wood", "Fire", "Earth", "Metal", "Water"].every((element) =>
+        Number.isFinite(bazi.elementsBalance[element as keyof typeof bazi.elementsBalance]) &&
+        bazi.elementsBalance[element as keyof typeof bazi.elementsBalance] >= 0
+      ),
+      notes: "Structural field validation only; this does not validate the element weighting model or Day Master strength.",
     });
 
     // 8. San He Trines & Liu He Secret Friend
@@ -790,27 +800,10 @@ export class MultiSystemBenchmarkRunner {
       notes: "Harmonic affinity and opposition clash dynamics computed.",
     });
 
-    // 9-16. Additional BaZi Metaphysics Assertions
-    for (let i = 9; i <= 16; i++) {
-      list.push({
-        id: `BZ-MET-${i.toString().padStart(2, "0")}`,
-        system: "BaZi",
-        name: i === 9 ? "Day Master Useful God (Yong Shen 用神) Evaluation" :
-              i === 10 ? "Heavenly Stems Combinations and Clashes (He / Chong)" :
-              i === 11 ? "Earthly Branches Six Harmonies (Liu He)" :
-              i === 12 ? "Earthly Branches Three Harmonies (San He Element Frames)" :
-              i === 13 ? "Earthly Branches Clashes (Six Clashes - Liu Chong)" :
-              i === 14 ? "Annual Influence (Liu Nian 流年) Transition" :
-              i === 15 ? "Monthly Influence (Liu Yue 流月) Synchronization" :
-              "Yin/Yang Polarity Totality Invariant",
-        category: "Chinese Metaphysics",
-        classicalAuthority: "Zi Ping Zhen Quan",
-        expectedFormula: "Validated against classical BaZi texts",
-        actualResult: "Passed mathematical assertion",
-        passed: true,
-        notes: "Metaphysical engine verified.",
-      });
-    }
+    // Advanced methods are not independently tested here. Do not manufacture
+    // green assertions: Yong Shen, stem/branch transformations, monthly timing,
+    // and the advanced interaction matrix remain research/test work.
+
   }
 
   // ------------------------------------------------------------
@@ -962,18 +955,8 @@ export class MultiSystemBenchmarkRunner {
       notes: "Karmic blind spots and areas of evolutionary soul stretching.",
     });
 
-    // 11. Karmic Debt Numbers Detection (13, 14, 16, 19)
-    list.push({
-      id: "NU-DEB-01",
-      system: "Numerology",
-      name: "Karmic Debt Intermediate Reductions (13, 14, 16, 19)",
-      category: "Karmic Analysis",
-      classicalAuthority: "Classical Esoteric Numerology",
-      expectedFormula: "Pre-reduction numbers monitored for karmic debt markers",
-      actualResult: "Karmic debt detection verified in core calculations",
-      passed: true,
-      notes: "13 (diligence), 14 (temperance), 16 (spiritual awakening), 19 (selflessness).",
-    });
+    // Karmic-debt intermediate reductions (13/14/16/19) are not asserted:
+    // the current profile does not expose a verified pre-reduction trace.
 
     // 12. Expression Planes of Expression
     const planes = num.expressionPlanes;

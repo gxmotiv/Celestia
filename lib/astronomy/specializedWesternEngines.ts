@@ -1,6 +1,6 @@
 /**
  * Specialized Western Astrology Engines:
- * 1. Fixed Stars Engine (35+ Classical, Royal & Archangel stars with orb detection & Ptolemaic natures)
+ * 1. Fixed Stars Engine (20 curated J2000 reference stars; no precession/proper-motion correction)
  * 2. Eclipse Analyzer (Solar & Lunar eclipses affecting natal houses with 6-12 month impacts)
  * 3. Medical Astrology Indicators (Zodiac bodily rulerships, stress aspects, 6th/12th house vitality analysis)
  * 4. Astrocartography Power Lines (Planetary lines on AC, DC, MC, IC across geographic coordinates)
@@ -8,8 +8,6 @@
 
 import {
   WesternChartData,
-  PlanetPosition,
-  normalizeDegrees,
   formatDegreeMinute,
   ZODIAC_SIGNS,
 } from "./ephemeris";
@@ -38,6 +36,9 @@ export interface StarContact {
   starLongitude: number;
   planetLongitude: number;
   orb: number;
+  /** These star coordinates are fixed J2000 reference longitudes, not date-corrected positions. */
+  coordinateEpoch: "J2000";
+  precisionStatus: "unprecessed-reference";
   interpretation: string;
 }
 
@@ -93,6 +94,8 @@ export class FixedStarsEngine {
             starLongitude: star.longitude,
             planetLongitude: point.longitude,
             orb: Math.round(diff * 100) / 100,
+            coordinateEpoch: "J2000",
+            precisionStatus: "unprecessed-reference",
             interpretation: `${point.name} (${point.signDegreeFormatted}) exactly conjuncts ${star.name} (${formatDegreeMinute(star.longitude)}, orb ${diff.toFixed(2)}°). Nature: ${star.nature} (${star.planetaryNature}). ${star.meaning}`,
           });
         }
@@ -131,7 +134,10 @@ export class EclipseAnalyzer {
     { date: "August 28, 2026", type: "Partial Lunar" as const, lon: 334.8 },   // ~4° Pisces
   ];
 
-  public analyzeEclipses(chart: WesternChartData): EclipseItem[] {
+  public analyzeEclipses(chart: WesternChartData, asOfDate: Date = new Date()): EclipseItem[] {
+    if (!Number.isFinite(asOfDate.getTime())) {
+      throw new Error("Eclipse analysis date must be a valid Date.");
+    }
     const getHouse = (lon: number) => {
       const cusps = chart.houses;
       for (let i = 0; i < cusps.length; i++) {
@@ -161,7 +167,9 @@ export class EclipseAnalyzer {
       12: { theme: "Subconscious Surrender & Spiritual Healing", recs: ["Enter sacred solitary retreat", "Engage dreamwork & meditation", "Forgive and release past burdens"] },
     };
 
-    return EclipseAnalyzer.UPCOMING_ECLIPSES.map((e) => {
+    return EclipseAnalyzer.UPCOMING_ECLIPSES
+      .filter((e) => Date.parse(e.date) > asOfDate.getTime())
+      .map((e) => {
       const house = getHouse(e.lon);
       const signIdx = Math.floor(e.lon / 30);
       const sign = ZODIAC_SIGNS[signIdx]?.name || "Aries";
@@ -277,69 +285,32 @@ export interface AstrocartographyLine {
 }
 
 export interface AstrocartographyReport {
+  status: "not-implemented";
+  limitations: string[];
   powerLines: AstrocartographyLine[];
   topDestinations: Array<{ purpose: string; suggestedRegion: string; planetaryLine: string }>;
 }
 
 export class AstrocartographyEngine {
-  public calculatePowerLines(chart: WesternChartData): AstrocartographyReport {
-    const lines: AstrocartographyLine[] = [];
-
-    chart.planets.forEach((p) => {
-      // Calculate longitude on Earth where planetary right ascension aligns with Midheaven
-      // Simple approximate astrocartography mapping:
-      const mcLon = normalizeDegrees(p.longitude - 90);
-      const icLon = normalizeDegrees(mcLon + 180);
-      const acLon = normalizeDegrees(p.longitude);
-      const dcLon = normalizeDegrees(p.longitude + 180);
-
-      const formatCoord = (deg: number) => {
-        const lonRel = deg > 180 ? deg - 360 : deg;
-        const hemi = lonRel >= 0 ? "E" : "W";
-        return `${Math.abs(lonRel).toFixed(1)}° ${hemi}`;
-      };
-
-      if (["Sun", "Moon", "Venus", "Jupiter", "Mars", "Saturn"].includes(p.name)) {
-        lines.push({
-          planet: p.name,
-          symbol: p.symbol,
-          lineType: "MC (Midheaven)",
-          longitudeTarget: mcLon,
-          longitudeStr: formatCoord(mcLon),
-          theme: `Peak public acclaim, career authority, and vocational purpose under ${p.name}.`,
-          bestFor: "Career advancement & public reputation",
-        });
-
-        lines.push({
-          planet: p.name,
-          symbol: p.symbol,
-          lineType: "AC (Ascendant)",
-          longitudeTarget: acLon,
-          longitudeStr: formatCoord(acLon),
-          theme: `Direct physical embodiment, magnetic presence, and personal empowerment under ${p.name}.`,
-          bestFor: "Self-expression, confidence & vitality",
-        });
-
-        lines.push({
-          planet: p.name,
-          symbol: p.symbol,
-          lineType: "DC (Descendant)",
-          longitudeTarget: dcLon,
-          longitudeStr: formatCoord(dcLon),
-          theme: `Fated partnerships, meeting significant others, and magnetic social connection.`,
-          bestFor: "Love, romance & collaborative alliances",
-        });
-      }
-    });
-
+  /**
+   * The former implementation used direct ecliptic-longitude offsets as
+   * terrestrial AC/DC/MC/IC lines. That is not an astrocartography solution:
+   * proper lines require equatorial coordinate conversion, sidereal time,
+   * geographic latitude and horizon/meridian intersection solving.
+   *
+   * Return no fabricated locations until those calculations are implemented
+   * and verified against reference charts.
+   */
+  public calculatePowerLines(_chart: WesternChartData): AstrocartographyReport {
     return {
-      powerLines: lines,
-      topDestinations: [
-        { purpose: "Career & Executive Success", suggestedRegion: "Regions along your Sun-MC or Jupiter-MC line", planetaryLine: "Sun / Jupiter Midheaven" },
-        { purpose: "Romance & Marriage Magnetism", suggestedRegion: "Regions along your Venus-DC or Moon-DC line", planetaryLine: "Venus / Moon Descendant" },
-        { purpose: "Spiritual Peace & Domestic Healing", suggestedRegion: "Regions along your Moon-IC or Jupiter-IC line", planetaryLine: "Moon / Jupiter Imum Coeli" },
-        { purpose: "Courage, Sports & Athletic Mastery", suggestedRegion: "Regions along your Mars-AC line", planetaryLine: "Mars Ascendant" },
+      status: "not-implemented",
+      limitations: [
+        "No verified right-ascension / declination transformation for planetary meridian lines.",
+        "No latitude-dependent Ascendant / Descendant horizon solving.",
+        "No UT-specific sidereal-time solution or reference-chart validation.",
       ],
+      powerLines: [],
+      topDestinations: [],
     };
   }
 }

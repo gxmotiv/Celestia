@@ -525,7 +525,7 @@ export function MultiSystemVerificationPanel({
                   Life Path = Reduce(Month) + Reduce(Day) + Reduce(Year), preserving 11, 22, 33
                 </p>
                 <p className="mt-1 text-slate-400">
-                  Prevents improper flattening of Master Numbers. Detects Karmic Debt Numbers (13, 14, 16, 19).
+                  Preserves selected Master Numbers. Karmic-debt intermediate reductions (13, 14, 16, 19) are not yet independently verified.
                 </p>
               </div>
             </div>
