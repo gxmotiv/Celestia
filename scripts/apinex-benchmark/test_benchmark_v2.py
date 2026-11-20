@@ -1,13 +1,20 @@
 import importlib.util
 import json
 import pathlib
+import threading
+import time
 import unittest
+from unittest import mock
 
 ROOT = pathlib.Path(__file__).resolve().parent
 spec = importlib.util.spec_from_file_location("benchmark_run", ROOT / "run.py")
 runner = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(runner)
 from response_validation import validate_response
+
+batch_spec = importlib.util.spec_from_file_location("benchmark_batch", ROOT / "run_batch.py")
+batch_runner = importlib.util.module_from_spec(batch_spec)
+batch_spec.loader.exec_module(batch_runner)
 
 CONFIG = json.loads((ROOT / "config.json").read_text(encoding="utf-8"))
 
@@ -50,6 +57,33 @@ def valid_task_payload(task):
             "method_note": "degree_in_sign = longitude - sign lower bound; arcseconds = degree difference × 3600",
         }
     return payload
+
+
+
+class ParallelDispatchTests(unittest.TestCase):
+    def test_selected_models_are_dispatched_concurrently_for_one_task(self):
+        lock = threading.Lock()
+        active = 0
+        maximum_active = 0
+
+        def fake_run(alias, task, out_dir):
+            nonlocal active, maximum_active
+            self.assertEqual(task, "A")
+            with lock:
+                active += 1
+                maximum_active = max(maximum_active, active)
+            time.sleep(0.08)
+            with lock:
+                active -= 1
+            return {"model_alias": alias, "status": "success"}
+
+        aliases = ["m1", "m2", "m3", "m4"]
+        with mock.patch.object(batch_runner, "run_one_model", side_effect=fake_run):
+            results = batch_runner.run_models_in_parallel(aliases, "A", pathlib.Path("."), 4)
+
+        self.assertEqual(set(results), set(aliases))
+        self.assertTrue(all(row["status"] == "success" for row in results.values()))
+        self.assertGreater(maximum_active, 1)
 
 
 class RoutingTests(unittest.TestCase):
