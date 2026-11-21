@@ -101,9 +101,7 @@ function parseCivilInput(dateString: string, timeString: string) {
   return { year, month, day, hour, minute, wallClockMs };
 }
 
-function getZonedParts(instantMs: number, timeZone: string) {
-  const formatter = new Intl.DateTimeFormat("en-US-u-ca-gregory-nu-latn", {
-    timeZone,
+function getZonedParts(instantMs: number, formatter: Intl.DateTimeFormat) {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -159,7 +157,16 @@ export function resolveIanaCivilDateTime(
   if (!timeZone.trim()) throw new RangeError("An IANA time-zone identifier is required.");
 
   // Validate the identifier early and fail clearly for unsupported/invalid zones.
-  const formatter = new Intl.DateTimeFormat("en-US", { timeZone });
+  const formatter = new Intl.DateTimeFormat("en-US-u-ca-gregory-nu-latn", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  });
   formatter.format(new Date(civil.wallClockMs));
 
   // Collect all offsets that could apply around the requested local date. Sampling
@@ -167,7 +174,7 @@ export function resolveIanaCivilDateTime(
   const offsets = new Set<number>();
   for (let delta = -48; delta <= 48; delta += 3) {
     const sampleMs = civil.wallClockMs + delta * 60 * 60 * 1000;
-    const local = getZonedParts(sampleMs, timeZone);
+    const local = getZonedParts(sampleMs, formatter);
     const sampleWholeSecond = Math.floor(sampleMs / 1000) * 1000;
     const localAsUtcMs = civilPartsToUtcMs(
       local.year, local.month, local.day, local.hour, local.minute, local.second
@@ -178,7 +185,7 @@ export function resolveIanaCivilDateTime(
   const candidates: IanaTimeCandidate[] = [];
   for (const offsetMs of offsets) {
     const utcMs = civil.wallClockMs - offsetMs;
-    const actual = getZonedParts(utcMs, timeZone);
+    const actual = getZonedParts(utcMs, formatter);
     if (sameCivilMinute(actual, civil)) {
       candidates.push({
         utcDate: new Date(utcMs),
