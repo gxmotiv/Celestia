@@ -9,8 +9,8 @@ export function localCivilDateTimeToUtc(
   timeString: string,
   timezoneOffsetHours: number
 ): Date {
-  const dateMatch = /^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(dateString);
-  const timeMatch = /^(\\d{2}):(\\d{2})$/.exec(timeString);
+  const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateString);
+  const timeMatch = /^(\d{2}):(\d{2})$/.exec(timeString);
 
   if (!dateMatch || !timeMatch) {
     throw new RangeError("Birth date must be YYYY-MM-DD and birth time must be HH:mm.");
