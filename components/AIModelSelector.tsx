@@ -182,7 +182,8 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
           />
           <span>
             <strong className="block mb-1">Manual provider-risk acknowledgement required</strong>
-            {liveSelected?.community ? `This model is published by ${liveSelected.publisher || "a community publisher"} and runs on independent provider infrastructure. Pollinations says community providers control their own storage, sharing, security, and training practices; it does not verify them. ` : "This model's provider warns that prompts and replies may be retained and used for training, and zero-data-retention is unavailable. "}
+            {liveSelected?.community ? `This model is published by ${liveSelected.publisher || "a community publisher"} and runs on independent provider infrastructure. Pollinations says community providers control their own storage, sharing, security, and training practices; it does not verify them. ` : ""}
+            {liveSelected?.privacyRisk ? "The model listing also warns that prompts and replies may be retained and used for training, and zero-data-retention is unavailable. " : ""}
             Celestia sends the current birth details, chart data, and question to this provider. I understand and explicitly consent to using this model for this reading. I will not send confidential information.
           </span>
         </label>
