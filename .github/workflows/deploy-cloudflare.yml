@@ -82,6 +82,13 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Install temporary TypeScript runner
         run: npm install --no-save --package-lock=false --no-audit --no-fund tsx
+      - name: Verify benchmark runner starts in the repository CommonJS mode
+        run: |
+          if env -u POLLINATIONS_API_KEY npx tsx scripts/benchmarkPollinationsModels.ts > benchmark-runner-smoke.log 2>&1; then
+            echo "Benchmark runner unexpectedly succeeded without its API key"
+            exit 1
+          fi
+          grep -F "POLLINATIONS_API_KEY GitHub secret is not configured." benchmark-runner-smoke.log
       - name: Run guarded synthetic-prompt benchmark
         run: npx tsx scripts/benchmarkPollinationsModels.ts
         env:
