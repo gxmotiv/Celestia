@@ -81,8 +81,8 @@ export function AIReadingView({
   ];
 
   const generateReading = async (overrideMode?: ReadingMode) => {
-    if (selectedModel === "pollinations:stealth/glyph-cluster" && !privacyRiskAcknowledged) {
-      setGenerationError("Acknowledge Glyph Cluster’s prompt-retention and training warning before generating.");
+    if ((selectedModel === "pollinations:stealth/glyph-cluster" || selectedModel.startsWith("pollinations:community/")) && !privacyRiskAcknowledged) {
+      setGenerationError("Acknowledge the selected model’s provider and data-handling warning before generating.");
       return;
     }
     setGenerationError("");
