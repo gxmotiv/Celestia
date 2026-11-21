@@ -1,35 +1,31 @@
 export const CELESTIA_AI_MODELS = [
-  { id: "free/deepseek-v4.1-flash", providerId: "apinex", providerName: "APInex", providerModelId: "free/deepseek-v4.1-flash", secretName: "APINEX_API_KEY", name: "DeepSeek V4.1 Flash", role: "Celestia default", description: "Passed the numerical reference fixture (Task C) in the 20 November 2026 run. Overall A–J quality is not yet ranked.", quotaNote: "APInex free-category model; quota weight ×3." },
-  { id: "free/mimo-v2.6-pro", providerId: "apinex", providerName: "APInex", providerModelId: "free/mimo-v2.6-pro", secretName: "APINEX_API_KEY", name: "MiMo V2.6 Pro", role: "Independent challenger", description: "Passed Task C in the 20 November 2026 run. Other task outputs need further validation.", quotaNote: "APInex free-category model; quota weight ×2." },
-  { id: "free/minimax-m3.1-flash", providerId: "apinex", providerName: "APInex", providerModelId: "free/minimax-m3.1-flash", secretName: "APINEX_API_KEY", name: "MiniMax M3.1 Flash", role: "Fast challenger", description: "Passed Task C in the 20 November 2026 run. Overall quality is not yet ranked.", quotaNote: "APInex free-category model; quota weight ×2." },
-  { id: "free/gemini-4-hydrogen", providerId: "apinex", providerName: "APInex", providerModelId: "free/gemini-4-hydrogen", secretName: "APINEX_API_KEY", name: "Gemini 4 Hydrogen", role: "Reasoning challenger", description: "APInex-routed model; passed Task C in the 20 November 2026 run. This is not a direct Google Gemini API connection.", quotaNote: "APInex free-category model; quota weight ×5." },
-  { id: "free/gemini-3.8-flash", providerId: "apinex", providerName: "APInex", providerModelId: "free/gemini-3.8-flash", secretName: "APINEX_API_KEY", name: "Gemini 3.8 Flash", role: "Research challenger", description: "APInex-routed model; passed Task C in the 20 November 2026 run. This is not a direct Google Gemini API connection.", quotaNote: "APInex free-category model; quota weight ×3." },
-  { id: "free/muse-spark-1.3", providerId: "apinex", providerName: "APInex", providerModelId: "free/muse-spark-1.3", secretName: "APINEX_API_KEY", name: "Muse Spark 1.3", role: "Challenger", description: "Passed Task C in the 20 November 2026 run. Other task outputs need further validation.", quotaNote: "APInex free-category model; quota weight ×3." },
-  { id: "free/deepseek-v4-pro-0813", providerId: "apinex", providerName: "APInex", providerModelId: "free/deepseek-v4-pro-0813", secretName: "APINEX_API_KEY", name: "DeepSeek V4 Pro", role: "Code and reasoning challenger", description: "Passed Task C in the 20 November 2026 run. Overall quality is not yet ranked.", quotaNote: "APInex free-category model; quota weight ×3." },
-  { id: "free/hy4-flash", providerId: "apinex", providerName: "APInex", providerModelId: "free/hy4-flash", secretName: "APINEX_API_KEY", name: "HY4 Flash", role: "Experimental challenger", description: "Passed Task C in the 20 November 2026 run. Keep experimental until more comparable trials are available.", quotaNote: "APInex free-category model; quota weight ×2." },
-  { id: "free/kimi-k3", providerId: "apinex", providerName: "APInex", providerModelId: "free/kimi-k3", secretName: "APINEX_API_KEY", name: "Kimi K3", role: "Long-context challenger", description: "Passed Task C in the 20 November 2026 run. Overall quality is not yet ranked.", quotaNote: "APInex free-category model; quota weight ×3." },
-  { id: "free/qwen-3.8-max", providerId: "apinex", providerName: "APInex", providerModelId: "free/qwen-3.8-max", secretName: "APINEX_API_KEY", name: "Qwen 3.8 Max", role: "Research challenger", description: "Passed Task C in the 20 November 2026 run. Overall quality is not yet ranked.", quotaNote: "APInex free-category model; quota weight ×3." },
-  { id: "free/gpt-6-luna", providerId: "apinex", providerName: "APInex", providerModelId: "free/gpt-6-luna", secretName: "APINEX_API_KEY", name: "GPT-6 Luna", role: "General-purpose challenger", description: "Passed Task C in the 20 November 2026 run. Overall quality is not yet ranked.", quotaNote: "APInex free-category model; quota weight ×3." },
-  { id: "free/glm-5.3-flash", providerId: "apinex", providerName: "APInex", providerModelId: "free/glm-5.3-flash", secretName: "APINEX_API_KEY", name: "GLM 5.3 Flash", role: "Fast alternative", description: "Passed Task C in the 20 November 2026 run. Overall quality is not yet ranked.", quotaNote: "APInex free-category model; quota weight ×3." },
-
-  { id: "freemodel:deepseek-v4.1-flash", providerId: "freemodel", providerName: "FreeModel", providerModelId: "deepseek-v4.1-flash", secretName: "FREEMODEL_API_KEY", name: "DeepSeek V4.1 Flash", role: "FreeModel free plan", description: "Available in FreeModel's OpenAI-compatible catalogue. Selected and routed through FreeModel, independently of APInex.", quotaNote: "Published free allowance: 1M combined prompt/completion tokens per month; 60 requests/minute; no card." },
-  { id: "freemodel:glm-5.3-flash", providerId: "freemodel", providerName: "FreeModel", providerModelId: "glm-5.3-flash", secretName: "FREEMODEL_API_KEY", name: "GLM 5.3 Flash", role: "FreeModel free plan", description: "Available in FreeModel's model catalogue. Usage is counted against the FreeModel monthly allowance.", quotaNote: "Published free allowance: 1M combined prompt/completion tokens per month; 60 requests/minute; no card." },
-  { id: "freemodel:mimo-v2.6-pro", providerId: "freemodel", providerName: "FreeModel", providerModelId: "mimo-v2.6-pro", secretName: "FREEMODEL_API_KEY", name: "MiMo V2.6 Pro", role: "FreeModel free plan", description: "Available in FreeModel's model catalogue. Usage is counted against the FreeModel monthly allowance.", quotaNote: "Published free allowance: 1M combined prompt/completion tokens per month; 60 requests/minute; no card." },
-  { id: "freemodel:gpt-6-luna", providerId: "freemodel", providerName: "FreeModel", providerModelId: "gpt-6-luna", secretName: "FREEMODEL_API_KEY", name: "GPT-6 Luna", role: "FreeModel free plan", description: "Available in FreeModel's model catalogue. Usage is counted against the FreeModel monthly allowance.", quotaNote: "Published free allowance: 1M combined prompt/completion tokens per month; 60 requests/minute; no card." },
-
-  { id: "nararouter:agnes-2.5-flash", providerId: "nararouter", providerName: "NaraRouter", providerModelId: "agnes-2.5-flash", secretName: "NARAROUTER_API_KEY", name: "Agnes 2.5 Flash", role: "NaraRouter free plan", description: "The current NaraRouter free plan lists Agnes 2.5 Flash as its included model. The authenticated /v1/models endpoint is the final authority for your account's available alias.", quotaNote: "Published free plan: 7M tokens/day and 15 requests/minute; no card required." },
-
-  { id: "openrouter:openrouter/free", providerId: "openrouter", providerName: "OpenRouter", providerModelId: "openrouter/free", secretName: "OPENROUTER_API_KEY", name: "Auto-select a free model", role: "OpenRouter free router", description: "OpenRouter chooses an eligible free model for each request. Celestia supplies no paid fallback models, so this remains free-model-only.", quotaNote: "Published free-variant limit: 20 requests/minute and 50 requests/day without purchased credits." },
+  { id: "pollinations:auto-free", providerId: "pollinations", providerName: "Pollinations", providerModelId: "auto-free", secretName: "POLLINATIONS_API_KEY", name: "Automatic free model", role: "Recommended default", description: "Automatically selects a currently healthy, official, zero-priced text model from Pollinations. The live catalogue is checked before each generation.", quotaNote: "Only models whose published input and output prices are both zero are eligible." },
+  { id: "freemodel:deepseek-v4.1-flash", providerId: "freemodel", providerName: "FreeModel", providerModelId: "deepseek-v4.1-flash", secretName: "FREEMODEL_API_KEY", name: "DeepSeek V4.1 Flash", role: "FreeModel free plan", description: "Available in FreeModel's OpenAI-compatible catalogue.", quotaNote: "FreeModel account allowance applies." },
+  { id: "freemodel:glm-5.3-flash", providerId: "freemodel", providerName: "FreeModel", providerModelId: "glm-5.3-flash", secretName: "FREEMODEL_API_KEY", name: "GLM 5.3 Flash", role: "FreeModel free plan", description: "Available in FreeModel's model catalogue.", quotaNote: "FreeModel account allowance applies." },
+  { id: "freemodel:mimo-v2.6-pro", providerId: "freemodel", providerName: "FreeModel", providerModelId: "mimo-v2.6-pro", secretName: "FREEMODEL_API_KEY", name: "MiMo V2.6 Pro", role: "FreeModel free plan", description: "Available in FreeModel's model catalogue.", quotaNote: "FreeModel account allowance applies." },
+  { id: "freemodel:gpt-6-luna", providerId: "freemodel", providerName: "FreeModel", providerModelId: "gpt-6-luna", secretName: "FREEMODEL_API_KEY", name: "GPT-6 Luna", role: "FreeModel free plan", description: "Available in FreeModel's model catalogue.", quotaNote: "FreeModel account allowance applies." },
+  { id: "nararouter:agnes-2.5-flash", providerId: "nararouter", providerName: "NaraRouter", providerModelId: "agnes-2.5-flash", secretName: "NARAROUTER_API_KEY", name: "Agnes 2.5 Flash", role: "NaraRouter plan", description: "The authenticated /v1/models endpoint is the final authority for account availability.", quotaNote: "NaraRouter account limits apply." },
+  { id: "openrouter:openrouter/free", providerId: "openrouter", providerName: "OpenRouter", providerModelId: "openrouter/free", secretName: "OPENROUTER_API_KEY", name: "Auto-select a free model", role: "OpenRouter free router", description: "Uses OpenRouter's free-model router only.", quotaNote: "OpenRouter free-variant limits apply." },
 ] as const;
 
 export type CelestiaAIModel = (typeof CELESTIA_AI_MODELS)[number];
-export type CelestiaAIModelId = CelestiaAIModel["id"];
-export type CelestiaAIProviderId = CelestiaAIModel["providerId"];
+export type CelestiaAIModelId = string;
+export type CelestiaAIProviderId = "pollinations" | "freemodel" | "nararouter" | "openrouter";
 
-export const DEFAULT_CELESTIA_AI_MODEL: CelestiaAIModelId = "free/deepseek-v4.1-flash";
+export const DEFAULT_CELESTIA_AI_MODEL: CelestiaAIModelId = "pollinations:auto-free";
 
-export function getCelestiaAIModel(value: unknown): CelestiaAIModel | undefined {
-  return CELESTIA_AI_MODELS.find((model) => model.id === value);
+export function getCelestiaAIModel(value: unknown): CelestiaAIModel | (CelestiaAIModel & { providerId: "pollinations"; providerName: "Pollinations"; providerModelId: string }) | undefined {
+  if (typeof value !== "string") return undefined;
+  const known = CELESTIA_AI_MODELS.find((model) => model.id === value);
+  if (known) return known;
+  if (value.startsWith("pollinations:") && value.length > "pollinations:".length) {
+    return {
+      ...CELESTIA_AI_MODELS[0],
+      id: value,
+      providerModelId: value.slice("pollinations:".length),
+    };
+  }
+  return undefined;
 }
 
 export function isCelestiaAIModelId(value: unknown): value is CelestiaAIModelId {
