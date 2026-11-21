@@ -181,7 +181,8 @@ export async function getPollinationsManualOnlyTextModels(): Promise<Pollination
       Number(b.reasoning) - Number(a.reasoning) ||
       (b.contextLength ?? 0) - (a.contextLength ?? 0) ||
       a.name.localeCompare(b.name)
-    );
+    )
+    .slice(0, 30);
 }
 
 export async function isPollinationsFreeTextModel(modelId: string, allowPrivacyRisk = false): Promise<boolean> {
