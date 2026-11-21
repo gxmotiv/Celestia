@@ -51,9 +51,27 @@ const glyph = {
 };
 check("excludes Glyph Cluster from automatic privacy-safe models", [glyph], 0);
 check("exposes Glyph Cluster only when manual privacy-risk models are requested", [glyph], 1);
-assert.equal(parsePollinationsFreeTextModels([glyph], { includePrivacyRisk: true })[0]?.privacyRisk, true);
+assert.equal(parsePollinationsFreeTextModels([glyph], { includeManualOnly: true })[0]?.privacyRisk, true);
 passed += 1;
 console.log("PASS marks manually exposed Glyph Cluster as privacy-risk");
+const communityModel = {
+  ...base,
+  name: "community/morriszdweck/glm-5.3-flash-free",
+  title: "GLM 5.3 Flash (free, stable!)",
+  publisher: "OSAII",
+  community: true,
+  reasoning: true,
+  tools: true,
+  context_length: 1000000,
+  health: { status: "healthy", success_rate: 100, requests: 50 },
+};
+check("excludes community models from automatic privacy-safe models", [communityModel], 0);
+check("exposes zero-priced healthy community models only for manual consent", [communityModel], 1);
+const parsedCommunity = parsePollinationsFreeTextModels([communityModel], { includeManualOnly: true })[0];
+assert.equal(parsedCommunity?.community, true);
+assert.equal(parsedCommunity?.publisher, "OSAII");
+passed += 1;
+console.log("PASS preserves community publisher identity for manual selection");
 check("rejects missing pricing currency", [{ ...base, pricing: {} }], 0);
 check("rejects unknown future billing field", [{
   ...base,
@@ -74,4 +92,4 @@ check("rejects models without chat-completions support", [{
 check("rejects non-text category", [{ ...base, category: "image" }], 0);
 check("rejects malformed payload", { models: [base] }, 0);
 
-console.log(`Pollinations catalogue tests: ${passed}/20 passed`);
+console.log(`Pollinations catalogue tests: ${passed}/23 passed`);
