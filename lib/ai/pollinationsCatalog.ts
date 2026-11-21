@@ -20,8 +20,17 @@ function numericPrices(value: unknown): number[] {
 }
 
 function zeroPriced(entry: CatalogEntry): boolean {
-  const prices = numericPrices(entry.pricing);
-  return prices.length >= 2 && prices.every((price) => price === 0);
+  if (!entry.pricing || typeof entry.pricing !== "object") return false;
+  const pricing = entry.pricing as Record<string, unknown>;
+  const input = pricing.promptTextToken ?? pricing.input ?? pricing.prompt ?? pricing.input_token;
+  const output = pricing.completionTextToken ?? pricing.output ?? pricing.completion ?? pricing.output_token;
+  const inputPrices = numericPrices(input);
+  const outputPrices = numericPrices(output);
+  const allPrices = numericPrices(pricing);
+  return inputPrices.length > 0 && outputPrices.length > 0 &&
+    inputPrices.every((price) => price === 0) &&
+    outputPrices.every((price) => price === 0) &&
+    allPrices.length >= 2 && allPrices.every((price) => price === 0);
 }
 
 function healthy(entry: CatalogEntry): boolean {
