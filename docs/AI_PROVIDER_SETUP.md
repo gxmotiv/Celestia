@@ -12,7 +12,7 @@ Official references:
 - [Official model registry schema and pricing fields](https://github.com/pollinations/pollinations/blob/main/shared/registry/model-info.ts)
 - [Pollinations privacy policy, including community-provider data handling](https://pollinations.ai/privacy)
 
-Celestia fetches both `GET https://gen.pollinations.ai/text/models?source=official&reliability=all&limit=500` and `GET https://gen.pollinations.ai/text/models?source=community&reliability=all&limit=500`. Both `/text/models` responses use `name` as the canonical model ID, `category: "text"`, `health.status`, and a `pricing` object whose currency is `pollen`. The registry omits zero-valued price fields; a free model therefore has a pricing object containing only its currency when no usage prices apply.
+Celestia fetches both `GET https://gen.pollinations.ai/text/models?source=official&reliability=all&limit=500` and `GET https://gen.pollinations.ai/text/models?source=community&reliability=all&limit=500`. Current catalogue entries expose the canonical model identifier in `id` (with older `name`-based responses accepted as a compatibility fallback), plus `category: "text"`, `health.status`, and a `pricing` object whose currency is `pollen`. The registry omits zero-valued price fields; a free model therefore has a pricing object containing only its currency when no usage prices apply.
 
 Celestia then applies stricter local checks:
 - For automatic selection: official catalogue entry; not community-sourced.
