@@ -18,6 +18,11 @@ on:
       - ".github/workflows/deploy-cloudflare.yml"
   workflow_dispatch:
     inputs:
+      benchmark:
+        description: "Run a small synthetic-prompt benchmark of eligible free official Pollinations models"
+        required: true
+        default: false
+        type: boolean
       deploy:
         description: "Deploy this branch to the Cloudflare account configured in repository secrets"
         required: true
@@ -60,6 +65,32 @@ jobs:
         run: npx opennextjs-cloudflare build --skipNextBuild
       - name: Validate Worker bundle without deploying
         run: npx wrangler deploy --dry-run
+
+  pollinations-model-benchmark:
+    name: Benchmark eligible free official Pollinations models
+    if: github.event_name == 'workflow_dispatch' && inputs.benchmark == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install locked app dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Install temporary TypeScript runner
+        run: npm install --no-save --package-lock=false --no-audit --no-fund tsx
+      - name: Run guarded synthetic-prompt benchmark
+        run: npx tsx scripts/benchmarkPollinationsModels.ts
+        env:
+          POLLINATIONS_API_KEY: ${{ secrets.POLLINATIONS_API_KEY }}
+      - name: Upload benchmark report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pollinations-model-benchmark
+          path: pollinations-model-benchmark.json
+          if-no-files-found: ignore
+          retention-days: 14
 
   deploy:
     name: Deploy to Cloudflare Workers
