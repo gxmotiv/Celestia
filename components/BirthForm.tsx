@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { GLOBAL_CITIES, CityData, searchCities } from "@/lib/astronomy/cities";
 import { getCityTimeZoneId } from "@/lib/astronomy/cityTimeZones";
-import { resolveIanaCivilDateTime } from "@/lib/astronomy/civilTime";
+import { localCivilDateTimeToUtc, resolveIanaCivilDateTime } from "@/lib/astronomy/civilTime";
 import {
   Compass,
   MapPin,
@@ -295,6 +295,13 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
         }
       } catch (error) {
         setTimeZoneError(error instanceof Error ? error.message : "The IANA time-zone identifier is invalid.");
+        return;
+      }
+    } else {
+      try {
+        localCivilDateTimeToUtc(formData.birthDate, formData.birthTime, formData.timezoneOffset);
+      } catch (error) {
+        setTimeZoneError(error instanceof Error ? error.message : "Invalid birth date, time, or fixed UTC offset.");
         return;
       }
     }
