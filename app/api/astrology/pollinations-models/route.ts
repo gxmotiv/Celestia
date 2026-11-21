@@ -1,16 +1,20 @@
 import { NextResponse } from "next/server";
-import { getPollinationsFreeTextModels } from "@/lib/ai/pollinationsCatalog";
+import { getPollinationsFreeTextModels, getPollinationsManualOnlyTextModels } from "@/lib/ai/pollinationsCatalog";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const models = await getPollinationsFreeTextModels();
+    const [models, manualOnlyModels] = await Promise.all([
+      getPollinationsFreeTextModels(),
+      getPollinationsManualOnlyTextModels(),
+    ]);
     return NextResponse.json(
       {
         provider: "pollinations",
         models,
-        filter: "official + healthy + general-purpose + zero-priced + no explicit prompt-retention warning",
+        manualOnlyModels,
+        filter: "official + healthy + general-purpose + zero-priced; privacy-risk models separated for explicit manual consent",
         sort: "price-low",
       },
       { headers: { "Cache-Control": "public, max-age=60, stale-while-revalidate=30" } }
