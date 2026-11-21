@@ -69,10 +69,11 @@ function isEligibleFreeTextModel(entry: CatalogEntry, includeManualOnly = false)
   const health = entry.health && typeof entry.health === "object"
     ? (entry.health as Record<string, unknown>).status
     : undefined;
-  const modelName = typeof entry.name === "string" ? entry.name : entry.id;
+  const modelName = typeof entry.id === "string" ? entry.id : entry.name;
   const description = typeof entry.description === "string" ? entry.description : "";
   const privacyRisk = /retain|retention|used for training|collected for training|data may be collected/i.test(description);
-  const community = entry.community === true;
+  const community = entry.community === true || entry.source === "community" ||
+    (typeof modelName === "string" && modelName.startsWith("community/"));
 
   return typeof modelName === "string" &&
     modelName.length > 0 &&
@@ -112,7 +113,9 @@ export function parsePollinationsFreeTextModels(
   return (entries as CatalogEntry[])
     .filter((entry) => entry && typeof entry === "object" && isEligibleFreeTextModel(entry, options.includeManualOnly === true))
     .map((entry) => {
-      const id = (typeof entry.name === "string" ? entry.name : entry.id) as string;
+      // Current Pollinations catalogues expose canonical IDs as `id`; keep
+      // `name` as a compatibility fallback for older catalogue responses.
+      const id = (typeof entry.id === "string" ? entry.id : entry.name) as string;
       const pricing = entry.pricing as Record<string, unknown>;
       return {
         id,
@@ -124,8 +127,8 @@ export function parsePollinationsFreeTextModels(
         privacyRisk: /retain|retention|used for training|collected for training|data may be collected/i.test(
           typeof entry.description === "string" ? entry.description : "",
         ),
-        community: entry.community === true,
-        publisher: typeof entry.publisher === "string" ? entry.publisher : (entry.community === true ? "Community publisher" : "Pollinations official"),
+        community: entry.community === true || entry.source === "community" || id.startsWith("community/"),
+        publisher: typeof entry.publisher === "string" ? entry.publisher : (entry.community === true || entry.source === "community" || id.startsWith("community/") ? "Community publisher" : "Pollinations official"),
         healthSuccessRate: entry.health && typeof entry.health === "object" && typeof (entry.health as Record<string, unknown>).success_rate === "number"
           ? (entry.health as Record<string, unknown>).success_rate as number
           : null,
