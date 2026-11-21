@@ -17,14 +17,18 @@ const base = {
 };
 
 let passed = 0;
-function check(name: string, payload: unknown, expectedCount: number) {
-  const actual = parsePollinationsFreeTextModels(payload).length;
+function check(name: string, payload: unknown, expectedCount: number, options: { includeManualOnly?: boolean } = {}) {
+  const actual = parsePollinationsFreeTextModels(payload, options).length;
   assert.equal(actual, expectedCount, name);
   passed += 1;
   console.log(`PASS ${name}`);
 }
 
-check("accepts official free model using Pollinations name field", [base], 1);
+check("accepts official free model using legacy name field", [base], 1);
+check("prefers canonical id over legacy name field", [{ ...base, id: "sample/canonical-id" }], 1);
+assert.equal(parsePollinationsFreeTextModels([{ ...base, id: "sample/canonical-id" }])[0]?.id, "sample/canonical-id");
+passed += 1;
+console.log("PASS preserves canonical id when both id and name are present");
 check("accepts wrapped OpenAI-style data array", { data: [base] }, 1);
 check("accepts explicit string zero prices", [{
   ...base,
@@ -50,7 +54,7 @@ const glyph = {
   description: "Prompts and replies may be retained and used for training; zero data retention is unavailable.",
 };
 check("excludes Glyph Cluster from automatic privacy-safe models", [glyph], 0);
-check("exposes Glyph Cluster only when manual privacy-risk models are requested", [glyph], 1);
+check("exposes Glyph Cluster only when manual privacy-risk models are requested", [glyph], 1, { includeManualOnly: true });
 assert.equal(parsePollinationsFreeTextModels([glyph], { includeManualOnly: true })[0]?.privacyRisk, true);
 passed += 1;
 console.log("PASS marks manually exposed Glyph Cluster as privacy-risk");
@@ -66,7 +70,7 @@ const communityModel = {
   health: { status: "healthy", success_rate: 100, requests: 50 },
 };
 check("excludes community models from automatic privacy-safe models", [communityModel], 0);
-check("exposes zero-priced healthy community models only for manual consent", [communityModel], 1);
+check("exposes zero-priced healthy community models only for manual consent", [communityModel], 1, { includeManualOnly: true });
 const upstreamTrainingWarning = { ...communityModel, description: "Upstream data may be collected for training." };
 assert.equal(parsePollinationsFreeTextModels([upstreamTrainingWarning], { includeManualOnly: true })[0]?.privacyRisk, true);
 passed += 1;
