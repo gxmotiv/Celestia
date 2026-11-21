@@ -100,4 +100,4 @@ check("rejects models without chat-completions support", [{
 check("rejects non-text category", [{ ...base, category: "image" }], 0);
 check("rejects malformed payload", { models: [base] }, 0);
 
-console.log(`Pollinations catalogue tests: ${passed}/24 passed`);
+console.log(`Pollinations catalogue tests: ${passed}/25 passed`);
