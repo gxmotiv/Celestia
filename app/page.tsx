@@ -18,7 +18,7 @@ import { RelationshipAstrologyView } from "@/components/RelationshipAstrologyVie
 import { MultiSystemVerificationPanel } from "@/components/MultiSystemVerificationPanel";
 import { useIsMounted } from "@/lib/hooks/useIsMounted";
 
-import { swissEphemeris } from "@/lib/astronomy/swissEphemeris";
+import { localCivilDateTimeToUtc, resolveIanaCivilDateTime } from "@/lib/astronomy/civilTime";
 import { calculateWesternChart } from "@/lib/astronomy/ephemeris";
 import { calculateVedicChart } from "@/lib/astronomy/vedic";
 import { calculateNumerologyProfile } from "@/lib/astronomy/numerology";
@@ -67,6 +67,7 @@ export default function HomePage() {
     latitude: 43.7844,
     longitude: 10.9253,
     timezoneOffset: 1,
+    timezoneId: "Europe/Rome",
     houseSystem: "Auto",
   });
 
@@ -77,29 +78,62 @@ export default function HomePage() {
   const [isCopiedShare, setIsCopiedShare] = useState(false);
   const isMounted = useIsMounted();
 
-  // High-precision client-side calculations
-  const { westernData, vedicData, numerologyData, baziData } = useMemo(() => {
+  // Resolve the entered wall-clock birth time using historical IANA rules when available.
+  // Fixed-offset profiles remain supported, but are explicitly labelled as such below.
+  const { westernData, vedicData, numerologyData, baziData, resolvedTimezoneOffset, timeZoneWarning } = useMemo(() => {
     const [yStr, mStr, dStr] = formData.birthDate.split("-");
-    const year = parseInt(yStr, 10) || 1990;
-    const month = parseInt(mStr, 10) || 1;
-    const day = parseInt(dStr, 10) || 1;
+    const year = Number(yStr);
+    const month = Number(mStr);
+    const day = Number(dStr);
 
     const [hStr, minStr] = formData.birthTime.split(":");
-    const hour = parseInt(hStr, 10) || 12;
-    const minute = parseInt(minStr, 10) || 0;
+    const hour = Number(hStr);
+    const minute = Number(minStr);
 
-    // Unambiguously normalize local birth date/time and timezone offset to true UTC instant
-    const birthDateObj = swissEphemeris.createUTCDate(
-      year,
-      month,
-      day,
-      hour,
-      minute,
-      0,
-      formData.timezoneOffset
-    );
+    let birthDateObj: Date;
+    let resolvedTimezoneOffset = formData.timezoneOffset;
+    let timeZoneWarning: string | null = null;
 
-    // 1. Western Astrology
+    if (formData.timezoneId) {
+      try {
+        const resolution = resolveIanaCivilDateTime(
+          formData.birthDate,
+          formData.birthTime,
+          formData.timezoneId,
+          formData.timezoneDisambiguation
+        );
+
+        if (resolution.status === "resolved") {
+          birthDateObj = resolution.utcDate;
+          resolvedTimezoneOffset = resolution.offsetHours;
+          if (year < 1970) {
+            timeZoneWarning = `IANA historical rules were applied for ${formData.timezoneId}, but pre-1970 local civil-time records may be incomplete. Treat the historical offset as an estimate and verify it against local historical sources.`;
+          }
+          if (resolution.wasAmbiguous) {
+            const ambiguityNote = `The local time occurred twice in ${formData.timezoneId}; the ${formData.timezoneDisambiguation} occurrence was selected.`;
+            timeZoneWarning = [timeZoneWarning, ambiguityNote].filter(Boolean).join(" ");
+          }
+        } else if (resolution.status === "ambiguous") {
+          // Keep the screen usable while clearly marking the preview as provisional.
+          // BirthForm prevents saving/submitting until the user chooses earlier or later.
+          birthDateObj = resolution.candidates[0].utcDate;
+          resolvedTimezoneOffset = resolution.candidates[0].offsetHours;
+          timeZoneWarning = `Ambiguous local time in ${formData.timezoneId}. Preview uses the earlier occurrence provisionally; choose earlier/later in the birth form before relying on this chart.`;
+        } else {
+          birthDateObj = localCivilDateTimeToUtc(formData.birthDate, formData.birthTime, formData.timezoneOffset);
+          timeZoneWarning = `This local time did not exist in ${formData.timezoneId} because of a clock change. Preview is using the stored fixed offset and must not be treated as verified.`;
+        }
+      } catch (error) {
+        birthDateObj = localCivilDateTimeToUtc(formData.birthDate, formData.birthTime, formData.timezoneOffset);
+        timeZoneWarning = `IANA timezone could not be resolved (${error instanceof Error ? error.message : "unknown error"}). Preview is using the stored fixed offset.`;
+      }
+    } else {
+      birthDateObj = localCivilDateTimeToUtc(formData.birthDate, formData.birthTime, formData.timezoneOffset);
+      timeZoneWarning = "No IANA timezone selected. This chart uses a fixed UTC offset and does not apply historical DST or local-mean-time changes.";
+    }
+
+    // The chart engine accepts a numeric offset. Feed it the offset resolved for
+    // this exact local date, including historical second-level offsets.
     const wData = calculateWesternChart(
       year,
       month,
@@ -108,17 +142,14 @@ export default function HomePage() {
       minute,
       formData.latitude,
       formData.longitude,
-      formData.timezoneOffset,
+      resolvedTimezoneOffset,
       formData.houseSystem
     );
 
-    // 2. Vedic Astrology (Lahiri Ayanamsa)
     const vData = calculateVedicChart(wData, birthDateObj);
-
-    // 3. Pythagorean Numerology
     const nData = calculateNumerologyProfile(formData.fullName, year, month, day);
-
-    // 4. Chinese BaZi (Four Pillars)
+    // BaZi's current API still consumes the entered civil date/hour; its solar-time
+    // and historical-zone handling are audited separately from this Western fix.
     const bData = calculateBaZiProfile(year, month, day, hour);
 
     return {
@@ -126,6 +157,8 @@ export default function HomePage() {
       vedicData: vData,
       numerologyData: nData,
       baziData: bData,
+      resolvedTimezoneOffset,
+      timeZoneWarning,
     };
   }, [formData]);
 
@@ -216,6 +249,11 @@ export default function HomePage() {
 
       {/* Main Content Viewport */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-1 space-y-6 no-print">
+        {timeZoneWarning && (
+          <div role="status" className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-2.5 text-xs text-amber-200">
+            <strong className="font-semibold">Birth-time timezone:</strong> {timeZoneWarning}
+          </div>
+        )}
         {/* 2. Compact Spacetime Inception Strip & Smooth Accordion Drawer */}
         <section className="bg-slate-950/70 border border-slate-800 rounded-xl overflow-hidden transition-all shadow-md">
           {/* Collapsed Horizontal Quick-Summary Bar */}
@@ -230,6 +268,8 @@ export default function HomePage() {
               <span>{formData.birthDate} at {formData.birthTime}</span>
               <span className="text-slate-600">·</span>
               <span className="text-slate-400">{formData.cityName}, {formData.country}</span>
+              <span className="text-slate-600">·</span>
+              <span className="text-slate-400 font-mono text-[11px]">{formData.timezoneId || `Fixed UTC${formData.timezoneOffset >= 0 ? "+" : ""}${formData.timezoneOffset}`}</span>
               <span className="text-slate-600">·</span>
               <span className="font-mono text-[11px] text-slate-400">
                 {Math.abs(formData.latitude).toFixed(2)}°{formData.latitude >= 0 ? "N" : "S"},{" "}
@@ -351,7 +391,7 @@ export default function HomePage() {
                 birthTime={formData.birthTime}
                 latitude={formData.latitude}
                 longitude={formData.longitude}
-                timezoneOffset={formData.timezoneOffset}
+                timezoneOffset={resolvedTimezoneOffset}
               />
             )}
 
@@ -364,7 +404,7 @@ export default function HomePage() {
                 person1Lat={formData.latitude}
                 person1Lon={formData.longitude}
                 person1CityName={formData.cityName}
-                person1TimezoneOffset={formData.timezoneOffset}
+                person1TimezoneOffset={resolvedTimezoneOffset}
               />
             )}
 
@@ -375,7 +415,7 @@ export default function HomePage() {
                 birthTime={formData.birthTime}
                 latitude={formData.latitude}
                 longitude={formData.longitude}
-                timezoneOffset={formData.timezoneOffset}
+                timezoneOffset={resolvedTimezoneOffset}
                 westernData={westernData}
                 numerologyData={numerologyData}
                 baziData={baziData}

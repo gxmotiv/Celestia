@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { GLOBAL_CITIES, CityData, searchCities } from "@/lib/astronomy/cities";
+import { getCityTimeZoneId } from "@/lib/astronomy/cityTimeZones";
+import { localCivilDateTimeToUtc, resolveIanaCivilDateTime } from "@/lib/astronomy/civilTime";
 import {
   Compass,
   MapPin,
@@ -24,7 +26,9 @@ export interface BirthFormData {
   country: string;
   latitude: number;
   longitude: number;
-  timezoneOffset: number; // hours from UTC
+  timezoneOffset: number; // fallback hours from UTC when no IANA zone is selected
+  timezoneId?: string;
+  timezoneDisambiguation?: "earlier" | "later";
   houseSystem: "Auto" | "Placidus" | "Equal" | "WholeSign";
 }
 
@@ -56,6 +60,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
   const [showCustomCoords, setShowCustomCoords] = useState(false);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsError, setGpsError] = useState("");
+  const [timeZoneError, setTimeZoneError] = useState("");
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Debounced search that queries Geoapify with fallback to built-in list
@@ -84,6 +89,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
       lat: c.lat,
       lng: c.lng,
       tz: c.tz,
+      tzName: getCityTimeZoneId(c.city, c.country),
       source: "built-in",
     }));
     if (immediateMatches.length > 0) {
@@ -113,6 +119,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
         lat: c.lat,
         lng: c.lng,
         tz: c.tz,
+        tzName: getCityTimeZoneId(c.city, c.country),
         source: "built-in",
       }));
       setCityResults(fallbacks);
@@ -128,7 +135,10 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
       latitude: c.lat,
       longitude: c.lng,
       timezoneOffset: c.tz,
+      timezoneId: c.tzName || getCityTimeZoneId(c.city, c.country),
+      timezoneDisambiguation: undefined,
     }));
+    setTimeZoneError("");
     setCitySearchQuery(c.formatted || `${c.city}, ${c.country}`);
     setShowCityDropdown(false);
   };
@@ -149,6 +159,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
         let detectedCity = "Current Location";
         let detectedCountry = "GPS";
         let detectedTz = -new Date().getTimezoneOffset() / 60;
+        let detectedTzName: string | undefined;
         let formattedLabel = `GPS (${lat}°, ${lng}°)`;
 
         try {
@@ -161,6 +172,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
               detectedCity = r.city;
               detectedCountry = r.country;
               detectedTz = r.tz;
+              detectedTzName = r.tzName || getCityTimeZoneId(r.city, r.country);
               formattedLabel = r.formatted || `${r.city}, ${r.country}`;
             }
           }
@@ -175,6 +187,8 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
           latitude: lat,
           longitude: lng,
           timezoneOffset: detectedTz,
+          timezoneId: detectedTzName || getCityTimeZoneId(detectedCity, detectedCountry),
+          timezoneDisambiguation: undefined,
         }));
         setCitySearchQuery(formattedLabel);
         setGpsLoading(false);
@@ -200,6 +214,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
         latitude: 48.4011,
         longitude: 9.9876,
         timezoneOffset: 0.6658,
+        timezoneId: "Europe/Berlin",
         houseSystem: "Auto",
       };
       setFormData(sample);
@@ -216,6 +231,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
         latitude: 43.7844,
         longitude: 10.9253,
         timezoneOffset: 1,
+        timezoneId: "Europe/Rome",
         houseSystem: "Auto",
       };
       setFormData(sample);
@@ -232,6 +248,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
         latitude: 47.6006,
         longitude: 9.3174,
         timezoneOffset: 1,
+        timezoneId: "Europe/Zurich",
         houseSystem: "Auto",
       };
       setFormData(sample);
@@ -248,6 +265,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
         latitude: 52.8089,
         longitude: -0.6293,
         timezoneOffset: 0,
+        timezoneId: "Europe/London",
         houseSystem: "Auto",
       };
       setFormData(sample);
@@ -258,6 +276,35 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setTimeZoneError("");
+    if (formData.timezoneId) {
+      try {
+        const resolution = resolveIanaCivilDateTime(
+          formData.birthDate,
+          formData.birthTime,
+          formData.timezoneId,
+          formData.timezoneDisambiguation
+        );
+        if (resolution.status === "nonexistent") {
+          setTimeZoneError("This local time did not occur in this location because the clock changed. Check the recorded birth time or use a documented manual UTC offset.");
+          return;
+        }
+        if (resolution.status === "ambiguous") {
+          setTimeZoneError("This local time occurred twice because the clock moved back. Select the earlier or later occurrence below before continuing.");
+          return;
+        }
+      } catch (error) {
+        setTimeZoneError(error instanceof Error ? error.message : "The IANA time-zone identifier is invalid.");
+        return;
+      }
+    } else {
+      try {
+        localCivilDateTimeToUtc(formData.birthDate, formData.birthTime, formData.timezoneOffset);
+      } catch (error) {
+        setTimeZoneError(error instanceof Error ? error.message : "Invalid birth date, time, or fixed UTC offset.");
+        return;
+      }
+    }
     onSubmit(formData);
   };
 
@@ -291,7 +338,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
             type="date"
             required
             value={formData.birthDate}
-            onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
+            onChange={(e) => { setFormData({ ...formData, birthDate: e.target.value, timezoneDisambiguation: undefined }); setTimeZoneError(""); }}
             className="w-full px-3.5 py-2.5 bg-slate-900/90 border border-slate-700/80 rounded-lg text-sm text-slate-100 focus:outline-none focus:border-amber-500/80 focus:ring-1 focus:ring-amber-500/80 transition-colors"
           />
           <p className="text-[11px] text-slate-400">Gregorian or Historical Date (1800-2100)</p>
@@ -324,13 +371,13 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
             type="time"
             disabled={formData.isTimeUnknown}
             value={formData.birthTime}
-            onChange={(e) => setFormData({ ...formData, birthTime: e.target.value })}
+            onChange={(e) => { setFormData({ ...formData, birthTime: e.target.value, timezoneDisambiguation: undefined }); setTimeZoneError(""); }}
             className={`w-full px-3.5 py-2.5 bg-slate-900/90 border border-slate-700/80 rounded-lg text-sm text-slate-100 focus:outline-none focus:border-amber-500/80 focus:ring-1 focus:ring-amber-500/80 transition-colors ${
               formData.isTimeUnknown ? "opacity-50 cursor-not-allowed" : ""
             }`}
           />
           <p className="text-[11px] text-slate-400">
-            {formData.isTimeUnknown ? "Using Solar Noon standard" : "24-hour local standard time"}
+            {formData.isTimeUnknown ? "Using Solar Noon standard" : "24-hour local civil time"}
           </p>
         </div>
 
@@ -405,10 +452,38 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
           )}
 
           {gpsError && <p className="text-[11px] text-rose-400">{gpsError}</p>}
+          {formData.timezoneId && (() => {
+            try {
+              const resolution = resolveIanaCivilDateTime(formData.birthDate, formData.birthTime, formData.timezoneId);
+              if (resolution.status === "ambiguous") {
+                return (
+                  <div className="mt-2 rounded border border-amber-500/30 bg-amber-500/5 p-2">
+                    <p className="text-[11px] text-amber-300 mb-1">This clock time occurred twice. Choose the occurrence:</p>
+                    <select
+                      value={formData.timezoneDisambiguation || ""}
+                      onChange={(e) => setFormData({ ...formData, timezoneDisambiguation: (e.target.value || undefined) as BirthFormData["timezoneDisambiguation"] })}
+                      className="w-full px-2 py-1.5 bg-slate-950 border border-slate-700 rounded text-xs text-slate-100"
+                    >
+                      <option value="">Select occurrence</option>
+                      <option value="earlier">Earlier occurrence (first UTC instant)</option>
+                      <option value="later">Later occurrence (second UTC instant)</option>
+                    </select>
+                  </div>
+                );
+              }
+              if (resolution.status === "nonexistent") {
+                return <p className="text-[11px] text-rose-400 mt-1">This local time was skipped by a clock change. Verify the birth record or use a documented manual offset.</p>;
+              }
+              return <p className="text-[10px] text-emerald-400 mt-1">Historical IANA rules: {formData.timezoneId}</p>;
+            } catch {
+              return <p className="text-[11px] text-rose-400 mt-1">Invalid IANA time-zone ID. Correct it or clear it to use the manual offset.</p>;
+            }
+          })()}
+          {timeZoneError && <p className="text-[11px] text-rose-400">{timeZoneError}</p>}
           <div className="flex items-center justify-between text-[11px] text-slate-400">
             <span>
               {formData.cityName
-                ? `${formData.cityName} (${formData.latitude.toFixed(2)}°, ${formData.longitude.toFixed(2)}°) · UTC${formData.timezoneOffset >= 0 ? `+${formData.timezoneOffset}` : formData.timezoneOffset}`
+                ? `${formData.cityName} (${formData.latitude.toFixed(2)}°, ${formData.longitude.toFixed(2)}°) · ${formData.timezoneId || `fixed UTC${formData.timezoneOffset >= 0 ? `+${formData.timezoneOffset}` : formData.timezoneOffset}`}`
                 : "Worldwide town & village search"}
             </span>
             <span className="text-[10px] text-emerald-400 flex items-center gap-1">
@@ -491,13 +566,23 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
               />
             </div>
             <div>
-              <label className="text-[11px] font-medium text-slate-400 block mb-1">UTC Offset (Hours)</label>
+              <label className="text-[11px] font-medium text-slate-400 block mb-1">Fallback UTC Offset (Hours)</label>
               <input
                 type="number"
                 step="0.25"
                 value={formData.timezoneOffset}
-                onChange={(e) => setFormData({ ...formData, timezoneOffset: parseFloat(e.target.value) || 0 })}
+                onChange={(e) => setFormData({ ...formData, timezoneOffset: parseFloat(e.target.value) || 0, timezoneId: undefined, timezoneDisambiguation: undefined })}
                 className="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded text-xs text-slate-100 tabular-nums focus:border-amber-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="text-[11px] font-medium text-slate-400 block mb-1">IANA Time Zone (optional)</label>
+              <input
+                type="text"
+                value={formData.timezoneId || ""}
+                onChange={(e) => setFormData({ ...formData, timezoneId: e.target.value.trim() || undefined, timezoneDisambiguation: undefined })}
+                placeholder="e.g. Asia/Kolkata"
+                className="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded text-xs text-slate-100 focus:border-amber-500 focus:outline-none"
               />
             </div>
             <div>
