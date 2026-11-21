@@ -452,8 +452,7 @@ export class WesternBenchmarkRunner {
       new Date("1990-01-01T12:00:00Z"),
       new Date("2025-01-01T12:00:00Z"),
       40.7128,
-      -74.006,
-      -5
+      -74.006
     );
     results.push({
       id: "W-PRED-05",
