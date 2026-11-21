@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchCities, GLOBAL_CITIES, CityData } from "@/lib/astronomy/cities";
+import { getCityTimeZoneId } from "@/lib/astronomy/cityTimeZones";
 
 export interface GeocodeResult {
   city: string;
@@ -113,7 +114,7 @@ export async function GET(req: NextRequest) {
                 lat: Math.round(lat * 10000) / 10000,
                 lng: Math.round(lon * 10000) / 10000,
                 tz: tzOffsetHours,
-                tzName,
+                tzName: tzName || getCityTimeZoneId(city, country) || "",
                 source: "geoapify",
               };
               return NextResponse.json({ results: [result] });
@@ -139,6 +140,7 @@ export async function GET(req: NextRequest) {
         lat: matchedCity.lat,
         lng: matchedCity.lng,
         tz: matchedCity.tz,
+        tzName: getCityTimeZoneId(matchedCity.city, matchedCity.country),
         source: "built-in",
       };
       return NextResponse.json({ results: [result] });
@@ -159,6 +161,7 @@ export async function GET(req: NextRequest) {
       lat: c.lat,
       lng: c.lng,
       tz: c.tz,
+      tzName: getCityTimeZoneId(c.city, c.country),
       source: "built-in" as const,
     }));
     return NextResponse.json({ results: fallbackList });
@@ -175,6 +178,7 @@ export async function GET(req: NextRequest) {
     lat: c.lat,
     lng: c.lng,
     tz: c.tz,
+    tzName: getCityTimeZoneId(c.city, c.country),
     source: "built-in",
   }));
 
@@ -236,7 +240,7 @@ export async function GET(req: NextRequest) {
               lat: typeof props.lat === "number" ? Math.round(props.lat * 10000) / 10000 : 0,
               lng: typeof props.lon === "number" ? Math.round(props.lon * 10000) / 10000 : 0,
               tz: tzOffset,
-              tzName,
+              tzName: tzName || getCityTimeZoneId(city, country) || "",
               source: "geoapify" as const,
             };
           });
