@@ -266,6 +266,8 @@ export default function HomePage() {
               <span className="text-slate-600">·</span>
               <span className="text-slate-400">{formData.cityName}, {formData.country}</span>
               <span className="text-slate-600">·</span>
+              <span className="text-slate-400 font-mono text-[11px]">{formData.timezoneId || `Fixed UTC${formData.timezoneOffset >= 0 ? "+" : ""}${formData.timezoneOffset}`}</span>
+              <span className="text-slate-600">·</span>
               <span className="font-mono text-[11px] text-slate-400">
                 {Math.abs(formData.latitude).toFixed(2)}°{formData.latitude >= 0 ? "N" : "S"},{" "}
                 {Math.abs(formData.longitude).toFixed(2)}°{formData.longitude >= 0 ? "E" : "W"}
