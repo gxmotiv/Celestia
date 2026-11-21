@@ -48,6 +48,8 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Install temporary Cloudflare and TypeScript test tools
         run: npm install --no-save --package-lock=false --no-audit --no-fund @opennextjs/cloudflare@latest wrangler@latest tsx
+      - name: Run Pollinations catalogue schema regression tests
+        run: npx tsx scripts/testPollinationsCatalog.ts
       - name: Run the astrology regression suite
         run: npx tsx scripts/testAstrologySuite.ts
       - name: Build the Next.js application
