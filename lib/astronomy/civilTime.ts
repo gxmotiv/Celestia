@@ -165,7 +165,6 @@ export function resolveIanaCivilDateTime(
   // Collect all offsets that could apply around the requested local date. Sampling
   // across four days covers both sides of ordinary and date-line transitions.
   const offsets = new Set<number>();
-  const sampleStepMs = 3 * 60 * 60 * 1000;
   for (let delta = -48; delta <= 48; delta += 3) {
     const sampleMs = civil.wallClockMs + delta * 60 * 60 * 1000;
     const local = getZonedParts(sampleMs, timeZone);
