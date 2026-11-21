@@ -410,7 +410,7 @@ export default function HomePage() {
                 birthTime={formData.birthTime}
                 latitude={formData.latitude}
                 longitude={formData.longitude}
-                timezoneOffset={formData.timezoneOffset}
+                timezoneOffset={resolvedTimezoneOffset}
                 westernData={westernData}
                 numerologyData={numerologyData}
                 baziData={baziData}
