@@ -126,7 +126,10 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
         <span className="text-xs font-medium text-slate-300">Provider / model</span>
         <select
           value={value}
-          onChange={(event) => onChange(event.target.value)}
+          onChange={(event) => {
+            onChange(event.target.value);
+            onPrivacyRiskAcknowledgedChange(false);
+          }}
           className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-3 text-sm text-slate-100 outline-none focus:border-amber-500"
         >
           {PROVIDERS.map((providerId) => {
