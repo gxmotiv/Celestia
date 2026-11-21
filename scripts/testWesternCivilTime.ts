@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { localCivilDateTimeToUtc } from "../lib/astronomy/civilTime";
+import { localCivilDateTimeToUtc, resolveIanaCivilDateTime } from "../lib/astronomy/civilTime";
 
 const cases = [
   {
