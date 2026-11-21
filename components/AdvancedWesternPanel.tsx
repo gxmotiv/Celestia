@@ -687,7 +687,7 @@ export function AdvancedWesternPanel({
                 <div key={i} className="p-2.5 bg-slate-900/60 border border-slate-800/80 rounded-lg text-xs flex items-center justify-between gap-3">
                   <div className="space-y-0.5">
                     <span className="font-semibold text-slate-200">
-                      Year {c.year} (Age {c.age}): {c.fromSign} → <strong className="text-amber-300">{c.toSign}</strong>
+                      Ingress {c.eventDate.slice(0, 10)} · Age {c.age}: {c.fromSign} → <strong className="text-amber-300">{c.toSign}</strong>
                     </span>
                     <p className="text-[11px] text-slate-400">{c.interpretation}</p>
                   </div>
