@@ -24,6 +24,7 @@ interface GenerateTextOptions {
   temperature?: number;
   modelTier?: CelestiaAIModelTier;
   model?: string;
+  allowPrivacyRiskModel?: boolean;
 }
 
 type ProviderError = Error & { status?: number };
@@ -45,16 +46,18 @@ function readUsage(value: unknown): CelestiaAIUsage | undefined {
 async function generateWithPollinations(
   apiKey: string,
   requestedModel: string,
-  options: { systemPrompt: string; userPrompt: string; maxOutputTokens: number; temperature: number },
+  options: { systemPrompt: string; userPrompt: string; maxOutputTokens: number; temperature: number; allowPrivacyRiskModel?: boolean },
 ): Promise<CelestiaAIResult> {
   const eligible = await getPollinationsFreeTextModels();
+  const manualOnly = options.allowPrivacyRiskModel ? await getPollinationsManualOnlyTextModels() : [];
   const model = requestedModel === "auto-free"
     ? eligible[0]?.id
-    : eligible.find((candidate) => candidate.id === requestedModel)?.id;
+    : (eligible.find((candidate) => candidate.id === requestedModel) ??
+      manualOnly.find((candidate) => candidate.id === requestedModel))?.id;
   if (!model) {
     throw new Error("No healthy, official, zero-priced Pollinations text model is currently available. Refresh the model list later.");
   }
-  if (!await isPollinationsFreeTextModel(model)) {
+  if (!await isPollinationsFreeTextModel(model, options.allowPrivacyRiskModel === true)) {
     throw new Error("The selected Pollinations model is no longer listed as healthy and zero-priced. Select a refreshed model.");
   }
 
@@ -191,6 +194,7 @@ export async function generateCelestiaText(input: GenerateTextOptions): Promise<
   const options = {
     systemPrompt: input.systemPrompt,
     userPrompt: input.userPrompt,
+    allowPrivacyRiskModel: input.allowPrivacyRiskModel === true,
     maxOutputTokens: input.maxOutputTokens ?? 2048,
     temperature: input.temperature ?? 0.35,
   };
