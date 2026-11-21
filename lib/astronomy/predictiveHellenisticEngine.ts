@@ -51,8 +51,7 @@ export class ProgressionsEngine {
     birthDate: Date,
     currentDate: Date,
     lat: number,
-    lon: number,
-    timezoneOffset: number
+    lon: number
   ): ProgressedChartResult {
     const diffMs = currentDate.getTime() - birthDate.getTime();
     const ageYears = diffMs / (365.2422 * 86400000);
@@ -107,7 +106,6 @@ export class ProgressionsEngine {
 
     // Moon changes signs roughly every 2.3 to 2.5 years
     const moonSignChanges: MoonSignChangeEvent[] = [];
-    const currentYear = currentDate.getFullYear();
 
     for (let delta = -2; delta <= 10; delta++) {
       const checkAge = age + delta;
@@ -126,7 +124,7 @@ export class ProgressionsEngine {
       if (moonPos1.sign !== moonPos2.sign) {
         moonSignChanges.push({
           age: checkAge,
-          year: currentYear + delta,
+          year: new Date(birthDate.getTime() + checkAge * 365.2422 * 86400000).getUTCFullYear(),
           fromSign: moonPos1.sign,
           toSign: moonPos2.sign,
           interpretation: `Progressed Moon shifts into ${moonPos2.sign}: A 2.5-year chapter focusing emotional focus, lifestyle habits, and instincts into ${moonPos2.sign} themes.`,

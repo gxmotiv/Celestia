@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { localCivilDateTimeToUtc } from "@/lib/astronomy/civilTime";
 import {
   WesternChartData,
   PlanetPosition,
@@ -125,12 +126,11 @@ export function AdvancedWesternPanel({
     return declinationCalc.calculateAll(chartData.planets, chartData.obliquity);
   }, [declinationCalc, chartData.planets, chartData.obliquity]);
 
-  // Birth Date Object
+  // Convert the entered local civil time to its UTC instant before age/progression math.
+  // The current form supplies a fixed numeric offset; historical IANA/DST resolution is not implied.
   const birthDateObj = useMemo(() => {
-    const [y, m, d] = birthDateStr.split("-").map(Number);
-    const [h, min] = birthTimeStr.split(":").map(Number);
-    return new Date(Date.UTC(y || 1990, (m || 1) - 1, d || 1, h || 12, min || 0));
-  }, [birthDateStr, birthTimeStr]);
+    return localCivilDateTimeToUtc(birthDateStr, birthTimeStr, timezoneOffset);
+  }, [birthDateStr, birthTimeStr, timezoneOffset]);
 
   const nowObj = useMemo(() => new Date(), []);
   const currentAgeYears = useMemo(() => {
@@ -141,8 +141,8 @@ export function AdvancedWesternPanel({
   // Secondary Progressions
   const progEngine = useMemo(() => new ProgressionsEngine(), []);
   const progressionsReport: ProgressedChartResult = useMemo(() => {
-    return progEngine.calculateProgressions(birthDateObj, nowObj, latitude, longitude, timezoneOffset);
-  }, [progEngine, birthDateObj, nowObj, latitude, longitude, timezoneOffset]);
+    return progEngine.calculateProgressions(birthDateObj, nowObj, latitude, longitude);
+  }, [progEngine, birthDateObj, nowObj, latitude, longitude]);
 
   // Hellenistic Profections
   const profEngine = useMemo(() => new ProfectionsEngine(), []);

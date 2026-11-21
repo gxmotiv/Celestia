@@ -50,6 +50,8 @@ jobs:
         run: npm install --no-save --package-lock=false --no-audit --no-fund @opennextjs/cloudflare@latest wrangler@latest tsx
       - name: Run the astrology regression suite
         run: npx tsx scripts/testAstrologySuite.ts
+      - name: Run Western civil-time regression tests
+        run: npx tsx scripts/testWesternCivilTime.ts
       - name: Build the Next.js application
         run: npm run build
         env:
