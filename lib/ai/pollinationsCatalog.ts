@@ -6,6 +6,13 @@ export interface PollinationsTextModel {
   outputPrice: number;
   health: string;
   privacyRisk: boolean;
+  community: boolean;
+  publisher: string;
+  healthSuccessRate: number | null;
+  healthRequests: number;
+  contextLength: number | null;
+  reasoning: boolean;
+  tools: boolean;
 }
 
 type CatalogEntry = Record<string, unknown>;
@@ -58,21 +65,22 @@ function hasNoPaidAdjustments(entry: CatalogEntry): boolean {
   });
 }
 
-function isEligibleFreeTextModel(entry: CatalogEntry, includePrivacyRisk = false): boolean {
+function isEligibleFreeTextModel(entry: CatalogEntry, includeManualOnly = false): boolean {
   const health = entry.health && typeof entry.health === "object"
     ? (entry.health as Record<string, unknown>).status
     : undefined;
   const modelName = typeof entry.name === "string" ? entry.name : entry.id;
   const description = typeof entry.description === "string" ? entry.description : "";
-  const privacyRisk = /retain(?:ed|s)?|used for training|training data|data retention/i.test(description);
+  const privacyRisk = /retain|retention|used for training|collected for training|data may be collected/i.test(description);
+  const community = entry.community === true;
 
   return typeof modelName === "string" &&
     modelName.length > 0 &&
     entry.category === "text" &&
-    entry.community !== true &&
+    (!community || includeManualOnly) &&
     entry.paid_only !== true &&
     entry.is_specialized !== true &&
-    (!privacyRisk || includePrivacyRisk) &&
+    (!privacyRisk || includeManualOnly) &&
     health === "healthy" &&
     Array.isArray(entry.input_modalities) &&
     entry.input_modalities.includes("text") &&
@@ -93,7 +101,7 @@ function isEligibleFreeTextModel(entry: CatalogEntry, includePrivacyRisk = false
 /** Pure parser exported so the live Pollinations schema can be regression-tested. */
 export function parsePollinationsFreeTextModels(
   payload: unknown,
-  options: { includePrivacyRisk?: boolean } = {},
+  options: { includeManualOnly?: boolean } = {},
 ): PollinationsTextModel[] {
   const entries = Array.isArray(payload)
     ? payload
@@ -102,7 +110,7 @@ export function parsePollinationsFreeTextModels(
       : [];
 
   return (entries as CatalogEntry[])
-    .filter((entry) => entry && typeof entry === "object" && isEligibleFreeTextModel(entry, options.includePrivacyRisk === true))
+    .filter((entry) => entry && typeof entry === "object" && isEligibleFreeTextModel(entry, options.includeManualOnly === true))
     .map((entry) => {
       const id = (typeof entry.name === "string" ? entry.name : entry.id) as string;
       const pricing = entry.pricing as Record<string, unknown>;
@@ -113,9 +121,20 @@ export function parsePollinationsFreeTextModels(
         inputPrice: parsePrice(pricing.promptTextTokens) ?? 0,
         outputPrice: parsePrice(pricing.completionTextTokens) ?? 0,
         health: "healthy",
-        privacyRisk: /retain(?:ed|s)?|used for training|training data|data retention/i.test(
+        privacyRisk: /retain|retention|used for training|collected for training|data may be collected/i.test(
           typeof entry.description === "string" ? entry.description : "",
         ),
+        community: entry.community === true,
+        publisher: typeof entry.publisher === "string" ? entry.publisher : (entry.community === true ? "Community publisher" : "Pollinations official"),
+        healthSuccessRate: entry.health && typeof entry.health === "object" && typeof (entry.health as Record<string, unknown>).success_rate === "number"
+          ? (entry.health as Record<string, unknown>).success_rate as number
+          : null,
+        healthRequests: entry.health && typeof entry.health === "object" && typeof (entry.health as Record<string, unknown>).requests === "number"
+          ? (entry.health as Record<string, unknown>).requests as number
+          : 0,
+        contextLength: typeof entry.context_length === "number" ? entry.context_length : null,
+        reasoning: entry.reasoning === true || (Array.isArray(entry.capabilities) && entry.capabilities.includes("reasoning")),
+        tools: entry.tools === true || (Array.isArray(entry.capabilities) && entry.capabilities.includes("tool_calling")),
       };
     })
     .sort((a, b) => (a.inputPrice + a.outputPrice) - (b.inputPrice + b.outputPrice) || a.name.localeCompare(b.name));
@@ -124,26 +143,45 @@ export function parsePollinationsFreeTextModels(
 async function getPollinationsCatalogueModels(): Promise<PollinationsTextModel[]> {
   if (Date.now() - cachedAt < 60_000) return cachedModels;
 
-  const response = await fetch("https://gen.pollinations.ai/text/models?source=official&reliability=all&limit=500", {
-    headers: { Accept: "application/json" },
-    cache: "no-store",
-    signal: AbortSignal.timeout(12_000),
-  });
-  if (!response.ok) throw new Error(`Pollinations model catalogue returned HTTP ${response.status}.`);
-  const payload: unknown = await response.json();
-  cachedModels = parsePollinationsFreeTextModels(payload, { includePrivacyRisk: true });
+  // Query both Pollinations-operated and community-published models.
+  const sources = ["official", "community"] as const;
+  const responses = await Promise.all(sources.map((source) => fetch(
+    `https://gen.pollinations.ai/text/models?source=${source}&reliability=all&limit=500`,
+    {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+      signal: AbortSignal.timeout(12_000),
+    },
+  )));
+  const failed = responses.find((response) => !response.ok);
+  if (failed) throw new Error(`Pollinations model catalogue returned HTTP ${failed.status}.`);
+  const payloads: unknown[] = await Promise.all(responses.map((response) => response.json()));
+  const unique = new Map<string, PollinationsTextModel>();
+  for (const payload of payloads) {
+    for (const model of parsePollinationsFreeTextModels(payload, { includeManualOnly: true })) {
+      unique.set(model.id, model);
+    }
+  }
+  cachedModels = [...unique.values()];
   cachedAt = Date.now();
   return cachedModels;
 }
 
-/** Privacy-safe models are the only candidates for automatic selection. */
+/** Only official, privacy-safe models can be selected automatically. */
 export async function getPollinationsFreeTextModels(): Promise<PollinationsTextModel[]> {
-  return (await getPollinationsCatalogueModels()).filter((model) => !model.privacyRisk);
+  return (await getPollinationsCatalogueModels()).filter((model) => !model.community && !model.privacyRisk);
 }
 
-/** Zero-priced models with explicit retention/training warnings require manual consent. */
+/** Community-hosted models and official models with retention warnings require explicit consent. */
 export async function getPollinationsManualOnlyTextModels(): Promise<PollinationsTextModel[]> {
-  return (await getPollinationsCatalogueModels()).filter((model) => model.privacyRisk);
+  return (await getPollinationsCatalogueModels())
+    .filter((model) => model.community || model.privacyRisk)
+    .sort((a, b) =>
+      (b.healthSuccessRate ?? -1) - (a.healthSuccessRate ?? -1) ||
+      Number(b.reasoning) - Number(a.reasoning) ||
+      (b.contextLength ?? 0) - (a.contextLength ?? 0) ||
+      a.name.localeCompare(b.name)
+    );
 }
 
 export async function isPollinationsFreeTextModel(modelId: string, allowPrivacyRisk = false): Promise<boolean> {
