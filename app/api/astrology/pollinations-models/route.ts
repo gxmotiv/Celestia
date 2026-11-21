@@ -7,7 +7,12 @@ export async function GET() {
   try {
     const models = await getPollinationsFreeTextModels();
     return NextResponse.json(
-      { provider: "pollinations", models, filter: "official + healthy + zero-priced text models", sort: "price-low" },
+      {
+        provider: "pollinations",
+        models,
+        filter: "official + healthy + general-purpose + zero-priced + no explicit prompt-retention warning",
+        sort: "price-low",
+      },
       { headers: { "Cache-Control": "public, max-age=60, stale-while-revalidate=30" } }
     );
   } catch (error) {
