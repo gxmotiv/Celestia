@@ -129,7 +129,8 @@ export function AdvancedWesternPanel({
   const birthDateObj = useMemo(() => {
     const [y, m, d] = birthDateStr.split("-").map(Number);
     const [h, min] = birthTimeStr.split(":").map(Number);
-    return new Date(Date.UTC(y || 1990, (m || 1) - 1, d || 1, h || 12, min || 0));
+    // Preserve midnight (00:00) as a valid birth time; only use noon when the hour is missing/invalid.
+    return new Date(Date.UTC(y || 1990, (m || 1) - 1, d || 1, Number.isFinite(h) ? h : 12, Number.isFinite(min) ? min : 0));
   }, [birthDateStr, birthTimeStr]);
 
   const nowObj = useMemo(() => new Date(), []);
