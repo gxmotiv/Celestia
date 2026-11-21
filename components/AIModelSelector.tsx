@@ -33,7 +33,7 @@ interface LivePollinationsModel {
 
 const PROVIDERS: CelestiaAIProviderId[] = ["pollinations", "freemodel", "nararouter", "openrouter"];
 const PROVIDER_LABELS: Record<CelestiaAIProviderId, string> = {
-  pollinations: "Pollinations — official, healthy, free",
+  pollinations: "Pollinations — zero-priced official + community",
   freemodel: "FreeModel",
   nararouter: "NaraRouter",
   openrouter: "OpenRouter",
@@ -145,7 +145,7 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
                   ))}
                   {manualOnlyModels.map((model) => (
                     <option key={model.id} value={`pollinations:${model.id}`} disabled={configured === false}>
-                      {model.name} — community/manual opt-in
+                      {model.name} — {model.community ? "community · manual opt-in" : "privacy warning · manual opt-in"}
                     </option>
                   ))}
                 </optgroup>
@@ -169,10 +169,10 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
       {catalogueError ? <p className="text-xs text-amber-300">{catalogueError}</p> : null}
       {catalogueLoaded && !catalogueError && pollinationsModels.length === 0 ? (
         <p className="text-xs text-amber-300">
-          No general-purpose Pollinations model currently passes Celestia's free-price, healthy-status, and privacy checks. Specialized safety models and models warning that prompts may be retained or used for training are excluded.
+          No official privacy-safe model is currently available for automatic selection. Manual-only community models and models with explicit data-handling warnings may still appear in the selector.
         </p>
       ) : null}
-      {liveSelected?.privacyRisk ? (
+      {liveSelected && (liveSelected.privacyRisk || liveSelected.community) ? (
         <label className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-xs text-amber-100">
           <input
             type="checkbox"
