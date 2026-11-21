@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { localCivilDateTimeToUtc } from "../lib/astronomy/civilTime";
+import { ProgressionsEngine } from "../lib/astronomy/predictiveHellenisticEngine";
+import { swissEphemeris } from "../lib/astronomy/swissEphemeris";
 
 const cases = [
   {
@@ -52,3 +54,53 @@ assert.throws(
 
 process.stdout.write("PASS invalid input guards\n");
 process.stdout.write("All civil-time regression tests passed.\n");
+
+const progressionBirth = new Date("1990-01-01T12:00:00.000Z");
+const progressionNow = new Date("2025-01-01T12:00:00.000Z");
+const progressionReport = new ProgressionsEngine().calculateProgressions(
+  progressionBirth,
+  progressionNow,
+  40.7128,
+  -74.006
+);
+assert.ok(progressionReport.moonSignChanges.length > 0, "progression fixture contains Moon sign ingresses");
+
+for (const event of progressionReport.moonSignChanges) {
+  const chronologicalMs = Date.parse(event.eventDate);
+  assert.ok(Number.isFinite(chronologicalMs), "ingress event date is valid ISO UTC");
+  assert.equal(new Date(chronologicalMs).getUTCFullYear(), event.year, "event year matches the mapped ingress date");
+
+  // Invert the day-for-a-year mapping to recover the progressed ephemeris minute.
+  const progressedMs = progressionBirth.getTime() +
+    ((chronologicalMs - progressionBirth.getTime()) / (365.2422 * 86400000)) * 86400000;
+  const ingressMinuteMs = Math.round(progressedMs / 60000) * 60000;
+  const before = new Date(ingressMinuteMs - 60000);
+  const at = new Date(ingressMinuteMs);
+  const beforeJd = swissEphemeris.calculateJulianDay(
+    before.getUTCFullYear(), before.getUTCMonth() + 1, before.getUTCDate(),
+    before.getUTCHours(), before.getUTCMinutes()
+  );
+  const atJd = swissEphemeris.calculateJulianDay(
+    at.getUTCFullYear(), at.getUTCMonth() + 1, at.getUTCDate(),
+    at.getUTCHours(), at.getUTCMinutes()
+  );
+  const beforeMoon = swissEphemeris.calculatePlanetPosition(swissEphemeris.MOON, beforeJd);
+  const atMoon = swissEphemeris.calculatePlanetPosition(swissEphemeris.MOON, atJd);
+  assert.equal(beforeMoon.sign, event.fromSign, "minute before ingress remains in source sign");
+  assert.equal(atMoon.sign, event.toSign, "ingress minute is in destination sign");
+  assert.equal(
+    event.age,
+    Math.floor((chronologicalMs - progressionBirth.getTime()) / (365.2422 * 86400000)),
+    "event age is completed chronological age"
+  );
+}
+process.stdout.write("PASS progressed Moon ingress dates map to the actual sign-boundary minute\\n");
+
+assert.throws(
+  () => new ProgressionsEngine().calculateProgressions(
+    progressionBirth, new Date("1989-12-31T12:00:00.000Z"), 0, 0
+  ),
+  RangeError,
+  "progressions reject a current date before birth"
+);
+process.stdout.write("PASS progression date validation\\n");
