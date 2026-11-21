@@ -67,6 +67,10 @@ const communityModel = {
 };
 check("excludes community models from automatic privacy-safe models", [communityModel], 0);
 check("exposes zero-priced healthy community models only for manual consent", [communityModel], 1);
+const upstreamTrainingWarning = { ...communityModel, description: "Upstream data may be collected for training." };
+assert.equal(parsePollinationsFreeTextModels([upstreamTrainingWarning], { includeManualOnly: true })[0]?.privacyRisk, true);
+passed += 1;
+console.log("PASS detects upstream collection-for-training warning");
 const parsedCommunity = parsePollinationsFreeTextModels([communityModel], { includeManualOnly: true })[0];
 assert.equal(parsedCommunity?.community, true);
 assert.equal(parsedCommunity?.publisher, "OSAII");
@@ -92,4 +96,4 @@ check("rejects models without chat-completions support", [{
 check("rejects non-text category", [{ ...base, category: "image" }], 0);
 check("rejects malformed payload", { models: [base] }, 0);
 
-console.log(`Pollinations catalogue tests: ${passed}/23 passed`);
+console.log(`Pollinations catalogue tests: ${passed}/24 passed`);
