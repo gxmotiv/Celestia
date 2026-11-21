@@ -370,7 +370,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
             }`}
           />
           <p className="text-[11px] text-slate-400">
-            {formData.isTimeUnknown ? "Using Solar Noon standard" : "24-hour local standard time"}
+            {formData.isTimeUnknown ? "Using Solar Noon standard" : "24-hour local civil time"}
           </p>
         </div>
 
@@ -476,7 +476,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
           <div className="flex items-center justify-between text-[11px] text-slate-400">
             <span>
               {formData.cityName
-                ? `${formData.cityName} (${formData.latitude.toFixed(2)}°, ${formData.longitude.toFixed(2)}°) · UTC${formData.timezoneOffset >= 0 ? `+${formData.timezoneOffset}` : formData.timezoneOffset}`
+                ? `${formData.cityName} (${formData.latitude.toFixed(2)}°, ${formData.longitude.toFixed(2)}°) · ${formData.timezoneId || `fixed UTC${formData.timezoneOffset >= 0 ? `+${formData.timezoneOffset}` : formData.timezoneOffset}`}`
                 : "Worldwide town & village search"}
             </span>
             <span className="text-[10px] text-emerald-400 flex items-center gap-1">
