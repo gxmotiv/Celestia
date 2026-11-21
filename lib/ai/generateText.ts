@@ -1,5 +1,5 @@
 import { getCelestiaAIModel } from "./modelCatalog";
-import { getPollinationsFreeTextModels, isPollinationsFreeTextModel } from "./pollinationsCatalog";
+import { getPollinationsFreeTextModels, getPollinationsManualOnlyTextModels, isPollinationsFreeTextModel } from "./pollinationsCatalog";
 
 export type CelestiaAIProvider = "pollinations" | "freemodel" | "nararouter" | "openrouter";
 export type CelestiaAIModelTier = "budget" | "reasoning";
