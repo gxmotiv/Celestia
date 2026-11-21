@@ -94,7 +94,7 @@ for (const event of progressionReport.moonSignChanges) {
     "event age is completed chronological age"
   );
 }
-process.stdout.write("PASS progressed Moon ingress dates map to the actual sign-boundary minute\\n");
+process.stdout.write("PASS progressed Moon ingress dates map to the actual sign-boundary minute\n");
 
 assert.throws(
   () => new ProgressionsEngine().calculateProgressions(
