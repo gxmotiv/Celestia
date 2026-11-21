@@ -78,12 +78,12 @@ for (const test of ianaCases) {
   if (test.result.status !== "resolved") throw new Error(test.name + " did not resolve");
   assert.equal(test.result.utcDate.toISOString(), test.expectedUtc, test.name + " UTC instant");
   assert.ok(Math.abs(test.result.offsetHours - test.expectedOffset) < 1e-9, test.name + " offset");
-  process.stdout.write("PASS " + test.name + "\\n");
+  process.stdout.write("PASS " + test.name + "\n");
 }
 
 const gap = resolveIanaCivilDateTime("2024-03-10", "02:30", "America/New_York");
 assert.equal(gap.status, "nonexistent", "rejects a clock time skipped by the spring DST change");
-process.stdout.write("PASS nonexistent DST wall time is rejected\\n");
+process.stdout.write("PASS nonexistent DST wall time is rejected\n");
 
 const overlap = resolveIanaCivilDateTime("2024-11-03", "01:30", "America/New_York");
 assert.equal(overlap.status, "ambiguous", "does not silently choose during the autumn DST overlap");
@@ -100,13 +100,13 @@ if (earlier.status === "resolved" && later.status === "resolved") {
   assert.equal(earlier.utcDate.toISOString(), "2024-11-03T05:30:00.000Z");
   assert.equal(later.utcDate.toISOString(), "2024-11-03T06:30:00.000Z");
 }
-process.stdout.write("PASS ambiguous DST wall time requires explicit earlier/later selection\\n");
+process.stdout.write("PASS ambiguous DST wall time requires explicit earlier/later selection\n");
 
 assert.throws(
   () => resolveIanaCivilDateTime("2024-01-01", "12:00", "Not/A_Real_Zone"),
   RangeError,
   "rejects unknown IANA time-zone identifiers"
 );
-process.stdout.write("PASS invalid IANA zone is rejected\\n");
+process.stdout.write("PASS invalid IANA zone is rejected\n");
 
 process.stdout.write("All civil-time regression tests passed.\n");
