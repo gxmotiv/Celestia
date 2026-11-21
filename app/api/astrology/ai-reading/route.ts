@@ -23,9 +23,11 @@ export async function POST(req: NextRequest) {
     if (model !== undefined && !isCelestiaAIModelId(model)) {
       return NextResponse.json({ error: "The selected AI model is not supported." }, { status: 400 });
     }
-    if (model === "pollinations:stealth/glyph-cluster" && allowPrivacyRiskModel !== true) {
+    const isManualOnlyPollinationsModel = typeof model === "string" &&
+      (model === "pollinations:stealth/glyph-cluster" || model.startsWith("pollinations:community/"));
+    if (isManualOnlyPollinationsModel && allowPrivacyRiskModel !== true) {
       return NextResponse.json({
-        error: "Glyph Cluster requires explicit acknowledgement of its prompt-retention and training warning before any chart data is sent.",
+        error: "This Pollinations model requires explicit acknowledgement of its provider and data-handling warning before any chart data is sent.",
       }, { status: 400 });
     }
 
