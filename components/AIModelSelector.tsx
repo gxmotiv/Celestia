@@ -35,6 +35,7 @@ export function AIModelSelector({ value, onChange }: AIModelSelectorProps) {
   const [providerConfiguration, setProviderConfiguration] = useState<ProviderConfiguration | null>(null);
   const [pollinationsModels, setPollinationsModels] = useState<LivePollinationsModel[]>([]);
   const [catalogueError, setCatalogueError] = useState("");
+  const [catalogueLoaded, setCatalogueLoaded] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -60,10 +61,14 @@ export function AIModelSelector({ value, onChange }: AIModelSelectorProps) {
         if (active) {
           setPollinationsModels(Array.isArray(data.models) ? data.models : []);
           setCatalogueError("");
+          setCatalogueLoaded(true);
         }
       })
       .catch((error: unknown) => {
-        if (active) setCatalogueError(error instanceof Error ? error.message : "Pollinations catalogue unavailable");
+        if (active) {
+          setCatalogueError(error instanceof Error ? error.message : "Pollinations catalogue unavailable");
+          setCatalogueLoaded(true);
+        }
       });
     return () => {
       active = false;
@@ -74,9 +79,7 @@ export function AIModelSelector({ value, onChange }: AIModelSelectorProps) {
     const isKnownStatic = CELESTIA_AI_MODELS.some((model) => model.id === value);
     const isKnownLive = value.startsWith("pollinations:") &&
       (value === "pollinations:auto-free" || pollinationsModels.some((model) => `pollinations:${model.id}` === value));
-    if (!isKnownStatic && !isKnownLive && pollinationsModels.length >= 0) {
-      onChange("pollinations:auto-free");
-    }
+    if (!isKnownStatic && !isKnownLive) onChange("pollinations:auto-free");
   }, [value, pollinationsModels, onChange]);
 
   const staticSelected = CELESTIA_AI_MODELS.find((model) => model.id === value) ?? CELESTIA_AI_MODELS[0];
@@ -120,7 +123,9 @@ export function AIModelSelector({ value, onChange }: AIModelSelectorProps) {
             if (providerId === "pollinations") {
               return (
                 <optgroup key={providerId} label={PROVIDER_LABELS[providerId] + suffix}>
-                  <option value="pollinations:auto-free" disabled={configured === false}>Automatic — best available free model</option>
+                  <option value="pollinations:auto-free" disabled={configured === false || (catalogueLoaded && pollinationsModels.length === 0)}>
+                    Automatic — best available eligible free model
+                  </option>
                   {pollinationsModels.map((model) => (
                     <option key={model.id} value={`pollinations:${model.id}`} disabled={configured === false}>
                       {model.name} — $0 input / $0 output
@@ -145,6 +150,11 @@ export function AIModelSelector({ value, onChange }: AIModelSelectorProps) {
       </label>
 
       {catalogueError ? <p className="text-xs text-amber-300">{catalogueError}</p> : null}
+      {catalogueLoaded && !catalogueError && pollinationsModels.length === 0 ? (
+        <p className="text-xs text-amber-300">
+          No general-purpose Pollinations model currently passes Celestia's free-price, healthy-status, and privacy checks. Specialized safety models and models warning that prompts may be retained or used for training are excluded.
+        </p>
+      ) : null}
       <div className="rounded-lg border border-slate-800 bg-slate-900/70 p-3 space-y-1">
         <div className="flex flex-wrap items-center gap-2">
           <strong className="text-sm text-amber-300">{selectedProviderId === "pollinations" ? "Pollinations" : staticSelected.providerName} · {selectedName}</strong>
@@ -155,7 +165,7 @@ export function AIModelSelector({ value, onChange }: AIModelSelectorProps) {
         <p className={`text-[10px] ${selectedProviderConfigured === true ? "text-emerald-300" : "text-amber-300"}`}>
           {selectedStatus}
         </p>
-        <p className="text-[10px] text-slate-500">The live Pollinations list is restricted to official text models marked healthy with zero input and output prices. Model discovery is public; generation needs a server-side secret key. No provider fallback or paid model substitution is performed.</p>
+        <p className="text-[10px] text-slate-500">The live Pollinations list is restricted to official, healthy, general-purpose text models with zero published prices. Models with explicit prompt-retention/training warnings are excluded. Discovery is public; generation needs a server-side secret key. No provider fallback or paid model substitution is performed.</p>
       </div>
     </section>
   );
