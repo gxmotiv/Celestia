@@ -145,7 +145,7 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
                   ))}
                   {manualOnlyModels.map((model) => (
                     <option key={model.id} value={`pollinations:${model.id}`} disabled={configured === false}>
-                      {model.name} — {model.community ? "community · manual opt-in" : "privacy warning · manual opt-in"}
+                      {model.community ? `Community · ${model.publisher} · ${model.name}` : `${model.name} · privacy warning · manual opt-in`}
                     </option>
                   ))}
                 </optgroup>
