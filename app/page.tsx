@@ -110,7 +110,8 @@ export default function HomePage() {
             timeZoneWarning = `IANA historical rules were applied for ${formData.timezoneId}, but pre-1970 local civil-time records may be incomplete. Treat the historical offset as an estimate and verify it against local historical sources.`;
           }
           if (resolution.wasAmbiguous) {
-            timeZoneWarning = `The local time occurred twice in ${formData.timezoneId}; the ${formData.timezoneDisambiguation} occurrence was selected.`;
+            const ambiguityNote = `The local time occurred twice in ${formData.timezoneId}; the ${formData.timezoneDisambiguation} occurrence was selected.`;
+            timeZoneWarning = [timeZoneWarning, ambiguityNote].filter(Boolean).join(" ");
           }
         } else if (resolution.status === "ambiguous") {
           // Keep the screen usable while clearly marking the preview as provisional.
