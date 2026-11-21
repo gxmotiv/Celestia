@@ -6,16 +6,26 @@ Celestia keeps provider credentials on the server. The model selector offers a l
 
 Pollinations exposes OpenAI-compatible Chat Completions at `https://gen.pollinations.ai/v1/chat/completions`. Model discovery is public and does not need a key; text generation requires a secret `sk_` key from [enter.pollinations.ai](https://enter.pollinations.ai/).
 
-Official documentation: [Pollinations API](https://gen.pollinations.ai/).
+Official references:
+- [Pollinations API documentation](https://gen.pollinations.ai/)
+- [Official model catalogue schema](https://github.com/pollinations/pollinations/blob/main/gen.pollinations.ai/src/docs/models.md)
+- [Official model registry schema and pricing fields](https://github.com/pollinations/pollinations/blob/main/shared/registry/model-info.ts)
 
-Celestia's server-side catalogue fetches `GET https://gen.pollinations.ai/text/models?source=official&reliability=all`, then keeps only:
-- Official Pollinations text models returned by that endpoint.
-- Models explicitly reporting a healthy status.
-- Models whose published pricing values are all numeric zero (including prompt and completion prices).
+Celestia fetches `GET https://gen.pollinations.ai/text/models?source=official&reliability=all&limit=500`. The official `/text/models` response uses `name` as the canonical model ID, `category: "text"`, `health.status`, and a `pricing` object whose currency is `pollen`. The registry omits zero-valued price fields; a free model therefore has a pricing object containing only its currency when no usage prices apply.
 
-The remaining models are sorted from lowest to highest published price. Because the eligible models are all zero-priced, this is effectively a stable price-low ordering. The selector refreshes the list through Celestia's API and generation rechecks that the selected model is still eligible before sending a request. If no eligible model is available, generation stops rather than using a paid model.
+Celestia then applies stricter local checks:
+- Official catalogue entry; not community-sourced.
+- `category: "text"`, text input/output, and `/v1/chat/completions` support.
+- `health.status === "healthy"`.
+- No paid-only restriction, specialized classifier role, positive price fields, paid pricing variants, or paid pricing adjustments.
+- No explicit description warning that prompts may be retained or used for training. This is a conservative privacy guard because Celestia may send personal birth/chart details to an AI provider.
+- Unknown pricing fields fail closed rather than being assumed free.
 
-A zero-priced model is free at the Pollinations layer according to its official documentation. It does not guarantee uninterrupted availability or a permanent model ID. Pollinations may change catalogue fields, pricing, or health. If its catalogue shape changes, the safe behaviour is to show no eligible models rather than assume a model is free.
+The eligible list is sorted by published input + output price. Since all eligible entries are zero-priced, the final tie-break is model name. Generation rechecks the current catalogue before sending any prompt. If no suitable model passes these checks, Celestia stops instead of selecting a paid, specialized, or privacy-risk model.
+
+**Live research finding (21 November 2026):** the official catalogue returned two healthy zero-priced text entries in the inspected snapshot. One was a specialized safety classifier; the other explicitly warned that prompts and replies may be retained and used for training. Celestia therefore excluded both and exposed no default Pollinations assistant model at that moment. This is intentional: an empty list is safer than falsely claiming a suitable free/private model exists. The list can change as Pollinations updates its catalogue.
+
+A zero-priced model means no published model-token price at the Pollinations layer; it does not guarantee permanent availability, unlimited usage, or zero cost for every optional capability. Pollinations may change catalogue fields, prices, health, access permissions, or model IDs. If the schema changes, Celestia shows no eligible models rather than assuming a model is free.
 
 ## Add the Pollinations secret to the Cloudflare Worker
 
@@ -39,8 +49,8 @@ Optional provider limits and availability can change. Check the provider's own d
 
 ## Routing and cost safeguards
 
-- The default selection is Pollinations automatic-free mode. It resolves to the first currently healthy, official, zero-priced text model.
-- A named Pollinations model is checked against the current live free/healthy catalogue immediately before generation.
+- The default selection is Pollinations automatic-free mode, but it resolves only when a currently eligible model exists.
+- A named Pollinations model is checked against the current live free/healthy/privacy-filtered catalogue immediately before generation.
 - Missing credentials, a stale/paid model, exhausted provider access, or an upstream error is reported. There is no silent fallback to another provider.
 - The Pollinations model catalogue endpoint is public, but generation requires `POLLINATIONS_API_KEY`.
 - No provider key is returned to the browser.
