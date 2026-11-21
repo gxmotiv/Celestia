@@ -277,7 +277,7 @@ export function AIReadingView({
         value={selectedModel}
         onChange={(value) => {
           setSelectedModel(value);
-          if (value !== "pollinations:stealth/glyph-cluster") setPrivacyRiskAcknowledged(false);
+          setPrivacyRiskAcknowledged(false);
         }}
         privacyRiskAcknowledged={privacyRiskAcknowledged}
         onPrivacyRiskAcknowledgedChange={setPrivacyRiskAcknowledged}
