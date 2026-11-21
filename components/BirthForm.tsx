@@ -119,6 +119,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
         lat: c.lat,
         lng: c.lng,
         tz: c.tz,
+        tzName: getCityTimeZoneId(c.city, c.country),
         source: "built-in",
       }));
       setCityResults(fallbacks);
@@ -158,6 +159,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
         let detectedCity = "Current Location";
         let detectedCountry = "GPS";
         let detectedTz = -new Date().getTimezoneOffset() / 60;
+        let detectedTzName: string | undefined;
         let formattedLabel = `GPS (${lat}°, ${lng}°)`;
 
         try {
@@ -170,6 +172,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
               detectedCity = r.city;
               detectedCountry = r.country;
               detectedTz = r.tz;
+              detectedTzName = r.tzName || getCityTimeZoneId(r.city, r.country);
               formattedLabel = r.formatted || `${r.city}, ${r.country}`;
             }
           }
@@ -184,7 +187,7 @@ export function BirthForm({ initialData, onSubmit, isLoading = false }: BirthFor
           latitude: lat,
           longitude: lng,
           timezoneOffset: detectedTz,
-          timezoneId: data?.results?.[0]?.tzName || undefined,
+          timezoneId: detectedTzName || getCityTimeZoneId(detectedCity, detectedCountry),
           timezoneDisambiguation: undefined,
         }));
         setCitySearchQuery(formattedLabel);
