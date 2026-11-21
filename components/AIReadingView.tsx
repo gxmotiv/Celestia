@@ -59,6 +59,7 @@ export function AIReadingView({
 }: AIReadingViewProps) {
   const [aiViewMode, setAiViewMode] = useState<"oracle" | "reading">("oracle");
   const [selectedModel, setSelectedModel] = useState<CelestiaAIModelId>(DEFAULT_CELESTIA_AI_MODEL);
+  const [privacyRiskAcknowledged, setPrivacyRiskAcknowledged] = useState(false);
   const [readingText, setReadingText] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -101,6 +102,7 @@ export function AIReadingView({
       // Construct payload adhering strictly to the required interpretation schema
       const payload = {
         model: selectedModel,
+        allowPrivacyRiskModel: privacyRiskAcknowledged,
         name: fullName || "Seeker",
         birthData: {
           date: birthDate,
@@ -261,7 +263,15 @@ export function AIReadingView({
 
   return (
     <div className="space-y-6">
-      <AIModelSelector value={selectedModel} onChange={setSelectedModel} />
+      <AIModelSelector
+        value={selectedModel}
+        onChange={(value) => {
+          setSelectedModel(value);
+          if (value !== "pollinations:stealth/glyph-cluster") setPrivacyRiskAcknowledged(false);
+        }}
+        privacyRiskAcknowledged={privacyRiskAcknowledged}
+        onPrivacyRiskAcknowledgedChange={setPrivacyRiskAcknowledged}
+      />
 
       {/* Top Architecture Toggle: Master Oracle Cockpit vs Magnum Opus Reading */}
       <div className="flex items-center justify-between p-1.5 bg-slate-950/90 border border-slate-800 rounded-xl">
