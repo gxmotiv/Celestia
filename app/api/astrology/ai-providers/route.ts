@@ -6,7 +6,7 @@ export async function GET() {
   return NextResponse.json(
     {
       providers: {
-        apinex: Boolean(process.env.APINEX_API_KEY?.trim()),
+        pollinations: Boolean(process.env.POLLINATIONS_API_KEY?.trim()),
         freemodel: Boolean(process.env.FREEMODEL_API_KEY?.trim()),
         nararouter: Boolean(process.env.NARAROUTER_API_KEY?.trim()),
         openrouter: Boolean(process.env.OPENROUTER_API_KEY?.trim()),

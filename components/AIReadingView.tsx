@@ -59,6 +59,7 @@ export function AIReadingView({
 }: AIReadingViewProps) {
   const [aiViewMode, setAiViewMode] = useState<"oracle" | "reading">("oracle");
   const [selectedModel, setSelectedModel] = useState<CelestiaAIModelId>(DEFAULT_CELESTIA_AI_MODEL);
+  const [privacyRiskAcknowledged, setPrivacyRiskAcknowledged] = useState(false);
   const [readingText, setReadingText] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -66,6 +67,7 @@ export function AIReadingView({
   const [aiProvider, setAiProvider] = useState<string | null>(null);
   const [aiModel, setAiModel] = useState<string | null>(null);
   const [aiUsageTokens, setAiUsageTokens] = useState<number | null>(null);
+  const [generationError, setGenerationError] = useState("");
 
   const [activeMode, setActiveMode] = useState<ReadingMode>("holistic");
   const [readingLength, setReadingLength] = useState<"detailed" | "concise">("detailed");
@@ -79,6 +81,11 @@ export function AIReadingView({
   ];
 
   const generateReading = async (overrideMode?: ReadingMode) => {
+    if ((selectedModel === "pollinations:stealth/glyph-cluster" || selectedModel.startsWith("pollinations:community/")) && !privacyRiskAcknowledged) {
+      setGenerationError("Acknowledge the selected model’s provider and data-handling warning before generating.");
+      return;
+    }
+    setGenerationError("");
     const modeToUse = overrideMode || activeMode;
     setIsLoading(true);
     setAiUsageTokens(null);
@@ -101,6 +108,7 @@ export function AIReadingView({
       // Construct payload adhering strictly to the required interpretation schema
       const payload = {
         model: selectedModel,
+        allowPrivacyRiskModel: privacyRiskAcknowledged,
         name: fullName || "Seeker",
         birthData: {
           date: birthDate,
@@ -188,6 +196,7 @@ export function AIReadingView({
       });
 
       const data = await res.json();
+      if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : `Reading request failed (HTTP ${res.status}).`);
       if (data.success && data.reading) {
         setReadingText(data.reading);
         setIsAiGenerated(data.isAiGenerated);
@@ -196,6 +205,8 @@ export function AIReadingView({
         setAiUsageTokens(typeof data.usage?.totalTokens === "number" ? data.usage.totalTokens : null);
       }
     } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to generate AI reading.";
+      setGenerationError(message);
       console.error("Failed to generate AI reading:", err);
     } finally {
       setIsLoading(false);
@@ -261,7 +272,16 @@ export function AIReadingView({
 
   return (
     <div className="space-y-6">
-      <AIModelSelector value={selectedModel} onChange={setSelectedModel} />
+      {generationError ? <p role="alert" className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-200">{generationError}</p> : null}
+      <AIModelSelector
+        value={selectedModel}
+        onChange={(value) => {
+          setSelectedModel(value);
+          setPrivacyRiskAcknowledged(false);
+        }}
+        privacyRiskAcknowledged={privacyRiskAcknowledged}
+        onPrivacyRiskAcknowledgedChange={setPrivacyRiskAcknowledged}
+      />
 
       {/* Top Architecture Toggle: Master Oracle Cockpit vs Magnum Opus Reading */}
       <div className="flex items-center justify-between p-1.5 bg-slate-950/90 border border-slate-800 rounded-xl">
@@ -567,7 +587,7 @@ export function AIReadingView({
             <div className="flex items-center gap-2">
               <span className="font-mono text-amber-400/90">
                 {isAiGenerated
-                  ? `Generated via ${aiProvider === "apinex" ? "APInex" : aiProvider === "freemodel" ? "FreeModel" : aiProvider === "nararouter" ? "NaraRouter" : aiProvider === "local-fallback" ? "Local fallback" : "Unknown provider"}${aiModel ? ` · ${aiModel}` : ""}`
+                  ? `Generated via ${aiProvider === "pollinations" ? "Pollinations" : aiProvider === "freemodel" ? "FreeModel" : aiProvider === "nararouter" ? "NaraRouter" : aiProvider === "local-fallback" ? "Local fallback" : "Unknown provider"}${aiModel ? ` · ${aiModel}` : ""}`
                   : "Calculated via Astronomical Synthesizer"}
                 {aiUsageTokens !== null ? ` · ${aiUsageTokens.toLocaleString()} tokens` : ""}
               </span>
