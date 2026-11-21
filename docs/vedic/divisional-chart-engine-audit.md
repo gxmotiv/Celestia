@@ -153,7 +153,7 @@ Sources:
 - [Jagannatha Hora — D60 computation and convention discussion](https://jagannathahora.com/shashtiamsa) — explicitly documents the occupied-sign convention and the alternative literal Aries reading.
 - [SIA Vigyan — BPHS D60 verse and rendering](https://siavigyan.com/learn/varga/d60-shashtiamsha) — provides the Sanskrit verse and its occupied-sign rendering.
 
-Important remaining limitation: Celestia currently computes D60 sign placement but does not yet calculate the sixty named Shashtiamsa deities and their benefic/malefic classification. The even-sign reversal in BPHS 6.40 applies to those names. Do not imply that D60 deity or benefic/malefic interpretation is implemented.
+The earlier sign-only limitation was superseded by the named-amsa implementation documented below. The current calculator returns a selected BPHS-derived amsa name and a separately sourced Saumya/Krura nature classification from Phaladeepika 3.5. It still lacks a source-profile selector and independent reference-chart certification; do not present the selected text profile as universal recension consensus.
 
 
 
@@ -176,3 +176,14 @@ Sources:
 - [BPHS Chapter 7, verses 7.6–8](https://vedicpupil.in/library/books/brihat-parashara-hora-shastra/chapter-7) — D45/D60 “all indications” scope and the role of the Shashtiamsa lord.
 
 Verification added: Category 28 checks all 60 segments across all 12 natal signs (720 combinations), odd/even reversal, Phaladeepika nature assignment, the half-degree boundary and invalid input. These are deterministic rule fixtures, not independent reference-chart certification.
+
+
+## D60 floating-point boundary consistency (2026-11-21)
+
+The D60 sign branch now reuses `equalDivisionPart(degInRasi, 60)`, the same numeric boundary helper used by the other equal-part vargas and by the D60 amsa-detail calculation. Previously the sign branch used a direct `Math.floor(degInRasi / 0.5)`, while the name/nature helper applied a small ULP tolerance. A longitude produced a few representable floating-point steps below an exact half-degree could therefore yield different sign-part and named-amsa results.
+
+The helper's tolerance is `1e-10` of a segment index (about `5e-11°` for D60). This is a numerical policy for roundoff near an exact boundary, not a classical textual rule. Category 27.3 checks a one-ULP-before boundary input under both sign conventions and confirms that a point `1e-7°` before the same boundary remains in the preceding segment. The existing full sweep still checks both conventions over all 12 natal signs and 60 parts.
+
+Source context for the sign-count disagreement remains unchanged: BPHS 6.33 supplies the half-degree arithmetic, but translations and software lineages differ on whether the remainder count is from the occupied sign or Aries. The Sanskrit transcription is primary-text evidence, not a critical-edition collation. VedicPupil's rendering explicitly says “from that planet's sign” but self-disclaims possible translation error; it is recorded as a secondary rendering, not as a final philological ruling.
+
+Additional source: [BPHS 6.33 Sanskrit and word-level rendering (VedicPupil)](https://vedicpupil.in/library/books/brihat-parashara-hora-shastra/chapter-6/verse-33) — records the occupied-sign wording while noting its own translation may be wrong.

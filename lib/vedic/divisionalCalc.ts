@@ -321,7 +321,7 @@ export function calculateDivisionalSignIndex(
       // software/lineage convention) or from Aries (literal BPHS reading).
       // BPHS 6.40 reverses the D60 NAME sequence in even signs; it does not
       // establish a seventh-sign offset for the D60 sign calculation.
-      const part = Math.floor(degInRasi / 0.5);
+      const part = equalDivisionPart(degInRasi, 60);
       const offset = part % 12;
       return options.d60SignConvention === "from-aries"
         ? offset

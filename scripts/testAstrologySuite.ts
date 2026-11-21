@@ -1866,6 +1866,22 @@ assertTest(
   `Got sign index ${d60DefaultEvenSign}`
 );
 
+const d60UlpBeforeTaurusBoundary = 30.5 - (Number.EPSILON * 30.5) / 2;
+const d60UlpFromSign = calculateDivisionalSignIndex(d60UlpBeforeTaurusBoundary, "D60", { d60SignConvention: "from-sign" });
+const d60UlpFromAries = calculateDivisionalSignIndex(d60UlpBeforeTaurusBoundary, "D60", { d60SignConvention: "from-aries" });
+const d60UlpAmsa = calculateD60AmsaDetails(d60UlpBeforeTaurusBoundary);
+const d60ClearlyBeforeBoundary = calculateDivisionalSignIndex(30.5 - 1e-7, "D60", { d60SignConvention: "from-sign" });
+assertTest(
+  "27.3 D60 Floating-Point Boundary Consistency",
+  "Both D60 sign conventions and the named-amsa helper agree at a one-ULP-before half-degree boundary, while a 1e-7-degree pre-boundary point stays in the preceding segment",
+  d60UlpFromSign === 2 &&
+    d60UlpFromAries === 1 &&
+    d60UlpAmsa.segmentNumber === 2 &&
+    d60ClearlyBeforeBoundary === 1,
+  "Occupied-sign: Taurus→Gemini; Aries-origin: Taurus→Taurus; amsa segment 2; clearly-before point remains Taurus",
+  `Occupied-sign ${d60UlpFromSign}; Aries-origin ${d60UlpFromAries}; amsa segment ${d60UlpAmsa.segmentNumber}; pre-boundary ${d60ClearlyBeforeBoundary}`
+);
+
 console.log("Running Category 28: D60 named amsa and textual nature fixtures...");
 
 const expectedKrura = new Set<number>(D60_KRURA_AMSA_ORDINALS);
