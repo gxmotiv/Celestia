@@ -102,14 +102,6 @@ function parseCivilInput(dateString: string, timeString: string) {
 }
 
 function getZonedParts(instantMs: number, formatter: Intl.DateTimeFormat) {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hourCycle: "h23",
-  });
   const parts = formatter.formatToParts(new Date(instantMs));
   const values: Record<string, number> = {};
   for (const part of parts) {
