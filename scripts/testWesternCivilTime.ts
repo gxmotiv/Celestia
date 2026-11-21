@@ -31,7 +31,7 @@ const cases = [
 
 for (const test of cases) {
   assert.equal(test.actual, test.expected, test.name);
-  process.stdout.write("PASS " + test.name + "\\n");
+  process.stdout.write("PASS " + test.name + "\n");
 }
 
 assert.throws(
@@ -50,5 +50,5 @@ assert.throws(
   "rejects unsupported UTC offsets"
 );
 
-process.stdout.write("PASS invalid input guards\\n");
-process.stdout.write("All civil-time regression tests passed.\\n");
+process.stdout.write("PASS invalid input guards\n");
+process.stdout.write("All civil-time regression tests passed.\n");
