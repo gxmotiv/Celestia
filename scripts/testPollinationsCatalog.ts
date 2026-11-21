@@ -43,10 +43,17 @@ check("rejects unknown health", [{ ...base, health: { status: "unknown" } }], 0)
 check("rejects community model", [{ ...base, community: true }], 0);
 check("rejects paid-only model", [{ ...base, paid_only: true }], 0);
 check("rejects specialized classifier", [{ ...base, is_specialized: true }], 0);
-check("rejects model with explicit prompt-retention/training warning", [{
+const glyph = {
   ...base,
-  description: "Prompts and replies may be retained and used for training.",
-}], 0);
+  name: "stealth/glyph-cluster",
+  title: "Glyph Cluster",
+  description: "Prompts and replies may be retained and used for training; zero data retention is unavailable.",
+};
+check("excludes Glyph Cluster from automatic privacy-safe models", [glyph], 0);
+check("exposes Glyph Cluster only when manual privacy-risk models are requested", [glyph], 1);
+assert.equal(parsePollinationsFreeTextModels([glyph], { includePrivacyRisk: true })[0]?.privacyRisk, true);
+passed += 1;
+console.log("PASS marks manually exposed Glyph Cluster as privacy-risk");
 check("rejects missing pricing currency", [{ ...base, pricing: {} }], 0);
 check("rejects unknown future billing field", [{
   ...base,
@@ -67,4 +74,4 @@ check("rejects models without chat-completions support", [{
 check("rejects non-text category", [{ ...base, category: "image" }], 0);
 check("rejects malformed payload", { models: [base] }, 0);
 
-console.log(`Pollinations catalogue tests: ${passed}/18 passed`);
+console.log(`Pollinations catalogue tests: ${passed}/20 passed`);
