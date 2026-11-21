@@ -67,6 +67,7 @@ export function AIReadingView({
   const [aiProvider, setAiProvider] = useState<string | null>(null);
   const [aiModel, setAiModel] = useState<string | null>(null);
   const [aiUsageTokens, setAiUsageTokens] = useState<number | null>(null);
+  const [generationError, setGenerationError] = useState("");
 
   const [activeMode, setActiveMode] = useState<ReadingMode>("holistic");
   const [readingLength, setReadingLength] = useState<"detailed" | "concise">("detailed");
@@ -80,6 +81,11 @@ export function AIReadingView({
   ];
 
   const generateReading = async (overrideMode?: ReadingMode) => {
+    if (selectedModel === "pollinations:stealth/glyph-cluster" && !privacyRiskAcknowledged) {
+      setGenerationError("Acknowledge Glyph Cluster’s prompt-retention and training warning before generating.");
+      return;
+    }
+    setGenerationError("");
     const modeToUse = overrideMode || activeMode;
     setIsLoading(true);
     setAiUsageTokens(null);
@@ -190,6 +196,7 @@ export function AIReadingView({
       });
 
       const data = await res.json();
+      if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : `Reading request failed (HTTP ${res.status}).`);
       if (data.success && data.reading) {
         setReadingText(data.reading);
         setIsAiGenerated(data.isAiGenerated);
@@ -198,6 +205,8 @@ export function AIReadingView({
         setAiUsageTokens(typeof data.usage?.totalTokens === "number" ? data.usage.totalTokens : null);
       }
     } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to generate AI reading.";
+      setGenerationError(message);
       console.error("Failed to generate AI reading:", err);
     } finally {
       setIsLoading(false);
@@ -263,6 +272,7 @@ export function AIReadingView({
 
   return (
     <div className="space-y-6">
+      {generationError ? <p role="alert" className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-200">{generationError}</p> : null}
       <AIModelSelector
         value={selectedModel}
         onChange={(value) => {
