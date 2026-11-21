@@ -10,6 +10,8 @@ import {
 interface AIModelSelectorProps {
   value: CelestiaAIModelId;
   onChange: (value: CelestiaAIModelId) => void;
+  privacyRiskAcknowledged: boolean;
+  onPrivacyRiskAcknowledgedChange: (value: boolean) => void;
 }
 
 interface LivePollinationsModel {
@@ -19,6 +21,7 @@ interface LivePollinationsModel {
   inputPrice: number;
   outputPrice: number;
   health: string;
+  privacyRisk?: boolean;
 }
 
 const PROVIDERS: CelestiaAIProviderId[] = ["pollinations", "freemodel", "nararouter", "openrouter"];
@@ -31,9 +34,10 @@ const PROVIDER_LABELS: Record<CelestiaAIProviderId, string> = {
 
 type ProviderConfiguration = Partial<Record<CelestiaAIProviderId, boolean>>;
 
-export function AIModelSelector({ value, onChange }: AIModelSelectorProps) {
+export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPrivacyRiskAcknowledgedChange }: AIModelSelectorProps) {
   const [providerConfiguration, setProviderConfiguration] = useState<ProviderConfiguration | null>(null);
   const [pollinationsModels, setPollinationsModels] = useState<LivePollinationsModel[]>([]);
+  const [manualOnlyModels, setManualOnlyModels] = useState<LivePollinationsModel[]>([]);
   const [catalogueError, setCatalogueError] = useState("");
   const [catalogueLoaded, setCatalogueLoaded] = useState(false);
 
@@ -55,11 +59,12 @@ export function AIModelSelector({ value, onChange }: AIModelSelectorProps) {
       .then(async (response) => {
         const data = await response.json();
         if (!response.ok) throw new Error(data?.error || "Pollinations catalogue unavailable");
-        return data as { models?: LivePollinationsModel[] };
+        return data as { models?: LivePollinationsModel[]; manualOnlyModels?: LivePollinationsModel[] };
       })
       .then((data) => {
         if (active) {
           setPollinationsModels(Array.isArray(data.models) ? data.models : []);
+          setManualOnlyModels(Array.isArray(data.manualOnlyModels) ? data.manualOnlyModels : []);
           setCatalogueError("");
           setCatalogueLoaded(true);
         }
@@ -78,13 +83,13 @@ export function AIModelSelector({ value, onChange }: AIModelSelectorProps) {
   useEffect(() => {
     const isKnownStatic = CELESTIA_AI_MODELS.some((model) => model.id === value);
     const isKnownLive = value.startsWith("pollinations:") &&
-      (value === "pollinations:auto-free" || pollinationsModels.some((model) => `pollinations:${model.id}` === value));
+      (value === "pollinations:auto-free" || [...pollinationsModels, ...manualOnlyModels].some((model) => `pollinations:${model.id}` === value));
     if (!isKnownStatic && !isKnownLive) onChange("pollinations:auto-free");
-  }, [value, pollinationsModels, onChange]);
+  }, [value, pollinationsModels, manualOnlyModels, onChange]);
 
   const staticSelected = CELESTIA_AI_MODELS.find((model) => model.id === value) ?? CELESTIA_AI_MODELS[0];
   const liveSelected = value.startsWith("pollinations:")
-    ? pollinationsModels.find((model) => `pollinations:${model.id}` === value)
+    ? [...pollinationsModels, ...manualOnlyModels].find((model) => `pollinations:${model.id}` === value)
     : undefined;
   const selectedProviderId = value.startsWith("pollinations:") ? "pollinations" : staticSelected.providerId;
   const selectedName = liveSelected?.name ?? staticSelected.name;
@@ -131,6 +136,11 @@ export function AIModelSelector({ value, onChange }: AIModelSelectorProps) {
                       {model.name} — $0 input / $0 output
                     </option>
                   ))}
+                  {manualOnlyModels.map((model) => (
+                    <option key={model.id} value={`pollinations:${model.id}`} disabled={configured === false}>
+                      {model.name} — manual opt-in · privacy warning
+                    </option>
+                  ))}
                 </optgroup>
               );
             }
@@ -155,6 +165,20 @@ export function AIModelSelector({ value, onChange }: AIModelSelectorProps) {
           No general-purpose Pollinations model currently passes Celestia's free-price, healthy-status, and privacy checks. Specialized safety models and models warning that prompts may be retained or used for training are excluded.
         </p>
       ) : null}
+      {liveSelected?.privacyRisk ? (
+        <label className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-xs text-amber-100">
+          <input
+            type="checkbox"
+            checked={privacyRiskAcknowledged}
+            onChange={(event) => onPrivacyRiskAcknowledgedChange(event.target.checked)}
+            className="mt-0.5 accent-amber-500"
+          />
+          <span>
+            <strong className="block mb-1">Manual privacy-risk acknowledgement required</strong>
+            Glyph Cluster may retain prompts and replies and use them for training; zero-data-retention is unavailable. Celestia sends the current birth details, chart data, and question to the provider. I understand and explicitly consent to using this model for this reading. I will not send confidential information.
+          </span>
+        </label>
+      ) : null}
       <div className="rounded-lg border border-slate-800 bg-slate-900/70 p-3 space-y-1">
         <div className="flex flex-wrap items-center gap-2">
           <strong className="text-sm text-amber-300">{selectedProviderId === "pollinations" ? "Pollinations" : staticSelected.providerName} · {selectedName}</strong>
@@ -165,7 +189,7 @@ export function AIModelSelector({ value, onChange }: AIModelSelectorProps) {
         <p className={`text-[10px] ${selectedProviderConfigured === true ? "text-emerald-300" : "text-amber-300"}`}>
           {selectedStatus}
         </p>
-        <p className="text-[10px] text-slate-500">The live Pollinations list is restricted to official, healthy, general-purpose text models with zero published prices. Models with explicit prompt-retention/training warnings are excluded. Discovery is public; generation needs a server-side secret key. No provider fallback or paid model substitution is performed.</p>
+        <p className="text-[10px] text-slate-500">Automatic selection includes only privacy-safe, official, healthy, zero-priced general-purpose models. Models with explicit retention/training warnings are separated into manual-only choices and require a fresh acknowledgement. Discovery is public; generation needs a server-side secret key. No paid fallback is performed.</p>
       </div>
     </section>
   );
