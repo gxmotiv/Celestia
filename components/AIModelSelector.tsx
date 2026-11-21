@@ -22,6 +22,13 @@ interface LivePollinationsModel {
   outputPrice: number;
   health: string;
   privacyRisk?: boolean;
+  community?: boolean;
+  publisher?: string;
+  healthSuccessRate?: number | null;
+  healthRequests?: number;
+  contextLength?: number | null;
+  reasoning?: boolean;
+  tools?: boolean;
 }
 
 const PROVIDERS: CelestiaAIProviderId[] = ["pollinations", "freemodel", "nararouter", "openrouter"];
@@ -95,7 +102,7 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
   const selectedName = liveSelected?.name ?? staticSelected.name;
   const selectedDescription = liveSelected?.description ?? staticSelected.description;
   const selectedQuota = liveSelected
-    ? "Published input price: 0 · output price: 0 · official source · healthy status"
+    ? `Published input price: 0 · output price: 0 · ${liveSelected.community ? `community publisher: ${liveSelected.publisher ?? "unknown"}` : "official source"} · healthy status`
     : staticSelected.quotaNote;
   const selectedProviderConfigured = providerConfiguration?.[selectedProviderId];
   const selectedSecret = selectedProviderId === "pollinations" ? "POLLINATIONS_API_KEY" : staticSelected.secretName;
@@ -138,7 +145,7 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
                   ))}
                   {manualOnlyModels.map((model) => (
                     <option key={model.id} value={`pollinations:${model.id}`} disabled={configured === false}>
-                      {model.name} — manual opt-in · privacy warning
+                      {model.name} — community/manual opt-in
                     </option>
                   ))}
                 </optgroup>
@@ -174,8 +181,9 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
             className="mt-0.5 accent-amber-500"
           />
           <span>
-            <strong className="block mb-1">Manual privacy-risk acknowledgement required</strong>
-            Glyph Cluster may retain prompts and replies and use them for training; zero-data-retention is unavailable. Celestia sends the current birth details, chart data, and question to the provider. I understand and explicitly consent to using this model for this reading. I will not send confidential information.
+            <strong className="block mb-1">Manual provider-risk acknowledgement required</strong>
+            {liveSelected?.community ? `This model is published by ${liveSelected.publisher || "a community publisher"} and runs on independent provider infrastructure. Pollinations says community providers control their own storage, sharing, security, and training practices; it does not verify them. ` : "This model's provider warns that prompts and replies may be retained and used for training, and zero-data-retention is unavailable. "}
+            Celestia sends the current birth details, chart data, and question to this provider. I understand and explicitly consent to using this model for this reading. I will not send confidential information.
           </span>
         </label>
       ) : null}
@@ -186,10 +194,17 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
         </div>
         <p className="text-xs leading-relaxed text-slate-300">{selectedDescription}</p>
         <p className="text-[10px] leading-relaxed text-slate-400">{selectedQuota}</p>
+        {liveSelected ? (
+          <p className="text-[10px] leading-relaxed text-slate-400">
+            {liveSelected.healthSuccessRate === null || liveSelected.healthSuccessRate === undefined ? "Health sample unavailable" : `${liveSelected.healthSuccessRate.toFixed(1)}% recent success · ${liveSelected.healthRequests ?? 0} requests`}
+            {liveSelected.contextLength ? ` · ${(liveSelected.contextLength / 1000).toFixed(0)}K context` : ""}
+            {liveSelected.reasoning ? " · reasoning" : ""}{liveSelected.tools ? " · tool calling" : ""}
+          </p>
+        ) : null}
         <p className={`text-[10px] ${selectedProviderConfigured === true ? "text-emerald-300" : "text-amber-300"}`}>
           {selectedStatus}
         </p>
-        <p className="text-[10px] text-slate-500">Automatic selection includes only privacy-safe, official, healthy, zero-priced general-purpose models. Models with explicit retention/training warnings are separated into manual-only choices and require a fresh acknowledgement. Discovery is public; generation needs a server-side secret key. No paid fallback is performed.</p>
+        <p className="text-[10px] text-slate-500">Automatic selection includes only privacy-safe, official, healthy, zero-priced general-purpose models. Community-hosted models and models with explicit retention/training warnings are manual-only and require a fresh acknowledgement. Discovery is public; generation needs a server-side secret key. No paid fallback is performed.</p>
       </div>
     </section>
   );
