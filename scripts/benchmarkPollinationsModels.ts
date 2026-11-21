@@ -165,4 +165,9 @@ async function main() {
   }
 }
 
-await main();
+// Keep the entry point compatible with tsx's CommonJS output mode. The
+// repository does not declare ESM in package.json, so top-level await fails.
+void main().catch((error: unknown) => {
+  console.error("Pollinations benchmark failed:", error);
+  process.exitCode = 1;
+});
