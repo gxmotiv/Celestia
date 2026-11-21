@@ -70,6 +70,15 @@ export function AIModelSelector({ value, onChange }: AIModelSelectorProps) {
     };
   }, []);
 
+  useEffect(() => {
+    const isKnownStatic = CELESTIA_AI_MODELS.some((model) => model.id === value);
+    const isKnownLive = value.startsWith("pollinations:") &&
+      (value === "pollinations:auto-free" || pollinationsModels.some((model) => `pollinations:${model.id}` === value));
+    if (!isKnownStatic && !isKnownLive && pollinationsModels.length >= 0) {
+      onChange("pollinations:auto-free");
+    }
+  }, [value, pollinationsModels, onChange]);
+
   const staticSelected = CELESTIA_AI_MODELS.find((model) => model.id === value) ?? CELESTIA_AI_MODELS[0];
   const liveSelected = value.startsWith("pollinations:")
     ? pollinationsModels.find((model) => `pollinations:${model.id}` === value)
