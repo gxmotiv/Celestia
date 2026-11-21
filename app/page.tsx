@@ -80,7 +80,7 @@ export default function HomePage() {
 
   // Resolve the entered wall-clock birth time using historical IANA rules when available.
   // Fixed-offset profiles remain supported, but are explicitly labelled as such below.
-  const { westernData, vedicData, numerologyData, baziData, birthDateObj, resolvedTimezoneOffset, timeZoneWarning } = useMemo(() => {
+  const { westernData, vedicData, numerologyData, baziData, resolvedTimezoneOffset, timeZoneWarning } = useMemo(() => {
     const [yStr, mStr, dStr] = formData.birthDate.split("-");
     const year = Number(yStr);
     const month = Number(mStr);
@@ -106,6 +106,9 @@ export default function HomePage() {
         if (resolution.status === "resolved") {
           birthDateObj = resolution.utcDate;
           resolvedTimezoneOffset = resolution.offsetHours;
+          if (year < 1970) {
+            timeZoneWarning = `IANA historical rules were applied for ${formData.timezoneId}, but pre-1970 local civil-time records may be incomplete. Treat the historical offset as an estimate and verify it against local historical sources.`;
+          }
           if (resolution.wasAmbiguous) {
             timeZoneWarning = `The local time occurred twice in ${formData.timezoneId}; the ${formData.timezoneDisambiguation} occurrence was selected.`;
           }
@@ -153,7 +156,6 @@ export default function HomePage() {
       vedicData: vData,
       numerologyData: nData,
       baziData: bData,
-      birthDateObj,
       resolvedTimezoneOffset,
       timeZoneWarning,
     };
