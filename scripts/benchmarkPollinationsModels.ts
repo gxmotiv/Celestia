@@ -17,7 +17,7 @@ const tasks = [
   },
   {
     id: "structured-extraction",
-    prompt: 'Extract the following facts and return ONLY valid JSON with keys "date", "time", "location", and "unknowns": "Birth date: 5 November 2008. Birth time: 4:49 PM IST. Birthplace: Haridwar, India. Exact house system: not specified."',
+    prompt: 'Extract the following facts and return ONLY valid JSON with keys "date", "time", "location", and "unknowns": "Birth date: 14 February 1995. Birth time: 9:30 AM IST. Birthplace: Jaipur, India. Exact house system: not specified."',
   },
   {
     id: "astrology-caution",
