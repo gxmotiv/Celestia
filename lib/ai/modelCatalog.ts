@@ -9,12 +9,13 @@ export const CELESTIA_AI_MODELS = [
 ] as const;
 
 export type CelestiaAIModel = (typeof CELESTIA_AI_MODELS)[number];
+type CelestiaAIDynamicPollinationsModel = Omit<CelestiaAIModel, "id" | "providerModelId"> & { id: string; providerModelId: string };
 export type CelestiaAIModelId = string;
 export type CelestiaAIProviderId = "pollinations" | "freemodel" | "nararouter" | "openrouter";
 
 export const DEFAULT_CELESTIA_AI_MODEL: CelestiaAIModelId = "pollinations:auto-free";
 
-export function getCelestiaAIModel(value: unknown): CelestiaAIModel | (CelestiaAIModel & { providerId: "pollinations"; providerName: "Pollinations"; providerModelId: string }) | undefined {
+export function getCelestiaAIModel(value: unknown): CelestiaAIModel | CelestiaAIDynamicPollinationsModel | undefined {
   if (typeof value !== "string") return undefined;
   const known = CELESTIA_AI_MODELS.find((model) => model.id === value);
   if (known) return known;
