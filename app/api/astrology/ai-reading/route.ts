@@ -17,10 +17,16 @@ export async function POST(req: NextRequest) {
       readingLength = "detailed",
       userQuestion,
       model,
+      allowPrivacyRiskModel,
     } = payload ?? {};
 
     if (model !== undefined && !isCelestiaAIModelId(model)) {
       return NextResponse.json({ error: "The selected AI model is not supported." }, { status: 400 });
+    }
+    if (model === "pollinations:stealth/glyph-cluster" && allowPrivacyRiskModel !== true) {
+      return NextResponse.json({
+        error: "Glyph Cluster requires explicit acknowledgement of its prompt-retention and training warning before any chart data is sent.",
+      }, { status: 400 });
     }
 
     const fullName = typeof name === "string" && name.trim() ? name.trim() : "Querent";
@@ -69,6 +75,7 @@ Format a useful, structured response with Markdown headings. Do not repeat the e
         // Concise changes answer length, not the reasoning quality.
         modelTier: "reasoning",
         ...(model ? { model } : {}),
+        allowPrivacyRiskModel: allowPrivacyRiskModel === true,
       });
       return NextResponse.json({
         success: true,
