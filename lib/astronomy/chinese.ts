@@ -177,7 +177,10 @@ function calculateMonthPillar(yearStemIdx: number, month: number, day: number): 
  * Calculates Day Pillar from Julian Day Number (Sexagenary 60-day cycle)
  */
 function calculateDayPillar(year: number, month: number, day: number, hour: number): { stemIdx: number; branchIdx: number } {
-  // If birth is between 23:00 and 23:59 (Early Zi / Rat hour), in classical BaZi it belongs to the next day's pillar
+  // This calculator currently selects the Zi-Chu (子初换日) convention:
+  // the day pillar advances when Zi hour begins at 23:00. This is a declared
+  // lineage choice, not a universal BaZi rule; a Zi-Zheng (子正换日) midnight
+  // alternative is not yet exposed as a selectable option.
   let adjDay = day;
   let adjMonth = month;
   let adjYear = year;
@@ -195,8 +198,8 @@ function calculateDayPillar(year: number, month: number, day: number, hour: numb
   }
 
   const jd = calculateJulianDay(adjYear, adjMonth, adjDay, 12, 0); // noon JD
-  // Sexagenary cycle formula: JDN + 50 % 60
-  // Standard anchor: Jan 1, 2000 (JD 2451545.0) was Geng-Chen day (Index 16: Geng=6, Chen=4)
+  // For an integer noon JD, this is equivalent to (JD_noon + 49) mod 60.
+  // Reference: 2000-01-01 (JD 2451545.0) = Wu-Wu (index 54; 0 = Jia-Zi).
   const cycleIndex = Math.floor((jd + 0.5 + 49) % 60);
   const stemIdx = cycleIndex % 10;
   const branchIdx = cycleIndex % 12;

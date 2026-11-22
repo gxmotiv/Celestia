@@ -354,3 +354,41 @@ Do not conflate this with Chinese lunisolar calendar month numbering. Liu and St
 - [2024 solar-term table](https://almanark.com/jieqi/2024/) and [2024 UTC/HKT CSV](https://koyomidays.com/data/solar-terms-2024.csv) — independent secondary computational cross-checks for the LiChun and Jingzhe fixture instants; not classical authority.
 
 CI evidence for this commit is pending until the PR workflow completes. No provider was called; no secrets, deployment, merge, release, or main-branch changes were involved.
+
+
+### BaZi Zi-hour day rollover and dual-engine audit (2026-11-22)
+
+**Bounded question.** Does the sexagenary day change at the start of Zi hour (23:00; 子初) or at midnight (00:00; 子正/子半)? These are competing conventions in BaZi practice and in discussions of the historical Chinese time system. They must not be collapsed into a universal claim.
+
+**Classical and scholarly evidence.**
+- The *Xin Tang Shu* (新唐書), Treatise 15, Calendar I, records Li Chunfeng's statement “古曆分日，起於子半” (“ancient calendars divided the day beginning at the midpoint of Zi”). The same passage records a calendrical dispute about the new-moon day and the competing use of Zi-Chu; it is evidence of a historical calendrical argument, not a blanket ruling for every later BaZi lineage.
+- Zhao Youqin's *Ge Xiang Xin Shu* (革象新書), juan 2, “時分百刻,” explicitly says the first half of Zi before midnight belongs to the previous day and the second half after midnight belongs to the current day. This supports a midnight split in that calendrical text.
+- Kim Mantae and Shin Donghyun's 2014 peer-reviewed study, “A Study on the Disputed Points of Time in the Science of Ming Li — With a Focus on Mouse Time,” distinguishes the astronomical/civil-midnight argument from the internal Ming Li argument. Its abstract says midnight is more plausible astronomically, while 23:00 is more internally consistent within the BaZi system because its year boundary is already based on the opening solar term. This is the authors' conclusion, not universal consensus.
+- The Five Rats (五鼠遁) rule derives the hour stem from the day stem. *San Ming Tong Hui*, juan 2, “論遁月時,” is a relevant classical source for the stem/hour sequence; it does not by itself settle the disputed day rollover.
+- Y. T. Liu's technical sexagenary-cycle note gives the reproducible noon-JD modular formula and a 2019 Jia-Zi reference date. From that reference, 2000-01-01 is Wu-Wu (cycle index 54): the dates are 6,966 days apart, and 6,966 mod 60 = 6, so the earlier date is index 54. This independently checks the day-cycle anchor used by both code paths.
+
+**Exact implementation currently selected in the main user-facing calculator.**
+- `lib/astronomy/chinese.ts::calculateDayPillar` selects Zi-Chu (子初换日): for integer local civil hour `hour >= 23`, it advances the Gregorian date by one before calculating the noon Julian day.
+- The day-cycle index is `floor((JD_noon + 0.5 + 49) mod 60)`; stem index is `cycleIndex mod 10`, branch index is `cycleIndex mod 12`. The corrected reference is 2000-01-01 noon = Wu-Wu (戊午), index 54, not Geng-Chen.
+- `calculateHourPillar` maps 23:00–00:59 to Zi and derives the hour stem from the resulting day stem using the Five Rats sequence. Thus, under this selected Zi-Chu path, 23:00 and the following civil midnight produce the same day/hour pair.
+- The main page passes a local integer hour to this function. The minute is not passed to the day/hour calculation; the solar year/month path separately receives the UTC birth instant.
+
+**Important second-engine discrepancy.** `CompleteBaZiEngine.generateBaZiChart` in `lib/astronomy/baziEngine.ts` calculates the day pillar from the UTC calendar date and the hour pillar from the UTC hour; it does not apply the main calculator's 23:00 date increment. `components/TransitView.tsx` constructs a date-only birth value as `YYYY-MM-DDT12:00:00Z` when no time is supplied, so that view can produce a noon-UTC hour pillar rather than a verified birth-time pillar. The two BaZi paths are not yet parity-validated and must not be described as interchangeable. This remains a user-facing limitation; no change to the second engine is made in this bounded update.
+
+**Offline regression fixtures.** Category 30 adds four assertions: (30.1) 2000-01-01 maps to Wu-Wu; (30.2) the main calculator changes day pillar between 22:00 and 23:00; (30.3) 23:00 Zi and the following 00:00 share day and hour pillars; and (30.4) the same continuity holds across 31 December/1 January. These fixtures pin the currently selected implementation; they do not prove that Zi-Chu is the only valid lineage or certify local/true-solar-time conversion.
+
+**Limitations and readiness.**
+- No selectable Zi-Zheng/midnight alternative is exposed.
+- The main path uses the entered local civil date/hour for day/hour, but does not apply longitude-based local mean or apparent solar-time correction. The minute is not currently passed into the day/hour function.
+- Historical IANA timezone/DST resolution and “time unknown” uncertainty intervals remain absent.
+- The separate `CompleteBaZiEngine` uses UTC date/hour and has no shared day-boundary policy; the date-only TransitView path defaults to noon UTC. Cross-engine parity is not established.
+- BaZi remains partial. The year/month solar-term integration does not certify day/hour conventions, hidden-stem weighting, Ten Gods, Yong Shen, transformations or Da Yun.
+
+**Sources consulted (2026-11-22).**
+- [*Xin Tang Shu*, juan 25, Treatise 15: Calendar I (新唐書/卷025)](https://zh.wikisource.org/wiki/新唐書/卷025) — primary-text transcription of the Li Chunfeng calendrical discussion and “古曆分日，起於子半”; not a critical-edition collation.
+- [Zhao Youqin, *Ge Xiang Xin Shu*, juan 2, “時分百刻” (四庫全書 transcription)](https://zh.wikisource.org/wiki/革象新書_(四庫全書本)/卷2) — primary-text transcription explicitly splitting Zi at midnight; not a critical-edition collation.
+- [Kim Mantae & Shin Donghyun (2014), KCI article record and abstract](https://www.kci.go.kr/kciportal/ci/sereArticleSearch/ciSereArtiView.kci?sereArticleSearchBean.artiId=ART001867073) — peer-reviewed discussion of the two day-boundary positions and its conclusion about astronomical versus internal BaZi consistency.
+- [Kim Mantae & Shin Donghyun (2014), article PDF repository record](http://namestory.dsso.kr/bbs/board.php?bo_table=sub3_1&wr_id=75) — research-library page listing the 40-page article PDF; use the KCI record as the bibliographic authority.
+- [Y. T. Liu, “Sexagenary Cycle”](https://ytliu0.github.io/ChineseCalendar/sexagenary.html) — reproducible Julian-day formula for sexagenary days and a dated Jia-Zi anchor.
+- [*San Ming Tong Hui*, juan 2 (三命通會/卷二)](https://zh.wikisource.org/zh-hans/三命通會/卷二) — classical reference for the Five Rats hour-stem rule; not treated as resolving the rollover debate.
+- [Tan Bing, “Zi Hour Day-Change Investigation”](https://www.xinyi.hk/article-238.html) — secondary discussion quoting the classical calendrical sources; its argument favors midnight and is not treated as the only lineage.

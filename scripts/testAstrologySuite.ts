@@ -2024,6 +2024,52 @@ assertTest(
   invalidBaZiInstantRejected ? "Rejected" : "Accepted"
 );
 
+// ======================================================================
+ // CATEGORY 30: BAZI DAY-CYCLE ANCHOR AND ZI-HOUR ROLLOVER POLICY
+ // ======================================================================
+console.log("Running Category 30: BaZi day-cycle anchor and Zi-hour rollover tests...");
+
+const baziDayAnchor20000101 = calculateBaZiProfile(2000, 1, 1, 12);
+assertTest(
+  "30.1 BaZi Sexagenary Day Anchor",
+  "2000-01-01 noon maps to Wu-Wu (cycle index 54)",
+  baziDayAnchor20000101.dayPillar.stem.name === "Wu" &&
+    baziDayAnchor20000101.dayPillar.branch.name === "Horse",
+  "Wu-Wu (戊午; index 54)",
+  baziDayAnchor20000101.dayPillar.combinedName
+);
+
+const baziBeforeZiStart = calculateBaZiProfile(2024, 3, 5, 22);
+const baziAtZiStart = calculateBaZiProfile(2024, 3, 5, 23);
+assertTest(
+  "30.2 BaZi Zi-Chu Day Boundary",
+  "The selected calculator advances the day pillar at 23:00, not at 22:00",
+  baziBeforeZiStart.dayPillar.combinedName !== baziAtZiStart.dayPillar.combinedName,
+  "22:00 remains on March 5; 23:00 uses March 6 day pillar",
+  `22:00 ${baziBeforeZiStart.dayPillar.combinedName}; 23:00 ${baziAtZiStart.dayPillar.combinedName}`
+);
+
+const baziNextCivilMidnight = calculateBaZiProfile(2024, 3, 6, 0);
+assertTest(
+  "30.3 BaZi Zi-Hour Continuity",
+  "23:00 Zi and the next civil day's 00:00 share day and hour pillars under the selected Zi-Chu convention",
+  baziAtZiStart.dayPillar.combinedName === baziNextCivilMidnight.dayPillar.combinedName &&
+    baziAtZiStart.hourPillar.combinedName === baziNextCivilMidnight.hourPillar.combinedName,
+  "Same day pillar and same Zi hour pillar",
+  `23:00 ${baziAtZiStart.dayPillar.combinedName} / ${baziAtZiStart.hourPillar.combinedName}; 00:00 ${baziNextCivilMidnight.dayPillar.combinedName} / ${baziNextCivilMidnight.hourPillar.combinedName}`
+);
+
+const baziYearEndZi = calculateBaZiProfile(2023, 12, 31, 23);
+const baziNewYearMidnight = calculateBaZiProfile(2024, 1, 1, 0);
+assertTest(
+  "30.4 BaZi Zi-Hour Calendar Rollover",
+  "23:00 on December 31 advances to the same day/hour pillars as January 1 at 00:00",
+  baziYearEndZi.dayPillar.combinedName === baziNewYearMidnight.dayPillar.combinedName &&
+    baziYearEndZi.hourPillar.combinedName === baziNewYearMidnight.hourPillar.combinedName,
+  "Year rollover preserves the selected Zi-Chu day/hour continuity",
+  `23:00 ${baziYearEndZi.dayPillar.combinedName} / ${baziYearEndZi.hourPillar.combinedName}; 00:00 ${baziNewYearMidnight.dayPillar.combinedName} / ${baziNewYearMidnight.hourPillar.combinedName}`
+);
+
 // SUMMARY OUTPUT — deliberately last so every appended regression fixture is counted.
 console.log("\n=================== TEST RESULTS ===================");
 let passCount = 0;
