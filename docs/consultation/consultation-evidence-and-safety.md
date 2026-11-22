@@ -392,3 +392,9 @@ CI evidence for this commit is pending until the PR workflow completes. No provi
 - [Y. T. Liu, “Sexagenary Cycle”](https://ytliu0.github.io/ChineseCalendar/sexagenary.html) — reproducible Julian-day formula for sexagenary days and a dated Jia-Zi anchor.
 - [*San Ming Tong Hui*, juan 2 (三命通會/卷二)](https://zh.wikisource.org/zh-hans/三命通會/卷二) — classical reference for the Five Rats hour-stem rule; not treated as resolving the rollover debate.
 - [Tan Bing, “Zi Hour Day-Change Investigation”](https://www.xinyi.hk/article-238.html) — secondary discussion quoting the classical calendrical sources; its argument favors midnight and is not treated as the only lineage.
+
+
+**CI and fixture-correction follow-up (2026-11-22).**
+- Follow-up commit `97e327bc00c795a80d952fc2b9474d63a5e9c602` corrects Category 30.1 to assert the sexagenary branch name `Wu` (午) and animal label `Horse` separately; the branch name is not the animal label.
+- Latest PR head after this correction: `97e327bc00c795a80d952fc2b9474d63a5e9c602`. No PR-triggered workflow run and no combined status check is associated with this head. The four Category 30 assertions remain unexecuted by CI.
+- Last PR-specific completed workflow remains [#1284](https://github.com/gxmotiv/Celestia/actions/runs/44663425337) on older head `b19a8d5f2e9dc55e1ec42c562e8bbafb018d700a`: astrology regression suite 150/150; Next.js production build, OpenNext packaging and Wrangler Worker dry-run passed; deployment skipped. The logs show existing duplicate `axisIndex` and duplicate switch-case warnings. This older run does not validate the new fixtures.
