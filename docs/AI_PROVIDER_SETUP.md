@@ -45,10 +45,21 @@ Pollinations documents secret keys (`sk_`) for API requests and App Keys (`pk_`)
 | Provider | Celestia option | Credential |
 |---|---|---|
 | FreeModel | Selected FreeModel catalogue models | `FREEMODEL_API_KEY` |
-| NaraRouter | Agnes 2.5 Flash / configured alias | `NARAROUTER_API_KEY` |
+| NaraRouter | Live authenticated Free-plan models only (currently Agnes 2.5 Flash) | `NARAROUTER_API_KEY` |
 | OpenRouter | Free-model auto-router (`openrouter/free`) | `OPENROUTER_API_KEY` |
 
-Optional provider limits and availability can change. Check the provider's own dashboard and current terms before relying on a particular offer.
+NaraRouter official references: [API docs](https://router.bynara.id/docs) and [live pricing/plans](https://router.bynara.id/pricing). NaraRouter's current English pricing page lists Agnes 2.5 Flash as the Free-plan model, with a 7M-token daily quota and 15 requests/minute. Older or differently localized listings have shown other aliases; Celestia therefore allows only Agnes 2.5 Flash until the provider's current plan metadata confirms another model. The authenticated `GET /v1/models` endpoint returns the aliases available to the account. Celestia intersects that list with the provider-published Free-plan model allowlist; all other aliases are hidden from the selector and rejected again before generation. This is intentionally fail-closed so an API key that also has paid entitlements cannot accidentally spend credits through Celestia. The plan's quota and model availability can change; verify the provider dashboard before use.
+
+## NaraRouter setup
+
+1. Create an API key in the [NaraRouter dashboard](https://router.bynara.id/).
+2. Add it to the Cloudflare Worker as the server-side secret `NARAROUTER_API_KEY`; never put it in browser code, a public GitHub variable, or chat.
+3. Keep `NARAROUTER_BASE_URL` at `https://router.bynara.id/v1` unless the provider officially changes it.
+4. Celestia calls authenticated `GET /v1/models` and displays only the current provider-published Free-plan aliases. It does not default to the old `auto/bynara` router alias; it shows the known Free-plan aliases only after authenticated discovery confirms availability.
+5. Link your Telegram account in the NaraRouter dashboard if the provider requires it for free-model access. Its official onboarding notice says Telegram linking is required to use Free models. If the authenticated model list contains only PAYG models, check Telegram linking and Free-plan entitlement in the dashboard; do not treat the appearance of a model in `/v1/models` as proof that it is free.
+6. Generation rechecks the same allowlist before sending a prompt. If no Free model is returned, the request is blocked rather than falling through to a paid model.
+
+The Free plan is quota-limited (7M tokens/day and 15 requests/minute according to the provider's current public pages). The provider explicitly warns that the 7M daily quota does not make every model free: PAYG-enabled keys may see paid models in `/v1/models`, and those are billed from balance. Celestia therefore intersects the account catalogue with a strict Free-plan allowlist. “Free” does not mean unlimited. Celestia does not run paid NaraRouter benchmark calls or select paid models.
 
 ## Routing and cost safeguards
 

@@ -1,5 +1,6 @@
 import { getCelestiaAIModel } from "./modelCatalog";
 import { getPollinationsFreeTextModels, getPollinationsManualOnlyTextModels, isPollinationsFreeTextModel } from "./pollinationsCatalog";
+import { getNaraRouterFreeModels } from "./nararouterCatalog";
 
 export type CelestiaAIProvider = "pollinations" | "freemodel" | "nararouter" | "openrouter";
 export type CelestiaAIModelTier = "budget" | "reasoning";
@@ -216,9 +217,11 @@ export async function generateCelestiaText(input: GenerateTextOptions): Promise<
     case "nararouter": {
       const key = process.env.NARAROUTER_API_KEY?.trim();
       if (!key) throw new Error("NaraRouter is not configured. Add the NARAROUTER_API_KEY server secret.");
-      const model = input.modelTier === "reasoning"
-        ? process.env.NARAROUTER_REASONING_MODEL?.trim() || process.env.NARAROUTER_MODEL?.trim() || selectedModel.providerModelId
-        : selectedModel.providerModelId;
+      const model = selectedModel.providerModelId;
+      const freeModels = await getNaraRouterFreeModels(key);
+      if (!freeModels.some((candidate) => candidate.id === model)) {
+        throw new Error("The selected NaraRouter model is not currently verified on the provider's Free plan. Refresh the model list; paid models are blocked.");
+      }
       return generateWithNaraRouter(key, model, options);
     }
     case "openrouter": {
