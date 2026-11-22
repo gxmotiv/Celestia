@@ -7,6 +7,7 @@ if (!apiKey) throw new Error("POLLINATIONS_API_KEY GitHub secret is not configur
 const baseUrl = "https://gen.pollinations.ai";
 const MAX_RANKED_MODELS = 8;
 const REQUIRED_BENCHMARK_MODELS = ["openai/gpt-5-nano"];
+const allowPaidBenchmark = process.env.POLLINATIONS_ALLOW_PAID_BENCHMARK === "true";
 const tasks = [
   {
     id: "angular-reasoning",
@@ -62,25 +63,27 @@ async function main() {
     (b.contextLength ?? 0) - (a.contextLength ?? 0) ||
     a.name.localeCompare(b.name)
   );
-  const selected = ranked.slice(0, MAX_RANKED_MODELS);
+  const selected = (allowPaidBenchmark ? ranked : ranked.filter((model) => model.zeroPriced)).slice(0, MAX_RANKED_MODELS);
   for (const requiredId of REQUIRED_BENCHMARK_MODELS) {
     const required = allAvailable.find((model) => model.id === requiredId);
     if (required && !selected.some((model) => model.id === requiredId)) selected.push(required);
   }
   const candidates = selected;
+  const runnableCandidates = candidates.filter((model) => model.zeroPriced || allowPaidBenchmark);
+  const skippedPaidModels = candidates.filter((model) => !model.zeroPriced && !allowPaidBenchmark);
   if (candidates.length === 0) {
     throw new Error("The live reliable catalogue returned no healthy, non-paid-only text models for this API key.");
   }
 
   console.log(`Live catalogue: ${official.length} eligible official + ${community.length} eligible community models.`);
-  console.log(`Benchmarking up to ${MAX_RANKED_MODELS} ranked models plus required models; this run may consume Pollen.`);
+  console.log(`Benchmarking ${runnableCandidates.length} runnable models. Paid-priced requests are ${allowPaidBenchmark ? "explicitly enabled" : "blocked by the zero-cost guard"}.`);
   for (const model of candidates) {
     console.log(`CANDIDATE ${model.id} | ${model.community ? "community" : "official"} | zeroPriced=${model.zeroPriced} | health=${model.healthSuccessRate ?? "n/a"}% over ${model.healthRequests} requests | input=${model.inputPrice ?? "unlisted"} / output=${model.outputPrice ?? "unlisted"} Pollen per token`);
   }
 
   const results: Result[] = [];
   for (let attempt = 1; attempt <= 2; attempt += 1) {
-    for (const model of candidates) {
+    for (const model of runnableCandidates) {
       for (const task of tasks) {
         const started = Date.now();
         try {
@@ -140,6 +143,8 @@ async function main() {
       publisher: model.publisher,
       source: model.community ? "community" : "official",
       eligibility: "listed by authenticated reliable catalogue; healthy; paid_only=false; text chat-completions capable",
+      benchmarkStatus: model.zeroPriced || allowPaidBenchmark ? "included" : "skipped_paid_cost_guard",
+      skipReason: !model.zeroPriced && !allowPaidBenchmark ? "Non-zero Pollen price; set workflow input allow_paid=true only if you accept the charge." : null,
       zeroPriced: model.zeroPriced,
       pricingCurrency: model.currency,
       inputPricePerTokenPollen: model.inputPrice,
@@ -178,11 +183,14 @@ async function main() {
     },
     benchmark: {
       selectedModels: candidates.map((model) => model.id),
+      executedModels: runnableCandidates.map((model) => model.id),
+      skippedPaidModels: skippedPaidModels.map((model) => ({ id: model.id, reason: "non-zero Pollen price; blocked because allow_paid was false" })),
       requiredModels: REQUIRED_BENCHMARK_MODELS,
+      allowPaidRequests: allowPaidBenchmark,
       attemptsPerTask: 2,
       taskCount: tasks.length,
     },
-    note: "paid_only=false means not restricted to paid-only keys; it does NOT mean zero-cost. zeroPriced is true only when every listed price, pricing variant and pricing adjustment is zero. Pollen charges may apply. Synthetic prompts only; no personal birth-chart data. Small-sample availability/latency does not prove answer quality.",
+    note: "paid_only=false means not restricted to paid-only keys; it does NOT mean zero-cost. The default benchmark skips every non-zero-priced model, including GPT-5 Nano. Set workflow input allow_paid=true only when Pollen charges are explicitly accepted. zeroPriced is true only when every listed price, pricing variant and pricing adjustment is zero. Synthetic prompts only; no personal birth-chart data. Small-sample availability/latency does not prove answer quality.",
     summary,
     results,
   };
