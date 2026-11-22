@@ -221,6 +221,11 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
 
       {catalogueError ? <p className="text-xs text-amber-300">{catalogueError}</p> : null}
       {naraError ? <p className="text-xs text-amber-300">{naraError}</p> : null}
+      {naraLoaded && !naraError && naraModels.length === 0 ? (
+        <p className="text-xs text-amber-300">
+          NaraRouter authenticated successfully, but no verified Free-plan model is available to this account. Its onboarding guidance requires linking Telegram for Free-model access. Link Telegram and confirm the Free plan in your NaraRouter dashboard, then reload Celestia. Paid/PAYG models remain blocked.
+        </p>
+      ) : null}
       {catalogueLoaded && !catalogueError && pollinationsModels.length === 0 ? (
         <p className="text-xs text-amber-300">
           No official privacy-safe model is currently available for automatic selection. Manual-only community models and models with explicit data-handling warnings may still appear in the selector.
