@@ -1,12 +1,10 @@
 /**
  * NaraRouter exposes an authenticated, account-scoped OpenAI-compatible model list.
- * The provider's public Free-plan listing currently names Agnes 2.5 Flash, Laguna S 2.1,
- * and Nemotron 3.5 Lightning Free. Unknown models are never assumed free.
+ * The current provider pricing page lists Agnes 2.5 Flash on the Free plan.
+ * Older aliases and every PAYG model are excluded unless the provider updates its public plan listing.
  */
 export const NARAROUTER_FREE_MODEL_IDS = [
   "agnes-2.5-flash",
-  "laguna-s-2.1",
-  "nemotron-3.5-lightning-free",
 ] as const;
 
 export interface NaraRouterModel {
@@ -31,11 +29,9 @@ export function parseNaraRouterFreeModels(payload: unknown): NaraRouterModel[] {
       id,
       name: ({
         "agnes-2.5-flash": "Agnes 2.5 Flash",
-        "laguna-s-2.1": "Laguna S 2.1",
-        "nemotron-3.5-lightning-free": "Nemotron 3.5 Lightning Free",
       } as const)[id],
       free: true as const,
-      description: "Listed on NaraRouter's public Free plan; subject to the shared daily quota and rate limit.",
+      description: "Listed on NaraRouter's current public Free plan; subject to its quota and rate limits.",
     }));
 }
 
