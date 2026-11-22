@@ -5,7 +5,8 @@ const apiKey = process.env.POLLINATIONS_API_KEY;
 if (!apiKey) throw new Error("POLLINATIONS_API_KEY GitHub secret is not configured.");
 
 const baseUrl = "https://gen.pollinations.ai";
-const MAX_MODELS = 8;
+const MAX_RANKED_MODELS = 8;
+const REQUIRED_BENCHMARK_MODELS = ["openai/gpt-5-nano"];
 const tasks = [
   {
     id: "angular-reasoning",
@@ -48,7 +49,12 @@ async function main() {
   const community = parsePollinationsFreeTextModels(payloads[1], { includeManualOnly: true })
     .filter((model) => model.community && !model.privacyRisk);
   const allAvailable = [...official, ...community];
-  const ranked = allAvailable.sort((a, b) =>
+  const nano = official.find((model) => model.id === "openai/gpt-5-nano");
+  if (!nano) {
+    throw new Error("Required benchmark model openai/gpt-5-nano is missing from the authenticated official healthy text catalogue; refusing to silently omit the Nano test.");
+  }
+
+  const ranked = [...allAvailable].sort((a, b) =>
     Number(b.reasoning) - Number(a.reasoning) ||
     Number(b.tools) - Number(a.tools) ||
     (b.healthSuccessRate ?? -1) - (a.healthSuccessRate ?? -1) ||
@@ -56,15 +62,20 @@ async function main() {
     (b.contextLength ?? 0) - (a.contextLength ?? 0) ||
     a.name.localeCompare(b.name)
   );
-  const candidates = ranked.slice(0, MAX_MODELS);
+  const selected = ranked.slice(0, MAX_RANKED_MODELS);
+  for (const requiredId of REQUIRED_BENCHMARK_MODELS) {
+    const required = allAvailable.find((model) => model.id === requiredId);
+    if (required && !selected.some((model) => model.id === requiredId)) selected.push(required);
+  }
+  const candidates = selected;
   if (candidates.length === 0) {
     throw new Error("The live reliable catalogue returned no healthy, non-paid-only text models for this API key.");
   }
 
   console.log(`Live catalogue: ${official.length} eligible official + ${community.length} eligible community models.`);
-  console.log(`Benchmarking ${candidates.length} highest-ranked candidates; each request may consume Pollen according to its listed token prices.`);
+  console.log(`Benchmarking up to ${MAX_RANKED_MODELS} ranked models plus required models; this run may consume Pollen.`);
   for (const model of candidates) {
-    console.log(`CANDIDATE ${model.id} | ${model.community ? "community" : "official"} | health=${model.healthSuccessRate ?? "n/a"}% over ${model.healthRequests} requests | input=${model.inputPrice ?? "unlisted"} / output=${model.outputPrice ?? "unlisted"} Pollen per token`);
+    console.log(`CANDIDATE ${model.id} | ${model.community ? "community" : "official"} | zeroPriced=${model.zeroPriced} | health=${model.healthSuccessRate ?? "n/a"}% over ${model.healthRequests} requests | input=${model.inputPrice ?? "unlisted"} / output=${model.outputPrice ?? "unlisted"} Pollen per token`);
   }
 
   const results: Result[] = [];
@@ -129,11 +140,15 @@ async function main() {
       publisher: model.publisher,
       source: model.community ? "community" : "official",
       eligibility: "listed by authenticated reliable catalogue; healthy; paid_only=false; text chat-completions capable",
+      zeroPriced: model.zeroPriced,
+      pricingCurrency: model.currency,
+      inputPricePerTokenPollen: model.inputPrice,
+      outputPricePerTokenPollen: model.outputPrice,
+      inputPricePerMillionPollen: model.inputPrice === null ? null : model.inputPrice * 1_000_000,
+      outputPricePerMillionPollen: model.outputPrice === null ? null : model.outputPrice * 1_000_000,
       catalogueHealth: model.health,
       catalogueSuccessRate: model.healthSuccessRate,
       catalogueRequests: model.healthRequests,
-      inputPricePerTokenPollen: model.inputPrice,
-      outputPricePerTokenPollen: model.outputPrice,
       contextLength: model.contextLength,
       reasoning: model.reasoning,
       toolCalling: model.tools,
@@ -154,13 +169,20 @@ async function main() {
         id: model.id, title: model.name, publisher: model.publisher,
         source: model.community ? "community" : "official",
         health: model.health, successRate: model.healthSuccessRate,
-        requests: model.healthRequests, inputPricePerTokenPollen: model.inputPrice,
-        outputPricePerTokenPollen: model.outputPrice, contextLength: model.contextLength,
+        requests: model.healthRequests, zeroPriced: model.zeroPriced,
+        inputPricePerTokenPollen: model.inputPrice,
+        outputPricePerTokenPollen: model.outputPrice,
+        contextLength: model.contextLength,
         reasoning: model.reasoning, toolCalling: model.tools,
       })),
     },
-    benchmark: { selectedModels: candidates.map((model) => model.id), attemptsPerTask: 2, taskCount: tasks.length },
-    note: "paid_only=false means not restricted to paid-only keys; it does NOT mean zero-cost. Pollen charges may apply at the listed token rates. Synthetic prompts only; no personal birth-chart data. Small-sample availability/latency does not prove answer quality.",
+    benchmark: {
+      selectedModels: candidates.map((model) => model.id),
+      requiredModels: REQUIRED_BENCHMARK_MODELS,
+      attemptsPerTask: 2,
+      taskCount: tasks.length,
+    },
+    note: "paid_only=false means not restricted to paid-only keys; it does NOT mean zero-cost. zeroPriced is true only when every listed price, pricing variant and pricing adjustment is zero. Pollen charges may apply. Synthetic prompts only; no personal birth-chart data. Small-sample availability/latency does not prove answer quality.",
     summary,
     results,
   };
