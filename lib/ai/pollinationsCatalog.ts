@@ -6,6 +6,7 @@ export interface PollinationsTextModel {
   outputPrice: number | null;
   currency: string | null;
   zeroPriced: boolean;
+  pricingStatus: "free_verified" | "paid" | "unknown";
   health: string;
   privacyRisk: boolean;
   community: boolean;
@@ -44,6 +45,15 @@ function hasZeroPricing(value: unknown): boolean {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const pricing = value as Record<string, unknown>;
   if (pricing.currency !== "pollen") return false;
+
+  // Text chat generation must explicitly price both input and output.
+  // A currency-only object, omitted rates, or a future unknown billing
+  // dimension is unknown pricing, never proof of zero cost.
+  const requiredTextRates = ["promptTextTokens", "completionTextTokens"];
+  if (!requiredTextRates.every((field) =>
+    Object.prototype.hasOwnProperty.call(pricing, field) && parsePrice(pricing[field]) === 0
+  )) return false;
+
   return Object.entries(pricing).every(([field, rawPrice]) =>
     field === "currency" || (PRICE_FIELDS.has(field) && parsePrice(rawPrice) === 0)
   );
@@ -126,6 +136,16 @@ export function parsePollinationsAvailableTextModels(
         outputPrice: parsePrice(pricing.completionTextTokens),
         currency: typeof pricing.currency === "string" ? pricing.currency : null,
         zeroPriced: isZeroPricedModel(entry),
+        pricingStatus: isZeroPricedModel(entry)
+          ? "free_verified"
+          : [pricing.promptTextTokens, pricing.completionTextTokens].some((value) => {
+              const price = parsePrice(value);
+              return price !== null && price > 0;
+            }) || Object.entries(pricing).some(([field, value]) =>
+              PRICE_FIELDS.has(field) && (parsePrice(value) ?? 0) > 0
+            )
+            ? "paid"
+            : "unknown",
         health: typeof health.status === "string" ? health.status : "unknown",
         privacyRisk: /retain|retention|used for training|collected for training|data may be collected/i.test(
           typeof entry.description === "string" ? entry.description : "",
