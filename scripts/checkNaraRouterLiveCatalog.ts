@@ -39,10 +39,44 @@ async function main() {
   if (!mcpResponse.ok) {
     console.warn(`WARN NaraRouter MCP list_models returned HTTP ${mcpResponse.status}; /v1/models remains the only checked catalogue.`);
   } else {
-    const mcpPayload: unknown = await mcpResponse.json();
-    const serializedMcp = JSON.stringify(mcpPayload);
-    const mcpIds = [...serializedMcp.matchAll(/"id"\\s*:\\s*"([^"]+)"/g)].map((match) => match[1]);
-    console.log(`NaraRouter MCP list_models read-only response: HTTP ${mcpResponse.status}; ${mcpIds.length} model IDs parsed: ${mcpIds.join(", ") || "(none or non-JSON content)"}`);
+    // MCP servers may return JSON or Server-Sent Events even when the
+    // Accept header includes application/json. Read text first, then parse
+    // JSON bodies and each SSE data frame without ever logging raw payloads.
+    const mcpText = await mcpResponse.text();
+    const parsedFrames: unknown[] = [];
+    const parseFrame = (raw: string) => {
+      const trimmed = raw.trim();
+      if (!trimmed || trimmed === "[DONE]") return;
+      try { parsedFrames.push(JSON.parse(trimmed) as unknown); } catch { /* ignore non-JSON SSE frames */ }
+    };
+    try {
+      parseFrame(mcpText);
+    } catch { /* handled by parseFrame */ }
+    if (parsedFrames.length === 0) {
+      for (const line of mcpText.split(/\\r?\\n/)) {
+        if (line.startsWith("data:")) parseFrame(line.slice(5));
+      }
+    }
+
+    const mcpIds = new Set<string>();
+    const visit = (value: unknown, depth = 0): void => {
+      if (depth > 12 || value === null || typeof value !== "object") return;
+      if (Array.isArray(value)) {
+        for (const item of value) visit(item, depth + 1);
+        return;
+      }
+      const record = value as Record<string, unknown>;
+      if (typeof record.id === "string" && record.id.trim()) mcpIds.add(record.id.trim());
+      for (const child of Object.values(record)) {
+        if (typeof child === "string" && child.trim().startsWith("{")) {
+          parseFrame(child);
+        } else if (child && typeof child === "object") {
+          visit(child, depth + 1);
+        }
+      }
+    };
+    for (const frame of parsedFrames) visit(frame);
+    console.log(`NaraRouter MCP list_models read-only response: HTTP ${mcpResponse.status}; ${mcpIds.size} model IDs parsed: ${[...mcpIds].join(", ") || "(none returned)"}`);
   }
 
   const plansResponse = await fetch("https://router.bynara.id/api/plans", {
