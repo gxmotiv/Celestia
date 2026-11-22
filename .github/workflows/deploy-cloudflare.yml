@@ -62,6 +62,10 @@ jobs:
         run: npx tsx scripts/testPollinationsCatalog.ts
       - name: Run NaraRouter free-plan catalogue tests
         run: npx tsx scripts/testNaraRouterCatalog.ts
+      - name: Check NaraRouter live catalogue (read-only, optional)
+        run: npx tsx scripts/checkNaraRouterLiveCatalog.ts
+        env:
+          NARAROUTER_API_KEY: ${{ secrets.NARAROUTER_API_KEY }}
       - name: Run the astrology regression suite
         run: npx tsx scripts/testAstrologySuite.ts
       - name: Build the Next.js application
