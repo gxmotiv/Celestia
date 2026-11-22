@@ -62,7 +62,7 @@ jobs:
         run: npx tsx scripts/testPollinationsCatalog.ts
       - name: Run NaraRouter free-plan catalogue tests
         run: npx tsx scripts/testNaraRouterCatalog.ts
-      - name: Check NaraRouter live catalogue (read-only, optional)
+      - name: Check NaraRouter live catalogue (read-only, optional; no generation requests)
         run: npx tsx scripts/checkNaraRouterLiveCatalog.ts
         env:
           NARAROUTER_API_KEY: ${{ secrets.NARAROUTER_API_KEY }}
