@@ -19,7 +19,7 @@ on:
   workflow_dispatch:
     inputs:
       benchmark:
-        description: "Run a small synthetic-prompt benchmark of eligible free official Pollinations models"
+        description: "Run a synthetic-prompt benchmark of official Pollinations models; requests may consume Pollen, including for paid-priced GPT-5 Nano"
         required: true
         default: false
         type: boolean
@@ -67,7 +67,7 @@ jobs:
         run: npx wrangler deploy --dry-run
 
   pollinations-model-benchmark:
-    name: Benchmark eligible free official Pollinations models
+    name: Benchmark eligible official Pollinations models (Pollen usage may apply)
     if: github.event_name == 'workflow_dispatch' && inputs.benchmark == true
     runs-on: ubuntu-latest
     steps:
