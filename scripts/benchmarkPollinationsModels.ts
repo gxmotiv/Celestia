@@ -5,10 +5,7 @@ const apiKey = process.env.POLLINATIONS_API_KEY;
 if (!apiKey) throw new Error("POLLINATIONS_API_KEY GitHub secret is not configured.");
 
 const baseUrl = "https://gen.pollinations.ai";
-const candidates = [
-  "z-ai/glm-5.3-flash",
-  "nvidia/nemotron-3.5-lightning",
-];
+const MAX_BENCHMARK_MODELS = 6;
 
 const tasks = [
   {
@@ -39,31 +36,37 @@ type Result = {
 
 async function main() {
   const catalogResponse = await fetch(
-    `${baseUrl}/text/models?source=official&reliability=all&limit=500`,
-    { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(20_000) },
+    `${baseUrl}/text/models?source=official&reliability=reliable&limit=500`,
+    {
+      headers: { Accept: "application/json", Authorization: `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(20_000),
+    },
   );
   if (!catalogResponse.ok) {
-    throw new Error(`Official model catalogue request failed: HTTP ${catalogResponse.status}`);
+    throw new Error(`Authenticated Pollinations catalogue request failed: HTTP ${catalogResponse.status}`);
   }
   const catalogPayload: unknown = await catalogResponse.json();
   const eligible = parsePollinationsFreeTextModels(catalogPayload);
-  const results: Result[] = [];
-  const eligibility: Record<string, string> = {};
-
-  for (const model of candidates) {
-    const match = eligible.find((entry) => entry.id === model);
-    if (!match) {
-      eligibility[model] = "SKIPPED: not currently listed as healthy, official, privacy-safe, zero-priced text model";
-      console.log(`SKIP ${model}: failed live free/official/privacy/health eligibility check`);
-      continue;
-    }
-    eligibility[model] = "eligible at live catalogue check (zero Pollinations-listed input/output pricing)";
-    console.log(`ELIGIBLE ${model}`);
+  if (eligible.length === 0) {
+    throw new Error("The API key can see no official, healthy, zero-priced text models.");
   }
 
+  // Benchmark the strongest currently eligible candidates rather than stale,
+  // hard-coded IDs. Keep the run bounded to avoid excessive requests.
+  const ranked = [...eligible].sort((a, b) =>
+    Number(b.reasoning) - Number(a.reasoning) ||
+    Number(b.tools) - Number(a.tools) ||
+    (b.healthSuccessRate ?? -1) - (a.healthSuccessRate ?? -1) ||
+    b.healthRequests - a.healthRequests ||
+    (b.contextLength ?? 0) - (a.contextLength ?? 0) ||
+    a.name.localeCompare(b.name)
+  );
+  const candidates = ranked.slice(0, MAX_BENCHMARK_MODELS).map((model) => model.id);
+  console.log(`Found ${eligible.length} eligible models for this API key; benchmarking top ${candidates.length} candidates.`);
+
+  const results: Result[] = [];
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     for (const model of candidates) {
-      if (!eligible.some((entry) => entry.id === model)) continue;
       for (const task of tasks) {
         const started = Date.now();
         try {
@@ -141,9 +144,16 @@ async function main() {
         ? sorted[(sorted.length - 1) / 2]
         : Math.round((sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2)
       : null;
+    const catalogModel = eligible.find((entry) => entry.id === model);
     return {
       model,
-      eligibility: eligibility[model] ?? "not checked",
+      catalogueHealth: catalogModel?.health ?? "unknown",
+      catalogueSuccessRate: catalogModel?.healthSuccessRate ?? null,
+      catalogueRequests: catalogModel?.healthRequests ?? 0,
+      reasoning: catalogModel?.reasoning ?? false,
+      toolCalling: catalogModel?.tools ?? false,
+      contextLength: catalogModel?.contextLength ?? null,
+      eligibility: "eligible at authenticated live catalogue check (official, healthy, zero-priced)",
       successfulRequests: ok.length,
       totalRequests: rows.length,
       successRate: rows.length ? Math.round((ok.length / rows.length) * 100) : null,
@@ -153,6 +163,22 @@ async function main() {
 
   const report = {
     generatedAt: new Date().toISOString(),
+    catalogue: {
+      source: "official",
+      reliabilityFilter: "reliable",
+      eligibleModelCount: eligible.length,
+      eligibleModels: eligible.map((model) => ({
+        id: model.id,
+        name: model.name,
+        health: model.health,
+        healthSuccessRate: model.healthSuccessRate,
+        healthRequests: model.healthRequests,
+        reasoning: model.reasoning,
+        toolCalling: model.tools,
+        contextLength: model.contextLength,
+      })),
+    },
+    benchmark: { selectedModels: candidates, attemptsPerTask: 2, taskCount: tasks.length },
     note: "Synthetic prompts only. No personal birth-chart data used. Latency and availability are a small sample, not a statistical guarantee. Human review of answer quality is still required.",
     summary,
     results,
@@ -161,7 +187,7 @@ async function main() {
   console.log("\nSUMMARY");
   console.log(JSON.stringify(summary, null, 2));
   if (results.length === 0) {
-    throw new Error("No benchmark requests were run: candidates were not eligible or accessible.");
+    throw new Error("No benchmark requests were run.");
   }
 }
 
