@@ -85,8 +85,10 @@ export default function HomePage() {
     const day = parseInt(dStr, 10) || 1;
 
     const [hStr, minStr] = formData.birthTime.split(":");
-    const hour = parseInt(hStr, 10) || 12;
-    const minute = parseInt(minStr, 10) || 0;
+    const parsedHour = Number.parseInt(hStr, 10);
+    const hour = Number.isInteger(parsedHour) && parsedHour >= 0 && parsedHour <= 23 ? parsedHour : 12;
+    const parsedMinute = Number.parseInt(minStr, 10);
+    const minute = Number.isInteger(parsedMinute) && parsedMinute >= 0 && parsedMinute <= 59 ? parsedMinute : 0;
 
     // Unambiguously normalize local birth date/time and timezone offset to true UTC instant
     const birthDateObj = swissEphemeris.createUTCDate(
@@ -119,7 +121,7 @@ export default function HomePage() {
     const nData = calculateNumerologyProfile(formData.fullName, year, month, day);
 
     // 4. Chinese BaZi (Four Pillars)
-    const bData = calculateBaZiProfile(year, month, day, hour);
+    const bData = calculateBaZiProfile(year, month, day, hour, birthDateObj);
 
     return {
       westernData: wData,

@@ -27,7 +27,7 @@ export interface SolarTerm {
   pinyin: string;
   longitude: number; // 0, 15, 30 ... 345
   season: "Spring" | "Summer" | "Autumn" | "Winter";
-  isMajor: boolean; // Jie (Solar Node) vs Zhong (Middle Term)
+  isJie: boolean; // true for Jie (month-opening sectional terms), false for Zhongqi.
   monthBranchIndex: number; // 0 = Zi, 2 = Yin (Tiger), etc.
 }
 
@@ -182,30 +182,30 @@ export interface BaZiChart {
 // ============================================================
 
 export const SOLAR_TERMS: SolarTerm[] = [
-  { name: "Chunfen (Spring Equinox)", chinese: "春分", pinyin: "Chūnfēn", longitude: 0, season: "Spring", isMajor: false, monthBranchIndex: 3 }, // Rabbit
-  { name: "Qingming (Clear & Bright)", chinese: "清明", pinyin: "Qīngmíng", longitude: 15, season: "Spring", isMajor: true, monthBranchIndex: 4 }, // Dragon
-  { name: "Guyu (Grain Rain)", chinese: "谷雨", pinyin: "Gǔyǔ", longitude: 30, season: "Spring", isMajor: false, monthBranchIndex: 4 },
-  { name: "Lixia (Start of Summer)", chinese: "立夏", pinyin: "Lìxià", longitude: 45, season: "Summer", isMajor: true, monthBranchIndex: 5 }, // Snake
-  { name: "Xiaoman (Grain Full)", chinese: "小满", pinyin: "Xiǎomǎn", longitude: 60, season: "Summer", isMajor: false, monthBranchIndex: 5 },
-  { name: "Mangzhong (Grain in Ear)", chinese: "芒种", pinyin: "Mángzhòng", longitude: 75, season: "Summer", isMajor: true, monthBranchIndex: 6 }, // Horse
-  { name: "Xiazhi (Summer Solstice)", chinese: "夏至", pinyin: "Xiàzhì", longitude: 90, season: "Summer", isMajor: false, monthBranchIndex: 6 },
-  { name: "Xiaoshu (Minor Heat)", chinese: "小暑", pinyin: "Xiǎoshǔ", longitude: 105, season: "Summer", isMajor: true, monthBranchIndex: 7 }, // Goat
-  { name: "Dashu (Major Heat)", chinese: "大暑", pinyin: "Dàshǔ", longitude: 120, season: "Summer", isMajor: false, monthBranchIndex: 7 },
-  { name: "Liqiu (Start of Autumn)", chinese: "立秋", pinyin: "Lìqiū", longitude: 135, season: "Autumn", isMajor: true, monthBranchIndex: 8 }, // Monkey
-  { name: "Chushu (End of Heat)", chinese: "处暑", pinyin: "Chùshǔ", longitude: 150, season: "Autumn", isMajor: false, monthBranchIndex: 8 },
-  { name: "Bailu (White Dew)", chinese: "白露", pinyin: "Báilù", longitude: 165, season: "Autumn", isMajor: true, monthBranchIndex: 9 }, // Rooster
-  { name: "Qiufen (Autumn Equinox)", chinese: "秋分", pinyin: "Qiūfēn", longitude: 180, season: "Autumn", isMajor: false, monthBranchIndex: 9 },
-  { name: "Hanlu (Cold Dew)", chinese: "寒露", pinyin: "Hánlù", longitude: 195, season: "Autumn", isMajor: true, monthBranchIndex: 10 }, // Dog
-  { name: "Shuangjiang (Frost Descends)", chinese: "霜降", pinyin: "Shuāngjiàng", longitude: 210, season: "Autumn", isMajor: false, monthBranchIndex: 10 },
-  { name: "Lidong (Start of Winter)", chinese: "立冬", pinyin: "Lìdōng", longitude: 225, season: "Winter", isMajor: true, monthBranchIndex: 11 }, // Pig
-  { name: "Xiaoxue (Minor Snow)", chinese: "小雪", pinyin: "Xiǎoxuě", longitude: 240, season: "Winter", isMajor: false, monthBranchIndex: 11 },
-  { name: "Daxue (Major Snow)", chinese: "大雪", pinyin: "Dàxuě", longitude: 255, season: "Winter", isMajor: true, monthBranchIndex: 0 }, // Rat
-  { name: "Dongzhi (Winter Solstice)", chinese: "冬至", pinyin: "Dōngzhì", longitude: 270, season: "Winter", isMajor: false, monthBranchIndex: 0 },
-  { name: "Xiaohan (Minor Cold)", chinese: "小寒", pinyin: "Xiǎohán", longitude: 285, season: "Winter", isMajor: true, monthBranchIndex: 1 }, // Ox
-  { name: "Dahan (Major Cold)", chinese: "大寒", pinyin: "Dàhán", longitude: 300, season: "Winter", isMajor: false, monthBranchIndex: 1 },
-  { name: "Lichun (Start of Spring)", chinese: "立春", pinyin: "Lìchūn", longitude: 315, season: "Spring", isMajor: true, monthBranchIndex: 2 }, // Tiger - Solar Year Boundary!
-  { name: "Yushui (Rain Water)", chinese: "雨水", pinyin: "Yǔshuǐ", longitude: 330, season: "Spring", isMajor: false, monthBranchIndex: 2 },
-  { name: "Jingzhe (Awakening of Insects)", chinese: "惊蛰", pinyin: "Jīngzhé", longitude: 345, season: "Spring", isMajor: true, monthBranchIndex: 3 }, // Rabbit
+  { name: "Chunfen (Spring Equinox)", chinese: "春分", pinyin: "Chūnfēn", longitude: 0, season: "Spring", isJie: false, monthBranchIndex: 3 }, // Rabbit
+  { name: "Qingming (Clear & Bright)", chinese: "清明", pinyin: "Qīngmíng", longitude: 15, season: "Spring", isJie: true, monthBranchIndex: 4 }, // Dragon
+  { name: "Guyu (Grain Rain)", chinese: "谷雨", pinyin: "Gǔyǔ", longitude: 30, season: "Spring", isJie: false, monthBranchIndex: 4 },
+  { name: "Lixia (Start of Summer)", chinese: "立夏", pinyin: "Lìxià", longitude: 45, season: "Summer", isJie: true, monthBranchIndex: 5 }, // Snake
+  { name: "Xiaoman (Grain Full)", chinese: "小满", pinyin: "Xiǎomǎn", longitude: 60, season: "Summer", isJie: false, monthBranchIndex: 5 },
+  { name: "Mangzhong (Grain in Ear)", chinese: "芒种", pinyin: "Mángzhòng", longitude: 75, season: "Summer", isJie: true, monthBranchIndex: 6 }, // Horse
+  { name: "Xiazhi (Summer Solstice)", chinese: "夏至", pinyin: "Xiàzhì", longitude: 90, season: "Summer", isJie: false, monthBranchIndex: 6 },
+  { name: "Xiaoshu (Minor Heat)", chinese: "小暑", pinyin: "Xiǎoshǔ", longitude: 105, season: "Summer", isJie: true, monthBranchIndex: 7 }, // Goat
+  { name: "Dashu (Major Heat)", chinese: "大暑", pinyin: "Dàshǔ", longitude: 120, season: "Summer", isJie: false, monthBranchIndex: 7 },
+  { name: "Liqiu (Start of Autumn)", chinese: "立秋", pinyin: "Lìqiū", longitude: 135, season: "Autumn", isJie: true, monthBranchIndex: 8 }, // Monkey
+  { name: "Chushu (End of Heat)", chinese: "处暑", pinyin: "Chùshǔ", longitude: 150, season: "Autumn", isJie: false, monthBranchIndex: 8 },
+  { name: "Bailu (White Dew)", chinese: "白露", pinyin: "Báilù", longitude: 165, season: "Autumn", isJie: true, monthBranchIndex: 9 }, // Rooster
+  { name: "Qiufen (Autumn Equinox)", chinese: "秋分", pinyin: "Qiūfēn", longitude: 180, season: "Autumn", isJie: false, monthBranchIndex: 9 },
+  { name: "Hanlu (Cold Dew)", chinese: "寒露", pinyin: "Hánlù", longitude: 195, season: "Autumn", isJie: true, monthBranchIndex: 10 }, // Dog
+  { name: "Shuangjiang (Frost Descends)", chinese: "霜降", pinyin: "Shuāngjiàng", longitude: 210, season: "Autumn", isJie: false, monthBranchIndex: 10 },
+  { name: "Lidong (Start of Winter)", chinese: "立冬", pinyin: "Lìdōng", longitude: 225, season: "Winter", isJie: true, monthBranchIndex: 11 }, // Pig
+  { name: "Xiaoxue (Minor Snow)", chinese: "小雪", pinyin: "Xiǎoxuě", longitude: 240, season: "Winter", isJie: false, monthBranchIndex: 11 },
+  { name: "Daxue (Major Snow)", chinese: "大雪", pinyin: "Dàxuě", longitude: 255, season: "Winter", isJie: true, monthBranchIndex: 0 }, // Rat
+  { name: "Dongzhi (Winter Solstice)", chinese: "冬至", pinyin: "Dōngzhì", longitude: 270, season: "Winter", isJie: false, monthBranchIndex: 0 },
+  { name: "Xiaohan (Minor Cold)", chinese: "小寒", pinyin: "Xiǎohán", longitude: 285, season: "Winter", isJie: true, monthBranchIndex: 1 }, // Ox
+  { name: "Dahan (Major Cold)", chinese: "大寒", pinyin: "Dàhán", longitude: 300, season: "Winter", isJie: false, monthBranchIndex: 1 },
+  { name: "Lichun (Start of Spring)", chinese: "立春", pinyin: "Lìchūn", longitude: 315, season: "Spring", isJie: true, monthBranchIndex: 2 }, // Tiger - Solar Year Boundary!
+  { name: "Yushui (Rain Water)", chinese: "雨水", pinyin: "Yǔshuǐ", longitude: 330, season: "Spring", isJie: false, monthBranchIndex: 2 },
+  { name: "Jingzhe (Awakening of Insects)", chinese: "惊蛰", pinyin: "Jīngzhé", longitude: 345, season: "Spring", isJie: true, monthBranchIndex: 3 }, // Rabbit
 ];
 
 // ============================================================
@@ -507,7 +507,7 @@ export class SolarTermCalculator {
     }
 
     const startLongitude = this.getSunLongitude(date);
-    const jieTerms = SOLAR_TERMS.filter((term) => term.isMajor);
+    const jieTerms = SOLAR_TERMS.filter((term) => term.isJie);
     if (jieTerms.length !== 12) {
       throw new Error(`Expected 12 Jie solar nodes; found ${jieTerms.length}.`);
     }

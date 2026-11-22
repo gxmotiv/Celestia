@@ -22,7 +22,8 @@ import { NavamsaCalculator } from "../lib/vedic/d9NavamsaEngine";
 import { calculateDivisionalChart, calculateDivisionalSignIndex, calculateD60AmsaDetails, D60_AMSA_NAMES, D60_KRURA_AMSA_ORDINALS } from "../lib/vedic/divisionalCalc";
 import { calculateAnnualProfection, calculateCompletedAge } from "../lib/astronomy/annualProfections";
 import { SubLordCalculator } from "../lib/kp/subLordEngine";
-import { CompleteBaZiEngine, SolarTermCalculator } from "../lib/astronomy/baziEngine";
+import { CompleteBaZiEngine, SolarTermCalculator, SOLAR_TERMS } from "../lib/astronomy/baziEngine";
+import { calculateBaZiProfile } from "../lib/astronomy/chinese";
 import { KPCuspsCalculator } from "../lib/kp/kpCusps";
 import { calculateNumerologyAgreementIndex, calculateCompleteNumerologyReport } from "../lib/numerology";
 import { calculateSoulUrge, calculatePersonality } from "../lib/numerology/pythagorean";
@@ -1946,6 +1947,81 @@ assertTest(
   invalidD60MetadataRejected,
   "NaN rejected",
   invalidD60MetadataRejected ? "Rejected" : "NaN accepted"
+);
+
+// ======================================================================
+// CATEGORY 29: BAZI SOLAR-TERM YEAR/MONTH PILLAR BOUNDARIES
+// ======================================================================
+console.log("Running Category 29: BaZi exact Jie year/month boundary tests...");
+
+const expectedJieLongitudes = [15, 45, 75, 105, 135, 165, 195, 225, 255, 285, 315, 345];
+const actualJieLongitudes = SOLAR_TERMS
+  .filter((term) => term.isJie)
+  .map((term) => term.longitude)
+  .sort((a, b) => a - b);
+assertTest(
+  "29.1 BaZi Jie/Zhongqi distinction",
+  "Exactly 12 Jie month-opening terms are labelled; the 12 Zhongqi are excluded",
+  JSON.stringify(actualJieLongitudes) === JSON.stringify(expectedJieLongitudes),
+  expectedJieLongitudes.join(", "),
+  actualJieLongitudes.join(", ")
+);
+
+// 2024 LiChun: 315° at 2024-02-04 16:27:07 HKT (08:27:07 UTC).
+const beforeLiChun = calculateBaZiProfile(2024, 2, 4, 16, new Date("2024-02-04T08:00:00Z"));
+const afterLiChun = calculateBaZiProfile(2024, 2, 4, 17, new Date("2024-02-04T09:00:00Z"));
+assertTest(
+  "29.2 BaZi LiChun boundary",
+  "Before LiChun, 2024 remains Gui-Mao year with Yi-Chou month",
+  beforeLiChun.yearPillar.stem.name === "Gui" &&
+    beforeLiChun.yearPillar.branch.name === "Mao" &&
+    beforeLiChun.monthPillar.stem.name === "Yi" &&
+    beforeLiChun.monthPillar.branch.name === "Chou",
+  "Gui-Mao / Yi-Chou",
+  `${beforeLiChun.yearPillar.combinedName} / ${beforeLiChun.monthPillar.combinedName}`
+);
+assertTest(
+  "29.3 BaZi LiChun boundary",
+  "After LiChun, year and month change to Jia-Chen / Bing-Yin",
+  afterLiChun.yearPillar.stem.name === "Jia" &&
+    afterLiChun.yearPillar.branch.name === "Chen" &&
+    afterLiChun.monthPillar.stem.name === "Bing" &&
+    afterLiChun.monthPillar.branch.name === "Yin",
+  "Jia-Chen / Bing-Yin",
+  `${afterLiChun.yearPillar.combinedName} / ${afterLiChun.monthPillar.combinedName}`
+);
+
+// 2024 Jingzhe: 345° at 2024-03-05 10:22:45 HKT (02:22:45 UTC).
+// The civil date is the same on both sides; fixed day-of-month cutoffs fail this case.
+const beforeJingzhe = calculateBaZiProfile(2024, 3, 5, 10, new Date("2024-03-05T02:00:00Z"));
+const afterJingzhe = calculateBaZiProfile(2024, 3, 5, 11, new Date("2024-03-05T03:00:00Z"));
+assertTest(
+  "29.4 BaZi Jingzhe boundary",
+  "Before Jingzhe, the month remains Bing-Yin (Tiger)",
+  beforeJingzhe.monthPillar.stem.name === "Bing" && beforeJingzhe.monthPillar.branch.name === "Yin",
+  "Bing-Yin",
+  beforeJingzhe.monthPillar.combinedName
+);
+assertTest(
+  "29.5 BaZi Jingzhe boundary",
+  "After Jingzhe, the month changes to Ding-Mao (Rabbit)",
+  afterJingzhe.monthPillar.stem.name === "Ding" && afterJingzhe.monthPillar.branch.name === "Mao",
+  "Ding-Mao",
+  afterJingzhe.monthPillar.combinedName
+);
+
+let invalidBaZiInstantRejected = false;
+try {
+  calculateBaZiProfile(2024, 3, 5, 10, new Date(Number.NaN));
+} catch {
+  invalidBaZiInstantRejected = true;
+}
+assertTest(
+  "29.6 BaZi invalid instant",
+  "An invalid exact birth instant is rejected instead of silently using date-only fallback",
+  invalidBaZiInstantRejected,
+  "Invalid Date rejected",
+  invalidBaZiInstantRejected ? "Rejected" : "Accepted"
 );
 
 // SUMMARY OUTPUT — deliberately last so every appended regression fixture is counted.

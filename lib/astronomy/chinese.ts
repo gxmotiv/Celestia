@@ -6,6 +6,9 @@
  */
 
 import { calculateJulianDay } from "./ephemeris";
+import { SolarTermCalculator } from "./baziEngine";
+
+const exactSolarTermCalculator = new SolarTermCalculator();
 
 export interface StemData {
   name: string;
@@ -305,12 +308,37 @@ export function calculateBaZiProfile(
   year: number,
   month: number,
   day: number,
-  hour = 12
+  hour = 12,
+  birthInstant?: Date
 ): BaZiProfile {
-  // Year Pillar
-  const { stemIdx: yStem, branchIdx: yBranch } = calculateYearPillar(year, month, day);
-  // Month Pillar
-  const { stemIdx: mStem, branchIdx: mBranch } = calculateMonthPillar(yStem, month, day);
+  // Prefer the exact UTC birth instant for solar year/month boundaries.
+  // Date-only callers retain the legacy fixed-day approximation below.
+  let yStem: number;
+  let yBranch: number;
+  let mStem: number;
+  let mBranch: number;
+
+  if (birthInstant !== undefined) {
+    if (!Number.isFinite(birthInstant.getTime())) {
+      throw new Error("BaZi birth instant must be a valid Date.");
+    }
+    const exactYearPillar = exactSolarTermCalculator.calculateYearPillar(birthInstant);
+    const exactMonthPillar = exactSolarTermCalculator.calculateMonthPillar(
+      birthInstant,
+      exactYearPillar.heavenlyStem.index
+    );
+    yStem = exactYearPillar.heavenlyStem.index;
+    yBranch = exactYearPillar.earthlyBranch.index;
+    mStem = exactMonthPillar.heavenlyStem.index;
+    mBranch = exactMonthPillar.earthlyBranch.index;
+  } else {
+    const legacyYear = calculateYearPillar(year, month, day);
+    const legacyMonth = calculateMonthPillar(legacyYear.stemIdx, month, day);
+    yStem = legacyYear.stemIdx;
+    yBranch = legacyYear.branchIdx;
+    mStem = legacyMonth.stemIdx;
+    mBranch = legacyMonth.branchIdx;
+  }
   // Day Pillar
   const { stemIdx: dStem, branchIdx: dBranch } = calculateDayPillar(year, month, day, hour);
   // Hour Pillar

@@ -73,7 +73,7 @@ export class MultiSystemBenchmarkRunner {
 
     const wChart = customData?.western || calculateWesternChart(year, month, day, hour, minute, lat, lon, tz, "Placidus");
     const vChart = customData?.vedic || calculateVedicChart(wChart, new Date(Date.UTC(year, month - 1, day, hour, minute)));
-    const bProfile = customData?.bazi || calculateBaZiProfile(year, month, day, hour);
+    const bProfile = customData?.bazi || calculateBaZiProfile(year, month, day, hour, new Date(Date.UTC(year, month - 1, day, hour, minute)));
     const nProfile = customData?.numerology || calculateNumerologyProfile("Universal Standard Soul", year, month, day);
 
     // ============================================================
@@ -693,26 +693,26 @@ export class MultiSystemBenchmarkRunner {
     list.push({
       id: "BZ-SOL-01",
       system: "BaZi",
-      name: "Solar Lichun (Start of Spring 315°) Boundary Check",
+      name: "Year Pillar output present (structural smoke check only)",
       category: "Solar Ephemeris",
-      classicalAuthority: "San Ming Tong Hui (三命通會)",
-      expectedFormula: "Year Stem/Branch anchored on solar Lichun, not Lunar New Year",
+      classicalAuthority: "Traditional LiChun solar-year convention; see cited astronomical sources",
+      expectedFormula: "Year boundary at the 315° LiChun instant, not a fixed Gregorian date",
       actualResult: `Year: ${bazi.yearPillar.combinedName} (${bazi.zodiacAnimal})`,
       passed: Boolean(bazi.yearPillar.combinedName),
-      notes: "Astronomical solar ecliptic longitude governs the Four Pillars.",
+      notes: "This is a presence check, not a LiChun accuracy fixture; exact before/after tests live in scripts/testAstrologySuite.ts.",
     });
 
     // 2. Month Pillar Solar Term Crossing
     list.push({
       id: "BZ-SOL-02",
       system: "BaZi",
-      name: "Month Pillar 24 Solar Terms (Jie Qi) Synchronization",
+      name: "Month Pillar output present (structural smoke check only)",
       category: "Solar Ephemeris",
-      classicalAuthority: "Yuan Hai Zi Ping (淵海子平)",
-      expectedFormula: "Month branch matches 15° solar longitude sector",
+      classicalAuthority: "Yuan Hai Zi Ping, Juan 1, 论年上起月例 (Five Tigers month-stem rule)",
+      expectedFormula: "12 Jie month boundaries are 30° apart; month stem advances from the year stem by Five Tigers (五虎遁)",
       actualResult: `Month: ${bazi.monthPillar.combinedName} (${bazi.monthPillar.branch.element})`,
       passed: Boolean(bazi.monthPillar.combinedName),
-      notes: "Solar terms prevent calendar misalignment.",
+      notes: "This is a presence check, not a solar-term accuracy fixture; exact before/after Jie tests live in scripts/testAstrologySuite.ts. Date-only callers still use the documented legacy approximation.",
     });
 
     // 3. Day Pillar 60 Jia Zi Sexagenary Continuity
