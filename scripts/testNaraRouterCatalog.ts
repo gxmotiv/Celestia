@@ -39,9 +39,9 @@ console.log("PASS MCP JSON-RPC text-wrapped catalogue is parsed");
 
 assert.deepEqual(
   parseNaraRouterMcpModelIds({ result: { structuredContent: { models: ["agnes-2.5-flash", "laguna-s-2.1"] } } }),
-  [],
+  ["agnes-2.5-flash", "laguna-s-2.1"],
 );
-console.log("PASS MCP model strings are not confused with verified Free-plan eligibility");
+console.log("PASS MCP structured model-string catalogue is parsed");
 
 
 assert.deepEqual(NARAROUTER_FREE_MODEL_IDS, ["agnes-2.5-flash"]);
