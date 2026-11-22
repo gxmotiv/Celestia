@@ -146,12 +146,19 @@ export function parsePollinationsFreeTextModels(
 async function getPollinationsCatalogueModels(): Promise<PollinationsTextModel[]> {
   if (Date.now() - cachedAt < 60_000) return cachedModels;
 
-  // Query both Pollinations-operated and community-published models.
+  // Authenticate discovery so Pollinations can apply this key's model permissions.
+  // Public discovery remains supported when no server key is configured.
+  const apiKey = process.env.POLLINATIONS_API_KEY?.trim();
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+
+  // Fetch official and community catalogues, but ask Pollinations to apply its
+  // reliable-list policy before our stricter healthy/zero-price checks.
   const sources = ["official", "community"] as const;
   const responses = await Promise.all(sources.map((source) => fetch(
-    `https://gen.pollinations.ai/text/models?source=${source}&reliability=all&limit=500`,
+    `https://gen.pollinations.ai/text/models?source=${source}&reliability=reliable&limit=500`,
     {
-      headers: { Accept: "application/json" },
+      headers,
       cache: "no-store",
       signal: AbortSignal.timeout(12_000),
     },
