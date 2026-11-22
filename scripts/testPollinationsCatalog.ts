@@ -126,4 +126,4 @@ check("accepts long-context price variant while preserving base price", [{
   pricing_variants: [{ name: "long_context", pricing: { currency: "pollen", promptTextTokens: "0.0000003" } }],
 }], 1);
 check("rejects malformed payload", { models: [base] }, 0);
-console.log(`Pollinations catalogue tests: ${passed}/28 passed`);
+console.log(`Pollinations catalogue tests: ${passed}/30 passed`);
