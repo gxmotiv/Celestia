@@ -69,8 +69,8 @@ export function parseNaraRouterMcpModelIds(payload: unknown): string[] {
       if (text.startsWith("{") || text.startsWith("[")) {
         try { visit(JSON.parse(text) as unknown, depth + 1); } catch { /* text is not JSON */ }
       } else {
-        for (const line of text.split(/\\r?\\n/)) {
-          const match = line.match(/^\\s*(?:[-*]\\s*)?([a-z0-9][a-z0-9._/-]{1,100})\\s*$/i);
+        for (const line of text.split(/\r?\n/)) {
+          const match = line.match(/^\s*(?:[-*]\s*)?([a-z0-9][a-z0-9._/-]{1,100})\s*$/i);
           if (match) ids.add(match[1]);
         }
       }
