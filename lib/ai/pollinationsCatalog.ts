@@ -59,6 +59,13 @@ function hasZeroPricing(value: unknown): boolean {
   );
 }
 
+function pricingHasNonZeroCharge(value: unknown): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  return Object.entries(value as Record<string, unknown>).some(([field, raw]) =>
+    PRICE_FIELDS.has(field) && (parsePrice(raw) ?? 0) > 0
+  );
+}
+
 function isZeroPricedModel(entry: CatalogEntry): boolean {
   if (!hasZeroPricing(entry.pricing)) return false;
   if (entry.pricing_variants !== undefined) {
@@ -138,12 +145,15 @@ export function parsePollinationsAvailableTextModels(
         zeroPriced: isZeroPricedModel(entry),
         pricingStatus: isZeroPricedModel(entry)
           ? "free_verified"
-          : [pricing.promptTextTokens, pricing.completionTextTokens].some((value) => {
-              const price = parsePrice(value);
-              return price !== null && price > 0;
-            }) || Object.entries(pricing).some(([field, value]) =>
-              PRICE_FIELDS.has(field) && (parsePrice(value) ?? 0) > 0
-            )
+          : pricingHasNonZeroCharge(pricing) ||
+            (Array.isArray(entry.pricing_variants) && entry.pricing_variants.some((variant) =>
+              Boolean(variant && typeof variant === "object" &&
+                pricingHasNonZeroCharge((variant as Record<string, unknown>).pricing))
+            )) ||
+            (Array.isArray(entry.pricing_adjustments) && entry.pricing_adjustments.some((adjustment) =>
+              Boolean(adjustment && typeof adjustment === "object" &&
+                (parsePrice((adjustment as Record<string, unknown>).price) ?? 0) > 0)
+            ))
             ? "paid"
             : "unknown",
         health: typeof health.status === "string" ? health.status : "unknown",
