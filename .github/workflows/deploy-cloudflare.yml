@@ -19,7 +19,12 @@ on:
   workflow_dispatch:
     inputs:
       benchmark:
-        description: "Run a synthetic-prompt benchmark of official Pollinations models; requests may consume Pollen, including for paid-priced GPT-5 Nano"
+        description: "Run a synthetic-prompt benchmark; zero-priced models only unless allow_paid is enabled"
+        required: true
+        default: false
+        type: boolean
+      allow_paid:
+        description: "Allow Pollen-consuming requests to non-zero-priced models, including GPT-5 Nano. Keep false for a zero-cost benchmark."
         required: true
         default: false
         type: boolean
@@ -93,6 +98,7 @@ jobs:
         run: npx tsx scripts/benchmarkPollinationsModels.ts
         env:
           POLLINATIONS_API_KEY: ${{ secrets.POLLINATIONS_API_KEY }}
+          POLLINATIONS_ALLOW_PAID_BENCHMARK: ${{ inputs.allow_paid }}
       - name: Upload benchmark report
         if: always()
         uses: actions/upload-artifact@v4
