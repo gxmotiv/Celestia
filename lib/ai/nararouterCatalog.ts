@@ -48,3 +48,34 @@ export async function getNaraRouterFreeModels(apiKey: string): Promise<NaraRoute
   }
   return parseNaraRouterFreeModels(await response.json());
 }
+/** Extract model IDs from the documented JSON-RPC MCP list_models result. */
+export function parseNaraRouterMcpModelIds(payload: unknown): string[] {
+  const ids = new Set<string>();
+  const seen = new Set<unknown>();
+  const visit = (value: unknown, depth = 0): void => {
+    if (depth > 16 || value === null || typeof value !== "object" || seen.has(value)) return;
+    seen.add(value);
+    if (Array.isArray(value)) {
+      for (const item of value) visit(item, depth + 1);
+      return;
+    }
+    const record = value as Record<string, unknown>;
+    if (typeof record.id === "string" && record.id.trim()) ids.add(record.id.trim());
+    for (const key of ["models", "data", "content", "structuredContent", "result"]) {
+      if (record[key] !== undefined) visit(record[key], depth + 1);
+    }
+    if (typeof record.text === "string") {
+      const text = record.text.trim();
+      if (text.startsWith("{") || text.startsWith("[")) {
+        try { visit(JSON.parse(text) as unknown, depth + 1); } catch { /* text is not JSON */ }
+      } else {
+        for (const line of text.split(/\\r?\\n/)) {
+          const match = line.match(/^\\s*(?:[-*]\\s*)?([a-z0-9][a-z0-9._/-]{1,100})\\s*$/i);
+          if (match) ids.add(match[1]);
+        }
+      }
+    }
+  };
+  visit(payload);
+  return [...ids].sort();
+}
