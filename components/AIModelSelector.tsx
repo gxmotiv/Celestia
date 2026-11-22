@@ -223,7 +223,7 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
       {naraError ? <p className="text-xs text-amber-300">{naraError}</p> : null}
       {naraLoaded && !naraError && naraModels.length === 0 ? (
         <p className="text-xs text-amber-300">
-          NaraRouter authenticated successfully, but no verified Free-plan model is available to this account. Its onboarding guidance requires linking Telegram for Free-model access. Link Telegram and confirm the Free plan in your NaraRouter dashboard, then reload Celestia. Paid/PAYG models remain blocked.
+NaraRouter authenticated successfully, but this key has no verified Free-plan model in its current catalogue. If your Free plan is active and Telegram is linked, contact NaraRouter support to check account entitlement or API-key association. Paid/PAYG models remain blocked.
         </p>
       ) : null}
       {catalogueLoaded && !catalogueError && pollinationsModels.length === 0 ? (
