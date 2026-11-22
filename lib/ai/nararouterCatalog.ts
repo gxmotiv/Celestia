@@ -3,7 +3,11 @@
  * The public pricing page currently identifies Laguna S 2.1 as the sole $0 Free-plan
  * model. Keep this allowlist deliberately narrow: unknown models are never assumed free.
  */
-export const NARAROUTER_FREE_MODEL_IDS = ["laguna-s-2.1"] as const;
+export const NARAROUTER_FREE_MODEL_IDS = [
+  "agnes-2.5-flash",
+  "laguna-s-2.1",
+  "nemotron-3.5-lightning-free",
+] as const;
 
 export interface NaraRouterModel {
   id: string;
@@ -25,9 +29,13 @@ export function parseNaraRouterFreeModels(payload: unknown): NaraRouterModel[] {
     .filter((id) => available.has(id))
     .map((id) => ({
       id,
-      name: id === "laguna-s-2.1" ? "Laguna S 2.1" : id,
-      free: true,
-      description: "Listed on NaraRouter's Free plan; subject to its daily quota and rate limit.",
+      name: ({
+        "agnes-2.5-flash": "Agnes 2.5 Flash",
+        "laguna-s-2.1": "Laguna S 2.1",
+        "nemotron-3.5-lightning-free": "Nemotron 3.5 Lightning Free",
+      } as const)[id],
+      free: true as const,
+      description: "Listed on NaraRouter's public Free plan; subject to the shared daily quota and rate limit.",
     }));
 }
 
