@@ -31,6 +31,13 @@ interface LivePollinationsModel {
   tools?: boolean;
 }
 
+interface LiveNaraRouterModel {
+  id: string;
+  name: string;
+  description: string;
+  free: true;
+}
+
 const PROVIDERS: CelestiaAIProviderId[] = ["pollinations", "freemodel", "nararouter", "openrouter"];
 const PROVIDER_LABELS: Record<CelestiaAIProviderId, string> = {
   pollinations: "Pollinations — zero-priced official + community",
@@ -45,6 +52,9 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
   const [providerConfiguration, setProviderConfiguration] = useState<ProviderConfiguration | null>(null);
   const [pollinationsModels, setPollinationsModels] = useState<LivePollinationsModel[]>([]);
   const [manualOnlyModels, setManualOnlyModels] = useState<LivePollinationsModel[]>([]);
+  const [naraModels, setNaraModels] = useState<LiveNaraRouterModel[]>([]);
+  const [naraError, setNaraError] = useState("");
+  const [naraLoaded, setNaraLoaded] = useState(false);
   const [catalogueError, setCatalogueError] = useState("");
   const [catalogueLoaded, setCatalogueLoaded] = useState(false);
 
@@ -82,30 +92,56 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
           setCatalogueLoaded(true);
         }
       });
+    fetch("/api/astrology/nararouter-models", { cache: "no-store" })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data?.error || "NaraRouter catalogue unavailable");
+        return data as { models?: LiveNaraRouterModel[]; error?: string };
+      })
+      .then((data) => {
+        if (active) {
+          setNaraModels(Array.isArray(data.models) ? data.models : []);
+          setNaraError(data.error || "");
+          setNaraLoaded(true);
+        }
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          setNaraError(error instanceof Error ? error.message : "NaraRouter catalogue unavailable");
+          setNaraLoaded(true);
+        }
+      });
     return () => {
       active = false;
     };
   }, []);
 
   useEffect(() => {
+    if (value.startsWith("pollinations:") && !catalogueLoaded) return;
+    if (value.startsWith("nararouter:") && !naraLoaded) return;
     const isKnownStatic = CELESTIA_AI_MODELS.some((model) => model.id === value);
-    const isKnownLive = value.startsWith("pollinations:") &&
+    const isKnownPollinations = value.startsWith("pollinations:") &&
       (value === "pollinations:auto-free" || [...pollinationsModels, ...manualOnlyModels].some((model) => `pollinations:${model.id}` === value));
-    if (!isKnownStatic && !isKnownLive) onChange("pollinations:auto-free");
-  }, [value, pollinationsModels, manualOnlyModels, onChange]);
+    const isKnownNaraRouter = value.startsWith("nararouter:") &&
+      naraModels.some((model) => `nararouter:${model.id}` === value);
+    if (!isKnownStatic && !isKnownPollinations && !isKnownNaraRouter) onChange("pollinations:auto-free");
+  }, [value, pollinationsModels, manualOnlyModels, catalogueLoaded, naraModels, naraLoaded, onChange]);
 
   const staticSelected = CELESTIA_AI_MODELS.find((model) => model.id === value) ?? CELESTIA_AI_MODELS[0];
   const liveSelected = value.startsWith("pollinations:")
     ? [...pollinationsModels, ...manualOnlyModels].find((model) => `pollinations:${model.id}` === value)
     : undefined;
-  const selectedProviderId = value.startsWith("pollinations:") ? "pollinations" : staticSelected.providerId;
-  const selectedName = liveSelected?.name ?? staticSelected.name;
-  const selectedDescription = liveSelected?.description ?? staticSelected.description;
+  const naraSelected = value.startsWith("nararouter:")
+    ? naraModels.find((model) => `nararouter:${model.id}` === value)
+    : undefined;
+  const selectedProviderId = value.startsWith("pollinations:") ? "pollinations" : value.startsWith("nararouter:") ? "nararouter" : staticSelected.providerId;
+  const selectedName = liveSelected?.name ?? naraSelected?.name ?? staticSelected.name;
+  const selectedDescription = liveSelected?.description ?? naraSelected?.description ?? staticSelected.description;
   const selectedQuota = liveSelected
     ? `Published input price: 0 · output price: 0 · ${liveSelected.community ? `community publisher: ${liveSelected.publisher ?? "unknown"}` : "official source"} · healthy status`
-    : staticSelected.quotaNote;
+    : naraSelected?.description ?? staticSelected.quotaNote;
   const selectedProviderConfigured = providerConfiguration?.[selectedProviderId];
-  const selectedSecret = selectedProviderId === "pollinations" ? "POLLINATIONS_API_KEY" : staticSelected.secretName;
+  const selectedSecret = selectedProviderId === "pollinations" ? "POLLINATIONS_API_KEY" : selectedProviderId === "nararouter" ? "NARAROUTER_API_KEY" : staticSelected.secretName;
   const selectedStatus = selectedProviderConfigured === true
     ? "Server key configured"
     : selectedProviderConfigured === false
@@ -119,7 +155,7 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
           <h3 className="text-sm font-semibold text-slate-100">Choose AI provider and model</h3>
           <p className="text-xs text-slate-400">Choose the provider and model for Oracle and Blueprint. Explicit selections are sent only to that provider.</p>
         </div>
-        <span className="text-[10px] rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-emerald-300 w-fit">Zero-priced models only</span>
+        <span className="text-[10px] rounded-md border border-slate-700 px-2 py-1 text-slate-300 w-fit">Provider-specific cost controls</span>
       </div>
 
       <label className="block space-y-1.5">
@@ -154,6 +190,20 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
                 </optgroup>
               );
             }
+            if (providerId === "nararouter") {
+              return (
+                <optgroup key={providerId} label={PROVIDER_LABELS[providerId] + " — verified Free plan" + suffix}>
+                  {naraModels.map((model) => (
+                    <option key={model.id} value={`nararouter:${model.id}`} disabled={configured === false}>
+                      {model.name} — Free plan (quota-limited)
+                    </option>
+                  ))}
+                  {naraLoaded && naraModels.length === 0 ? (
+                    <option value="" disabled>No verified Free-plan model available</option>
+                  ) : null}
+                </optgroup>
+              );
+            }
             const providerModels = CELESTIA_AI_MODELS.filter((model) => model.providerId === providerId);
             if (providerModels.length === 0) return null;
             return (
@@ -170,6 +220,7 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
       </label>
 
       {catalogueError ? <p className="text-xs text-amber-300">{catalogueError}</p> : null}
+      {naraError ? <p className="text-xs text-amber-300">{naraError}</p> : null}
       {catalogueLoaded && !catalogueError && pollinationsModels.length === 0 ? (
         <p className="text-xs text-amber-300">
           No official privacy-safe model is currently available for automatic selection. Manual-only community models and models with explicit data-handling warnings may still appear in the selector.
@@ -193,8 +244,8 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
       ) : null}
       <div className="rounded-lg border border-slate-800 bg-slate-900/70 p-3 space-y-1">
         <div className="flex flex-wrap items-center gap-2">
-          <strong className="text-sm text-amber-300">{selectedProviderId === "pollinations" ? "Pollinations" : staticSelected.providerName} · {selectedName}</strong>
-          <span className="text-[10px] text-slate-300 rounded border border-slate-700 px-1.5 py-0.5">{liveSelected ? "Live catalogue model" : staticSelected.role}</span>
+          <strong className="text-sm text-amber-300">{selectedProviderId === "pollinations" ? "Pollinations" : selectedProviderId === "nararouter" ? "NaraRouter" : staticSelected.providerName} · {selectedName}</strong>
+          <span className="text-[10px] text-slate-300 rounded border border-slate-700 px-1.5 py-0.5">{liveSelected ? "Live catalogue model" : naraSelected ? "Verified Free-plan model" : staticSelected.role}</span>
         </div>
         <p className="text-xs leading-relaxed text-slate-300">{selectedDescription}</p>
         <p className="text-[10px] leading-relaxed text-slate-400">{selectedQuota}</p>
@@ -208,7 +259,7 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
         <p className={`text-[10px] ${selectedProviderConfigured === true ? "text-emerald-300" : "text-amber-300"}`}>
           {selectedStatus}
         </p>
-        <p className="text-[10px] text-slate-500">Automatic selection includes only privacy-safe, official, healthy, zero-priced general-purpose models. Community-hosted models and models with explicit retention/training warnings are manual-only and require a fresh acknowledgement. Discovery is public; generation needs a server-side secret key. No paid fallback is performed.</p>
+        <p className="text-[10px] text-slate-500">Pollinations automatic mode uses only verified zero-priced models. NaraRouter shows only the model currently listed for its Free plan; paid catalogue models are hidden and blocked server-side. Provider quotas and availability can change. All credentials stay server-side; no paid fallback is performed.</p>
       </div>
     </section>
   );
