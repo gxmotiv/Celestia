@@ -16,6 +16,8 @@ export interface PollinationsTextModel {
   contextLength: number | null;
   reasoning: boolean;
   tools: boolean;
+  agent: boolean;
+  baseModel: string | null;
 }
 
 type CatalogEntry = Record<string, unknown>;
@@ -77,6 +79,7 @@ function isEligibleAvailableTextModel(entry: CatalogEntry, includeManualOnly = f
   return typeof modelName === "string" &&
     modelName.length > 0 &&
     entry.category === "text" &&
+    entry.agent !== true &&
     (!community || includeManualOnly) &&
     entry.paid_only !== true &&
     entry.is_specialized !== true &&
@@ -135,6 +138,8 @@ export function parsePollinationsAvailableTextModels(
         contextLength: typeof entry.context_length === "number" ? entry.context_length : null,
         reasoning: entry.reasoning === true || (Array.isArray(entry.capabilities) && entry.capabilities.includes("reasoning")),
         tools: entry.tools === true || (Array.isArray(entry.capabilities) && entry.capabilities.includes("tool_calling")),
+        agent: entry.agent === true,
+        baseModel: typeof entry.base_model === "string" ? entry.base_model : null,
       };
     })
     .sort((a, b) =>
@@ -155,7 +160,7 @@ async function getPollinationsCatalogueModels(): Promise<PollinationsTextModel[]
 
   const sources = ["official", "community"] as const;
   const responses = await Promise.all(sources.map((source) => fetch(
-    `https://gen.pollinations.ai/text/models?source=${source}&reliability=reliable&limit=500`,
+    `https://gen.pollinations.ai/text/models?source=${source}&reliability=reliable&agent=false&limit=500`,
     { headers, cache: "no-store", signal: AbortSignal.timeout(12_000) },
   )));
   const failed = responses.find((response) => !response.ok);
