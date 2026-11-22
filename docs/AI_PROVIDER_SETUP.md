@@ -55,7 +55,7 @@ NaraRouter official references: [API docs](https://router.bynara.id/docs) and [l
 1. Create an API key in the [NaraRouter dashboard](https://router.bynara.id/).
 2. Add it to the Cloudflare Worker as the server-side secret `NARAROUTER_API_KEY`; never put it in browser code, a public GitHub variable, or chat.
 3. Keep `NARAROUTER_BASE_URL` at `https://router.bynara.id/v1` unless the provider officially changes it.
-4. Celestia calls authenticated `GET /v1/models` and displays only the current provider-published Free-plan aliases. It does not trust the old hardcoded `agnes-2.5-flash` or `auto/bynara` aliases.
+4. Celestia calls authenticated `GET /v1/models` and displays only the current provider-published Free-plan aliases. It does not default to the old `auto/bynara` router alias; it shows the known Free-plan aliases only after authenticated discovery confirms availability.
 5. Link your Telegram account in the NaraRouter dashboard if the provider requires it for free-model access. Its official onboarding notice says Telegram linking is required to use Free models.
 6. Generation rechecks the same allowlist before sending a prompt. If no Free model is returned, the request is blocked rather than falling through to a paid model.
 
