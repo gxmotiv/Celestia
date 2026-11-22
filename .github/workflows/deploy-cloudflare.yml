@@ -60,6 +60,18 @@ jobs:
         run: npm install --no-save --package-lock=false --no-audit --no-fund @opennextjs/cloudflare@latest wrangler@latest tsx
       - name: Run Pollinations catalogue schema regression tests
         run: npx tsx scripts/testPollinationsCatalog.ts
+      - name: Pollinations live zero-price inference smoke test
+        # One synthetic prompt, selected only after the authenticated live catalogue proves zero input/output prices.
+        # Continue the build if the provider is temporarily unavailable; the step result remains visible.
+        continue-on-error: true
+        run: |
+          if [ -z "$POLLINATIONS_API_KEY" ]; then
+            echo "SKIP Pollinations live inference smoke test: POLLINATIONS_API_KEY secret is not configured."
+          else
+            npx tsx scripts/benchmarkPollinationsModels.ts --smoke
+          fi
+        env:
+          POLLINATIONS_API_KEY: ${{ secrets.POLLINATIONS_API_KEY }}
       - name: Run the astrology regression suite
         run: npx tsx scripts/testAstrologySuite.ts
       - name: Build the Next.js application
