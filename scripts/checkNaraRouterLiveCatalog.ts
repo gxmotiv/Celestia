@@ -18,6 +18,18 @@ async function main() {
   }
 
   const payload: unknown = await response.json();
+  const plansResponse = await fetch("https://router.bynara.id/api/plans", {
+    cache: "no-store",
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!plansResponse.ok) {
+    console.warn(`WARN NaraRouter public /api/plans returned HTTP ${plansResponse.status}; retaining the strict existing allowlist.`);
+  } else {
+    const plansPayload: unknown = await plansResponse.json();
+    const serializedPlans = JSON.stringify(plansPayload);
+    console.log(`NaraRouter public /api/plans top-level shape: ${plansPayload && typeof plansPayload === "object" ? Object.keys(plansPayload as Record<string, unknown>).join(", ") : typeof plansPayload}`);
+    console.log(`NaraRouter public plan metadata (read-only): ${serializedPlans.slice(0, 8000)}`);
+  }
   const root = payload && typeof payload === "object" ? payload as Record<string, unknown> : {};
   const entries = Array.isArray(root.data) ? root.data : Array.isArray(root.models) ? root.models : [];
   const ids = entries.flatMap((entry) => {
