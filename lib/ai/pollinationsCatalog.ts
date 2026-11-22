@@ -135,6 +135,20 @@ export function parsePollinationsAvailableTextModels(
         ? entry.health as Record<string, unknown>
         : {};
       const community = entry.community === true || entry.source === "community" || id.startsWith("community/");
+      const zeroPriced = isZeroPricedModel(entry);
+      const pricingStatus: PollinationsTextModel["pricingStatus"] = zeroPriced
+        ? "free_verified"
+        : pricingHasNonZeroCharge(pricing) ||
+          (Array.isArray(entry.pricing_variants) && entry.pricing_variants.some((variant) =>
+            Boolean(variant && typeof variant === "object" &&
+              pricingHasNonZeroCharge((variant as Record<string, unknown>).pricing))
+          )) ||
+          (Array.isArray(entry.pricing_adjustments) && entry.pricing_adjustments.some((adjustment) =>
+            Boolean(adjustment && typeof adjustment === "object" &&
+              (parsePrice((adjustment as Record<string, unknown>).price) ?? 0) > 0)
+          ))
+          ? "paid"
+          : "unknown";
       return {
         id,
         name: typeof entry.title === "string" ? entry.title : id,
@@ -142,20 +156,8 @@ export function parsePollinationsAvailableTextModels(
         inputPrice: parsePrice(pricing.promptTextTokens),
         outputPrice: parsePrice(pricing.completionTextTokens),
         currency: typeof pricing.currency === "string" ? pricing.currency : null,
-        zeroPriced: isZeroPricedModel(entry),
-        pricingStatus: isZeroPricedModel(entry)
-          ? "free_verified"
-          : pricingHasNonZeroCharge(pricing) ||
-            (Array.isArray(entry.pricing_variants) && entry.pricing_variants.some((variant) =>
-              Boolean(variant && typeof variant === "object" &&
-                pricingHasNonZeroCharge((variant as Record<string, unknown>).pricing))
-            )) ||
-            (Array.isArray(entry.pricing_adjustments) && entry.pricing_adjustments.some((adjustment) =>
-              Boolean(adjustment && typeof adjustment === "object" &&
-                (parsePrice((adjustment as Record<string, unknown>).price) ?? 0) > 0)
-            ))
-            ? "paid"
-            : "unknown",
+        zeroPriced,
+        pricingStatus,
         health: typeof health.status === "string" ? health.status : "unknown",
         privacyRisk: /retain|retention|used for training|collected for training|data may be collected/i.test(
           typeof entry.description === "string" ? entry.description : "",
