@@ -18,6 +18,33 @@ async function main() {
   }
 
   const payload: unknown = await response.json();
+  // NaraRouter documents MCP list_models as a free read that returns the
+  // models this API key can use. Compare it with /v1/models without generating.
+  const mcpResponse = await fetch("https://router.bynara.id/mcp", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      Accept: "application/json, text/event-stream",
+    },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "tools/call",
+      params: { name: "list_models", arguments: {} },
+    }),
+    cache: "no-store",
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!mcpResponse.ok) {
+    console.warn(`WARN NaraRouter MCP list_models returned HTTP ${mcpResponse.status}; /v1/models remains the only checked catalogue.`);
+  } else {
+    const mcpPayload: unknown = await mcpResponse.json();
+    const serializedMcp = JSON.stringify(mcpPayload);
+    const mcpIds = [...serializedMcp.matchAll(/"id"\\s*:\\s*"([^"]+)"/g)].map((match) => match[1]);
+    console.log(`NaraRouter MCP list_models read-only response: HTTP ${mcpResponse.status}; ${mcpIds.length} model IDs parsed: ${mcpIds.join(", ") || "(none or non-JSON content)"}`);
+  }
+
   const plansResponse = await fetch("https://router.bynara.id/api/plans", {
     cache: "no-store",
     signal: AbortSignal.timeout(15_000),
