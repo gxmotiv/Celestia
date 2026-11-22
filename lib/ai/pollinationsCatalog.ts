@@ -151,7 +151,7 @@ export async function getPollinationsManualOnlyTextModels(): Promise<Pollination
       (b.contextLength ?? 0) - (a.contextLength ?? 0) ||
       a.name.localeCompare(b.name)
     )
-    .slice(0, 100);
+;
 }
 
 export async function isPollinationsFreeTextModel(modelId: string, allowPrivacyRisk = false): Promise<boolean> {
