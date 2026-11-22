@@ -7,7 +7,7 @@ async function main() {
     return;
   }
 
-  const baseUrl = (process.env.NARAROUTER_BASE_URL?.trim() || "https://router.bynara.id/v1").replace(/\\/+$/, "");
+  const baseUrl = (process.env.NARAROUTER_BASE_URL?.trim() || "https://router.bynara.id/v1").replace(/\/+$/, "");
   const response = await fetch(baseUrl + "/models", {
     headers: { Authorization: `Bearer ${apiKey}` },
     cache: "no-store",
