@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { parsePollinationsAvailableTextModels } from "../lib/ai/pollinationsCatalog";
 
 const base = {
-  name: "sample/free-chat",
+  id: "sample/free-chat",
   title: "Sample Free Chat",
   description: "A general-purpose text assistant.",
   category: "text",
@@ -12,7 +12,11 @@ const base = {
   input_modalities: ["text"],
   output_modalities: ["text"],
   supported_endpoints: ["/v1/chat/completions"],
-  pricing: { currency: "pollen", promptTextTokens: "0.00000015", completionTextTokens: "0.0000009" },
+  pricing: {
+    currency: "pollen",
+    promptTextTokens: "0",
+    completionTextTokens: "0",
+  },
   health: { status: "healthy", success_rate: 99.9, requests: 100 },
 };
 
@@ -23,25 +27,40 @@ function check(name: string, payload: unknown, expectedCount: number, options: {
   passed += 1;
   console.log(`PASS ${name}`);
 }
+function parsed(entry: unknown) {
+  return parsePollinationsAvailableTextModels([entry])[0];
+}
 
-check("accepts available official model with non-zero Pollen pricing", [base], 1);
-assert.equal(parsePollinationsAvailableTextModels([base])[0]?.inputPrice, 0.00000015);
-assert.equal(parsePollinationsAvailableTextModels([base])[0]?.outputPrice, 0.0000009);
-assert.equal(parsePollinationsAvailableTextModels([base])[0]?.zeroPriced, false);
+check("accepts available official model", [base], 1);
+assert.equal(parsed(base)?.zeroPriced, true);
+assert.equal(parsed(base)?.pricingStatus, "free_verified");
 passed += 1;
-console.log("PASS preserves non-zero token prices and marks model as not free");
+console.log("PASS complete explicit zero rates are verified free");
 
-const zeroPriceModel = { ...base, pricing: { currency: "pollen" } };
-check("accepts genuinely zero-priced model", [zeroPriceModel], 1);
-assert.equal(parsePollinationsAvailableTextModels([zeroPriceModel])[0]?.zeroPriced, true);
+const currencyOnly = { ...base, pricing: { currency: "pollen" } };
+check("keeps currency-only pricing available but unknown-cost", [currencyOnly], 1);
+assert.equal(parsed(currencyOnly)?.zeroPriced, false);
+assert.equal(parsed(currencyOnly)?.pricingStatus, "unknown");
 passed += 1;
-console.log("PASS identifies currency-only pricing as zero-priced only for direct non-agent models");
+console.log("PASS currency-only pricing is never treated as free");
+
+const missingOutput = { ...base, pricing: { currency: "pollen", promptTextTokens: "0" } };
+assert.equal(parsed(missingOutput)?.zeroPriced, false);
+assert.equal(parsed(missingOutput)?.pricingStatus, "unknown");
+passed += 1;
+console.log("PASS missing output rate is unknown");
+
+const paid = { ...base, pricing: { currency: "pollen", promptTextTokens: "0", completionTextTokens: "0.0000003" } };
+assert.equal(parsed(paid)?.zeroPriced, false);
+assert.equal(parsed(paid)?.pricingStatus, "paid");
+passed += 1;
+console.log("PASS any nonzero text rate is paid");
 
 const nanoModel = {
   ...base,
   id: "openai/gpt-5-nano",
   title: "GPT-5 Nano",
-  description: "Label messages or extract names quickly and at low cost for simple, high-volume tasks.",
+  description: "Small text model.",
   pricing: {
     currency: "pollen",
     promptTextTokens: "0.0000000375",
@@ -53,57 +72,34 @@ const nanoModel = {
   tools: true,
   context_length: 400000,
 };
-const parsedNano = parsePollinationsAvailableTextModels([nanoModel])[0];
-assert.equal(parsedNano?.id, "openai/gpt-5-nano");
-assert.equal(parsedNano?.zeroPriced, false);
-assert.equal(parsedNano?.inputPrice, 0.0000000375);
-assert.equal(parsedNano?.outputPrice, 0.0000003);
+assert.equal(parsed(nanoModel)?.id, "openai/gpt-5-nano");
+assert.equal(parsed(nanoModel)?.zeroPriced, false);
+assert.equal(parsed(nanoModel)?.pricingStatus, "paid");
+assert.equal(parsed(nanoModel)?.inputPrice, 0.0000000375);
+assert.equal(parsed(nanoModel)?.outputPrice, 0.0000003);
 passed += 1;
-console.log("PASS GPT-5 Nano is eligible for testing but correctly classified as paid, not free");
+console.log("PASS GPT-5 Nano is discoverable but not falsely labelled free");
 
-check("rejects unknown future billing field from zero-price classification but keeps available model", [{
-  ...base,
-  pricing: { currency: "pollen", futureTokenPrice: "0" },
-}], 1);
-assert.equal(parsePollinationsAvailableTextModels([{
-  ...base,
-  pricing: { currency: "pollen", futureTokenPrice: "0" },
-}])[0]?.zeroPriced, false);
+const unknownField = { ...base, pricing: { ...base.pricing, futureTokenPrice: "0" } };
+assert.equal(parsed(unknownField)?.zeroPriced, false);
 passed += 1;
-console.log("PASS unknown pricing dimensions fail closed for free classification");
+console.log("PASS unknown future billing dimensions fail closed");
 
-check("rejects non-zero pricing variant from free classification but keeps model available", [{
-  ...base,
-  pricing: { currency: "pollen" },
-  pricing_variants: [{ name: "long_context", pricing: { currency: "pollen", promptTextTokens: "0.0000003" } }],
-}], 1);
-assert.equal(parsePollinationsAvailableTextModels([{
-  ...base,
-  pricing: { currency: "pollen" },
-  pricing_variants: [{ name: "long_context", pricing: { currency: "pollen", promptTextTokens: "0.0000003" } }],
-}])[0]?.zeroPriced, false);
+const nonzeroVariant = { ...base, pricing_variants: [{ name: "long_context", pricing: {
+  currency: "pollen", promptTextTokens: "0", completionTextTokens: "0.0000003",
+} }] };
+assert.equal(parsed(nonzeroVariant)?.zeroPriced, false);
 passed += 1;
-console.log("PASS non-zero pricing variants prevent free classification");
+console.log("PASS nonzero pricing variants prevent free classification");
 
-check("rejects non-zero pricing adjustment from free classification but keeps model available", [{
-  ...base,
-  pricing: { currency: "pollen" },
-  pricing_adjustments: [{ name: "search", price: "1", currency: "pollen" }],
-}], 1);
-assert.equal(parsePollinationsAvailableTextModels([{
-  ...base,
-  pricing: { currency: "pollen" },
-  pricing_adjustments: [{ name: "search", price: "1", currency: "pollen" }],
-}])[0]?.zeroPriced, false);
+const nonzeroAdjustment = { ...base, pricing_adjustments: [{ name: "search", price: "1", currency: "pollen" }] };
+assert.equal(parsed(nonzeroAdjustment)?.zeroPriced, false);
 passed += 1;
-console.log("PASS non-zero pricing adjustments prevent free classification");
+console.log("PASS nonzero pricing adjustments prevent free classification");
 
-check("prefers canonical id over legacy name field", [{ ...base, id: "sample/canonical-id" }], 1);
-assert.equal(parsePollinationsAvailableTextModels([{ ...base, id: "sample/canonical-id" }])[0]?.id, "sample/canonical-id");
-passed += 1;
-console.log("PASS preserves canonical model ID");
 check("accepts wrapped data array", { data: [base] }, 1);
-check("excludes billed agent models even when outer listing has no token prices", [{ ...base, pricing: { currency: "pollen" }, agent: true, base_model: "openai/gpt-5-nano" }], 0);\ncheck("rejects paid-only model", [{ ...base, paid_only: true }], 0);
+check("excludes agent models", [{ ...base, agent: true, base_model: "openai/gpt-5-nano" }], 0);
+check("rejects paid-only model", [{ ...base, paid_only: true }], 0);
 check("rejects unhealthy model", [{ ...base, health: { status: "down" } }], 0);
 check("rejects degraded model", [{ ...base, health: { status: "degraded" } }], 0);
 check("rejects unknown health", [{ ...base, health: { status: "unknown" } }], 0);
@@ -117,13 +113,6 @@ check("rejects missing chat-completions support", [{ ...base, supported_endpoint
 check("rejects non-text category", [{ ...base, category: "image" }], 0);
 check("rejects missing text input", [{ ...base, input_modalities: ["image"] }], 0);
 check("rejects missing text output", [{ ...base, output_modalities: ["image"] }], 0);
-check("accepts optional paid search adjustment (not used by plain chat calls)", [{
-  ...base,
-  pricing_adjustments: [{ name: "web search", price: "14", currency: "pollen" }],
-}], 1);
-check("accepts long-context price variant while preserving base price", [{
-  ...base,
-  pricing_variants: [{ name: "long_context", pricing: { currency: "pollen", promptTextTokens: "0.0000003" } }],
-}], 1);
 check("rejects malformed payload", { models: [base] }, 0);
-console.log(`Pollinations catalogue tests: ${passed}/30 passed`);
+
+console.log(`Pollinations catalogue tests: ${passed} assertions passed`);
