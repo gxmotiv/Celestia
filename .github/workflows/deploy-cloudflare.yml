@@ -60,18 +60,6 @@ jobs:
         run: npm install --no-save --package-lock=false --no-audit --no-fund @opennextjs/cloudflare@latest wrangler@latest tsx
       - name: Run Pollinations catalogue schema regression tests
         run: npx tsx scripts/testPollinationsCatalog.ts
-      - name: Pollinations live zero-price inference smoke test
-        # One synthetic prompt, selected only after the authenticated live catalogue proves zero input/output prices.
-        # Continue the build if the provider is temporarily unavailable; the step result remains visible.
-        continue-on-error: true
-        run: |
-          if [ -z "$POLLINATIONS_API_KEY" ]; then
-            echo "SKIP Pollinations live inference smoke test: POLLINATIONS_API_KEY secret is not configured."
-          else
-            npx tsx scripts/benchmarkPollinationsModels.ts --smoke
-          fi
-        env:
-          POLLINATIONS_API_KEY: ${{ secrets.POLLINATIONS_API_KEY }}
       - name: Run the astrology regression suite
         run: npx tsx scripts/testAstrologySuite.ts
       - name: Build the Next.js application
@@ -82,6 +70,30 @@ jobs:
         run: npx opennextjs-cloudflare build --skipNextBuild
       - name: Validate Worker bundle without deploying
         run: npx wrangler deploy --dry-run
+
+  pollinations-live-smoke:
+    name: Pollinations live free-model inference smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Use npm version compatible with the committed lockfile
+        run: npm install --global npm@10.9.9
+      - name: Install locked app dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Install temporary TypeScript runner
+        run: npm install --no-save --package-lock=false --no-audit --no-fund tsx
+      - name: Run one guarded live inference only when the API key is configured
+        run: |
+          if [ -z "$POLLINATIONS_API_KEY" ]; then
+            echo "::notice title=Pollinations smoke test skipped::POLLINATIONS_API_KEY is not configured; no inference request was made."
+            exit 0
+          fi
+          npx tsx scripts/benchmarkPollinationsModels.ts --smoke
+        env:
+          POLLINATIONS_API_KEY: ${{ secrets.POLLINATIONS_API_KEY }}
 
   pollinations-model-benchmark:
     name: Benchmark eligible official Pollinations models (Pollen usage may apply)
