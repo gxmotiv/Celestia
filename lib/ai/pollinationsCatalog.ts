@@ -5,6 +5,7 @@ export interface PollinationsTextModel {
   inputPrice: number | null;
   outputPrice: number | null;
   currency: string | null;
+  zeroPriced: boolean;
   health: string;
   privacyRisk: boolean;
   community: boolean;
@@ -18,6 +19,13 @@ export interface PollinationsTextModel {
 }
 
 type CatalogEntry = Record<string, unknown>;
+const PRICE_FIELDS = new Set([
+  "promptTextTokens", "promptCachedTokens", "promptCacheWriteTokens",
+  "promptAudioTokens", "promptAudioSeconds", "promptImageTokens", "promptVideoTokens",
+  "completionTextTokens", "completionReasoningTokens", "completionAudioTokens",
+  "completionAudioSeconds", "completionImageTokens", "completionVideoSeconds",
+  "completionVideoTokens",
+]);
 let cachedAt = 0;
 let cachedModels: PollinationsTextModel[] = [];
 
@@ -28,6 +36,32 @@ function parsePrice(value: unknown): number | null {
     if (Number.isFinite(parsed) && parsed >= 0) return parsed;
   }
   return null;
+}
+
+function hasZeroPricing(value: unknown): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const pricing = value as Record<string, unknown>;
+  if (pricing.currency !== "pollen") return false;
+  return Object.entries(pricing).every(([field, rawPrice]) =>
+    field === "currency" || (PRICE_FIELDS.has(field) && parsePrice(rawPrice) === 0)
+  );
+}
+
+function isZeroPricedModel(entry: CatalogEntry): boolean {
+  if (!hasZeroPricing(entry.pricing)) return false;
+  if (entry.pricing_variants !== undefined) {
+    if (!Array.isArray(entry.pricing_variants) || !entry.pricing_variants.every((variant) =>
+      Boolean(variant && typeof variant === "object" &&
+        hasZeroPricing((variant as Record<string, unknown>).pricing))
+    )) return false;
+  }
+  if (entry.pricing_adjustments !== undefined) {
+    if (!Array.isArray(entry.pricing_adjustments) || !entry.pricing_adjustments.every((adjustment) =>
+      Boolean(adjustment && typeof adjustment === "object" &&
+        parsePrice((adjustment as Record<string, unknown>).price) === 0)
+    )) return false;
+  }
+  return true;
 }
 
 function isEligibleAvailableTextModel(entry: CatalogEntry, includeManualOnly = false): boolean {
@@ -55,8 +89,9 @@ function isEligibleAvailableTextModel(entry: CatalogEntry, includeManualOnly = f
 
 /**
  * Parses models available to non-paid-only Pollinations API keys.
- * IMPORTANT: paid_only:false does NOT mean zero-price. Per-token Pollen
- * charges are preserved in inputPrice/outputPrice for the UI and benchmark.
+ * IMPORTANT: paid_only=false does NOT mean zero-price. Per-token Pollen
+ * charges are preserved in inputPrice/outputPrice; zeroPriced is strict
+ * across listed token dimensions, pricing variants, and adjustments.
  */
 export function parsePollinationsFreeTextModels(
   payload: unknown,
@@ -87,6 +122,7 @@ export function parsePollinationsFreeTextModels(
         inputPrice: parsePrice(pricing.promptTextTokens),
         outputPrice: parsePrice(pricing.completionTextTokens),
         currency: typeof pricing.currency === "string" ? pricing.currency : null,
+        zeroPriced: isZeroPricedModel(entry),
         health: typeof health.status === "string" ? health.status : "unknown",
         privacyRisk: /retain|retention|used for training|collected for training|data may be collected/i.test(
           typeof entry.description === "string" ? entry.description : "",
@@ -150,8 +186,7 @@ export async function getPollinationsManualOnlyTextModels(): Promise<Pollination
       Number(b.reasoning) - Number(a.reasoning) ||
       (b.contextLength ?? 0) - (a.contextLength ?? 0) ||
       a.name.localeCompare(b.name)
-    )
-;
+    );
 }
 
 export async function isPollinationsFreeTextModel(modelId: string, allowPrivacyRisk = false): Promise<boolean> {
