@@ -53,7 +53,7 @@ async function main() {
       parseFrame(mcpText);
     } catch { /* handled by parseFrame */ }
     if (parsedFrames.length === 0) {
-      for (const line of mcpText.split(/\\r?\\n/)) {
+      for (const line of mcpText.split(/\r?\n/)) {
         if (line.startsWith("data:")) parseFrame(line.slice(5));
       }
     }
