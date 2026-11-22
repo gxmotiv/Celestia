@@ -1,5 +1,5 @@
 import { writeFile } from "node:fs/promises";
-import { parsePollinationsFreeTextModels } from "../lib/ai/pollinationsCatalog";
+import { parsePollinationsAvailableTextModels } from "../lib/ai/pollinationsCatalog";
 
 const apiKey = process.env.POLLINATIONS_API_KEY;
 if (!apiKey) throw new Error("POLLINATIONS_API_KEY GitHub secret is not configured.");
@@ -45,8 +45,8 @@ async function main() {
   if (failed) throw new Error(`Authenticated Pollinations catalogue request failed: HTTP ${failed.status}`);
   const payloads: unknown[] = await Promise.all(responses.map((response) => response.json()));
 
-  const official = parsePollinationsFreeTextModels(payloads[0]);
-  const community = parsePollinationsFreeTextModels(payloads[1], { includeManualOnly: true })
+  const official = parsePollinationsAvailableTextModels(payloads[0]);
+  const community = parsePollinationsAvailableTextModels(payloads[1], { includeManualOnly: true })
     .filter((model) => model.community && !model.privacyRisk);
   const allAvailable = [...official, ...community];
   const nano = official.find((model) => model.id === "openai/gpt-5-nano");
