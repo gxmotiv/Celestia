@@ -63,6 +63,39 @@ async function main() {
   const community = parsePollinationsAvailableTextModels(payloads[1], { includeManualOnly: true })
     .filter((model) => model.community && !model.privacyRisk);
   const allAvailable = [...official, ...community];
+
+  // A single synthetic inference request against a catalogue-verified,
+  // official zero-priced model. This is deliberately separate from the
+  // multi-model benchmark and never opts into paid requests.
+  if (process.argv.includes("--smoke")) {
+    const candidates = official.filter((model) => !model.community && !model.privacyRisk && model.zeroPriced);
+    if (candidates.length === 0) {
+      throw new Error("SKIP/FAIL: no official healthy model with explicitly zero input and output prices is currently available.");
+    }
+    const model = candidates[0];
+    const started = Date.now();
+    const response = await fetch(`${baseUrl}/v1/chat/completions`, {
+      method: "POST",
+      headers: { ...headers, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: model.id,
+        messages: [{ role: "user", content: "Reply exactly with: CELESTIA_POLLINATIONS_SMOKE_OK" }],
+        temperature: 0,
+        max_tokens: 24,
+        stream: false,
+      }),
+      signal: AbortSignal.timeout(45_000),
+    });
+    const latencyMs = Date.now() - started;
+    const raw = await response.text();
+    if (!response.ok) throw new Error(`Pollinations zero-price smoke request failed: HTTP ${response.status}.`);
+    let result: any;
+    try { result = JSON.parse(raw); } catch { throw new Error("Pollinations smoke request returned invalid JSON."); }
+    const answer = result?.choices?.[0]?.message?.content;
+    if (typeof answer !== "string" || !answer.trim()) throw new Error("Pollinations smoke request returned no assistant text.");
+    console.log(`PASS Pollinations live inference: HTTP ${response.status}; official model=${model.id}; catalogue price=input ${model.inputPrice} / output ${model.outputPrice} Pollen per token; latency=${latencyMs}ms; non-empty response received.`);
+    return;
+  }
   const nano = official.find((model) => model.id === "openai/gpt-5-nano");
   if (!nano) {
     throw new Error("Required benchmark model openai/gpt-5-nano is missing from the authenticated official healthy text catalogue; refusing to silently omit the Nano test.");
