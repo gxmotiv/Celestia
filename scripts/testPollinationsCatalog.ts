@@ -35,7 +35,7 @@ const zeroPriceModel = { ...base, pricing: { currency: "pollen" } };
 check("accepts genuinely zero-priced model", [zeroPriceModel], 1);
 assert.equal(parsePollinationsAvailableTextModels([zeroPriceModel])[0]?.zeroPriced, true);
 passed += 1;
-console.log("PASS identifies currency-only catalogue pricing as zero-priced");
+console.log("PASS identifies currency-only pricing as zero-priced only for direct non-agent models");
 
 const nanoModel = {
   ...base,
@@ -103,7 +103,7 @@ assert.equal(parsePollinationsAvailableTextModels([{ ...base, id: "sample/canoni
 passed += 1;
 console.log("PASS preserves canonical model ID");
 check("accepts wrapped data array", { data: [base] }, 1);
-check("rejects paid-only model", [{ ...base, paid_only: true }], 0);
+check("excludes billed agent models even when outer listing has no token prices", [{ ...base, pricing: { currency: "pollen" }, agent: true, base_model: "openai/gpt-5-nano" }], 0);\ncheck("rejects paid-only model", [{ ...base, paid_only: true }], 0);
 check("rejects unhealthy model", [{ ...base, health: { status: "down" } }], 0);
 check("rejects degraded model", [{ ...base, health: { status: "degraded" } }], 0);
 check("rejects unknown health", [{ ...base, health: { status: "unknown" } }], 0);
