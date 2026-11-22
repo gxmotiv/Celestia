@@ -12,14 +12,25 @@ const tasks = [
   {
     id: "angular-reasoning",
     prompt: "A planet is at 15 degrees Aries and another is at 15 degrees Libra. Calculate their smallest angular separation, name the major aspect, and explain the calculation briefly. Do not add other assumptions.",
+    validate: (answer: string) => /180/.test(answer) && /opposition/i.test(answer),
   },
   {
     id: "structured-extraction",
     prompt: 'Extract the following facts and return ONLY valid JSON with keys "date", "time", "location", and "unknowns": "Birth date: 14 February 1995. Birth time: 9:30 AM IST. Birthplace: Jaipur, India. Exact house system: not specified."',
+    validate: (answer: string) => {
+      try {
+        const value = JSON.parse(answer);
+        return ["date", "time", "location", "unknowns"].every((key) => key in value);
+      } catch { return false; }
+    },
   },
   {
     id: "astrology-caution",
     prompt: "A fictional chart has Mars in the 10th house. Give a short traditional-astrology interpretation, then list two things that cannot be concluded from this placement alone. Clearly distinguish symbolic interpretation from verified fact.",
+    validate: (answer: string) => {
+      const caveats = (answer.match(/cannot|can't|cannot be concluded|not enough information|does not prove/gi) ?? []).length;
+      return caveats >= 2 && /symbolic|traditional|astrolog/i.test(answer);
+    },
   },
 ];
 
@@ -28,6 +39,8 @@ type Result = {
   task: string;
   attempt: number;
   status: "ok" | "http_error" | "timeout" | "invalid_response";
+  qualityPass?: boolean;
+  qualityReason?: string;
   httpStatus?: number;
   latencyMs: number;
   responseChars?: number;
@@ -116,8 +129,13 @@ async function main() {
             results.push({ model: model.id, task: task.id, attempt, status: "invalid_response", latencyMs, responseChars: raw.length, error: "Missing choices[0].message.content" });
             continue;
           }
-          results.push({ model: model.id, task: task.id, attempt, status: "ok", httpStatus: response.status, latencyMs, responseChars: answer.length, answer: answer.slice(0, 4000) });
-          console.log(`OK ${model.id} / ${task.id} / attempt ${attempt} / ${latencyMs}ms`);
+          const qualityPass = task.validate(answer);
+          results.push({
+            model: model.id, task: task.id, attempt, status: "ok",
+            qualityPass, qualityReason: qualityPass ? "task-specific structural check passed" : "task-specific structural check failed",
+            httpStatus: response.status, latencyMs, responseChars: answer.length, answer: answer.slice(0, 4000),
+          });
+          console.log(`${qualityPass ? "QUALITY_PASS" : "QUALITY_FAIL"} ${model.id} / ${task.id} / attempt ${attempt} / ${latencyMs}ms`);
         } catch (error) {
           const latencyMs = Date.now() - started;
           const timedOut = error instanceof Error && error.name === "TimeoutError";
@@ -161,6 +179,9 @@ async function main() {
       successfulRequests: ok.length,
       totalRequests: rows.length,
       successRate: rows.length ? Math.round((ok.length / rows.length) * 100) : null,
+      qualityPasses: ok.filter((row) => row.qualityPass === true).length,
+      qualityChecks: ok.length,
+      qualityPassRate: ok.length ? Math.round((ok.filter((row) => row.qualityPass === true).length / ok.length) * 100) : null,
       medianLatencyMs,
     };
   });
