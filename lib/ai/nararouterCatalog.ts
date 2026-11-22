@@ -1,7 +1,7 @@
 /**
  * NaraRouter exposes an authenticated, account-scoped OpenAI-compatible model list.
- * The public pricing page currently identifies Laguna S 2.1 as the sole $0 Free-plan
- * model. Keep this allowlist deliberately narrow: unknown models are never assumed free.
+ * The provider's public Free-plan listing currently names Agnes 2.5 Flash, Laguna S 2.1,
+ * and Nemotron 3.5 Lightning Free. Unknown models are never assumed free.
  */
 export const NARAROUTER_FREE_MODEL_IDS = [
   "agnes-2.5-flash",
