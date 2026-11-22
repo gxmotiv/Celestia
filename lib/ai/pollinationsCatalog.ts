@@ -93,7 +93,7 @@ function isEligibleAvailableTextModel(entry: CatalogEntry, includeManualOnly = f
  * charges are preserved in inputPrice/outputPrice; zeroPriced is strict
  * across listed token dimensions, pricing variants, and adjustments.
  */
-export function parsePollinationsFreeTextModels(
+export function parsePollinationsAvailableTextModels(
   payload: unknown,
   options: { includeManualOnly?: boolean } = {},
 ): PollinationsTextModel[] {
@@ -163,7 +163,7 @@ async function getPollinationsCatalogueModels(): Promise<PollinationsTextModel[]
   const payloads: unknown[] = await Promise.all(responses.map((response) => response.json()));
   const unique = new Map<string, PollinationsTextModel>();
   for (const payload of payloads) {
-    for (const model of parsePollinationsFreeTextModels(payload, { includeManualOnly: true })) {
+    for (const model of parsePollinationsAvailableTextModels(payload, { includeManualOnly: true })) {
       unique.set(model.id, model);
     }
   }
@@ -174,13 +174,13 @@ async function getPollinationsCatalogueModels(): Promise<PollinationsTextModel[]
 
 /** Official models without a description-based data-retention warning. */
 export async function getPollinationsFreeTextModels(): Promise<PollinationsTextModel[]> {
-  return (await getPollinationsCatalogueModels()).filter((model) => !model.community && !model.privacyRisk);
+  return (await getPollinationsCatalogueModels()).filter((model) => !model.community && !model.privacyRisk && model.zeroPriced);
 }
 
 /** Community-hosted models and models with retention warnings are manual-choice only. */
 export async function getPollinationsManualOnlyTextModels(): Promise<PollinationsTextModel[]> {
   return (await getPollinationsCatalogueModels())
-    .filter((model) => model.community || model.privacyRisk)
+    .filter((model) => (model.community || model.privacyRisk) && model.zeroPriced)
     .sort((a, b) =>
       (b.healthSuccessRate ?? -1) - (a.healthSuccessRate ?? -1) ||
       Number(b.reasoning) - Number(a.reasoning) ||
@@ -194,5 +194,5 @@ export async function isPollinationsFreeTextModel(modelId: string, allowPrivacyR
   const models = allowPrivacyRisk
     ? [...await getPollinationsFreeTextModels(), ...await getPollinationsManualOnlyTextModels()]
     : await getPollinationsFreeTextModels();
-  return models.some((model) => model.id === modelId);
+  return models.some((model) => model.id === modelId && model.zeroPriced);
 }
