@@ -62,7 +62,10 @@ jobs:
         run: npx tsx scripts/testPollinationsCatalog.ts
       - name: Run NaraRouter free-plan catalogue tests
         run: npx tsx scripts/testNaraRouterCatalog.ts
-      - name: Check NaraRouter live catalogue (read-only, optional; no generation requests)
+      - name: Check NaraRouter live catalogue (read-only; network diagnostic only)
+        # Provider availability must not prevent local regression/build validation.
+        # This step only performs GET/list_models metadata calls; it never generates.
+        continue-on-error: true
         run: npx tsx scripts/checkNaraRouterLiveCatalog.ts
         env:
           NARAROUTER_API_KEY: ${{ secrets.NARAROUTER_API_KEY }}
@@ -86,7 +89,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      # Match the npm version already proven by the build and deploy jobs.
       - name: Use npm version compatible with the committed lockfile
         run: npm install --global npm@10.9.9
       - name: Install locked app dependencies
