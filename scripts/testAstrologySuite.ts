@@ -2034,8 +2034,9 @@ assertTest(
   "30.1 BaZi Sexagenary Day Anchor",
   "2000-01-01 noon maps to Wu-Wu (cycle index 54)",
   baziDayAnchor20000101.dayPillar.stem.name === "Wu" &&
-    baziDayAnchor20000101.dayPillar.branch.name === "Horse",
-  "Wu-Wu (戊午; index 54)",
+    baziDayAnchor20000101.dayPillar.branch.name === "Wu" &&
+    baziDayAnchor20000101.dayPillar.branch.animal === "Horse",
+  "Stem Wu (戊), branch Wu (午 / Horse; index 54)",
   baziDayAnchor20000101.dayPillar.combinedName
 );
 
