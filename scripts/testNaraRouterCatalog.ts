@@ -6,13 +6,11 @@ const available = parseNaraRouterFreeModels({
   object: "list",
   data: [
     { id: "agnes-2.5-flash", object: "model", owned_by: "bynara" },
-    { id: "laguna-s-2.1", object: "model", owned_by: "bynara" },
-    { id: "nemotron-3.5-lightning-free", object: "model", owned_by: "nvidia" },
     { id: "deepseek-v4-flash", object: "model", owned_by: "deepseek" },
     { id: "claude-haiku-5.5", object: "model", owned_by: "anthropic" },
   ],
 });
-assert.deepEqual(available.map((model) => model.id), ["agnes-2.5-flash", "laguna-s-2.1", "nemotron-3.5-lightning-free"]);
+assert.deepEqual(available.map((model) => model.id), ["agnes-2.5-flash"]);
 assert.equal(available[0].free, true);
 assert.match(available[0].description, /daily quota/i);
 console.log("PASS only provider-published Free-plan models are selectable");
@@ -33,8 +31,9 @@ console.log("PASS malformed catalogues fail closed");
 assert.deepEqual(NARAROUTER_FREE_MODEL_IDS, ["agnes-2.5-flash", "laguna-s-2.1", "nemotron-3.5-lightning-free"]);
 console.log("PASS free-model allowlist is explicit and minimal");
 
-assert.equal(getCelestiaAIModel("nararouter:laguna-s-2.1")?.providerId, "nararouter");
 assert.equal(getCelestiaAIModel("nararouter:agnes-2.5-flash")?.providerModelId, "agnes-2.5-flash");
-assert.equal(isCelestiaAIModelId("nararouter:laguna-s-2.1"), true);
+assert.equal(isCelestiaAIModelId("nararouter:agnes-2.5-flash"), true);
+assert.equal(parseNaraRouterFreeModels({ data: [{ id: "laguna-s-2.1" }, { id: "nemotron-3.5-lightning-free" }] }).length, 0);
+console.log("PASS older/unconfirmed free aliases remain blocked");
 console.log("PASS NaraRouter dynamic aliases are parsed for server-side revalidation");
 console.log("NaraRouter catalogue tests: 12 assertions passed");
