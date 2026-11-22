@@ -62,7 +62,13 @@ export function parseNaraRouterMcpModelIds(payload: unknown): string[] {
     const record = value as Record<string, unknown>;
     if (typeof record.id === "string" && record.id.trim()) ids.add(record.id.trim());
     for (const key of ["models", "data", "content", "structuredContent", "result"]) {
-      if (record[key] !== undefined) visit(record[key], depth + 1);
+      const child = record[key];
+      if (key === "models" && Array.isArray(child)) {
+        for (const model of child) {
+          if (typeof model === "string" && model.trim()) ids.add(model.trim());
+          else visit(model, depth + 1);
+        }
+      } else if (child !== undefined) visit(child, depth + 1);
     }
     if (typeof record.text === "string") {
       const text = record.text.trim();
