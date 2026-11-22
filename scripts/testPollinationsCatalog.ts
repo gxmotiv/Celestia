@@ -27,9 +27,77 @@ function check(name: string, payload: unknown, expectedCount: number, options: {
 check("accepts available official model with non-zero Pollen pricing", [base], 1);
 assert.equal(parsePollinationsFreeTextModels([base])[0]?.inputPrice, 0.00000015);
 assert.equal(parsePollinationsFreeTextModels([base])[0]?.outputPrice, 0.0000009);
+assert.equal(parsePollinationsFreeTextModels([base])[0]?.zeroPriced, false);
 passed += 1;
-console.log("PASS preserves non-zero per-token Pollen prices");
-check("accepts genuinely zero-priced model", [{ ...base, pricing: { currency: "pollen" } }], 1);
+console.log("PASS preserves non-zero token prices and marks model as not free");
+
+const zeroPriceModel = { ...base, pricing: { currency: "pollen" } };
+check("accepts genuinely zero-priced model", [zeroPriceModel], 1);
+assert.equal(parsePollinationsFreeTextModels([zeroPriceModel])[0]?.zeroPriced, true);
+passed += 1;
+console.log("PASS identifies currency-only catalogue pricing as zero-priced");
+
+const nanoModel = {
+  ...base,
+  id: "openai/gpt-5-nano",
+  title: "GPT-5 Nano",
+  description: "Label messages or extract names quickly and at low cost for simple, high-volume tasks.",
+  pricing: {
+    currency: "pollen",
+    promptTextTokens: "0.0000000375",
+    promptCachedTokens: "0.00000000375",
+    completionTextTokens: "0.0000003",
+  },
+  health: { status: "healthy", success_rate: 100, requests: 1227 },
+  reasoning: true,
+  tools: true,
+  context_length: 400000,
+};
+const parsedNano = parsePollinationsFreeTextModels([nanoModel])[0];
+assert.equal(parsedNano?.id, "openai/gpt-5-nano");
+assert.equal(parsedNano?.zeroPriced, false);
+assert.equal(parsedNano?.inputPrice, 0.0000000375);
+assert.equal(parsedNano?.outputPrice, 0.0000003);
+passed += 1;
+console.log("PASS GPT-5 Nano is eligible for testing but correctly classified as paid, not free");
+
+check("rejects unknown future billing field from zero-price classification but keeps available model", [{
+  ...base,
+  pricing: { currency: "pollen", futureTokenPrice: "0" },
+}], 1);
+assert.equal(parsePollinationsFreeTextModels([{
+  ...base,
+  pricing: { currency: "pollen", futureTokenPrice: "0" },
+}])[0]?.zeroPriced, false);
+passed += 1;
+console.log("PASS unknown pricing dimensions fail closed for free classification");
+
+check("rejects non-zero pricing variant from free classification but keeps model available", [{
+  ...base,
+  pricing: { currency: "pollen" },
+  pricing_variants: [{ name: "long_context", pricing: { currency: "pollen", promptTextTokens: "0.0000003" } }],
+}], 1);
+assert.equal(parsePollinationsFreeTextModels([{
+  ...base,
+  pricing: { currency: "pollen" },
+  pricing_variants: [{ name: "long_context", pricing: { currency: "pollen", promptTextTokens: "0.0000003" } }],
+}])[0]?.zeroPriced, false);
+passed += 1;
+console.log("PASS non-zero pricing variants prevent free classification");
+
+check("rejects non-zero pricing adjustment from free classification but keeps model available", [{
+  ...base,
+  pricing: { currency: "pollen" },
+  pricing_adjustments: [{ name: "search", price: "1", currency: "pollen" }],
+}], 1);
+assert.equal(parsePollinationsFreeTextModels([{
+  ...base,
+  pricing: { currency: "pollen" },
+  pricing_adjustments: [{ name: "search", price: "1", currency: "pollen" }],
+}])[0]?.zeroPriced, false);
+passed += 1;
+console.log("PASS non-zero pricing adjustments prevent free classification");
+
 check("prefers canonical id over legacy name field", [{ ...base, id: "sample/canonical-id" }], 1);
 assert.equal(parsePollinationsFreeTextModels([{ ...base, id: "sample/canonical-id" }])[0]?.id, "sample/canonical-id");
 passed += 1;
@@ -58,4 +126,4 @@ check("accepts long-context price variant while preserving base price", [{
   pricing_variants: [{ name: "long_context", pricing: { currency: "pollen", promptTextTokens: "0.0000003" } }],
 }], 1);
 check("rejects malformed payload", { models: [base] }, 0);
-console.log(`Pollinations catalogue tests: ${passed}/21 passed`);
+console.log(`Pollinations catalogue tests: ${passed}/28 passed`);
