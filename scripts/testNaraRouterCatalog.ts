@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { NARAROUTER_FREE_MODEL_IDS, parseNaraRouterFreeModels } from "../lib/ai/nararouterCatalog";
+import { getCelestiaAIModel, isCelestiaAIModelId } from "../lib/ai/modelCatalog";
 
 const available = parseNaraRouterFreeModels({
   object: "list",
@@ -29,4 +30,9 @@ console.log("PASS malformed catalogues fail closed");
 
 assert.deepEqual(NARAROUTER_FREE_MODEL_IDS, ["laguna-s-2.1"]);
 console.log("PASS free-model allowlist is explicit and minimal");
-console.log("NaraRouter catalogue tests: 6 assertions passed");
+
+assert.equal(getCelestiaAIModel("nararouter:laguna-s-2.1")?.providerId, "nararouter");
+assert.equal(getCelestiaAIModel("nararouter:agnes-2.5-flash")?.providerModelId, "agnes-2.5-flash");
+assert.equal(isCelestiaAIModelId("nararouter:laguna-s-2.1"), true);
+console.log("PASS NaraRouter dynamic aliases are parsed for server-side revalidation");
+console.log("NaraRouter catalogue tests: 9 assertions passed");
