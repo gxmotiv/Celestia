@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { NARAROUTER_FREE_MODEL_IDS, parseNaraRouterFreeModels } from "../lib/ai/nararouterCatalog";
+import { NARAROUTER_FREE_MODEL_IDS, parseNaraRouterFreeModels, parseNaraRouterMcpModelIds } from "../lib/ai/nararouterCatalog";
 import { getCelestiaAIModel, isCelestiaAIModelId } from "../lib/ai/modelCatalog";
 
 const available = parseNaraRouterFreeModels({
@@ -30,6 +30,19 @@ console.log("PASS malformed model entries are rejected");
 assert.deepEqual(parseNaraRouterFreeModels(null), []);
 assert.deepEqual(parseNaraRouterFreeModels({ data: "not-an-array" }), []);
 console.log("PASS malformed catalogues fail closed");
+
+assert.deepEqual(
+  parseNaraRouterMcpModelIds({ jsonrpc: "2.0", result: { content: [{ type: "text", text: JSON.stringify({ models: [{ id: "agnes-2.5-flash" }, { id: "deepseek-v4-flash" }] }) }] } }),
+  ["agnes-2.5-flash", "deepseek-v4-flash"],
+);
+console.log("PASS MCP JSON-RPC text-wrapped catalogue is parsed");
+
+assert.deepEqual(
+  parseNaraRouterMcpModelIds({ result: { structuredContent: { models: ["agnes-2.5-flash", "laguna-s-2.1"] } } }),
+  [],
+);
+console.log("PASS MCP model strings are not confused with verified Free-plan eligibility");
+
 
 assert.deepEqual(NARAROUTER_FREE_MODEL_IDS, ["agnes-2.5-flash"]);
 console.log("PASS current Free-plan allowlist is explicit and minimal");
