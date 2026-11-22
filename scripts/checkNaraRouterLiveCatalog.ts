@@ -71,7 +71,7 @@ async function main() {
 
   if (models.length === 0) {
     console.warn("WARN API authentication succeeded, but none of the returned IDs match Celestia's current Free-plan allowlist.");
-    console.warn("Do not select a paid model to work around this. NaraRouter says Free-model access requires Telegram linking; verify Telegram is linked and the Free plan is active in the dashboard. PAYG/Overages can expose paid models in /v1/models.");
+    console.warn("If the account's Free plan is active and Telegram is linked, contact NaraRouter support: the public Free plan lists Agnes 2.5 Flash, but this key's /v1/models response exposes a broader catalogue. Do not select a paid model to work around this.");
   } else {
     console.log(`PASS ${models.length} allowlisted Free-plan model(s) are available: ${models.map((model) => model.id).join(", ")}`);
   }
