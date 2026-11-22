@@ -39,7 +39,7 @@ async function main() {
   const headers = { Accept: "application/json", Authorization: `Bearer ${apiKey}` };
   const sources = ["official", "community"] as const;
   const responses = await Promise.all(sources.map((source) => fetch(
-    `${baseUrl}/text/models?source=${source}&reliability=reliable&limit=500`,
+    `${baseUrl}/text/models?source=${source}&reliability=reliable&agent=false&limit=500`,
     { headers, signal: AbortSignal.timeout(20_000) },
   )));
   const failed = responses.find((response) => !response.ok);
