@@ -10,6 +10,9 @@
   "ai": {
     "binding": "AI"
   },
+  "vars": {
+    "CLOUDFLARE_WORKERS_AI_FREE_PLAN_CONFIRMED": "true"
+  },
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
