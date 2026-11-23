@@ -57,6 +57,8 @@ jobs:
         run: npx tsx scripts/testPollinationsCatalog.ts
       - name: Run the astrology regression suite
         run: npx tsx scripts/testAstrologySuite.ts
+      - name: Run Western civil-time regression tests
+        run: npx tsx scripts/testWesternCivilTime.ts
       - name: Build the Next.js application
         run: npm run build
         env:

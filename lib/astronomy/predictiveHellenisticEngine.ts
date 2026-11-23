@@ -23,8 +23,12 @@ import { swissEphemeris } from "./swissEphemeris";
 // ---------------------------------------------------------------------------
 
 export interface MoonSignChangeEvent {
+  /** Completed chronological age at the ingress. */
   age: number;
+  /** UTC calendar year containing the mapped chronological ingress date. */
   year: number;
+  /** Exact mapped chronological ingress instant, in ISO-8601 UTC. */
+  eventDate: string;
   fromSign: string;
   toSign: string;
   interpretation: string;
@@ -51,12 +55,18 @@ export class ProgressionsEngine {
     birthDate: Date,
     currentDate: Date,
     lat: number,
-    lon: number,
-    timezoneOffset: number
+    lon: number
   ): ProgressedChartResult {
+    if (!Number.isFinite(birthDate.getTime()) || !Number.isFinite(currentDate.getTime())) {
+      throw new RangeError("Progressions require valid birth and current dates.");
+    }
+    if (currentDate.getTime() < birthDate.getTime()) {
+      throw new RangeError("The current date cannot be earlier than the birth date.");
+    }
+
     const diffMs = currentDate.getTime() - birthDate.getTime();
     const ageYears = diffMs / (365.2422 * 86400000);
-    const age = Math.max(0, Math.floor(ageYears));
+    const age = Math.floor(ageYears);
 
     // Secondary progression: 1 day after birth = 1 year of life
     const progressedTimeMs = birthDate.getTime() + ageYears * 86400000;
@@ -105,33 +115,66 @@ export class ProgressionsEngine {
       phaseInterp = "Incubation and surrender: resting before the next cyclical rebirth.";
     }
 
-    // Moon changes signs roughly every 2.3 to 2.5 years
+    // One progressed day represents one chronological year. Search each
+    // progressed-day interval to the first minute in the new sign, then map
+    // that fractional progressed day back to its chronological ingress date.
     const moonSignChanges: MoonSignChangeEvent[] = [];
-    const currentYear = currentDate.getFullYear();
+    const DAY_MS = 86400000;
+    const YEAR_DAYS = 365.2422;
 
     for (let delta = -2; delta <= 10; delta++) {
       const checkAge = age + delta;
-      const checkTimeMs = birthDate.getTime() + checkAge * 86400000;
-      const nextTimeMs = birthDate.getTime() + (checkAge + 1) * 86400000;
+      if (checkAge < 0) continue;
 
-      const d1 = new Date(checkTimeMs);
-      const d2 = new Date(nextTimeMs);
+      const progressedStartMs = birthDate.getTime() + checkAge * DAY_MS;
+      const startDate = new Date(progressedStartMs);
+      const startJd = swissEphemeris.calculateJulianDay(
+        startDate.getUTCFullYear(), startDate.getUTCMonth() + 1,
+        startDate.getUTCDate(), startDate.getUTCHours(), startDate.getUTCMinutes()
+      );
+      const startMoon = swissEphemeris.calculatePlanetPosition(swissEphemeris.MOON, startJd);
 
-      const jd1 = swissEphemeris.calculateJulianDay(d1.getUTCFullYear(), d1.getUTCMonth() + 1, d1.getUTCDate(), d1.getUTCHours(), d1.getUTCMinutes());
-      const jd2 = swissEphemeris.calculateJulianDay(d2.getUTCFullYear(), d2.getUTCMonth() + 1, d2.getUTCDate(), d2.getUTCHours(), d2.getUTCMinutes());
+      const endDate = new Date(progressedStartMs + DAY_MS);
+      const endJd = swissEphemeris.calculateJulianDay(
+        endDate.getUTCFullYear(), endDate.getUTCMonth() + 1,
+        endDate.getUTCDate(), endDate.getUTCHours(), endDate.getUTCMinutes()
+      );
+      const endMoon = swissEphemeris.calculatePlanetPosition(swissEphemeris.MOON, endJd);
+      if (startMoon.sign === endMoon.sign) continue;
 
-      const moonPos1 = swissEphemeris.calculatePlanetPosition(swissEphemeris.MOON, jd1);
-      const moonPos2 = swissEphemeris.calculatePlanetPosition(swissEphemeris.MOON, jd2);
-
-      if (moonPos1.sign !== moonPos2.sign) {
-        moonSignChanges.push({
-          age: checkAge,
-          year: currentYear + delta,
-          fromSign: moonPos1.sign,
-          toSign: moonPos2.sign,
-          interpretation: `Progressed Moon shifts into ${moonPos2.sign}: A 2.5-year chapter focusing emotional focus, lifestyle habits, and instincts into ${moonPos2.sign} themes.`,
-        });
+      // The Moon advances less than 30° in a day, so this interval can contain
+      // at most one zodiac-sign boundary. Resolve it to the first minute in
+      // which the ephemeris reports the destination sign.
+      let lowMinute = 0;
+      let highMinute = 1440;
+      while (highMinute - lowMinute > 1) {
+        const midMinute = Math.floor((lowMinute + highMinute) / 2);
+        const probeDate = new Date(progressedStartMs + midMinute * 60000);
+        const probeJd = swissEphemeris.calculateJulianDay(
+          probeDate.getUTCFullYear(), probeDate.getUTCMonth() + 1,
+          probeDate.getUTCDate(), probeDate.getUTCHours(), probeDate.getUTCMinutes()
+        );
+        const probeMoon = swissEphemeris.calculatePlanetPosition(swissEphemeris.MOON, probeJd);
+        if (probeMoon.sign === startMoon.sign) lowMinute = midMinute;
+        else highMinute = midMinute;
       }
+
+      const progressedIngressMs = progressedStartMs + highMinute * 60000;
+      const chronologicalIngressMs = birthDate.getTime() +
+        ((progressedIngressMs - birthDate.getTime()) / DAY_MS) * YEAR_DAYS * DAY_MS;
+      const chronologicalIngress = new Date(chronologicalIngressMs);
+
+      // Do not report events beyond the requested current date.
+      if (chronologicalIngressMs > currentDate.getTime()) continue;
+
+      moonSignChanges.push({
+        age: Math.floor((chronologicalIngressMs - birthDate.getTime()) / (YEAR_DAYS * DAY_MS)),
+        year: chronologicalIngress.getUTCFullYear(),
+        eventDate: chronologicalIngress.toISOString(),
+        fromSign: startMoon.sign,
+        toSign: endMoon.sign,
+        interpretation: `Progressed Moon shifts into ${endMoon.sign}: A 2.5-year chapter focusing emotional focus, lifestyle habits, and instincts into ${endMoon.sign} themes.`,
+      });
     }
 
     return {

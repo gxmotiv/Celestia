@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { localCivilDateTimeToUtc } from "@/lib/astronomy/civilTime";
 import {
   WesternChartData,
   PlanetPosition,
@@ -125,12 +126,11 @@ export function AdvancedWesternPanel({
     return declinationCalc.calculateAll(chartData.planets, chartData.obliquity);
   }, [declinationCalc, chartData.planets, chartData.obliquity]);
 
-  // Birth Date Object
+  // Convert the entered local civil time to its UTC instant before age/progression math.
+  // The current form supplies a fixed numeric offset; historical IANA/DST resolution is not implied.
   const birthDateObj = useMemo(() => {
-    const [y, m, d] = birthDateStr.split("-").map(Number);
-    const [h, min] = birthTimeStr.split(":").map(Number);
-    return new Date(Date.UTC(y || 1990, (m || 1) - 1, d || 1, h || 12, min || 0));
-  }, [birthDateStr, birthTimeStr]);
+    return localCivilDateTimeToUtc(birthDateStr, birthTimeStr, timezoneOffset);
+  }, [birthDateStr, birthTimeStr, timezoneOffset]);
 
   const nowObj = useMemo(() => new Date(), []);
   const currentAgeYears = useMemo(() => {
@@ -141,8 +141,8 @@ export function AdvancedWesternPanel({
   // Secondary Progressions
   const progEngine = useMemo(() => new ProgressionsEngine(), []);
   const progressionsReport: ProgressedChartResult = useMemo(() => {
-    return progEngine.calculateProgressions(birthDateObj, nowObj, latitude, longitude, timezoneOffset);
-  }, [progEngine, birthDateObj, nowObj, latitude, longitude, timezoneOffset]);
+    return progEngine.calculateProgressions(birthDateObj, nowObj, latitude, longitude);
+  }, [progEngine, birthDateObj, nowObj, latitude, longitude]);
 
   // Hellenistic Profections
   const profEngine = useMemo(() => new ProfectionsEngine(), []);
@@ -687,7 +687,7 @@ export function AdvancedWesternPanel({
                 <div key={i} className="p-2.5 bg-slate-900/60 border border-slate-800/80 rounded-lg text-xs flex items-center justify-between gap-3">
                   <div className="space-y-0.5">
                     <span className="font-semibold text-slate-200">
-                      Year {c.year} (Age {c.age}): {c.fromSign} → <strong className="text-amber-300">{c.toSign}</strong>
+                      Ingress {c.eventDate.slice(0, 10)} · Age {c.age}: {c.fromSign} → <strong className="text-amber-300">{c.toSign}</strong>
                     </span>
                     <p className="text-[11px] text-slate-400">{c.interpretation}</p>
                   </div>
