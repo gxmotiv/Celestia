@@ -135,6 +135,8 @@ async function generateWithOpenRouter(
   model: string,
   options: { systemPrompt: string; userPrompt: string; maxOutputTokens: number; temperature: number },
 ): Promise<CelestiaAIResult> {
+  const eligibleFreeModels = await getOpenRouterFreeModels(apiKey);
+  if (eligibleFreeModels.length === 0) throw new Error("OpenRouter has no currently verified zero-priced free model.");
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -161,8 +163,7 @@ async function generateWithOpenRouter(
     error.status = response.status;
     throw error;
   }
-  const catalogue = await getOpenRouterFreeModels(apiKey);
-  const validation = validateOpenRouterFreeResponse(body, catalogue.map((candidate) => candidate.id));
+  const validation = validateOpenRouterFreeResponse(body, eligibleFreeModels.map((candidate) => candidate.id));
   if (!validation.valid) throw new Error(`OpenRouter free-router response validation failed: ${validation.reason}`);
   return { text: validation.answer.trim(), provider: "openrouter", model: validation.model, usage: readUsage(body?.usage) };
 }
