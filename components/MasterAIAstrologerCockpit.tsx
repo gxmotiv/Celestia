@@ -6,6 +6,7 @@ import { WesternChartData } from "@/lib/astronomy/ephemeris";
 import { NumerologyProfile } from "@/lib/astronomy/numerology";
 import { BaZiProfile } from "@/lib/astronomy/chinese";
 import { CompleteDashaOrchestrator, AllDashaSystems } from "@/lib/vedic/completeDashaSystems";
+import { getVerifiedDashaInputs } from "@/lib/ai/oracleDataGuards";
 import {
   Sparkles,
   MessageSquare,
@@ -35,6 +36,7 @@ interface MasterAIAstrologerCockpitProps {
   baziData?: BaZiProfile;
   birthDate: string;
   birthTime: string;
+  timezoneOffset?: number;
   cityName?: string;
   country?: string;
   fullName?: string;
@@ -43,6 +45,9 @@ interface MasterAIAstrologerCockpitProps {
   activeDashas?: any[];
   onClose?: () => void;
   selectedModel?: string;
+  privacyRiskAcknowledged?: boolean;
+  externalDataConsent?: boolean;
+  onExternalDataConsentChange?: (value: boolean) => void;
 }
 
 interface ChatMessage {
@@ -54,6 +59,7 @@ interface ChatMessage {
   provider?: string;
   model?: string;
   usageTokens?: number;
+  error?: boolean;
 }
 
 const PLANETARY_REMEDIES: Record<
@@ -198,6 +204,7 @@ export function MasterAIAstrologerCockpit({
   baziData,
   birthDate,
   birthTime,
+  timezoneOffset,
   cityName = "City of Birth",
   country = "Earth",
   fullName,
@@ -206,87 +213,76 @@ export function MasterAIAstrologerCockpit({
   activeDashas,
   onClose,
   selectedModel,
+  privacyRiskAcknowledged = false,
+  externalDataConsent = false,
+  onExternalDataConsentChange,
 }: MasterAIAstrologerCockpitProps) {
   const effectiveName = fullName || seekerName || "Seeker";
+  const [localExternalDataConsent, setLocalExternalDataConsent] = useState(false);
+  const effectiveExternalDataConsent = onExternalDataConsentChange ? externalDataConsent : localExternalDataConsent;
   // Master Orchestrator for real-time 10-Dasha convergence
   const orchestrator = useMemo(() => new CompleteDashaOrchestrator(), []);
 
-  const dashaSystems = useMemo<AllDashaSystems>(() => {
-    const [yStr, mStr, dStr] = birthDate.split("-");
-    const [hStr, minStr] = birthTime.split(":");
-    const birthDateObj = new Date(
-      Date.UTC(
-        parseInt(yStr, 10) || 1990,
-        (parseInt(mStr, 10) || 1) - 1,
-        parseInt(dStr, 10) || 1,
-        parseInt(hStr, 10) || 12,
-        parseInt(minStr, 10) || 0
-      )
-    );
-
-    const moonPlanet = vedicData.planets.find((p) => p.name === "Moon") || {
-      siderealLongitude: 180,
-      nakshatraIndex: 13,
-      rasiName: "Libra",
-      rasiDegree: 10,
-    };
+  const dashaSystems = useMemo<AllDashaSystems | null>(() => {
+    const moonPlanet = vedicData.planets.find((planet) => planet.name === "Moon");
+    const verifiedInputs = getVerifiedDashaInputs({
+      birthDate,
+      birthTime,
+      ascendantSign: vedicData.lagna?.rasiName,
+      moonLongitude: moonPlanet?.siderealLongitude,
+      nakshatraIndex: moonPlanet?.nakshatraIndex,
+      timezoneOffsetHours: timezoneOffset,
+    });
+    if (!verifiedInputs) return null;
 
     const planetsInSigns: Record<string, string> = {};
-    vedicData.planets.forEach((p) => {
-      planetsInSigns[p.rasiName] = p.name;
+    vedicData.planets.forEach((planet) => {
+      if (planet.rasiName && planet.name) planetsInSigns[planet.rasiName] = planet.name;
     });
-
-    const currentMD =
-      vedicData.vimshottariDashas.find((d) => d.isCurrent) ||
-      vedicData.vimshottariDashas[0];
-    const currentAD =
-      currentMD?.subPeriods?.find((s) => s.isCurrent) ||
-      currentMD?.subPeriods?.[0];
-
-    const moonNakshatra1Indexed = (moonPlanet.nakshatraIndex ?? 13) + 1;
-    const moonDegreeInNakshatra = (moonPlanet.siderealLongitude || 180) % (360 / 27);
 
     return orchestrator.generateAllDashas({
-      birthDate: birthDateObj,
+      ...verifiedInputs,
       referenceDate: new Date(),
-      moonLongitude: moonPlanet.siderealLongitude || 180,
-      moonNakshatra1Indexed,
-      moonDegreeInNakshatra,
-      ascendantSign: vedicData.lagna.rasiName,
       planetsInSigns,
     });
-  }, [vedicData, birthDate, birthTime, orchestrator]);
+  }, [vedicData, birthDate, birthTime, timezoneOffset, orchestrator]);
 
   // Active Mahadasha and Antardasha
   const currentMD = useMemo(() => {
-    return (
-      vedicData.vimshottariDashas.find((d) => d.isCurrent) ||
-      vedicData.vimshottariDashas[0]
-    );
+    return vedicData.vimshottariDashas.find((d) => d.isCurrent);
   }, [vedicData]);
 
   const currentAD = useMemo(() => {
-    return (
-      currentMD?.subPeriods?.find((s) => s.isCurrent) ||
-      currentMD?.subPeriods?.[0]
-    );
+    return currentMD?.subPeriods?.find((s) => s.isCurrent);
   }, [currentMD]);
 
   // Active remedy profile based on Mahadasha lord
-  const activeRemedyLord = currentMD?.planet || "Jupiter";
-  const activeRemedy = PLANETARY_REMEDIES[activeRemedyLord] || PLANETARY_REMEDIES["Jupiter"];
+  const activeRemedyLord = currentMD?.planet ?? "not supplied";
+  const activeRemedy = PLANETARY_REMEDIES[activeRemedyLord] ?? {
+    gem: "Not available — no verified Mahadasha lord",
+    subGem: "Not available",
+    metal: "Not available",
+    finger: "Not available",
+    beejaMantra: "Not available",
+    sanskritMantra: "Not available",
+    recitations: 0,
+    charity: "Not available",
+    fastingDay: "Not available",
+    rudraksha: "Not available",
+    deity: "Not available",
+  };
 
   // Chat consultation state
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
     {
       id: "initial-welcome",
       sender: "oracle",
-      text: `Namaste, revered ${effectiveName}. I am **Acharya Celestia**, your Master Esoteric Astrologer and Celestial Synthesizer. 
+      text: `Namaste. I am **Acharya Celestia**, your multi-tradition astrology research assistant.
 
-I am currently reading your **10-System Classical Dasha convergence** synchronized with your **${vedicData.lagna.rasiName} Ascendant**, **${vedicData.birthNakshatra} Nakshatra** (Lord: **${vedicData.birthNakshatraLord}**), and the active **${currentMD?.planet || "Jupiter"} Mahadasha** / **${currentAD?.planet || "Saturn"} Antardasha**.
+I can interpret the chart values supplied by Celestia. Verified Ascendant: **${vedicData.lagna?.rasiName ?? "not supplied"}**; Nakshatra: **${vedicData.birthNakshatra ?? "not supplied"}**; current Mahadasha: **${currentMD?.planet ?? "not available"}**; Antardasha: **${currentAD?.planet ?? "not available"}**. The 10-Dasha comparison is ${dashaSystems ? "available from validated inputs" : "unavailable because one or more required birth/chart inputs are missing"}.
 
-Ask me any specific inquiry regarding your predictive timing, career milestones, relationship fruition, or sacred Vedic remedies.`,
-      timestamp: "Live Oracle Synchronized",
+Ask a specific question. Missing chart facts will remain marked as unavailable rather than being guessed.`,
+      timestamp: "Ready",
     },
   ]);
 
@@ -308,6 +304,37 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
     const textToSend = queryText || inputQuery;
     if (!textToSend.trim() || isConsulting) return;
 
+    if (!effectiveExternalDataConsent) {
+      const warning: ChatMessage = {
+        id: "oracle-data-consent-" + Date.now(),
+        sender: "oracle",
+        text: "Please acknowledge the chart-data sharing notice above before sending this question to the selected AI provider.",
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        isAiGenerated: false,
+        provider: "consent",
+        error: true,
+      };
+      setMessages((prev) => [...prev, warning]);
+      return;
+    }
+
+    const manualOnlyPollinationsModel =
+      selectedModel === "pollinations:stealth/glyph-cluster" ||
+      Boolean(selectedModel?.startsWith("pollinations:community/"));
+    if (manualOnlyPollinationsModel && !privacyRiskAcknowledged) {
+      const warning: ChatMessage = {
+        id: "oracle-privacy-warning-" + Date.now(),
+        sender: "oracle",
+        text: "This Pollinations model is published by a community provider or carries a data-handling warning. Review the provider-risk notice and explicitly acknowledge it in the model selector before sending chart data.",
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        isAiGenerated: false,
+        provider: "error",
+        error: true,
+      };
+      setMessages((prev) => [...prev, warning]);
+      return;
+    }
+
     const userMsg: ChatMessage = {
       id: "user-" + Date.now(),
       sender: "user",
@@ -322,13 +349,10 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
     try {
       const sun = westernData?.planets.find((p) => p.name === "Sun");
       const moon = westernData?.planets.find((p) => p.name === "Moon");
-
       const payload = {
         model: selectedModel,
-        seekerName: effectiveName,
-        birthDate,
-        birthTime,
-        location: `${cityName}, ${country}`,
+        allowPrivacyRiskModel: privacyRiskAcknowledged,
+        externalDataConsent: effectiveExternalDataConsent,
         query: textToSend,
         conversationHistory: messages.slice(-4).map((m) => ({
           sender: m.sender,
@@ -336,10 +360,10 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
         })),
         context: {
           western: {
-            sunSign: sun?.sign || "Aries",
-            moonSign: moon?.sign || "Taurus",
-            ascendantSign: westernData?.ascendant.sign || "Aries",
-            midheavenSign: westernData?.midheaven.sign || "Capricorn",
+            sunSign: sun?.sign ?? "not supplied",
+            moonSign: moon?.sign ?? "not supplied",
+            ascendantSign: westernData?.ascendant?.sign ?? "not supplied",
+            midheavenSign: westernData?.midheaven?.sign ?? "not supplied",
             majorAspects: westernData?.aspects.slice(0, 5).map((a) => `${a.planet1} ${a.aspectName} ${a.planet2}`),
           },
           vedic: {
@@ -348,29 +372,31 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
             nakshatra: vedicData.birthNakshatra,
             pada: vedicData.birthPada,
             nakshatraLord: vedicData.birthNakshatraLord,
-            activeMahadasha: currentMD?.planet || "Jupiter",
-            activeAntardasha: currentAD?.planet || "Saturn",
+            activeMahadasha: currentMD?.planet ?? "not supplied",
+            activeAntardasha: currentAD?.planet ?? "not supplied",
             yogas: vedicData.yogas.map((y) => y.name),
-            sadeSatiStatus: "Standard Transit",
+            sadeSatiStatus: "not supplied",
           },
-          dashaConvergence: {
+          dashaConvergence: dashaSystems ? {
             activeSystemsCount: dashaSystems.convergence.length,
-            dominantTone: dashaSystems.convergence[0]?.tone || "positive",
+            dominantTone: dashaSystems.convergence[0]?.tone ?? "not supplied",
             systemSummaries: dashaSystems.convergence.map((p) => ({
               system: p.system,
               lord: p.lordOrSign,
               tone: p.tone,
             })),
+          } : {
+            status: "not supplied: valid birth date/time, Vedic Lagna and Vedic Moon longitude are required",
           },
           numerology: {
-            lifePath: numerologyData?.lifePathNumber || 1,
-            expression: numerologyData?.expressionNumber || 1,
-            personalYear: numerologyData?.personalYearNumber || 1,
+            lifePath: numerologyData?.lifePathNumber ?? "not supplied",
+            expression: numerologyData?.expressionNumber ?? "not supplied",
+            personalYear: numerologyData?.personalYearNumber ?? "not supplied",
           },
           bazi: {
-            zodiacAnimal: baziData?.zodiacAnimal || "Dragon",
-            dayMaster: baziData?.dayMaster.symbol || "Jia",
-            dominantElement: baziData?.dayMaster.stem?.element || "Wood",
+            zodiacAnimal: baziData?.zodiacAnimal ?? "not supplied",
+            dayMaster: baziData?.dayMaster?.symbol ?? "not supplied",
+            dominantElement: baziData?.dayMaster?.stem?.element ?? "not supplied",
           },
         },
       };
@@ -379,10 +405,27 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(75_000),
       });
 
-      const data = await res.json();
-      const reply = data.reply || "The stars illuminate your path. Focus on grounding your current planetary energies.";
+      const responseText = await res.text();
+      let data: Record<string, any> = {};
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        throw new Error(`Celestia returned a non-JSON response (HTTP ${res.status}). The Worker may have timed out or returned an infrastructure error.`);
+      }
+      if (!res.ok) {
+        const providerLabel = typeof data.provider === "string" ? data.provider : selectedModel?.split(":")[0];
+        const errorCode = typeof data.code === "string" ? data.code : "";
+        const detail = typeof data.error === "string" ? data.error : `AI provider request failed (HTTP ${res.status}).`;
+        throw new Error([detail, providerLabel ? `Provider: ${providerLabel}` : "", errorCode ? `Code: ${errorCode}` : "", `HTTP: ${res.status}`].filter(Boolean).join("\n"));
+      }
+      const reply = typeof data.reply === "string" ? data.reply.trim() : "";
+      if (data.success !== true || !reply) {
+        const errorCode = typeof data.code === "string" ? data.code : "EMPTY_ASSISTANT_REPLY";
+        throw new Error(`The selected AI provider returned no assistant reply. Code: ${errorCode}`);
+      }
 
       const oracleMsg: ChatMessage = {
         id: "oracle-" + Date.now(),
@@ -397,16 +440,22 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
 
       setMessages((prev) => [...prev, oracleMsg]);
     } catch (err) {
-      console.error("Master Oracle consultation failed:", err);
-      const fallbackMsg: ChatMessage = {
-        id: "oracle-" + Date.now(),
+      console.error("Master Oracle provider request failed:", err);
+      const failureMessage = err instanceof Error ? err.message : "The AI provider could not complete this request.";
+      const errorMsg: ChatMessage = {
+        id: "oracle-error-" + Date.now(),
         sender: "oracle",
-        text: `### Guidance from Acharya Celestia
-In reviewing your chart, your active **${currentMD?.planet || "Jupiter"} Mahadasha** and **${currentAD?.planet || "Saturn"} Antardasha** demand mindful discipline. Propitiate your active Dasha lord by chanting **${activeRemedy.beejaMantra}** 108 times daily and offering charitable daan of **${activeRemedy.charity}** on ${activeRemedy.fastingDay}s.`,
+        text: `### AI provider could not answer
+
+${failureMessage}
+
+No alternative provider or locally generated astrology advice was substituted. Check the selected provider's configuration, model availability and free quota before retrying.`,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         isAiGenerated: false,
+        provider: "error",
+        error: true,
       };
-      setMessages((prev) => [...prev, fallbackMsg]);
+      setMessages((prev) => [...prev, errorMsg]);
     } finally {
       setIsConsulting(false);
     }
@@ -436,6 +485,20 @@ In reviewing your chart, your active **${currentMD?.planet || "Jupiter"} Mahadas
 
   return (
     <div className="space-y-5">
+      {!onExternalDataConsentChange ? (
+        <label className="flex items-start gap-2 rounded-xl border border-sky-500/30 bg-sky-500/5 p-3 text-xs text-sky-100">
+          <input
+            type="checkbox"
+            checked={localExternalDataConsent}
+            onChange={(event) => setLocalExternalDataConsent(event.target.checked)}
+            className="mt-0.5 accent-sky-500"
+          />
+          <span>
+            <strong className="block mb-1">Consent to send chart context to the selected AI provider</strong>
+            Your question, selected chart placements/calculated values, and recent chat context are sent to the provider. Celestia does not automatically attach your profile name, birth date/time, birthplace, or coordinates. Anything you type into the chat may still contain personal information. Provider terms and data handling apply. Do not include confidential information.
+          </span>
+        </label>
+      ) : null}
       {/* 1. Grand Master Oracle Banner */}
       <div className="p-5 md:p-6 bg-gradient-to-br from-slate-950 via-slate-900 to-amber-950/30 border border-amber-500/40 rounded-2xl shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
@@ -452,7 +515,7 @@ In reviewing your chart, your active **${currentMD?.planet || "Jupiter"} Mahadas
                 </span>
                 <span className="text-[11px] text-emerald-400 font-mono flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  Live 10-Dasha Engine Active
+                  {dashaSystems ? "${dashaSystems.convergence.length}/10 current periods identified" : "10-Dasha Inputs Incomplete"}
                 </span>
               </div>
               <h2 className="text-xl md:text-2xl font-serif-celestial font-bold text-slate-100 mt-1">
@@ -469,19 +532,19 @@ In reviewing your chart, your active **${currentMD?.planet || "Jupiter"} Mahadas
             <div className="px-3 py-1.5 rounded-xl bg-slate-950/80 border border-amber-500/30">
               <span className="text-[10px] text-slate-400 block uppercase font-mono">Active Sovereign</span>
               <span className="text-amber-300 font-bold font-serif-celestial">
-                {currentMD?.planet} Mahadasha
+                {currentMD?.planet ?? "Not available"} Mahadasha
               </span>
             </div>
             <div className="px-3 py-1.5 rounded-xl bg-slate-950/80 border border-slate-800">
               <span className="text-[10px] text-slate-400 block uppercase font-mono">Immediate Fruition</span>
               <span className="text-slate-200 font-bold font-serif-celestial">
-                {currentAD?.planet} Antardasha
+                {currentAD?.planet ?? "Not available"} Antardasha
               </span>
             </div>
             <div className="px-3 py-1.5 rounded-xl bg-slate-950/80 border border-emerald-500/30">
               <span className="text-[10px] text-slate-400 block uppercase font-mono">Convergence Tone</span>
               <span className="text-emerald-300 font-bold font-serif-celestial capitalize">
-                {dashaSystems.convergence[0]?.tone || "Auspicious"}
+                {dashaSystems?.convergence[0]?.tone ?? "Unavailable"}
               </span>
             </div>
           </div>
@@ -602,9 +665,10 @@ In reviewing your chart, your active **${currentMD?.planet || "Jupiter"} Mahadas
                       <span>{m.sender === "user" ? effectiveName : "Acharya Celestia"}</span>
                       <span>·</span>
                       <span>{m.timestamp}</span>
+                      {m.error && <span className="px-1 py-0.2 rounded bg-red-500/20 text-red-300 text-[9px]">Provider error</span>}
                       {m.isAiGenerated && (
                         <span className="px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[9px]">
-                          {m.provider === "pollinations" ? "Pollinations" : m.provider === "freemodel" ? "FreeModel" : m.provider === "nararouter" ? "NaraRouter" : m.provider === "local-fallback" ? "Local fallback" : "Unknown provider"}
+                          {m.provider === "pollinations" ? "Pollinations" : m.provider === "freemodel" ? "FreeModel" : m.provider === "nararouter" ? "NaraRouter" : m.provider === "openrouter" ? "OpenRouter" : m.provider === "groq" ? "Groq" : m.provider === "cloudflare-workers-ai" ? "Cloudflare Workers AI" : "Unknown provider"}
                           {m.model ? ` · ${m.model}` : ""}
                           {m.usageTokens !== undefined ? ` · ${m.usageTokens.toLocaleString()} tokens` : ""}
                         </span>
@@ -613,9 +677,11 @@ In reviewing your chart, your active **${currentMD?.planet || "Jupiter"} Mahadas
 
                     <div
                       className={`p-4 rounded-2xl max-w-[92%] sm:max-w-[85%] text-xs md:text-sm leading-relaxed space-y-2 ${
-                        m.sender === "user"
-                          ? "bg-amber-500/20 text-amber-100 border border-amber-500/30 rounded-tr-none"
-                          : "bg-slate-900/90 text-slate-200 border border-slate-800 rounded-tl-none shadow-md font-sans"
+                        m.error
+                          ? "bg-red-950/50 text-red-100 border border-red-500/40 rounded-tl-none shadow-md font-sans"
+                          : m.sender === "user"
+                            ? "bg-amber-500/20 text-amber-100 border border-amber-500/30 rounded-tr-none"
+                            : "bg-slate-900/90 text-slate-200 border border-slate-800 rounded-tl-none shadow-md font-sans"
                       }`}
                     >
                       {m.text.split("\n\n").map((para, idx) => {
@@ -722,7 +788,7 @@ In reviewing your chart, your active **${currentMD?.planet || "Jupiter"} Mahadas
                 <div className="pt-2 border-t border-slate-800">
                   <span className="text-[10px] text-slate-400 block uppercase font-mono">Sacred Beeja Mantra</span>
                   <span className="text-amber-300 font-mono text-[11px] font-bold block">{activeRemedy.beejaMantra}</span>
-                  <span className="text-[10px] text-slate-400">{activeRemedy.recitations.toLocaleString()} recitations on {activeRemedy.fastingDay}s</span>
+                  <span className="text-[10px] text-slate-400">{activeRemedy.recitations ? activeRemedy.recitations.toLocaleString() : "Not available"} recitations on {activeRemedy.fastingDay}s</span>
                 </div>
               </div>
             </div>
@@ -740,7 +806,7 @@ In reviewing your chart, your active **${currentMD?.planet || "Jupiter"} Mahadas
                 Classical Vedic Upayas (Planetary Remediation Suite)
               </h3>
               <p className="text-xs text-slate-400">
-                Prescriptions aligned with your active <strong>{currentMD?.planet} Mahadasha</strong> and <strong>{currentAD?.planet} Antardasha</strong> to harmonize malefic influences and magnify benefic grace.
+                Prescriptions aligned with your active <strong>{currentMD?.planet ?? "Not available"} Mahadasha</strong> and <strong>{currentAD?.planet ?? "Not available"} Antardasha</strong> to harmonize malefic influences and magnify benefic grace.
               </p>
             </div>
             <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 text-xs font-mono font-bold">
@@ -766,7 +832,7 @@ In reviewing your chart, your active **${currentMD?.planet || "Jupiter"} Mahadas
                 </div>
                 <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800 text-[11px]">
                   <div>
-                    <span className="text-[10px] text-slate-500 block">Auspicious Metal</span>
+                    <span className="text-[10px] text-slate-500 block">Traditional Metal Association</span>
                     <span className="text-amber-200 font-semibold">{activeRemedy.metal}</span>
                   </div>
                   <div>
@@ -794,7 +860,7 @@ In reviewing your chart, your active **${currentMD?.planet || "Jupiter"} Mahadas
                 </div>
                 <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-[11px]">
                   <span className="text-slate-400">Total Canonical Japa:</span>
-                  <span className="font-mono font-bold text-amber-300">{activeRemedy.recitations.toLocaleString()} counts</span>
+                  <span className="font-mono font-bold text-amber-300">{activeRemedy.recitations ? activeRemedy.recitations.toLocaleString() : "Not available"} counts</span>
                 </div>
               </div>
             </div>
@@ -889,18 +955,23 @@ In reviewing your chart, your active **${currentMD?.planet || "Jupiter"} Mahadas
                 10-Dasha System Simultaneous Synthesis
               </h3>
               <p className="text-xs text-slate-400">
-                Evaluation across all 10 Classical Vedic Dasha traditions running simultaneously for {effectiveName}.
+                Ten traditional Dasha calculation systems are evaluated from the chart inputs. Only periods confirmed active at the current reference time appear below.
               </p>
             </div>
             <div className="flex items-center gap-2">
               <span className="px-2.5 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-mono font-bold">
-                10 Engines Synchronized
+                {dashaSystems ? "${dashaSystems.convergence.length}/10 current periods identified" : "Awaiting Verified Inputs"}
               </span>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {dashaSystems.convergence.map((period, idx) => (
+            {!dashaSystems ? (
+              <p className="md:col-span-2 lg:col-span-3 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-200">
+                10-Dasha comparison is unavailable. Provide a valid YYYY-MM-DD birth date, HH:mm birth time, a verified Vedic Ascendant, and a Moon longitude/Nakshatra index from the chart calculation. No substitute values are used.
+              </p>
+            ) : null}
+            {(dashaSystems?.convergence ?? []).map((period, idx) => (
               <div
                 key={idx}
                 className="p-4 bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-2xl space-y-2 transition-all"

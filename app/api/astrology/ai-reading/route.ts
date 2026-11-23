@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateCelestiaText } from "@/lib/ai/generateText";
+import { toSafeAIProviderError } from "@/lib/ai/providerErrors";
 import { isCelestiaAIModelId } from "@/lib/ai/modelCatalog";
+import { hasExternalChartDataConsent } from "@/lib/ai/oracleDataGuards";
 
 export async function POST(req: NextRequest) {
   try {
     const payload = await req.json();
     // These names match the payload created by components/AIReadingView.tsx.
     const {
-      name,
-      birthData,
       western,
       vedic,
       numerology,
@@ -20,6 +20,9 @@ export async function POST(req: NextRequest) {
       allowPrivacyRiskModel,
     } = payload ?? {};
 
+    if (!hasExternalChartDataConsent(payload?.externalDataConsent)) {
+      return NextResponse.json({ error: "Explicit consent is required before chart context is sent to the selected AI provider." }, { status: 400 });
+    }
     if (model !== undefined && !isCelestiaAIModelId(model)) {
       return NextResponse.json({ error: "The selected AI model is not supported." }, { status: 400 });
     }
@@ -31,7 +34,6 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    const fullName = typeof name === "string" && name.trim() ? name.trim() : "Querent";
     const question = typeof userQuestion === "string" ? userQuestion.slice(0, 2000) : "";
     const westernPlanets = western?.planets && typeof western.planets === "object"
       ? Object.entries(western.planets).slice(0, 15).map(([planet, value]) => {
@@ -52,8 +54,7 @@ Respect the named traditions separately: Western Tropical, Vedic Sidereal/Lahiri
 Format a useful, structured response with Markdown headings. Do not repeat the entire raw input.`;
 
     const userPrompt = [
-      `Querent: ${fullName}`,
-      `Birth data: ${birthData?.date ?? "not supplied"} ${birthData?.time ?? ""}; ${birthData?.place ?? "place not supplied"}; coordinates ${birthData?.latitude ?? "?"}, ${birthData?.longitude ?? "?"}; UTC offset ${birthData?.timezoneOffsetHours ?? "?"} hours.`,
+      "Querent: Anonymous",
       `Requested report: ${readingMode}; length: ${readingLength}.`,
       question ? `Specific question: ${question}` : "",
       "",
@@ -88,32 +89,11 @@ Format a useful, structured response with Markdown headings. Do not repeat the e
         usage: result.usage,
       });
     } catch (aiErr) {
-      console.warn("AI reading provider unavailable; using transparent local fallback:", aiErr);
+      const provider = typeof model === "string" && model.includes(":") ? model.split(":")[0] : "pollinations";
+      const failure = toSafeAIProviderError(aiErr, provider);
+      return NextResponse.json(failure.body, { status: failure.status });
     }
 
-    const reading = `### Celestial Synthesis for ${fullName}
-
-#### I. Western Astrological Blueprint
-Sun: **${western?.sun?.sign ?? "not supplied"}**; Moon: **${western?.moon?.sign ?? "not supplied"}**; Ascendant: **${western?.ascendant ?? "not supplied"}**. The supplied house framework is **${western?.houseSystemUsed ?? western?.houseSystem ?? "not supplied"}**.
-
-#### II. Vedic Jyotish
-Lagna: **${vedic?.lagna ?? "not supplied"}**; Moon Rasi: **${vedic?.moonSign ?? "not supplied"}**; Nakshatra: **${vedic?.nakshatra ?? "not supplied"}**. Current dasha fields: **${vedic?.currentDasha?.planet ?? "not supplied"} / ${vedic?.currentDasha?.subPlanet ?? "not supplied"}**.
-
-#### III. Numerology
-Life Path: **${numerology?.lifePath ?? "not supplied"}**; Expression: **${numerology?.expression ?? "not supplied"}**; Personal Year: **${numerology?.personalYear ?? "not supplied"}**.
-
-#### IV. Chinese BaZi
-Animal: **${chinese?.animal ?? "not supplied"}**; Day Master: **${chinese?.dayMaster ?? "not supplied"}**; Element: **${chinese?.element ?? "not supplied"}**.
-
----
-*AI provider unavailable. This is a limited, data-only local summary, not an AI-generated interpretation.*`;
-
-    return NextResponse.json({
-      success: true,
-      reading,
-      isAiGenerated: false,
-      provider: "local-fallback",
-    });
   } catch (err) {
     console.error("AI reading route error:", err);
     return NextResponse.json({ error: "Failed to generate reading" }, { status: 500 });

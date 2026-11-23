@@ -1094,6 +1094,7 @@ export function VedicChart({
             vedicData={vedicData}
             birthDate={birthDate}
             birthTime={birthTime}
+            timezoneOffset={timezoneOffset}
           />
         )}
 
@@ -1106,6 +1107,7 @@ export function VedicChart({
             baziData={baziData}
             birthDate={birthDate}
             birthTime={birthTime}
+            timezoneOffset={timezoneOffset}
             cityName={cityName}
             country={country}
             fullName={fullName}

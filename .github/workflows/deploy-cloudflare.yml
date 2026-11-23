@@ -8,6 +8,7 @@ on:
       - "lib/**"
       - "scripts/**"
       - "docs/vedic/**"
+      - "docs/ai/**"
       - "public/**"
       - "next.config.ts"
       - "open-next.config.ts"
@@ -64,6 +65,20 @@ jobs:
         run: npx tsx scripts/testNaraRouterCatalog.ts
       - name: Run provider response identity regression tests
         run: npx tsx scripts/testPollinationsResponseIdentity.ts
+      - name: Run FreeModel live catalogue parser tests
+        run: npx tsx scripts/testFreeModelCatalog.ts
+      - name: Run Groq Free-plan allowlist tests
+        run: npx tsx scripts/testGroqCatalog.ts
+      - name: Run OpenRouter zero-price free-router tests
+        run: npx tsx scripts/testOpenRouterFreeCatalog.ts
+      - name: Run AI provider error-surface tests
+        run: npx tsx scripts/testAIProviderErrors.ts
+      - name: Run server-side AI consent route tests
+        run: npx tsx scripts/testAIConsentRoutes.ts
+      - name: Run Cloudflare Workers AI Free-model tests
+        run: npx tsx scripts/testCloudflareWorkersAICatalog.ts
+      - name: Run Cloudflare Workers AI response-shape tests
+        run: npx tsx scripts/testCloudflareWorkersAIResponse.ts
       - name: Check NaraRouter live catalogue (read-only; network diagnostic only)
         # Provider availability must not prevent local regression/build validation.
         # This step only performs GET/list_models metadata calls; it never generates.

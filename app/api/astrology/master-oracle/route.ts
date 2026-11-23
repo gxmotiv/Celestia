@@ -1,15 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateCelestiaText } from "@/lib/ai/generateText";
+import { toSafeAIProviderError } from "@/lib/ai/providerErrors";
 import { isCelestiaAIModelId } from "@/lib/ai/modelCatalog";
+import { hasExternalChartDataConsent } from "@/lib/ai/oracleDataGuards";
 
 export async function POST(req: NextRequest) {
   try {
     const payload = await req.json();
+    if (!hasExternalChartDataConsent(payload?.externalDataConsent)) {
+      return NextResponse.json({ error: "Explicit consent is required before chart context is sent to the selected AI provider." }, { status: 400 });
+    }
     if (payload?.model !== undefined && !isCelestiaAIModelId(payload.model)) {
       return NextResponse.json({ error: "The selected AI model is not supported." }, { status: 400 });
     }
     // Accept the live cockpit contract and legacy field names during migration.
-    const seekerName = payload?.seekerName ?? payload?.name ?? "Querent";
     const question = String(payload?.query ?? payload?.question ?? "").slice(0, 2000);
     const context = payload?.context ?? payload?.profileData ?? {};
     const history = Array.isArray(payload?.conversationHistory)
@@ -27,9 +31,8 @@ Answer the querent's question using only the chart context supplied. Do not inve
 Keep the answer focused, practical, respectful, and structured. If essential chart data is missing, say so explicitly.`;
 
     const userPrompt = [
-      `Querent: ${seekerName}`,
+      "Querent: Anonymous",
       `Question: ${question}`,
-      `Birth details: ${payload?.birthDate ?? "not supplied"} ${payload?.birthTime ?? ""}; ${payload?.location ?? "location not supplied"}.`,
       "",
       "CHART CONTEXT",
       `Western: Sun ${context?.western?.sunSign ?? "?"}; Moon ${context?.western?.moonSign ?? "?"}; Ascendant ${context?.western?.ascendantSign ?? "?"}; Midheaven ${context?.western?.midheavenSign ?? "?"}; major aspects: ${(context?.western?.majorAspects ?? []).join("; ")}.`,
@@ -49,6 +52,7 @@ Keep the answer focused, practical, respectful, and structured. If essential cha
         maxOutputTokens: 2048,
         modelTier: "reasoning",
         ...(payload?.model ? { model: payload.model } : {}),
+        allowPrivacyRiskModel: payload?.allowPrivacyRiskModel === true,
       });
       return NextResponse.json({
         success: true,
@@ -59,23 +63,11 @@ Keep the answer focused, practical, respectful, and structured. If essential cha
         usage: result.usage,
       });
     } catch (aiErr) {
-      console.warn("Master Oracle provider unavailable; using local fallback:", aiErr);
+      const provider = typeof payload?.model === "string" && payload.model.includes(":") ? payload.model.split(":")[0] : "pollinations";
+      const failure = toSafeAIProviderError(aiErr, provider);
+      return NextResponse.json(failure.body, { status: failure.status });
     }
 
-    const reply = `### Guidance from Acharya Celestia
-
-Your question: *"${question}"*
-
-The supplied chart context lists **${context?.vedic?.activeMahadasha ?? "no Mahadasha data"} Mahadasha** and **${context?.vedic?.activeAntardasha ?? "no Antardasha data"} Antardasha**, with Western Sun **${context?.western?.sunSign ?? "not supplied"}** and Life Path **${context?.numerology?.lifePath ?? "not supplied"}**.
-
-The AI provider is currently unavailable, so this response is a limited data-only fallback rather than a generated consultation. Please try again when an AI provider is configured.`;
-
-    return NextResponse.json({
-      success: true,
-      reply,
-      isAiGenerated: false,
-      provider: "local-fallback",
-    });
   } catch (err) {
     console.error("Master oracle route error:", err);
     return NextResponse.json({ error: "Failed to consult oracle" }, { status: 500 });
