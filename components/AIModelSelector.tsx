@@ -46,6 +46,18 @@ interface LiveFreeModel {
   capabilities: string[];
 }
 
+interface LiveGroqModel {
+  id: string;
+  name: string;
+  quota: string;
+  description: string;
+}
+
+interface LiveOpenRouterModel {
+  id: string;
+  name: string;
+}
+
 const PROVIDERS: CelestiaAIProviderId[] = ["pollinations", "freemodel", "nararouter", "openrouter", "groq"];
 const PROVIDER_LABELS: Record<CelestiaAIProviderId, string> = {
   pollinations: "Pollinations — zero-priced official + community",
@@ -70,6 +82,12 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
   const [freeModels, setFreeModels] = useState<LiveFreeModel[]>([]);
   const [freeModelError, setFreeModelError] = useState("");
   const [freeModelLoaded, setFreeModelLoaded] = useState(false);
+  const [groqModels, setGroqModels] = useState<LiveGroqModel[]>([]);
+  const [groqError, setGroqError] = useState("");
+  const [groqLoaded, setGroqLoaded] = useState(false);
+  const [openRouterModels, setOpenRouterModels] = useState<LiveOpenRouterModel[]>([]);
+  const [openRouterError, setOpenRouterError] = useState("");
+  const [openRouterLoaded, setOpenRouterLoaded] = useState(false);
   const [naraError, setNaraError] = useState("");
   const [naraLoaded, setNaraLoaded] = useState(false);
   const [catalogueError, setCatalogueError] = useState("");
@@ -128,6 +146,44 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
           setFreeModelLoaded(true);
         }
       });
+    fetch("/api/astrology/groq-models", { cache: "no-store" })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data?.error || "Groq catalogue unavailable");
+        return data as { models?: LiveGroqModel[]; error?: string };
+      })
+      .then((data) => {
+        if (active) {
+          setGroqModels(Array.isArray(data.models) ? data.models : []);
+          setGroqError(data.error || "");
+          setGroqLoaded(true);
+        }
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          setGroqError(error instanceof Error ? error.message : "Groq catalogue unavailable");
+          setGroqLoaded(true);
+        }
+      });
+    fetch("/api/astrology/openrouter-models", { cache: "no-store" })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data?.error || "OpenRouter catalogue unavailable");
+        return data as { models?: LiveOpenRouterModel[]; error?: string };
+      })
+      .then((data) => {
+        if (active) {
+          setOpenRouterModels(Array.isArray(data.models) ? data.models : []);
+          setOpenRouterError(data.error || "");
+          setOpenRouterLoaded(true);
+        }
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          setOpenRouterError(error instanceof Error ? error.message : "OpenRouter catalogue unavailable");
+          setOpenRouterLoaded(true);
+        }
+      });
     fetch("/api/astrology/nararouter-models", { cache: "no-store" })
       .then(async (response) => {
         const data = await response.json();
@@ -153,11 +209,13 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
   }, []);
 
   const selectedModelIsListed =
-    CELESTIA_AI_MODELS.some((model) => model.id === value) ||
+    (value.startsWith("groq:") && (!groqLoaded || groqModels.some((model) => `groq:${model.id}` === value))) ||
+    (value === "openrouter:openrouter/free" && (!openRouterLoaded || openRouterModels.length > 0)) ||
+    CELESTIA_AI_MODELS.some((model) => model.id === value && model.providerId !== "groq" && model.providerId !== "openrouter") ||
     (value.startsWith("pollinations:") && (value === "pollinations:auto-free" ||
       [...pollinationsModels, ...manualOnlyModels].some((model) => `pollinations:${model.id}` === value))) ||
     (value.startsWith("nararouter:") && naraModels.some((model) => `nararouter:${model.id}` === value)) ||
-    (value.startsWith("freemodel:") && freeModels.some((model) => `freemodel:${model.id}` === value));
+    (value.startsWith("freemodel:") && (!freeModelLoaded || freeModels.some((model) => `freemodel:${model.id}` === value)));
 
   const staticSelected = CELESTIA_AI_MODELS.find((model) => model.id === value) ?? CELESTIA_AI_MODELS[0];
   const liveSelected = value.startsWith("pollinations:")
@@ -240,6 +298,27 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
                 </optgroup>
               );
             }
+            if (providerId === "openrouter") {
+              return (
+                <optgroup key={providerId} label={PROVIDER_LABELS[providerId] + suffix}>
+                  <option value="openrouter:openrouter/free" disabled={configured === false || (openRouterLoaded && openRouterModels.length === 0)}>
+                    Auto-select eligible $0 text model{openRouterLoaded ? \` (\${openRouterModels.length} available)\` : ""}
+                  </option>
+                </optgroup>
+              );
+            }
+            if (providerId === "groq") {
+              return (
+                <optgroup key={providerId} label={PROVIDER_LABELS[providerId] + suffix}>
+                  {groqModels.map((model) => (
+                    <option key={model.id} value={\`groq:\${model.id}\`} disabled={configured === false}>
+                      {model.name} — {model.quota}
+                    </option>
+                  ))}
+                  {groqLoaded && groqModels.length === 0 ? <option value="" disabled>No verified Groq Free-plan models</option> : null}
+                </optgroup>
+              );
+            }
             if (providerId === "freemodel") {
               return (
                 <optgroup key={providerId} label={PROVIDER_LABELS[providerId] + suffix}>
@@ -286,6 +365,8 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
       {!selectedModelIsListed ? <p role="alert" className="text-xs text-amber-300">The saved model selection is not present in the current catalogue. Celestia has not switched providers; choose another model manually.</p> : null}
       {catalogueError ? <p className="text-xs text-amber-300">{catalogueError}</p> : null}
       {freeModelError ? <p className="text-xs text-amber-300">{freeModelError}</p> : null}
+      {groqError ? <p className="text-xs text-amber-300">{groqError}</p> : null}
+      {openRouterError ? <p className="text-xs text-amber-300">{openRouterError}</p> : null}
       {freeModelLoaded && !freeModelError && freeModels.length === 0 ? <p className="text-xs text-amber-300">FreeModel returned no selectable chat models. Confirm the key has the models:read scope and that the monthly Free allowance is active.</p> : null}
       {naraError ? <p className="text-xs text-amber-300">{naraError}</p> : null}
       {naraLoaded && !naraError && naraModels.length === 0 ? (
