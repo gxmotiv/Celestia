@@ -36,6 +36,7 @@ interface MasterAIAstrologerCockpitProps {
   baziData?: BaZiProfile;
   birthDate: string;
   birthTime: string;
+  timezoneOffset: number;
   cityName?: string;
   country?: string;
   fullName?: string;
@@ -202,6 +203,7 @@ export function MasterAIAstrologerCockpit({
   baziData,
   birthDate,
   birthTime,
+  timezoneOffset,
   cityName = "City of Birth",
   country = "Earth",
   fullName,
@@ -225,6 +227,7 @@ export function MasterAIAstrologerCockpit({
       ascendantSign: vedicData.lagna?.rasiName,
       moonLongitude: moonPlanet?.siderealLongitude,
       nakshatraIndex: moonPlanet?.nakshatraIndex,
+      timezoneOffsetHours: timezoneOffset,
     });
     if (!verifiedInputs) return null;
 
@@ -238,7 +241,7 @@ export function MasterAIAstrologerCockpit({
       referenceDate: new Date(),
       planetsInSigns,
     });
-  }, [vedicData, birthDate, birthTime, orchestrator]);
+  }, [vedicData, birthDate, birthTime, timezoneOffset, orchestrator]);
 
   // Active Mahadasha and Antardasha
   const currentMD = useMemo(() => {
