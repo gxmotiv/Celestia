@@ -1,5 +1,6 @@
 import {
   SolarTermCalculator,
+  getSolarMonthPosition,
   CompleteBaZiEngine,
   SOLAR_TERMS,
   HEAVENLY_STEMS,
@@ -122,6 +123,116 @@ assertTest(
 // 3. FOUR PILLARS CALCULATION
 // ============================================================
 const baziEngine = new CompleteBaZiEngine();
+
+// ============================================================
+// 3A. SOLAR MONTH BRANCH SELECTION (ALL 12 JIE + BOUNDARIES)
+// ============================================================
+const expectedMonthBranches = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, 1];
+for (let monthOrder = 0; monthOrder < 12; monthOrder++) {
+  const boundary = (315 + monthOrder * 30) % 360;
+  const expectedBranch = expectedMonthBranches[monthOrder];
+  const previousBranch = expectedMonthBranches[(monthOrder + 11) % 12];
+
+  const before = getSolarMonthPosition(boundary - 0.000001);
+  const at = getSolarMonthPosition(boundary);
+  const after = getSolarMonthPosition(boundary + 0.000001);
+
+  assertTest(
+    "3A. Solar Month Branches",
+    `Boundary ${boundary}° immediately before belongs to previous branch`,
+    before.branchIndex === previousBranch,
+    `Branch index ${previousBranch}`,
+    `Branch index ${before.branchIndex}`
+  );
+  assertTest(
+    "3A. Solar Month Branches",
+    `Boundary ${boundary}° itself starts the new branch`,
+    at.branchIndex === expectedBranch && at.monthOrderFromLichun === monthOrder,
+    `Branch ${expectedBranch}, month order ${monthOrder}`,
+    `Branch ${at.branchIndex}, month order ${at.monthOrderFromLichun}`
+  );
+  assertTest(
+    "3A. Solar Month Branches",
+    `Boundary ${boundary}° immediately after remains in new branch`,
+    after.branchIndex === expectedBranch,
+    `Branch index ${expectedBranch}`,
+    `Branch index ${after.branchIndex}`
+  );
+}
+
+assertTest(
+  "3A. Solar Month Branches",
+  "Equivalent longitude 390° normalizes to 30° (Dragon month)",
+  getSolarMonthPosition(390).branchIndex === 4,
+  "Branch index 4",
+  `Branch index ${getSolarMonthPosition(390).branchIndex}`
+);
+assertTest(
+  "3A. Solar Month Branches",
+  "Negative longitude -45° normalizes to 315° (Tiger month)",
+  getSolarMonthPosition(-45).branchIndex === 2,
+  "Branch index 2",
+  `Branch index ${getSolarMonthPosition(-45).branchIndex}`
+);
+let rejectsInvalidLongitude = false;
+try {
+  getSolarMonthPosition(Number.NaN);
+} catch (error) {
+  rejectsInvalidLongitude = error instanceof RangeError;
+}
+assertTest(
+  "3A. Solar Month Branches",
+  "Non-finite solar longitude is rejected",
+  rejectsInvalidLongitude,
+  "RangeError",
+  rejectsInvalidLongitude ? "RangeError" : "No error"
+);
+
+// Test the actual Month Pillar method, including the Five Tigers month-stem
+// progression. The injected longitudes are deterministic branch-mapping
+// fixtures, not independent astronomical timestamp references.
+const fixedLongitudeCalc = new SolarTermCalculator();
+const restoreSunLongitude = fixedLongitudeCalc.getSunLongitude.bind(fixedLongitudeCalc);
+// Year-stem Tiger-month starting stems for Jia..Gui: Bing, Wu, Geng, Ren, Jia.
+const tigerStartStemByYearStem = [2, 4, 6, 8, 0, 2, 4, 6, 8, 0];
+for (let monthOrder = 0; monthOrder < 12; monthOrder++) {
+  const boundary = (315 + monthOrder * 30) % 360;
+  const expectedBranch = expectedMonthBranches[monthOrder];
+  const expectedStem = (tigerStartStemByYearStem[0] + monthOrder) % 10;
+  const previousOrder = (monthOrder + 11) % 12;
+  const previousBranch = expectedMonthBranches[previousOrder];
+  // Just before Li Chun, the Year Pillar still belongs to the prior solar year.
+  const previousYearStemIndex = monthOrder === 0 ? 9 : 0;
+  const previousStem =
+    (tigerStartStemByYearStem[previousYearStemIndex] + previousOrder) % 10;
+  const cases = [
+    {
+      label: "before",
+      longitude: (boundary - 0.000001 + 360) % 360,
+      branch: previousBranch,
+      stem: previousStem,
+      yearStemIndex: previousYearStemIndex,
+    },
+    { label: "at", longitude: boundary, branch: expectedBranch, stem: expectedStem, yearStemIndex: 0 },
+    { label: "after", longitude: (boundary + 0.000001) % 360, branch: expectedBranch, stem: expectedStem, yearStemIndex: 0 },
+  ] as const;
+
+  for (const item of cases) {
+    fixedLongitudeCalc.getSunLongitude = () => item.longitude;
+    const pillar = fixedLongitudeCalc.calculateMonthPillar(
+      new Date("2026-01-01T12:00:00.000Z"),
+      item.yearStemIndex
+    );
+    assertTest(
+      "3A. Month Pillar Integration",
+      `calculateMonthPillar at ${boundary}° (${item.label}) selects the expected branch and Five-Tiger stem`,
+      pillar.earthlyBranch.index === item.branch && pillar.heavenlyStem.index === item.stem,
+      `Stem ${item.stem}, branch ${item.branch}`,
+      `Stem ${pillar.heavenlyStem.index}, branch ${pillar.earthlyBranch.index}`
+    );
+  }
+}
+fixedLongitudeCalc.getSunLongitude = restoreSunLongitude;
 
 // Test with known benchmark: Jan 1, 2000 @ 12:00 UTC
 // 2000 is before Lichun (Feb 4, 2000) -> Year belongs to 1999 (Ji Mao - Yin Earth Rabbit)
