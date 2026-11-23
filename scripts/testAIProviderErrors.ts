@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { toSafeAIProviderError } from "../lib/ai/providerErrors";
+import { getVerifiedDashaInputs, hasExternalChartDataConsent } from "../lib/ai/oracleDataGuards";
 
 const quota = toSafeAIProviderError(Object.assign(new Error("FreeModel HTTP 402"), { status: 402 }), "freemodel");
 assert.equal(quota.status, 402);
@@ -27,4 +28,37 @@ assert.equal(cloudflareGuard.body.code, "PROVIDER_NOT_CONFIGURED");
 assert.equal(cloudflareQuota.status, 429);
 assert.equal(cloudflareQuota.body.code, "PROVIDER_RATE_LIMITED");
 
-console.log("AI provider error tests: 15 assertions passed");
+assert.equal(hasExternalChartDataConsent(true), true);
+assert.equal(hasExternalChartDataConsent(false), false);
+assert.equal(hasExternalChartDataConsent("true"), false);
+
+const missingDate = getVerifiedDashaInputs({
+  birthDate: "", birthTime: "16:49", ascendantSign: "Aries", moonLongitude: 11.4, nakshatraIndex: 1,
+});
+const invalidDate = getVerifiedDashaInputs({
+  birthDate: "2008-02-30", birthTime: "16:49", ascendantSign: "Aries", moonLongitude: 11.4, nakshatraIndex: 1,
+});
+const invalidTime = getVerifiedDashaInputs({
+  birthDate: "2008-11-05", birthTime: "25:49", ascendantSign: "Aries", moonLongitude: 11.4, nakshatraIndex: 1,
+});
+const missingMoon = getVerifiedDashaInputs({
+  birthDate: "2008-11-05", birthTime: "16:49", ascendantSign: "Aries", moonLongitude: undefined, nakshatraIndex: 1,
+});
+const outOfRangeMoon = getVerifiedDashaInputs({
+  birthDate: "2008-11-05", birthTime: "16:49", ascendantSign: "Aries", moonLongitude: 360, nakshatraIndex: 1,
+});
+assert.equal(missingDate, null);
+assert.equal(invalidDate, null);
+assert.equal(invalidTime, null);
+assert.equal(missingMoon, null);
+assert.equal(outOfRangeMoon, null);
+
+const zeroLongitude = getVerifiedDashaInputs({
+  birthDate: "2008-11-05", birthTime: "16:49", ascendantSign: "Aries", moonLongitude: 0, nakshatraIndex: 0,
+});
+assert.ok(zeroLongitude);
+assert.equal(zeroLongitude.moonLongitude, 0, "zero degrees is valid and must not trigger a fallback");
+assert.equal(zeroLongitude.moonNakshatra1Indexed, 1);
+assert.equal(zeroLongitude.birthDate.toISOString(), "2008-11-05T16:49:00.000Z");
+
+console.log("AI provider and Oracle data-guard tests passed");
