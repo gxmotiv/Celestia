@@ -52,6 +52,11 @@ assert.equal(invalidDate, null);
 assert.equal(invalidTime, null);
 assert.equal(missingMoon, null);
 assert.equal(outOfRangeMoon, null);
+const mismatchedNakshatra = getVerifiedDashaInputs({
+  birthDate: "2008-11-05", birthTime: "16:49", ascendantSign: "Aries", moonLongitude: 30, nakshatraIndex: 1,
+  timezoneOffsetHours: 5.5,
+});
+assert.equal(mismatchedNakshatra, null, "longitude and Nakshatra index must describe the same 13°20′ segment");
 
 const zeroLongitude = getVerifiedDashaInputs({
   birthDate: "2008-11-05", birthTime: "16:49", ascendantSign: "Aries", moonLongitude: 0, nakshatraIndex: 0, timezoneOffsetHours: 5.5,
@@ -70,5 +75,11 @@ const invalidTimezone = getVerifiedDashaInputs({
 });
 assert.equal(missingTimezone, null);
 assert.equal(invalidTimezone, null);
+const earlyCEBirth = getVerifiedDashaInputs({
+  birthDate: "0099-01-01", birthTime: "00:00", ascendantSign: "Aries", moonLongitude: 0, nakshatraIndex: 0,
+  timezoneOffsetHours: 0,
+});
+assert.ok(earlyCEBirth);
+assert.equal(earlyCEBirth.birthDate.toISOString(), "0099-01-01T00:00:00.000Z");
 
 console.log("AI provider and Oracle data-guard tests passed");
