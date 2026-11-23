@@ -127,8 +127,15 @@ export function calculateMeanLilith(jd: number): { lon: number; speed: number } 
  * without a full lunar theory (verified residual up to ~15°). Always render
  * this point with an "approximate" badge; for ephemeris-grade values use
  * swisseph-wasm or an embedded table (audit Phase E).
+ *
+ * W-13 FIX (2026-11-23, found by runtime execution of the Phase-B regression
+ * suite): the previous version computed its speed via a SELF-RECURSIVE call
+ * (`calculateTrueLilithApprox(jd + 1/24)` calling itself again at +1h, and so
+ * on without bound) → RangeError: Maximum call stack size exceeded on ANY
+ * invocation. The corrected longitude is now factored into a non-recursive
+ * helper and the derivative is a bounded ±1h central difference.
  */
-export function calculateTrueLilithApprox(jd: number): { lon: number; speed: number } {
+function trueLilithLonAt(jd: number): number {
   const T = (jd - 2451545.0) / 36525.0;
   const mean = calculateMeanLilith(jd).lon;
   const M_sun = norm360(357.5291 + 35999.0503 * T) * DEG2RAD;
@@ -139,9 +146,13 @@ export function calculateTrueLilithApprox(jd: number): { lon: number; speed: num
     2.05 * Math.sin(M_sun) +
     1.25 * Math.sin(2 * D) -
     0.68 * Math.sin(M_moon);
-  // speed: numeric derivative of the corrected longitude
-  const lon = norm360(mean + correction);
-  const lonNext = calculateTrueLilithApprox(jd + 1 / 24).lon;
+  return norm360(mean + correction);
+}
+
+export function calculateTrueLilithApprox(jd: number): { lon: number; speed: number } {
+  // speed: bounded numeric derivative of the corrected longitude (±1 hour)
+  const lon = trueLilithLonAt(jd);
+  const lonNext = trueLilithLonAt(jd + 1 / 24);
   let d = lonNext - lon;
   if (d > 180) d -= 360;
   if (d < -180) d += 360;

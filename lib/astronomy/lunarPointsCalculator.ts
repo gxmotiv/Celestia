@@ -1,16 +1,24 @@
 /**
  * Lunar Points and Theoretical Points Calculator
  * Computes:
- * - Mean Lilith (Mean Lunar Apogee)
- * - True Lilith (Osculating Lunar Apogee with Evection & Solar pertubations)
- * - White Moon / Selena (Artemis - 7-year spiritual light cycle)
- * - Vertex (Intersection of Prime Vertical and Ecliptic in Western hemisphere)
+ * - Mean Lilith (Mean Lunar Apogee) — W-02 FIX: delegates to verifiedFixes
+ *   (Swiss-Ephemeris-verified hybrid: max err 0.124° in 1900–2100, ≤0.4° outside).
+ * - True Lilith (Osculating-style approximation) — flagged approximate (honesty).
+ * - White Moon / Selena — NON-STANDARD point (no standard ephemeris source); flagged.
+ * - Vertex — W-04 FIX: verified prime-vertical closed form (≤0.0016° vs Swiss Ephemeris).
  * - Anti-Vertex (Polar opposite of Vertex)
- * - East Point / Equatorial Ascendant (Ascendant on the celestial equator)
- * - Trans-Plutonian theoretical points (Proserpine, Hypnos)
+ * - East Point / Equatorial Ascendant — W-03 FIX: verified convention (was ≡ MC).
+ * - Trans-Plutonian theoretical points (Proserpine, Hypnos) — NON-STANDARD symbolic
+ *   points (fabricated linear formulas, no ephemeris source); flagged non-standard.
  */
 
 import { PlanetPosition, formatDegreeMinute, normalizeDegrees, ZODIAC_SIGNS } from "./ephemeris";
+import {
+  calculateMeanLilith as vfMeanLilith,
+  calculateTrueLilithApprox as vfTrueLilith,
+  calculateVertex as vfVertex,
+  calculateEastPoint as vfEastPoint,
+} from "./verifiedFixes";
 
 export interface LilithPositions {
   meanLilith: PlanetPosition;
@@ -28,53 +36,40 @@ export interface AdditionalPoints {
   hypnos: PlanetPosition;     // Dream/subconscious archetype
 }
 
-const DEG2RAD = Math.PI / 180.0;
-const RAD2DEG = 180.0 / Math.PI;
 
 export class LunarPointsCalculator {
   /**
-   * Mean Lilith (Lunar Apogee):
-   * Longitude of lunar perigee at J2000.0 is ~83.353243°, apogee is perigee + 180° = 263.353243° or
-   * standard Mean Apogee formula = 142.19° + 40.664876° * T (in Julian centuries).
+   * Mean Lilith (Lunar Apogee) — W-02 FIX.
+   * The previous in-class formula (142.19° + 40.664876°·T per Julian CENTURY)
+   * advanced ~100× too slowly (real mean-apogee rate ≈ 40.69°/YEAR), producing
+   * 17°–167° errors across 1452–2026. The replacement is the audit-verified
+   * hybrid in verifiedFixes.ts (quintic fit to Swiss Ephemeris MEAN_APOG
+   * 1900–2100 + Meeus-derived analytic outside the window).
+   * Reference values (Swiss Ephemeris MEAN_APOG, Moshier): 263.464333° at J2000,
+   * 234.839363° at jd 2448057.0, 273.828040° at jd 2461332.5.
    */
   public calculateMeanLilithLon(jd: number): { lon: number; speed: number } {
-    const T = (jd - 2451545.0) / 36525.0;
-    // Mean lunar apogee advances ~40.664876 degrees per Julian century
-    const lon = normalizeDegrees(142.1903 + 40.664876 * T - 0.00014 * T * T);
-    const speed = 40.664876 / 36525.0; // ~0.111° per day
-    return { lon, speed };
+    return vfMeanLilith(jd);
   }
 
   /**
-   * True (Osculating) Lilith:
-   * Incorporates solar perturbations, evection, and annual inequality on the lunar apogee.
+   * True (Osculating-style) Lilith — approximate.
+   * Uses the verified mean base + principal solar/evection corrections. The
+   * osculating apogee is intrinsically erratic (verified residual up to ~15°
+   * vs Swiss Ephemeris OSCU_APOG without a full lunar theory); UI must render
+   * this point with an "approximate" badge (see audit Phase E for the
+   * ephemeris-grade upgrade path).
    */
   public calculateTrueLilithLon(jd: number): { lon: number; speed: number } {
-    const T = (jd - 2451545.0) / 36525.0;
-    const mean = this.calculateMeanLilithLon(jd).lon;
-
-    // Solar mean anomaly
-    const M_sun = normalizeDegrees(357.5291 + 35999.0503 * T) * DEG2RAD;
-    // Lunar mean anomaly
-    const M_moon = normalizeDegrees(134.9634 + 477198.8676 * T) * DEG2RAD;
-    // Mean elongation of Moon from Sun (D)
-    const D = normalizeDegrees(297.8502 + 445267.1115 * T) * DEG2RAD;
-
-    // Main periodic oscillations (evection perturbation on lunar apogee reaches ~11.5°)
-    const correction =
-      11.69 * Math.sin(2 * D - M_moon) +
-      2.05 * Math.sin(M_sun) +
-      1.25 * Math.sin(2 * D) -
-      0.68 * Math.sin(M_moon);
-
-    const trueLon = normalizeDegrees(mean + correction);
-    return { lon: trueLon, speed: 0.111 };
+    return vfTrueLilith(jd);
   }
 
   /**
-   * White Moon / Selena:
-   * 7-year rhythmic harmonic cycle of the white moon (revolution period exactly 7 sidereal years = ~2556.7 days).
-   * Epoch J2000.0 longitude: ~298.15°
+   * White Moon / Selena — NON-STANDARD point.
+   * 7-year rhythmic harmonic cycle (revolution period exactly 7 sidereal years
+   * ≈ 2556.7 days). Epoch J2000.0 longitude: ~298.15°. There is NO standard
+   * ephemeris source for this point; it is retained for display continuity but
+   * flagged `nonStandard` — show it only behind a labeled toggle.
    */
   public calculateWhiteMoonLon(jd: number): { lon: number; speed: number } {
     const daysSinceEpoch = jd - 2451545.0;
@@ -84,47 +79,33 @@ export class LunarPointsCalculator {
   }
 
   /**
-   * Vertex calculation:
-   * The Vertex is the western intersection of the Prime Vertical with the Ecliptic.
-   * Formula:
-   * tan(V) = -cos(RAMC) / (sin(obliquity) * tan(lat) + cos(obliquity) * sin(RAMC))
+   * Vertex calculation — W-04 FIX.
+   * The Vertex is the western intersection of the Prime Vertical with the
+   * Ecliptic. The previous in-class closed form was off by 15°–44° vs Swiss
+   * Ephemeris `ascmc[3]`; the replacement in verifiedFixes.ts is verified to
+   * ≤0.0016° across 8 global cities / 1960–2026.
    */
   public calculateVertexLon(ramc: number, lat: number, obliquity: number): number {
-    const ramcRad = ramc * DEG2RAD;
-    const latRad = lat * DEG2RAD;
-    const epsRad = obliquity * DEG2RAD;
-
-    // Vertex is in the western hemisphere:
-    const num = -Math.cos(ramcRad);
-    const den = Math.sin(epsRad) * Math.tan(latRad) + Math.cos(epsRad) * Math.sin(ramcRad);
-
-    let vRad = Math.atan2(num, den);
-    let vDeg = normalizeDegrees(vRad * RAD2DEG);
-
-    // Vertex is traditionally on the western side of the meridian
-    if (vDeg < 0) vDeg += 360;
-    return vDeg;
+    return vfVertex(ramc, lat, obliquity);
   }
 
   /**
-   * East Point (Equatorial Ascendant):
-   * The intersection of the eastern horizon and the celestial equator.
-   * Longitude = atan2(sin(RAMC), cos(RAMC) * cos(obliquity))
+   * East Point (Equatorial Ascendant) — W-03 FIX.
+   * The previous formula was character-identical to the MC formula (East Point
+   * always equal to Midheaven). Correct convention: the ecliptic longitude
+   * whose right ascension is RAMC + 90° (equals the Ascendant at the equator).
+   * Display the convention name ("Equatorial Ascendant / East Point") in the UI.
    */
   public calculateEastPointLon(ramc: number, obliquity: number): number {
-    const ramcRad = ramc * DEG2RAD;
-    const epsRad = obliquity * DEG2RAD;
-
-    const y = Math.sin(ramcRad);
-    const x = Math.cos(ramcRad) * Math.cos(epsRad);
-    let ep = normalizeDegrees(Math.atan2(y, x) * RAD2DEG);
-    return ep;
+    return vfEastPoint(ramc, obliquity);
   }
 
   /**
    * Trans-Plutonian Hypnos & Proserpine (Symbolic theoretical archetypes)
-   * Proserpine: ~650-year ultra-slow cycle (subconscious regeneration)
-   * Hypnos: ~720-year cycle (the dream world and liminal gates)
+   * NON-STANDARD: fabricated linear formulas with no ephemeris source
+   * (Proserpine: ~650-year cycle; Hypnos: ~720-year cycle). Retained for
+   * display continuity but flagged `nonStandard` — show only behind a
+   * labeled toggle (audit honesty contract §7).
    */
   public calculateTheoreticalPoints(jd: number): { proserpine: number; hypnos: number } {
     const T = (jd - 2451545.0) / 36525.0;
@@ -197,15 +178,28 @@ export class LunarPointsCalculator {
     const epLon = this.calculateEastPointLon(ramc, obliquity);
     const theo = this.calculateTheoreticalPoints(jd);
 
+    const meanLilith = this.buildPoint("MeanLilith", "Mean Lilith", "⚸", meanL.lon, meanL.speed, cusps);
+    const trueLilith = this.buildPoint("TrueLilith", "True Lilith", "⚸*", trueL.lon, trueL.speed, cusps);
+    trueLilith.approximate = true; // osculating-style approximation — honesty badge
+    const whiteMoon = this.buildPoint("WhiteMoon", "White Moon (Selena)", "☽*", whiteM.lon, whiteM.speed, cusps);
+    whiteMoon.nonStandard = true;  // no standard ephemeris source — honesty badge
+    const vertex = this.buildPoint("Vertex", "Vertex", "Vx", vLon, 0, cusps);
+    const antiVertex = this.buildPoint("AntiVertex", "Anti-Vertex", "AVx", antiVLon, 0, cusps);
+    const eastPoint = this.buildPoint("EastPoint", "East Point", "EP", epLon, 0, cusps);
+    const proserpine = this.buildPoint("Proserpine", "Proserpine", "⚹P", theo.proserpine, 0.001, cusps);
+    proserpine.nonStandard = true; // fabricated linear formula — honesty badge
+    const hypnos = this.buildPoint("Hypnos", "Hypnos", "⚹H", theo.hypnos, 0.001, cusps);
+    hypnos.nonStandard = true;     // fabricated linear formula — honesty badge
+
     return {
-      meanLilith: this.buildPoint("MeanLilith", "Mean Lilith", "⚸", meanL.lon, meanL.speed, cusps),
-      trueLilith: this.buildPoint("TrueLilith", "True Lilith", "⚸*", trueL.lon, trueL.speed, cusps),
-      whiteMoon: this.buildPoint("WhiteMoon", "White Moon (Selena)", "☽*", whiteM.lon, whiteM.speed, cusps),
-      vertex: this.buildPoint("Vertex", "Vertex", "Vx", vLon, 0, cusps),
-      antiVertex: this.buildPoint("AntiVertex", "Anti-Vertex", "AVx", antiVLon, 0, cusps),
-      eastPoint: this.buildPoint("EastPoint", "East Point", "EP", epLon, 0, cusps),
-      proserpine: this.buildPoint("Proserpine", "Proserpine", "⚹P", theo.proserpine, 0.001, cusps),
-      hypnos: this.buildPoint("Hypnos", "Hypnos", "⚹H", theo.hypnos, 0.001, cusps),
+      meanLilith,
+      trueLilith,
+      whiteMoon,
+      vertex,
+      antiVertex,
+      eastPoint,
+      proserpine,
+      hypnos,
     };
   }
 }
