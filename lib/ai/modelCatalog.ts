@@ -1,6 +1,8 @@
 export const CELESTIA_AI_MODELS = [
   { id: "pollinations:auto-free", providerId: "pollinations", providerName: "Pollinations", providerModelId: "auto-free", secretName: "POLLINATIONS_API_KEY", name: "Automatic free model", role: "Recommended default", description: "Automatically selects a currently healthy, official, zero-priced text model from Pollinations. The live catalogue is checked before each generation.", quotaNote: "Only models whose published input and output prices are both zero are eligible." },
   { id: "openrouter:openrouter/free", providerId: "openrouter", providerName: "OpenRouter", providerModelId: "openrouter/free", secretName: "OPENROUTER_API_KEY", name: "Auto-select a free model", role: "OpenRouter free router", description: "Uses OpenRouter's free-model router only.", quotaNote: "20 RPM · 50 requests/day on a free account; failed requests count toward the daily cap." },
+  { id: "cloudflare-workers-ai:@cf/openai/gpt-oss-20b", providerId: "cloudflare-workers-ai", providerName: "Cloudflare Workers AI", providerModelId: "@cf/openai/gpt-oss-20b", secretName: "", name: "GPT-OSS 20B", role: "Cloudflare Workers Free · reasoning", description: "128K context · reasoning · function calling · zero data retention.", quotaNote: "10,000 shared Neurons/day on Workers Free · resets 00:00 UTC · over-limit requests fail. Never enable on Workers Paid for this $0 project." },
+  { id: "cloudflare-workers-ai:@cf/qwen/qwen3.8-27b", providerId: "cloudflare-workers-ai", providerName: "Cloudflare Workers AI", providerModelId: "@cf/qwen/qwen3.8-27b", secretName: "", name: "Qwen 3.8 27B", role: "Cloudflare Workers Free · multilingual reasoning", description: "262K context · reasoning · multilingual · vision · zero data retention.", quotaNote: "10,000 shared Neurons/day on Workers Free · resets 00:00 UTC · over-limit requests fail. Never enable on Workers Paid for this $0 project." },
   { id: "groq:openai/gpt-oss-120b", providerId: "groq", providerName: "Groq", providerModelId: "openai/gpt-oss-120b", secretName: "GROQ_API_KEY", name: "GPT-OSS 120B", role: "Groq Free plan · reasoning", description: "High-capability reasoning, coding and tool-use model.", quotaNote: "30 RPM · 1,000 requests/day · 8K TPM · 200K tokens/day. Requires confirmation that the account remains on Groq Free." },
   { id: "groq:openai/gpt-oss-20b", providerId: "groq", providerName: "Groq", providerModelId: "openai/gpt-oss-20b", secretName: "GROQ_API_KEY", name: "GPT-OSS 20B", role: "Groq Free plan · faster", description: "Smaller GPT-OSS model for routine chat and shorter tasks.", quotaNote: "30 RPM · 1,000 requests/day · 8K TPM · 200K tokens/day. Requires confirmation that the account remains on Groq Free." },
 ] as const;
@@ -8,7 +10,7 @@ export const CELESTIA_AI_MODELS = [
 export type CelestiaAIModel = (typeof CELESTIA_AI_MODELS)[number];
 type CelestiaAIDynamicModel = { id: string; providerId: CelestiaAIProviderId; providerName: string; providerModelId: string; secretName: string; name: string; role: string; description: string; quotaNote: string };
 export type CelestiaAIModelId = string;
-export type CelestiaAIProviderId = "pollinations" | "freemodel" | "nararouter" | "openrouter" | "groq";
+export type CelestiaAIProviderId = "pollinations" | "freemodel" | "nararouter" | "openrouter" | "groq" | "cloudflare-workers-ai";
 
 export const DEFAULT_CELESTIA_AI_MODEL: CelestiaAIModelId = "pollinations:auto-free";
 
