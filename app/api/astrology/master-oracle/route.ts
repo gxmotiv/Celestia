@@ -50,6 +50,7 @@ Keep the answer focused, practical, respectful, and structured. If essential cha
         maxOutputTokens: 2048,
         modelTier: "reasoning",
         ...(payload?.model ? { model: payload.model } : {}),
+        allowPrivacyRiskModel: payload?.allowPrivacyRiskModel === true,
       });
       return NextResponse.json({
         success: true,
