@@ -7,6 +7,7 @@ import {
   AllDashaSystems,
 } from "@/lib/vedic/completeDashaSystems";
 import { ExtendedDashaCalculator } from "@/lib/vedic/extendedDashaLevels";
+import { getVerifiedDashaInputs } from "@/lib/ai/oracleDataGuards";
 import {
   Sparkles,
   Calendar,
@@ -28,6 +29,7 @@ interface MultiDashaDashboardProps {
   vedicData: VedicChartData;
   birthDate: string;
   birthTime: string;
+  timezoneOffset?: number;
 }
 
 export type DashaTabId =
@@ -48,6 +50,7 @@ export function MultiDashaDashboard({
   vedicData,
   birthDate,
   birthTime,
+  timezoneOffset,
 }: MultiDashaDashboardProps) {
   // Navigation tab across all 10 systems + convergence + comparative matrix
   const [activeSystemTab, setActiveSystemTab] = useState<DashaTabId>("convergence");
@@ -59,63 +62,50 @@ export function MultiDashaDashboard({
   const orchestrator = useMemo(() => new CompleteDashaOrchestrator(), []);
   const extendedCalc = useMemo(() => new ExtendedDashaCalculator(), []);
 
-  // Parse birth date and time into UTC Date
-  const birthDateObj = useMemo(() => {
-    const [yStr, mStr, dStr] = birthDate.split("-");
-    const [hStr, minStr] = birthTime.split(":");
-    return new Date(
-      Date.UTC(
-        parseInt(yStr, 10) || 1990,
-        (parseInt(mStr, 10) || 1) - 1,
-        parseInt(dStr, 10) || 1,
-        parseInt(hStr, 10) || 12,
-        parseInt(minStr, 10) || 0
-      )
-    );
-  }, [birthDate, birthTime]);
-
-  // Extract Moon coordinates and Nakshatra parameters
-  const moonPlanet = useMemo(() => {
-    return (
-      vedicData.planets.find((p) => p.name === "Moon") || {
-        siderealLongitude: 180,
-        nakshatraIndex: 13,
-        rasiName: "Libra",
-        rasiDegree: 10,
-      }
-    );
-  }, [vedicData]);
+  // Validate birth time, timezone, Ascendant and Moon data before any Dasha calculation.
+  const verifiedInputs = useMemo(() => {
+    const moonPlanet = vedicData.planets.find((planet) => planet.name === "Moon");
+    return getVerifiedDashaInputs({
+      birthDate,
+      birthTime,
+      timezoneOffsetHours: timezoneOffset,
+      ascendantSign: vedicData.lagna?.rasiName,
+      moonLongitude: moonPlanet?.siderealLongitude,
+      nakshatraIndex: moonPlanet?.nakshatraIndex,
+    });
+  }, [vedicData, birthDate, birthTime, timezoneOffset]);
 
   // Build planetsInSigns map for Jaimini Chara Dasha
   const planetsInSigns = useMemo(() => {
     const map: Record<string, string> = {};
     vedicData.planets.forEach((p) => {
-      map[p.rasiName] = p.name;
+      if (p.rasiName && p.name) map[p.rasiName] = p.name;
     });
     return map;
   }, [vedicData]);
 
   // Calculate current Sookshma context for Level 5 Prana
   const currentMD = useMemo(() => {
-    return (
-      vedicData.vimshottariDashas.find((d) => d.isCurrent) ||
-      vedicData.vimshottariDashas[0]
-    );
+    return vedicData.vimshottariDashas.find((period) => period.isCurrent);
   }, [vedicData]);
 
   const currentAD = useMemo(() => {
-    return currentMD.subPeriods?.find((s) => s.isCurrent) || currentMD.subPeriods?.[0];
+    return currentMD?.subPeriods?.find((period) => period.isCurrent);
   }, [currentMD]);
 
   const sookshmaContext = useMemo(() => {
-    const mdName = currentMD.planet;
-    const adName = currentAD?.planet || mdName;
-    const mdYears = ExtendedDashaCalculator.DASHA_YEARS[mdName] || 10;
-    const adYears = ExtendedDashaCalculator.DASHA_YEARS[adName] || 10;
-    const adTotalYears = (mdYears * adYears) / 120;
-    const adStartDate = currentAD ? new Date(currentAD.startDate) : new Date();
+    if (!currentMD || !currentAD) return null;
 
-    // Generate Level 3 & Level 4
+    const mdName = currentMD.planet;
+    const adName = currentAD.planet;
+    const mdYears = ExtendedDashaCalculator.DASHA_YEARS[mdName];
+    const adYears = ExtendedDashaCalculator.DASHA_YEARS[adName];
+    if (!mdYears || !adYears) return null;
+
+    const adTotalYears = (mdYears * adYears) / 120;
+    const adStartDate = new Date(currentAD.startDate);
+    if (!Number.isFinite(adStartDate.getTime())) return null;
+
     const pds = extendedCalc.generatePratyantardashas(
       mdName,
       adName,
@@ -123,8 +113,9 @@ export function MultiDashaDashboard({
       adTotalYears,
       referenceDate
     );
-    const activePD = pds.find((p) => p.isCurrent) || pds[0];
-    const activeSK = activePD.sookshmas.find((s) => s.isCurrent) || activePD.sookshmas[0];
+    const activePD = pds.find((period) => period.isCurrent);
+    const activeSK = activePD?.sookshmas.find((period) => period.isCurrent);
+    if (!activePD || !activeSK) return null;
 
     return {
       mahadasha: mdName,
@@ -136,30 +127,27 @@ export function MultiDashaDashboard({
     };
   }, [currentMD, currentAD, extendedCalc, referenceDate]);
 
-  // Generate All 10 Systems simultaneously
-  const allDashas: AllDashaSystems = useMemo(() => {
-    const moonNakshatra1Indexed = moonPlanet.nakshatraIndex + 1;
-    const moonDegreeInNakshatra = moonPlanet.siderealLongitude % (360 / 27);
-
+  // Generate all ten systems only from validated chart inputs.
+  const allDashas: AllDashaSystems | null = useMemo(() => {
+    if (!verifiedInputs) return null;
     return orchestrator.generateAllDashas({
-      moonLongitude: moonPlanet.siderealLongitude,
-      moonNakshatra1Indexed,
-      moonDegreeInNakshatra,
-      ascendantSign: vedicData.lagna.rasiName,
+      ...verifiedInputs,
       planetsInSigns,
-      birthDate: birthDateObj,
-      sookshmaContext,
+      sookshmaContext: sookshmaContext ?? undefined,
       referenceDate,
     });
-  }, [
-    orchestrator,
-    moonPlanet,
-    vedicData.lagna.rasiName,
-    planetsInSigns,
-    birthDateObj,
-    sookshmaContext,
-    referenceDate,
-  ]);
+  }, [orchestrator, verifiedInputs, planetsInSigns, sookshmaContext, referenceDate]);
+
+  if (!allDashas) {
+    return (
+      <div className="rounded-2xl border border-amber-500/30 bg-slate-950 p-5 text-sm text-amber-100" role="status">
+        <h2 className="font-semibold mb-2">Multi-Dasha results unavailable</h2>
+        <p className="text-xs text-slate-300">
+          No fallback chart is used. Provide a valid birth date and time, the applicable UTC offset, a verified Vedic Ascendant, and a Moon longitude/Nakshatra index pair that agree.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -211,6 +199,7 @@ export function MultiDashaDashboard({
               seekerName="Seeker"
               birthDate={birthDate}
               birthTime={birthTime}
+              timezoneOffset={timezoneOffset}
               vedicData={vedicData}
               activeDashas={allDashas.convergence}
               onClose={() => setIsAiConsultOpen(false)}
@@ -472,7 +461,7 @@ export function MultiDashaDashboard({
                   Parashari Guardianship:
                 </strong>
                 <p>
-                  Vimshottari ({allDashas.currentPrana?.lord || "Active"}), Ashtottari ({allDashas.currentAshtottari?.planet || "Active"}), and Shodashottari ({allDashas.fiveLevels.shodashottari.activeHierarchy.level1?.name || "Active"}) emphasize focused karmic fruition and decisive personal momentum.
+                  Vimshottari ({allDashas.currentPrana?.lord || "Not available"}), Ashtottari ({allDashas.currentAshtottari?.planet || "Not available"}), and Shodashottari ({allDashas.fiveLevels.shodashottari.activeHierarchy.level1?.name || "Not available"}) emphasize focused karmic fruition and decisive personal momentum.
                 </p>
               </div>
 
@@ -481,7 +470,7 @@ export function MultiDashaDashboard({
                   Jaimini Sign Triplicity:
                 </strong>
                 <p>
-                  Chara ({allDashas.currentChara?.sign || "Active"}), Sthira ({allDashas.fiveLevels.sthira.activeHierarchy.level1?.name || "Active"}), and Mandooka ({allDashas.fiveLevels.mandooka.activeHierarchy.level1?.name || "Active"}) highlight sign karakas and house activations.
+                  Chara ({allDashas.currentChara?.sign || "Not available"}), Sthira ({allDashas.fiveLevels.sthira.activeHierarchy.level1?.name || "Not available"}), and Mandooka ({allDashas.fiveLevels.mandooka.activeHierarchy.level1?.name || "Not available"}) highlight sign karakas and house activations.
                 </p>
               </div>
 
@@ -490,7 +479,7 @@ export function MultiDashaDashboard({
                   Tantric & Deity Currents:
                 </strong>
                 <p>
-                  Yogini ({allDashas.currentYogini?.yogini || "Active"}) and Kalachakra ({allDashas.currentKalachakra?.deity || "Active"} {allDashas.currentKalachakra?.direction}) reveal subconscious spiritual energy and directional protection.
+                  Yogini ({allDashas.currentYogini?.yogini || "Not available"}) and Kalachakra ({allDashas.currentKalachakra?.deity || "Not available"} {allDashas.currentKalachakra?.direction}) reveal subconscious spiritual energy and directional protection.
                 </p>
               </div>
             </div>
