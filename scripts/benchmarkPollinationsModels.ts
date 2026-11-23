@@ -94,7 +94,6 @@ async function main() {
     try { result = JSON.parse(raw); } catch { throw new Error("Pollinations smoke request returned invalid JSON."); }
     const validation = validateRequestedModelResponse(model.id, result);
     if (!validation.valid) throw new Error(`Pollinations smoke response validation failed: ${validation.reason}`);
-    const answer = validation.answer;
     console.log(`PASS Pollinations live inference: HTTP ${response.status}; official model=${model.id}; catalogue price=input ${model.inputPrice} / output ${model.outputPrice} Pollen per token; latency=${latencyMs}ms; non-empty response received.`);
     return;
   }
