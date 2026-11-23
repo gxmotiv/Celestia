@@ -54,6 +54,7 @@ interface ChatMessage {
   provider?: string;
   model?: string;
   usageTokens?: number;
+  error?: boolean;
 }
 
 const PLANETARY_REMEDIES: Record<
@@ -382,7 +383,11 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
       });
 
       const data = await res.json();
-      const reply = data.reply || "The stars illuminate your path. Focus on grounding your current planetary energies.";
+      if (!res.ok) {
+        throw new Error(typeof data.error === "string" ? data.error : `AI provider request failed (HTTP ${res.status}).`);
+      }
+      const reply = typeof data.reply === "string" ? data.reply.trim() : "";
+      if (data.success !== true || !reply) throw new Error("The selected AI provider returned no assistant reply.");
 
       const oracleMsg: ChatMessage = {
         id: "oracle-" + Date.now(),
@@ -397,16 +402,22 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
 
       setMessages((prev) => [...prev, oracleMsg]);
     } catch (err) {
-      console.error("Master Oracle consultation failed:", err);
-      const fallbackMsg: ChatMessage = {
-        id: "oracle-" + Date.now(),
+      console.error("Master Oracle provider request failed:", err);
+      const failureMessage = err instanceof Error ? err.message : "The AI provider could not complete this request.";
+      const errorMsg: ChatMessage = {
+        id: "oracle-error-" + Date.now(),
         sender: "oracle",
-        text: `### Guidance from Acharya Celestia
-In reviewing your chart, your active **${currentMD?.planet || "Jupiter"} Mahadasha** and **${currentAD?.planet || "Saturn"} Antardasha** demand mindful discipline. Propitiate your active Dasha lord by chanting **${activeRemedy.beejaMantra}** 108 times daily and offering charitable daan of **${activeRemedy.charity}** on ${activeRemedy.fastingDay}s.`,
+        text: `### AI provider could not answer
+
+${failureMessage}
+
+No alternative provider or locally generated astrology advice was substituted. Check the selected provider's configuration, model availability and free quota before retrying.`,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         isAiGenerated: false,
+        provider: "error",
+        error: true,
       };
-      setMessages((prev) => [...prev, fallbackMsg]);
+      setMessages((prev) => [...prev, errorMsg]);
     } finally {
       setIsConsulting(false);
     }
@@ -602,9 +613,10 @@ In reviewing your chart, your active **${currentMD?.planet || "Jupiter"} Mahadas
                       <span>{m.sender === "user" ? effectiveName : "Acharya Celestia"}</span>
                       <span>·</span>
                       <span>{m.timestamp}</span>
+                      {m.error && <span className="px-1 py-0.2 rounded bg-red-500/20 text-red-300 text-[9px]">Provider error</span>}
                       {m.isAiGenerated && (
                         <span className="px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[9px]">
-                          {m.provider === "pollinations" ? "Pollinations" : m.provider === "freemodel" ? "FreeModel" : m.provider === "nararouter" ? "NaraRouter" : m.provider === "local-fallback" ? "Local fallback" : "Unknown provider"}
+                          {m.provider === "pollinations" ? "Pollinations" : m.provider === "freemodel" ? "FreeModel" : m.provider === "nararouter" ? "NaraRouter" : m.provider === "openrouter" ? "OpenRouter" : m.provider === "groq" ? "Groq" : "Unknown provider"}
                           {m.model ? ` · ${m.model}` : ""}
                           {m.usageTokens !== undefined ? ` · ${m.usageTokens.toLocaleString()} tokens` : ""}
                         </span>
@@ -613,9 +625,11 @@ In reviewing your chart, your active **${currentMD?.planet || "Jupiter"} Mahadas
 
                     <div
                       className={`p-4 rounded-2xl max-w-[92%] sm:max-w-[85%] text-xs md:text-sm leading-relaxed space-y-2 ${
-                        m.sender === "user"
-                          ? "bg-amber-500/20 text-amber-100 border border-amber-500/30 rounded-tr-none"
-                          : "bg-slate-900/90 text-slate-200 border border-slate-800 rounded-tl-none shadow-md font-sans"
+                        m.error
+                          ? "bg-red-950/50 text-red-100 border border-red-500/40 rounded-tl-none shadow-md font-sans"
+                          : m.sender === "user"
+                            ? "bg-amber-500/20 text-amber-100 border border-amber-500/30 rounded-tr-none"
+                            : "bg-slate-900/90 text-slate-200 border border-slate-800 rounded-tl-none shadow-md font-sans"
                       }`}
                     >
                       {m.text.split("\n\n").map((para, idx) => {
