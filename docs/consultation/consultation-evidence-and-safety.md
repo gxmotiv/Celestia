@@ -398,3 +398,36 @@ CI evidence for this commit is pending until the PR workflow completes. No provi
 - Follow-up commit `97e327bc00c795a80d952fc2b9474d63a5e9c602` corrects Category 30.1 to assert the sexagenary branch name `Wu` (午) and animal label `Horse` separately; the branch name is not the animal label.
 - Latest PR head after this correction: `97e327bc00c795a80d952fc2b9474d63a5e9c602`. No PR-triggered workflow run and no combined status check is associated with this head. The four Category 30 assertions remain unexecuted by CI.
 - Last PR-specific completed workflow remains [#1284](https://github.com/gxmotiv/Celestia/actions/runs/44663425337) on older head `b19a8d5f2e9dc55e1ec42c562e8bbafb018d700a`: astrology regression suite 150/150; Next.js production build, OpenNext packaging and Wrangler Worker dry-run passed; deployment skipped. The logs show existing duplicate `axisIndex` and duplicate switch-case warnings. This older run does not validate the new fixtures.
+
+
+## BaZi Five Rats hour-stem and secondary-engine readiness audit (2026-11-23)
+
+**Bounded research question.** Does the main calculator derive the Hour Stem from the effective Day Stem using the classical Five Rats (五鼠遁) sequence, and does that rule itself decide the disputed late-Zi day boundary? No: the Five Rats rule determines the hour stem after the effective Day Stem and Hour Branch have been established; it does not decide which civil day supplies that Day Stem.
+
+**Primary-text evidence.** *San Ming Tong Hui* (三命通會), juan 2, “論遁月時,” states that the hour is derived from the day (“遁時從日”), gives the worked Jia-Zi-day example (Zi hour Jia-Zi, Chou hour Yi-Chou, then sequentially), and transmits the verse “甲己還加甲，乙庚丙作初，丙辛從戊起，丁壬庚子居，戊癸何方發，壬子是直途.” The digital text consulted identifies its base as the Siku Quanshu transcription; it is a useful primary-text witness, not a critical-edition collation. The rule's five day-stem groups are:
+- Jia/Ji → Jia at Zi;
+- Yi/Geng → Bing at Zi;
+- Bing/Xin → Wu at Zi;
+- Ding/Ren → Geng at Zi;
+- Wu/Gui → Ren at Zi.
+The Hour Stem advances one Heavenly Stem for each successive Earthly-Branch hour, wrapping modulo 10.
+
+**Exact implementation formula.** With 0-based indices Jia=0 … Gui=9 and Zi=0 … Hai=11:
+`ziStartStemIndex = [0, 2, 4, 6, 8][effectiveDayStemIndex % 5]`
+`hourStemIndex = (ziStartStemIndex + hourBranchIndex) % 10`
+The main `lib/astronomy/chinese.ts` path implements this mapping with `ratStartStems = [0, 2, 4, 6, 8]` and advances by `branchIdx`. Its current day-boundary policy is separately declared Zi-Chu: at local civil hour 23 or later it advances the date first, then feeds that resulting Day Stem into Five Rats. This is one selected convention, not a universal resolution of late-Zi disagreements.
+
+**Subsystem audit and user-facing limitation.** The main calculator's Five Rats mapping matches the transmitted classical sequence. However, `CompleteBaZiEngine.generateBaZiChart` in `lib/astronomy/baziEngine.ts` derives the Day Pillar from the UTC calendar date and Hour Pillar from UTC hour/minute, without the main path's Zi-Chu date increment. `components/TransitView.tsx` constructs its birth date as `YYYY-MM-DDT12:00:00Z` when given a date-only string and does not receive the entered birth time or timezone offset. That secondary view can therefore show a noon-UTC-derived natal Hour Pillar unrelated to the recorded birth time. The two engines are not parity-validated; the secondary path must remain gated and must not be presented as an exact natal four-pillar calculation. This is a data/time-basis mismatch, not a Five Rats formula disagreement.
+
+**Offline regression fixture.** Category 31.1 adds one aggregate assertion covering all 10 Day Stems × 12 Shi-Chen branches (120 combinations). It uses the already documented 2000-01-01 Wu-Wu (戊午, cycle index 54) day-cycle anchor, ten consecutive civil dates, and representative branch-start hours `[0, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21]`. The fixture checks the Day Stem, derived Hour Stem and Hour Branch for every combination. Existing Category 30 tests separately pin the selected Zi-Chu rollover and 23:00/00:00 continuity. These fixtures verify this implementation's deterministic mapping; they do not establish a universal day-boundary doctrine.
+
+**Capability and remaining risks.** BaZi remains `partial`. The specialty catalogue now explicitly records the secondary UTC/date-only limitation. Still required before the secondary chart can be marked ready: pass the original civil birth date/time and IANA timezone (including historical DST), define civil versus local-mean/apparent-solar time, expose the selected Zi-Chu/Zi-Zheng and late-Zi hour-stem policy, and add cross-engine parity fixtures at 22:59/23:00/23:59/00:00 and each two-hour boundary. Unknown or rounded birth times must produce uncertainty/candidate pillars rather than a fabricated exact Hour Pillar. Hidden-stem weighting, Ten Gods, Yong Shen, transformations and Da Yun remain separately unaudited.
+
+**Sources consulted (2026-11-23).**
+- [*San Ming Tong Hui*, juan 2, “論遁月時” (electronic transcription)](https://mmkat.com/book/sanming-tonghui/34.html) — primary-text passage for deriving the hour from the day and the Five Rats verse; the page identifies the Siku Quanshu text basis.
+- [*San Ming Tong Hui*, volume 2, Wikisource transcription](https://zh.wikisource.org/zh-hans/三命通會/卷二) — independent electronic witness to the classical volume; not treated as a critical-edition collation.
+- [*Yu Ding Xing Li Kao Yuan*, “五鼠遁”](https://www.shidianguji.com/book/SK1618/chapter/1m2ba94oey5u1) — Qing-era calendrical compilation transmitting the Five Rats verse and explaining its 60-hour cycle.
+- [Y. T. Liu, “Sexagenary Cycle”](https://ytliu0.github.io/ChineseCalendar/sexagenary.html) — reproducible Julian-day basis for the 2000-01-01 Wu-Wu anchor already used by Category 30.
+- [*Xin Tang Shu*, juan 25, Calendar I](https://zh.wikisource.org/wiki/新唐書/卷025), and [Zhao Youqin, *Ge Xiang Xin Shu*, juan 2](https://zh.wikisource.org/wiki/革象新書_(四庫全書本)/卷2) — historical evidence relevant to the separate Zi-Chu/Zi-Zheng day-boundary dispute; these sources do not alter the Five Rats mapping.
+
+**CI status.** The pre-edit PR head `a9a62f0ba4d582e508ecfef09dd5c39c30f2e76e` had no PR-triggered workflow run and no combined status check. The last inspected successful PR workflow is [#1284](https://github.com/gxmotiv/Celestia/actions/runs/44663425337) on older commit `b19a8d5f2e9dc55e1ec42c562e8bbafb018d700a`: 150/150 astrology regression tests, Next.js build, OpenNext packaging and Wrangler Worker dry-run passed; deployment was skipped. Its logs include duplicate `axisIndex` and duplicate switch-case warnings. That older run does not validate Category 31.1 or the current head. The new commit's workflow/status will be checked after the branch update; no test or CI success is claimed here.

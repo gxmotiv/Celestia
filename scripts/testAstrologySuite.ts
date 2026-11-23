@@ -2071,6 +2071,54 @@ assertTest(
   `23:00 ${baziYearEndZi.dayPillar.combinedName} / ${baziYearEndZi.hourPillar.combinedName}; 00:00 ${baziNewYearMidnight.dayPillar.combinedName} / ${baziNewYearMidnight.hourPillar.combinedName}`
 );
 
+
+ // ======================================================================
+ // CATEGORY 31: FIVE RATS HOUR-STEM MATRIX (WU SHU DUN)
+ // ======================================================================
+console.log("Running Category 31: Five Rats hour-stem matrix tests...");
+
+const fiveRatsZiStartStemByDayGroup = [0, 2, 4, 6, 8];
+const fiveRatsStemNames = ["Jia", "Yi", "Bing", "Ding", "Wu", "Ji", "Geng", "Xin", "Ren", "Gui"];
+const fiveRatsBranchNames = ["Zi", "Chou", "Yin", "Mao", "Chen", "Si", "Wu", "Wei", "Shen", "You", "Xu", "Hai"];
+const fiveRatsRepresentativeHours = [0, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21];
+let fiveRatsChecked = 0;
+let fiveRatsFirstFailure = "";
+
+for (let dayOffset = 0; dayOffset < 10 && !fiveRatsFirstFailure; dayOffset++) {
+  // 2000-01-01 is the verified Wu-Wu day (cycle index 54); each next
+  // Gregorian date advances the sexagenary day by one.
+  const expectedDayStemIndex = (54 + dayOffset) % 10;
+  const birthDay = dayOffset + 1;
+
+  for (let hourBranchIndex = 0; hourBranchIndex < 12; hourBranchIndex++) {
+    const hour = fiveRatsRepresentativeHours[hourBranchIndex];
+    const profile = calculateBaZiProfile(2000, 1, birthDay, hour);
+    const expectedZiStem = fiveRatsZiStartStemByDayGroup[expectedDayStemIndex % 5];
+    const expectedHourStemIndex = (expectedZiStem + hourBranchIndex) % 10;
+    fiveRatsChecked++;
+
+    if (
+      profile.dayPillar.stem.name !== fiveRatsStemNames[expectedDayStemIndex] ||
+      profile.hourPillar.stem.name !== fiveRatsStemNames[expectedHourStemIndex] ||
+      profile.hourPillar.branch.name !== fiveRatsBranchNames[hourBranchIndex]
+    ) {
+      fiveRatsFirstFailure =
+        `2000-01-${String(birthDay).padStart(2, "0")}, day stem ${fiveRatsStemNames[expectedDayStemIndex]}, ` +
+        `hour ${String(hour).padStart(2, "0")}:00: expected ${fiveRatsStemNames[expectedHourStemIndex]}-${fiveRatsBranchNames[hourBranchIndex]}, ` +
+        `got ${profile.hourPillar.stem.name}-${profile.hourPillar.branch.name}`;
+      break;
+    }
+  }
+}
+
+assertTest(
+  "31.1 Five Rats Hour-Stem Matrix",
+  "All ten day stems and twelve Shi-Chen branches follow the San Ming Tong Hui Five Rats sequence",
+  fiveRatsChecked === 120 && fiveRatsFirstFailure === "",
+  "120/120 day-stem × hour-branch combinations match the explicit Five Rats table",
+  fiveRatsFirstFailure || `${fiveRatsChecked}/120 combinations matched`
+);
+
 // SUMMARY OUTPUT — deliberately last so every appended regression fixture is counted.
 console.log("\n=================== TEST RESULTS ===================");
 let passCount = 0;
