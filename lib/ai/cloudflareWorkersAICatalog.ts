@@ -49,14 +49,39 @@ export interface CloudflareWorkersAIBinding {
 
 export function parseCloudflareWorkersAIResponse(payload: unknown): {
   text: string;
+  model?: string;
   usage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number };
 } {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     throw new Error("Cloudflare Workers AI returned a malformed response.");
   }
   const result = payload as Record<string, unknown>;
-  const text = typeof result.response === "string" ? result.response.trim() : "";
-  if (!text) throw new Error("Cloudflare Workers AI returned no assistant text.");
+  if (result.success === false || result.error) {
+    const rawError = typeof result.error === "string"
+      ? result.error
+      : result.error && typeof result.error === "object" && typeof (result.error as Record<string, unknown>).message === "string"
+        ? String((result.error as Record<string, unknown>).message)
+        : typeof result.message === "string" ? result.message : "Unknown upstream model error";
+    const errorCode = typeof result.code === "string" ? result.code : "";
+    const safeError = rawError.replace(/(?:Bearer\\s+)[A-Za-z0-9._~-]+/gi, "Bearer [redacted]").slice(0, 240);
+    throw new Error(`Cloudflare Workers AI error ${errorCode}: ${safeError}`.trim());
+  }
+  // Newer chat models return OpenAI-compatible choices[].message.content;
+  // older text-generation models return { response: string }.
+  const choices = Array.isArray(result.choices) ? result.choices : [];
+  const firstChoice = choices[0] && typeof choices[0] === "object"
+    ? choices[0] as Record<string, unknown>
+    : undefined;
+  const message = firstChoice?.message && typeof firstChoice.message === "object"
+    ? firstChoice.message as Record<string, unknown>
+    : undefined;
+  const choiceContent = typeof message?.content === "string" ? message.content.trim() : "";
+  const text = (typeof result.response === "string" ? result.response.trim() : "") || choiceContent;
+  if (!text) {
+    const keys = Object.keys(result).slice(0, 12).join(", ");
+    throw new Error(`Cloudflare Workers AI returned no assistant text (response keys: ${keys || "none"}).`);
+  }
+  const model = typeof result.model === "string" && result.model.trim() ? result.model.trim() : undefined;
   const usageRaw = result.usage && typeof result.usage === "object"
     ? result.usage as Record<string, unknown>
     : {};
@@ -70,5 +95,5 @@ export function parseCloudflareWorkersAIResponse(payload: unknown): {
   const usage = promptTokens === undefined && completionTokens === undefined && totalTokens === undefined
     ? undefined
     : { promptTokens, completionTokens, totalTokens };
-  return { text, usage };
+  return { text, model, usage };
 }
