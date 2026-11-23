@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 export const dynamic = "force-dynamic";
 
@@ -7,6 +8,13 @@ export async function GET() {
   const freemodelFreePlanConfirmed = process.env.FREEMODEL_FREE_PLAN_CONFIRMED?.trim().toLowerCase() === "true";
   const groqKeyConfigured = Boolean(process.env.GROQ_API_KEY?.trim());
   const groqFreePlanConfirmed = process.env.GROQ_FREE_PLAN_CONFIRMED?.trim().toLowerCase() === "true";
+  const cloudflareWorkersAIFreePlanConfirmed = process.env.CLOUDFLARE_WORKERS_AI_FREE_PLAN_CONFIRMED?.trim().toLowerCase() === "true";
+  let cloudflareWorkersAIBindingConfigured = false;
+  try {
+    cloudflareWorkersAIBindingConfigured = Boolean((getCloudflareContext().env as unknown as { AI?: unknown }).AI);
+  } catch {
+    cloudflareWorkersAIBindingConfigured = false;
+  }
   return NextResponse.json(
     {
       providers: {
@@ -19,6 +27,9 @@ export async function GET() {
         groq: groqKeyConfigured && groqFreePlanConfirmed,
         groqKeyConfigured,
         groqFreePlanConfirmed,
+        cloudflareWorkersAi: cloudflareWorkersAIFreePlanConfirmed && cloudflareWorkersAIBindingConfigured,
+        cloudflareWorkersAiFreePlanConfirmed,
+        cloudflareWorkersAiBindingConfigured,
       },
     },
     { headers: { "Cache-Control": "no-store, max-age=0" } },
