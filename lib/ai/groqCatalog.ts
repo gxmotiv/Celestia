@@ -1,7 +1,7 @@
 export const GROQ_FREE_MODEL_IDS = [
   "openai/gpt-oss-120b",
   "openai/gpt-oss-20b",
-  "qwen/qwen3.8-27b",
+  "llama-3.1-8b-instant",
 ] as const;
 
 export interface GroqFreeModel {
@@ -25,10 +25,10 @@ export const GROQ_FREE_MODELS: GroqFreeModel[] = [
     description: "Smaller, faster GPT-OSS option for routine consultation and shorter tasks.",
   },
   {
-    id: "qwen/qwen3.8-27b",
-    name: "Qwen 3.8 27B",
-    quota: "30 RPM · 1,000 requests/day · 8K TPM · 200K tokens/day",
-    description: "Alternative reasoning model; verify availability in your live Groq model list.",
+    id: "llama-3.1-8b-instant",
+    name: "Llama 3.1 8B Instant",
+    quota: "30 RPM · 14,400 requests/day · 6K TPM · 500K tokens/day",
+    description: "Lightweight, higher-volume model for quick questions, routing and short replies; less suitable than GPT-OSS 120B for difficult reasoning.",
   },
 ];
 
