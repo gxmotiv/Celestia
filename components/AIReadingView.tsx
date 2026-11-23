@@ -60,6 +60,7 @@ export function AIReadingView({
   const [aiViewMode, setAiViewMode] = useState<"oracle" | "reading">("oracle");
   const [selectedModel, setSelectedModel] = useState<CelestiaAIModelId>(DEFAULT_CELESTIA_AI_MODEL);
   const [privacyRiskAcknowledged, setPrivacyRiskAcknowledged] = useState(false);
+  const [externalDataConsent, setExternalDataConsent] = useState(false);
   const [readingText, setReadingText] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -81,6 +82,10 @@ export function AIReadingView({
   ];
 
   const generateReading = async (overrideMode?: ReadingMode) => {
+    if (!externalDataConsent) {
+      setGenerationError("Please acknowledge the chart-data sharing notice before sending this reading to the selected AI provider.");
+      return;
+    }
     if ((selectedModel === "pollinations:stealth/glyph-cluster" || selectedModel.startsWith("pollinations:community/")) && !privacyRiskAcknowledged) {
       setGenerationError("Acknowledge the selected model’s provider and data-handling warning before generating.");
       return;
@@ -109,29 +114,20 @@ export function AIReadingView({
       const payload = {
         model: selectedModel,
         allowPrivacyRiskModel: privacyRiskAcknowledged,
-        name: fullName || "Seeker",
-        birthData: {
-          date: birthDate,
-          time: birthTime,
-          place: `${cityName}, ${country}`,
-          latitude,
-          longitude,
-          timezoneOffsetHours: timezoneOffset,
-          timezone: `UTC${timezoneOffset >= 0 ? "+" : ""}${timezoneOffset}`,
-        },
+        externalDataConsent,
         western: {
           sun: {
-            sign: sun?.sign || "Taurus",
-            degree: Math.round((sun?.signDegree || 0) * 10) / 10,
-            house: sun?.house || 1,
+            sign: sun?.sign ?? "not supplied",
+            degree: sun && Number.isFinite(sun.signDegree) ? Math.round(sun.signDegree * 10) / 10 : null,
+            house: sun && Number.isFinite(sun.house) ? sun.house : null,
           },
           moon: {
-            sign: moon?.sign || "Scorpio",
-            degree: Math.round((moon?.signDegree || 0) * 10) / 10,
-            house: moon?.house || 2,
+            sign: moon?.sign ?? "not supplied",
+            degree: moon && Number.isFinite(moon.signDegree) ? Math.round(moon.signDegree * 10) / 10 : null,
+            house: moon && Number.isFinite(moon.house) ? moon.house : null,
           },
-          ascendant: western.ascendant.sign,
-          midheaven: western.midheaven.sign,
+          ascendant: western.ascendant?.sign ?? "not supplied",
+          midheaven: western.midheaven?.sign ?? "not supplied",
           houseSystem: western.houseSystem,
           houseSystemUsed: western.houseSystemUsed,
           houseSystemFallbackReason: western.houseSystemFallbackReason,
@@ -197,7 +193,10 @@ export function AIReadingView({
 
       const data = await res.json();
       if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : `Reading request failed (HTTP ${res.status}).`);
-      if (data.success && data.reading) {
+      if (data.success !== true || typeof data.reading !== "string" || !data.reading.trim()) {
+        throw new Error("The selected AI provider returned no reading.");
+      }
+      {
         setReadingText(data.reading);
         setIsAiGenerated(data.isAiGenerated);
         setAiProvider(typeof data.provider === "string" ? data.provider : null);
@@ -278,9 +277,12 @@ export function AIReadingView({
         onChange={(value) => {
           setSelectedModel(value);
           setPrivacyRiskAcknowledged(false);
+          setExternalDataConsent(false);
         }}
         privacyRiskAcknowledged={privacyRiskAcknowledged}
         onPrivacyRiskAcknowledgedChange={setPrivacyRiskAcknowledged}
+        externalDataConsent={externalDataConsent}
+        onExternalDataConsentChange={setExternalDataConsent}
       />
 
       {/* Top Architecture Toggle: Master Oracle Cockpit vs Magnum Opus Reading */}
@@ -330,6 +332,7 @@ export function AIReadingView({
           fullName={fullName}
           selectedModel={selectedModel}
           privacyRiskAcknowledged={privacyRiskAcknowledged}
+          externalDataConsent={externalDataConsent}
         />
       )}
 
