@@ -3,10 +3,11 @@ import { parseOpenRouterFreeModels, validateOpenRouterFreeResponse } from "../li
 
 const models = parseOpenRouterFreeModels({
   data: [
-    { id: "meta/free-model:free", name: "Free Model", pricing: { prompt: "0", completion: "0" } },
+    { id: "meta/free-model:free", name: "Free Model", architecture: { input_modalities: ["text"], output_modalities: ["text"], modality: "text->text" }, pricing: { prompt: "0", completion: "0" } },
     { id: "meta/paid-model", name: "Paid Model", pricing: { prompt: "0.000001", completion: "0.000002" } },
     { id: "meta/missing-price:free", name: "Missing Price", pricing: { prompt: "0" } },
-    { id: "meta/non-zero:free", name: "Non-zero", pricing: { prompt: "0", completion: "0.01" } },
+    { id: "meta/non-zero:free", name: "Non-zero", architecture: { input_modalities: ["text"], output_modalities: ["text"] }, pricing: { prompt: "0", completion: "0.01" } },
+    { id: "meta/free-image:free", name: "Free Image", architecture: { input_modalities: ["image"], output_modalities: ["image"], modality: "image->image" }, pricing: { prompt: "0", completion: "0" } },
   ],
 });
 assert.deepEqual(models.map((model) => model.id), ["meta/free-model:free"]);
