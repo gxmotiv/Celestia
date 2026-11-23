@@ -9,9 +9,20 @@
  * 5. Pre-Natal Syzygy (SAN: New or Full Moon preceding birth)
  * Calculates essential dignities (Domicile +5, Exaltation +4, Triplicity +3, Terms +2, Faces +1)
  * plus accidental house dignities (+1 to +12), Day Ruler (+7), and Hour Ruler (+6).
+ *
+ * W-06 (2026-11-23): when `julianDay` is provided in `calculate()` params, the
+ * SAN is computed via the EXACT lunation search in verifiedFixes.ts
+ * (`previousSyzygy`, astronomy-engine `SearchMoonPhase`) instead of the legacy
+ * 0.08-back-guess. Verified vs Swiss Ephemeris: the legacy guess had
+ * 0.019°–1.158° position error (worst-case ~2° with extreme lunar speeds),
+ * which can flip term/face dignities near boundaries; the exact search
+ * reproduces Swiss Ephemeris to search precision. `sanExact` is returned so
+ * the UI can label the method. The legacy method remains as fallback for
+ * callers that do not pass a Julian Day.
  */
 
 import { normalizeDegrees } from "./ephemeris";
+import { previousSyzygy } from "./verifiedFixes";
 
 export interface AlmutenCandidateScore {
   planet: string;
@@ -52,6 +63,8 @@ export interface AlmutenFigurisResult {
   sanDegree: number;
   sanType: "New Moon" | "Full Moon";
   sanFormatted: string;
+  /** True when the SAN came from the exact lunation search (julianDay provided). */
+  sanExact?: boolean;
   dayRuler: string;
   hourRuler: string;
   points: AlmutenPointAnalysis[];
@@ -160,7 +173,11 @@ const PLANET_SYMBOLS: Record<string, string> = {
 
 export class AlmutenFigurisCalculator {
   /**
-   * Approximate Pre-natal Syzygy (SAN: New Moon or Full Moon before birth).
+   * @deprecated Legacy approximate Pre-natal Syzygy (SAN) back-guess.
+   * Kept ONLY as a fallback for callers that cannot supply a Julian Day.
+   * Measured vs the exact lunation: 0.019°–1.158° position error (sect-type
+   * correct 5/5, worst-case ~2°). Prefer `calculate({ ..., julianDay })`,
+   * which uses the exact `previousSyzygy` search (W-06).
    */
   public calculatePreNatalSyzygy(sunLon: number, moonLon: number): { degree: number; type: "New Moon" | "Full Moon" } {
     const diff = normalizeDegrees(moonLon - sunLon);
@@ -183,11 +200,22 @@ export class AlmutenFigurisCalculator {
     isDayChart: boolean;
     dayRuler: string;
     hourRuler: string;
+    /** Birth instant (UT Julian Day). When provided, the SAN is computed with
+     *  the exact lunation search (W-06) and `sanExact: true` is returned. */
+    julianDay?: number;
   }): AlmutenFigurisResult {
-    const { ascendant, sun, moon, partOfFortune, planets, isDayChart, dayRuler, hourRuler } = params;
+    const { ascendant, sun, moon, partOfFortune, planets, isDayChart, dayRuler, hourRuler, julianDay } = params;
 
-    // 1. Determine SAN
-    const san = this.calculatePreNatalSyzygy(sun, moon);
+    // 1. Determine SAN — exact lunation search when the birth instant is known
+    let san: { degree: number; type: "New Moon" | "Full Moon" };
+    let sanExact = false;
+    if (typeof julianDay === "number" && Number.isFinite(julianDay)) {
+      const syz = previousSyzygy(julianDay);
+      san = { degree: syz.sunLongitude, type: syz.type };
+      sanExact = true;
+    } else {
+      san = this.calculatePreNatalSyzygy(sun, moon);
+    }
 
     const candidatePoints = [
       { name: "Ascendant", lon: ascendant },
@@ -345,6 +373,7 @@ export class AlmutenFigurisCalculator {
       sanDegree: san.degree,
       sanType: san.type,
       sanFormatted,
+      sanExact,
       dayRuler,
       hourRuler,
       points: pointAnalyses,

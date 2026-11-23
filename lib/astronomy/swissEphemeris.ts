@@ -1,13 +1,29 @@
 /**
- * Swiss Ephemeris High-Precision Astronomical Engine
- * Computes planetary coordinates with 0.001° accuracy based on JPL DE405 / VSOP87
- * and IAU standards. Provides full compatibility with the Swiss Ephemeris API.
+ * Celestia Astronomy Engine facade ("SwissEphemerisEngine")
+ * =============================================================================
+ * HONEST LABELING (audit 2026-11-23, §F): this is NOT native Swiss Ephemeris.
+ * It is a facade over `astronomy-engine` (MIT; VSOP/ELP-class solutions),
+ * independently verified against Swiss Ephemeris 2.10.03:
+ *   - planets ≤ 0.3′ (1900–2100 modern era; ≤0.018° worst-case in 1452)
+ *   - MC/ASC ≤ 0.0005°
+ * Do not describe it as "Swiss Ephemeris" or claim "0.001° JPL DE405" accuracy
+ * in UI or comments. The API-shape compatibility (SUN=0, julday, etc.) is
+ * retained for call-site compatibility only.
+ *
+ * Phase B wiring (2026-11-23): Vertex (W-04), Placidus intermediate cusps
+ * (W-05) and True Node (W-07) now delegate to the audit-verified reference
+ * implementations in `./verifiedFixes.ts`.
  */
 
 import * as Astronomy from "astronomy-engine";
+import {
+  calculateVertex as vfVertex,
+  calculateTrueNode as vfTrueNode,
+  calculatePlacidusIntermediateCusps as vfPlacidus,
+} from "./verifiedFixes";
 
 export interface SwissPlanetPosition {
-  longitude: number;      // Exact position (0.001° accuracy)
+  longitude: number;      // position (verified ≤0.3′ vs Swiss Ephemeris, modern era)
   latitude: number;       // Declination / celestial latitude
   distance: number;       // AU from Earth
   speed: number;          // Degrees per day (retrograde detection)
@@ -113,6 +129,8 @@ export class SwissEphemerisEngine {
 
   /**
    * Calculates the exact Chitra Paksha (Lahiri) Ayanamsa for a given Julian Day
+   * Verified vs Swiss Ephemeris: 23.857092° at J2000 (match to 2×10⁻⁶°).
+   * Fagan/Bradley is Lahiri + 0.883208° (constant 1900–2100) — see verifiedFixes.ts (W-12).
    */
   public getAyanamsa(julianDay: number): number {
     const T = (julianDay - 2451545.0) / 36525.0;
@@ -280,7 +298,7 @@ export class SwissEphemerisEngine {
   }
 
   /**
-   * Calculate EXACT planetary position with 0.001° precision
+   * Calculate planetary position (verified ≤0.3′ vs Swiss Ephemeris in the modern era)
    */
   public calculatePlanetPosition(
     planet: number,
@@ -326,26 +344,24 @@ export class SwissEphemerisEngine {
       if (diff < -180) diff += 360;
       speed = diff * 24.0;
     } else if (planet === this.MEAN_NODE || planet === this.TRUE_NODE) {
-      // High precision Lunar Nodes based on Swiss Ephemeris / Meeus formulas
-      const T = (julianDay - 2451545.0) / 36525.0;
-      let omega = 125.04452 - 1934.136261 * T + 0.0020708 * T * T + (T * T * T) / 450000;
-
+      const dist0 = 0.00257; // Average lunar distance in AU
       if (planet === this.TRUE_NODE) {
-        // Periodic perturbations for True Node (evection, variation, solar inequality)
-        const sunVec = Astronomy.GeoVector(Astronomy.Body.Sun, time, true);
-        const sunEcl = Astronomy.Ecliptic(sunVec);
-        const moonVec = Astronomy.GeoVector(Astronomy.Body.Moon, time, true);
-        const moonEcl = Astronomy.Ecliptic(moonVec);
-        const D2 = 2 * (moonEcl.elon - sunEcl.elon) * (Math.PI / 180);
-        const M = (357.5291 + 35999.05029 * T) * (Math.PI / 180);
-        omega += -1.4979 * Math.sin(2 * (moonEcl.elon - omega) * (Math.PI / 180))
-                 - 0.1500 * Math.sin(M)
-                 - 0.1226 * Math.sin(D2);
+        // W-07 FIX: True (osculating) node from Moon state vectors (r×v),
+        // verified ≤0.009° vs Swiss Ephemeris TRUE_NODE at 1452/1975/1990/J2000/2026.
+        // Speed is numeric (±1h central difference) — the osculating node genuinely
+        // varies (−0.19…+0.3°/day, can be direct); never hardcode a constant.
+        const tn = vfTrueNode(julianDay);
+        lon = tn.lon;
+        speed = tn.speed;
+        dist = dist0;
+      } else {
+        // Mean node: analytic Meeus formula (verified ≤0.005° vs Swiss Ephemeris)
+        const T = (julianDay - 2451545.0) / 36525.0;
+        const omega = 125.04452 - 1934.136261 * T + 0.0020708 * T * T + (T * T * T) / 450000;
+        lon = (omega % 360 + 360) % 360;
+        speed = -0.05295; // Mean node mean daily motion (Meeus; matches Swiss Ephemeris)
+        dist = dist0;
       }
-
-      lon = (omega % 360 + 360) % 360;
-      speed = -0.05295; // Mean node retrograde motion
-      dist = 0.00257; // Average lunar distance in AU
     }
 
     if (isSidereal) {
@@ -353,7 +369,7 @@ export class SwissEphemerisEngine {
       lon = ((lon - ayanamsa) % 360 + 360) % 360;
     }
 
-    // Rounding to 0.0001° gives true 0.001° accuracy while avoiding float jitter
+    // Rounding to 0.0001° while avoiding float jitter
     const round4 = (v: number) => Math.round(v * 10000) / 10000;
 
     return {
@@ -422,13 +438,11 @@ export class SwissEphemerisEngine {
     ) * (180.0 / Math.PI);
     if (asc < 0) asc += 360.0;
 
-    // Vertex calculation (western electric axis)
-    const ramcVertex = (ramc + 180.0) * (Math.PI / 180.0);
-    let vertex = Math.atan2(
-      Math.cos(ramcVertex),
-      -Math.sin(ramcVertex) * Math.cos(eps) + (1 / Math.tan(phi || 0.0001)) * Math.sin(eps)
-    ) * (180.0 / Math.PI);
-    if (vertex < 0) vertex += 360.0;
+    // Vertex (W-04 FIX): western intersection of the prime vertical with the
+    // ecliptic — audit-verified closed form, ≤0.0016° vs Swiss Ephemeris
+    // `ascmc[3]` across 8 global cities / 1960–2026. The previous in-file
+    // formula was off by 9°–44°. Anti-Vertex = Vertex + 180°.
+    const vertex = vfVertex(ramc, latitude, epsDeg);
 
     const cusps: number[] = new Array(12);
     let houseSystemUsed: "P" | "W" | "E" = system;
@@ -463,32 +477,23 @@ export class SwissEphemerisEngine {
         cusps[0] = asc; // 1st house
         cusps[6] = (asc + 180.0) % 360.0; // 7th house (DESC)
 
-        const calcPlacidusCusp = (f: number, ramcOffset: number): number => {
-          let r = (ramc + ramcOffset) * (Math.PI / 180.0);
-          for (let iter = 0; iter < 10; iter++) {
-            const sinDec = Math.sin(eps) * Math.sin(r);
-            const cosDec = Math.cos(Math.asin(Math.max(-1, Math.min(1, sinDec))));
-            const tanDec = sinDec / (cosDec || 0.0001);
-            const semiArcRatio = Math.asin(
-              Math.max(-1, Math.min(1, Math.tan(phi) * tanDec))
-            ) * f;
-            r = (ramc + ramcOffset) * (Math.PI / 180.0) + semiArcRatio;
-          }
-          let cusp = Math.atan2(Math.sin(r), Math.cos(r) * Math.cos(eps)) * (180.0 / Math.PI);
-          if (cusp < 0) cusp += 360.0;
-          return cusp;
-        };
-
+        // W-05 FIX: Placidus intermediate cusps via the verified alternating
+        // iteration (λ_{n+1} = eclFromRA(H + F·AD(δ(λ_n)))) — ≤0.0044° vs
+        // Swiss Ephemeris `houses(..., 'P')` across Rome/NYC/Oslo/Sydney/
+        // CapeTown/Reykjavík. The previous in-file loop mixed ecliptic and
+        // right-ascension frames and locked onto the wrong fixed point
+        // (cusp errors 0.26°–1.74°, flipping planet house assignments).
         try {
-          cusps[10] = calcPlacidusCusp(1 / 3, 30.0); // 11th house
-          cusps[11] = calcPlacidusCusp(2 / 3, 60.0); // 12th house
-          cusps[1] = calcPlacidusCusp(2 / 3, 120.0); // 2nd house
-          cusps[2] = calcPlacidusCusp(1 / 3, 150.0); // 3rd house
+          const placidus = vfPlacidus(ramc, latitude, epsDeg);
+          cusps[10] = placidus.cusp11; // 11th house
+          cusps[11] = placidus.cusp12; // 12th house
+          cusps[1] = placidus.cusp2;   // 2nd house
+          cusps[2] = placidus.cusp3;   // 3rd house
 
           cusps[4] = (cusps[10] + 180.0) % 360.0; // 5th house
           cusps[5] = (cusps[11] + 180.0) % 360.0; // 6th house
-          cusps[7] = (cusps[1] + 180.0) % 360.0; // 8th house
-          cusps[8] = (cusps[2] + 180.0) % 360.0; // 9th house
+          cusps[7] = (cusps[1] + 180.0) % 360.0;  // 8th house
+          cusps[8] = (cusps[2] + 180.0) % 360.0;  // 9th house
 
           if (!cusps.every((value) => Number.isFinite(value) && value >= 0 && value < 360)) {
             throw new Error("Placidus produced a non-finite house cusp.");
