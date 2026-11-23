@@ -323,6 +323,14 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
     try {
       const sun = westernData?.planets.find((p) => p.name === "Sun");
       const moon = westernData?.planets.find((p) => p.name === "Moon");
+      const hasVerifiedDashaInputs = Boolean(
+        birthDate &&
+        birthTime &&
+        vedicData.lagna?.rasiName &&
+        vedicData.planets.some((planet) =>
+          planet.name === "Moon" && Number.isFinite(planet.siderealLongitude)
+        )
+      );
 
       const payload = {
         model: selectedModel,
@@ -354,14 +362,16 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
             yogas: vedicData.yogas.map((y) => y.name),
             sadeSatiStatus: "not supplied",
           },
-          dashaConvergence: {
+          dashaConvergence: hasVerifiedDashaInputs ? {
             activeSystemsCount: dashaSystems.convergence.length,
-            dominantTone: dashaSystems.convergence[0]?.tone || "positive",
+            dominantTone: dashaSystems.convergence[0]?.tone ?? "not supplied",
             systemSummaries: dashaSystems.convergence.map((p) => ({
               system: p.system,
               lord: p.lordOrSign,
               tone: p.tone,
             })),
+          } : {
+            status: "not supplied: valid birth date/time, Vedic Lagna and Vedic Moon longitude are required",
           },
           numerology: {
             lifePath: numerologyData?.lifePathNumber ?? "not supplied",
