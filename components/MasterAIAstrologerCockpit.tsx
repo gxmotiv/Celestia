@@ -274,7 +274,7 @@ export function MasterAIAstrologerCockpit({
   }, [currentMD]);
 
   // Active remedy profile based on Mahadasha lord
-  const activeRemedyLord = currentMD?.planet || "Jupiter";
+  const activeRemedyLord = currentMD?.planet ?? "not supplied";
   const activeRemedy = PLANETARY_REMEDIES[activeRemedyLord] || PLANETARY_REMEDIES["Jupiter"];
 
   // Chat consultation state
@@ -284,7 +284,7 @@ export function MasterAIAstrologerCockpit({
       sender: "oracle",
       text: `Namaste, revered ${effectiveName}. I am **Acharya Celestia**, your Master Esoteric Astrologer and Celestial Synthesizer. 
 
-I am currently reading your **10-System Classical Dasha convergence** synchronized with your **${vedicData.lagna.rasiName} Ascendant**, **${vedicData.birthNakshatra} Nakshatra** (Lord: **${vedicData.birthNakshatraLord}**), and the active **${currentMD?.planet || "Jupiter"} Mahadasha** / **${currentAD?.planet || "Saturn"} Antardasha**.
+I am currently reading your **10-System Classical Dasha convergence** synchronized with your **${vedicData.lagna.rasiName} Ascendant**, **${vedicData.birthNakshatra} Nakshatra** (Lord: **${vedicData.birthNakshatraLord}**), and the active **${currentMD?.planet || "Jupiter"} Mahadasha** / **${currentAD?.planet ?? "not supplied"} Antardasha**.
 
 Ask me any specific inquiry regarding your predictive timing, career milestones, relationship fruition, or sacred Vedic remedies.`,
       timestamp: "Live Oracle Synchronized",
@@ -337,10 +337,10 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
         })),
         context: {
           western: {
-            sunSign: sun?.sign || "Aries",
-            moonSign: moon?.sign || "Taurus",
-            ascendantSign: westernData?.ascendant.sign || "Aries",
-            midheavenSign: westernData?.midheaven.sign || "Capricorn",
+            sunSign: sun?.sign ?? "not supplied",
+            moonSign: moon?.sign ?? "not supplied",
+            ascendantSign: westernData?.ascendant?.sign ?? "not supplied",
+            midheavenSign: westernData?.midheaven?.sign ?? "not supplied",
             majorAspects: westernData?.aspects.slice(0, 5).map((a) => `${a.planet1} ${a.aspectName} ${a.planet2}`),
           },
           vedic: {
@@ -352,7 +352,7 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
             activeMahadasha: currentMD?.planet || "Jupiter",
             activeAntardasha: currentAD?.planet || "Saturn",
             yogas: vedicData.yogas.map((y) => y.name),
-            sadeSatiStatus: "Standard Transit",
+            sadeSatiStatus: "not supplied",
           },
           dashaConvergence: {
             activeSystemsCount: dashaSystems.convergence.length,
@@ -364,14 +364,14 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
             })),
           },
           numerology: {
-            lifePath: numerologyData?.lifePathNumber || 1,
-            expression: numerologyData?.expressionNumber || 1,
-            personalYear: numerologyData?.personalYearNumber || 1,
+            lifePath: numerologyData?.lifePathNumber ?? "not supplied",
+            expression: numerologyData?.expressionNumber ?? "not supplied",
+            personalYear: numerologyData?.personalYearNumber ?? "not supplied",
           },
           bazi: {
-            zodiacAnimal: baziData?.zodiacAnimal || "Dragon",
-            dayMaster: baziData?.dayMaster.symbol || "Jia",
-            dominantElement: baziData?.dayMaster.stem?.element || "Wood",
+            zodiacAnimal: baziData?.zodiacAnimal ?? "not supplied",
+            dayMaster: baziData?.dayMaster?.symbol ?? "not supplied",
+            dominantElement: baziData?.dayMaster?.stem?.element ?? "not supplied",
           },
         },
       };
