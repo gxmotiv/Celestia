@@ -354,7 +354,9 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
                     </option>
                   ))}
                   {naraLoaded && naraModels.length === 0 ? (
-                    <option value="" disabled>No verified Free-plan model available</option>
+                    <option value="nararouter:agnes-2.5-flash" disabled>
+                      Agnes 2.5 Flash — Free-listed; waiting for account API confirmation
+                    </option>
                   ) : null}
                 </optgroup>
               );
