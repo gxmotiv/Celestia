@@ -1,5 +1,6 @@
 import { writeFile } from "node:fs/promises";
 import { parsePollinationsAvailableTextModels } from "../lib/ai/pollinationsCatalog";
+import { validateRequestedModelResponse } from "../lib/ai/modelResponseValidation";
 
 const apiKey = process.env.POLLINATIONS_API_KEY;
 if (!apiKey) throw new Error("POLLINATIONS_API_KEY GitHub secret is not configured.");
@@ -91,8 +92,8 @@ async function main() {
     if (!response.ok) throw new Error(`Pollinations zero-price smoke request failed: HTTP ${response.status}.`);
     let result: any;
     try { result = JSON.parse(raw); } catch { throw new Error("Pollinations smoke request returned invalid JSON."); }
-    const answer = result?.choices?.[0]?.message?.content;
-    if (typeof answer !== "string" || !answer.trim()) throw new Error("Pollinations smoke request returned no assistant text.");
+    const validation = validateRequestedModelResponse(model.id, result);
+    if (!validation.valid) throw new Error(`Pollinations smoke response validation failed: ${validation.reason}`);
     console.log(`PASS Pollinations live inference: HTTP ${response.status}; official model=${model.id}; catalogue price=input ${model.inputPrice} / output ${model.outputPrice} Pollen per token; latency=${latencyMs}ms; non-empty response received.`);
     return;
   }
@@ -157,11 +158,12 @@ async function main() {
             results.push({ model: model.id, task: task.id, attempt, status: "invalid_response", latencyMs, responseChars: raw.length, answer: raw.slice(0, 4000) });
             continue;
           }
-          const answer = parsed?.choices?.[0]?.message?.content;
-          if (typeof answer !== "string" || answer.trim().length === 0) {
-            results.push({ model: model.id, task: task.id, attempt, status: "invalid_response", latencyMs, responseChars: raw.length, error: "Missing choices[0].message.content" });
+          const validation = validateRequestedModelResponse(model.id, parsed);
+          if (!validation.valid) {
+            results.push({ model: model.id, task: task.id, attempt, status: "invalid_response", latencyMs, responseChars: raw.length, error: validation.reason });
             continue;
           }
+          const answer = validation.answer;
           const qualityPass = task.validate(answer);
           results.push({
             model: model.id, task: task.id, attempt, status: "ok",
