@@ -1,7 +1,7 @@
 /**
  * Comprehensive Chinese BaZi (Four Pillars of Destiny - 八字) & 24 Solar Terms Engine
  * Implements:
- * 1. Solar Calendar & 24 Solar Terms Calculation via Swiss Ephemeris
+ * 1. Solar Calendar & 24 Solar Terms via Astronomy Engine-backed facade
  * 2. 10 Heavenly Stems (Tian Gan) & 12 Earthly Branches (Di Zhi) with Hidden Stems (Cang Gan)
  * 3. 60 Jia Zi Sexagenary Cycle
  * 4. Four Pillars: Year (Lichun), Month (Solar Terms), Day (60-day cycle), Hour (2-hour branches)
@@ -13,6 +13,11 @@
 
 import { swissEphemeris } from "./swissEphemeris";
 import { calculateJulianDay, normalizeDegrees } from "./ephemeris";
+import {
+  BaZiClockOptions,
+  BaZiTimeBasis,
+  createBaZiClock,
+} from "./timeEngine";
 
 // ============================================================
 // 1. DATA TYPES & INTERFACES
@@ -27,7 +32,13 @@ export interface SolarTerm {
   pinyin: string;
   longitude: number; // 0, 15, 30 ... 345
   season: "Spring" | "Summer" | "Autumn" | "Winter";
-  isMajor: boolean; // Jie (Solar Node) vs Zhong (Middle Term)
+  /** True for the 12 Jie terms that begin BaZi solar months. */
+  isJie: boolean;
+  /**
+   * @deprecated Legacy alias for isJie. Historically Celestia used "major"
+   * to mean Jie; HKO "major solar terms" instead refers to Zhongqi.
+   */
+  isMajor: boolean;
   monthBranchIndex: number; // 0 = Zi, 2 = Yin (Tiger), etc.
 }
 
@@ -134,9 +145,38 @@ export interface AnnualInfluence {
   cautions: string[];
 }
 
+export type BaZiDayBoundaryPolicy = "pure-zi" | "early-late-zi";
+export type BaZiPillarName = "year" | "month" | "day" | "hour";
+
+export interface BaZiCalculationOptions {
+  clock: BaZiClockOptions;
+  dayBoundaryPolicy?: BaZiDayBoundaryPolicy;
+  /** False when the entered local clock value is only a noon placeholder. */
+  birthTimeKnown?: boolean;
+  instantResolution?: "manual-fixed-offset" | "iana-resolved";
+  uncertainPillars?: BaZiPillarName[];
+  warnings?: string[];
+}
+
 export interface BaZiChart {
   birthDate: Date;
   gender: "Male" | "Female";
+  calculationContext?: {
+    birthTimeKnown: boolean;
+    utcInstantIso: string;
+    timeBasis: BaZiTimeBasis;
+    dayBoundaryPolicy: BaZiDayBoundaryPolicy;
+    solarClockIso: string;
+    longitudeDegrees: number;
+    longitudeCorrectionSeconds: number;
+    equationOfTimeMinutes: number;
+    civilUtcOffsetSeconds?: number;
+    instantResolution: "manual-fixed-offset" | "iana-resolved";
+    uncertainPillars: BaZiPillarName[];
+    warnings: string[];
+    solarLongitudeMethod: "astronomy-engine-geovector-ecliptic-output";
+    solarTermBoundaryMode: "instantaneous-longitude-snapshot";
+  };
   pillars: {
     year: Pillar;
     month: Pillar;
@@ -177,30 +217,30 @@ export interface BaZiChart {
 // ============================================================
 
 export const SOLAR_TERMS: SolarTerm[] = [
-  { name: "Chunfen (Spring Equinox)", chinese: "春分", pinyin: "Chūnfēn", longitude: 0, season: "Spring", isMajor: false, monthBranchIndex: 3 }, // Rabbit
-  { name: "Qingming (Clear & Bright)", chinese: "清明", pinyin: "Qīngmíng", longitude: 15, season: "Spring", isMajor: true, monthBranchIndex: 4 }, // Dragon
-  { name: "Guyu (Grain Rain)", chinese: "谷雨", pinyin: "Gǔyǔ", longitude: 30, season: "Spring", isMajor: false, monthBranchIndex: 4 },
-  { name: "Lixia (Start of Summer)", chinese: "立夏", pinyin: "Lìxià", longitude: 45, season: "Summer", isMajor: true, monthBranchIndex: 5 }, // Snake
-  { name: "Xiaoman (Grain Full)", chinese: "小满", pinyin: "Xiǎomǎn", longitude: 60, season: "Summer", isMajor: false, monthBranchIndex: 5 },
-  { name: "Mangzhong (Grain in Ear)", chinese: "芒种", pinyin: "Mángzhòng", longitude: 75, season: "Summer", isMajor: true, monthBranchIndex: 6 }, // Horse
-  { name: "Xiazhi (Summer Solstice)", chinese: "夏至", pinyin: "Xiàzhì", longitude: 90, season: "Summer", isMajor: false, monthBranchIndex: 6 },
-  { name: "Xiaoshu (Minor Heat)", chinese: "小暑", pinyin: "Xiǎoshǔ", longitude: 105, season: "Summer", isMajor: true, monthBranchIndex: 7 }, // Goat
-  { name: "Dashu (Major Heat)", chinese: "大暑", pinyin: "Dàshǔ", longitude: 120, season: "Summer", isMajor: false, monthBranchIndex: 7 },
-  { name: "Liqiu (Start of Autumn)", chinese: "立秋", pinyin: "Lìqiū", longitude: 135, season: "Autumn", isMajor: true, monthBranchIndex: 8 }, // Monkey
-  { name: "Chushu (End of Heat)", chinese: "处暑", pinyin: "Chùshǔ", longitude: 150, season: "Autumn", isMajor: false, monthBranchIndex: 8 },
-  { name: "Bailu (White Dew)", chinese: "白露", pinyin: "Báilù", longitude: 165, season: "Autumn", isMajor: true, monthBranchIndex: 9 }, // Rooster
-  { name: "Qiufen (Autumn Equinox)", chinese: "秋分", pinyin: "Qiūfēn", longitude: 180, season: "Autumn", isMajor: false, monthBranchIndex: 9 },
-  { name: "Hanlu (Cold Dew)", chinese: "寒露", pinyin: "Hánlù", longitude: 195, season: "Autumn", isMajor: true, monthBranchIndex: 10 }, // Dog
-  { name: "Shuangjiang (Frost Descends)", chinese: "霜降", pinyin: "Shuāngjiàng", longitude: 210, season: "Autumn", isMajor: false, monthBranchIndex: 10 },
-  { name: "Lidong (Start of Winter)", chinese: "立冬", pinyin: "Lìdōng", longitude: 225, season: "Winter", isMajor: true, monthBranchIndex: 11 }, // Pig
-  { name: "Xiaoxue (Minor Snow)", chinese: "小雪", pinyin: "Xiǎoxuě", longitude: 240, season: "Winter", isMajor: false, monthBranchIndex: 11 },
-  { name: "Daxue (Major Snow)", chinese: "大雪", pinyin: "Dàxuě", longitude: 255, season: "Winter", isMajor: true, monthBranchIndex: 0 }, // Rat
-  { name: "Dongzhi (Winter Solstice)", chinese: "冬至", pinyin: "Dōngzhì", longitude: 270, season: "Winter", isMajor: false, monthBranchIndex: 0 },
-  { name: "Xiaohan (Minor Cold)", chinese: "小寒", pinyin: "Xiǎohán", longitude: 285, season: "Winter", isMajor: true, monthBranchIndex: 1 }, // Ox
-  { name: "Dahan (Major Cold)", chinese: "大寒", pinyin: "Dàhán", longitude: 300, season: "Winter", isMajor: false, monthBranchIndex: 1 },
-  { name: "Lichun (Start of Spring)", chinese: "立春", pinyin: "Lìchūn", longitude: 315, season: "Spring", isMajor: true, monthBranchIndex: 2 }, // Tiger - Solar Year Boundary!
-  { name: "Yushui (Rain Water)", chinese: "雨水", pinyin: "Yǔshuǐ", longitude: 330, season: "Spring", isMajor: false, monthBranchIndex: 2 },
-  { name: "Jingzhe (Awakening of Insects)", chinese: "惊蛰", pinyin: "Jīngzhé", longitude: 345, season: "Spring", isMajor: true, monthBranchIndex: 3 }, // Rabbit
+  { name: "Chunfen (Spring Equinox)", chinese: "春分", pinyin: "Chūnfēn", longitude: 0, season: "Spring", isJie: false, isMajor: false, monthBranchIndex: 3 }, // Rabbit
+  { name: "Qingming (Clear & Bright)", chinese: "清明", pinyin: "Qīngmíng", longitude: 15, season: "Spring", isJie: true, isMajor: true, monthBranchIndex: 4 }, // Dragon
+  { name: "Guyu (Grain Rain)", chinese: "谷雨", pinyin: "Gǔyǔ", longitude: 30, season: "Spring", isJie: false, isMajor: false, monthBranchIndex: 4 },
+  { name: "Lixia (Start of Summer)", chinese: "立夏", pinyin: "Lìxià", longitude: 45, season: "Summer", isJie: true, isMajor: true, monthBranchIndex: 5 }, // Snake
+  { name: "Xiaoman (Grain Full)", chinese: "小满", pinyin: "Xiǎomǎn", longitude: 60, season: "Summer", isJie: false, isMajor: false, monthBranchIndex: 5 },
+  { name: "Mangzhong (Grain in Ear)", chinese: "芒种", pinyin: "Mángzhòng", longitude: 75, season: "Summer", isJie: true, isMajor: true, monthBranchIndex: 6 }, // Horse
+  { name: "Xiazhi (Summer Solstice)", chinese: "夏至", pinyin: "Xiàzhì", longitude: 90, season: "Summer", isJie: false, isMajor: false, monthBranchIndex: 6 },
+  { name: "Xiaoshu (Minor Heat)", chinese: "小暑", pinyin: "Xiǎoshǔ", longitude: 105, season: "Summer", isJie: true, isMajor: true, monthBranchIndex: 7 }, // Goat
+  { name: "Dashu (Major Heat)", chinese: "大暑", pinyin: "Dàshǔ", longitude: 120, season: "Summer", isJie: false, isMajor: false, monthBranchIndex: 7 },
+  { name: "Liqiu (Start of Autumn)", chinese: "立秋", pinyin: "Lìqiū", longitude: 135, season: "Autumn", isJie: true, isMajor: true, monthBranchIndex: 8 }, // Monkey
+  { name: "Chushu (End of Heat)", chinese: "处暑", pinyin: "Chùshǔ", longitude: 150, season: "Autumn", isJie: false, isMajor: false, monthBranchIndex: 8 },
+  { name: "Bailu (White Dew)", chinese: "白露", pinyin: "Báilù", longitude: 165, season: "Autumn", isJie: true, isMajor: true, monthBranchIndex: 9 }, // Rooster
+  { name: "Qiufen (Autumn Equinox)", chinese: "秋分", pinyin: "Qiūfēn", longitude: 180, season: "Autumn", isJie: false, isMajor: false, monthBranchIndex: 9 },
+  { name: "Hanlu (Cold Dew)", chinese: "寒露", pinyin: "Hánlù", longitude: 195, season: "Autumn", isJie: true, isMajor: true, monthBranchIndex: 10 }, // Dog
+  { name: "Shuangjiang (Frost Descends)", chinese: "霜降", pinyin: "Shuāngjiàng", longitude: 210, season: "Autumn", isJie: false, isMajor: false, monthBranchIndex: 10 },
+  { name: "Lidong (Start of Winter)", chinese: "立冬", pinyin: "Lìdōng", longitude: 225, season: "Winter", isJie: true, isMajor: true, monthBranchIndex: 11 }, // Pig
+  { name: "Xiaoxue (Minor Snow)", chinese: "小雪", pinyin: "Xiǎoxuě", longitude: 240, season: "Winter", isJie: false, isMajor: false, monthBranchIndex: 11 },
+  { name: "Daxue (Major Snow)", chinese: "大雪", pinyin: "Dàxuě", longitude: 255, season: "Winter", isJie: true, isMajor: true, monthBranchIndex: 0 }, // Rat
+  { name: "Dongzhi (Winter Solstice)", chinese: "冬至", pinyin: "Dōngzhì", longitude: 270, season: "Winter", isJie: false, isMajor: false, monthBranchIndex: 0 },
+  { name: "Xiaohan (Minor Cold)", chinese: "小寒", pinyin: "Xiǎohán", longitude: 285, season: "Winter", isJie: true, isMajor: true, monthBranchIndex: 1 }, // Ox
+  { name: "Dahan (Major Cold)", chinese: "大寒", pinyin: "Dàhán", longitude: 300, season: "Winter", isJie: false, isMajor: false, monthBranchIndex: 1 },
+  { name: "Lichun (Start of Spring)", chinese: "立春", pinyin: "Lìchūn", longitude: 315, season: "Spring", isJie: true, isMajor: true, monthBranchIndex: 2 }, // Tiger - Solar Year Boundary!
+  { name: "Yushui (Rain Water)", chinese: "雨水", pinyin: "Yǔshuǐ", longitude: 330, season: "Spring", isJie: false, isMajor: false, monthBranchIndex: 2 },
+  { name: "Jingzhe (Awakening of Insects)", chinese: "惊蛰", pinyin: "Jīngzhé", longitude: 345, season: "Spring", isJie: true, isMajor: true, monthBranchIndex: 3 }, // Rabbit
 ];
 
 // ============================================================
@@ -433,9 +473,35 @@ export const EARTHLY_BRANCHES: EarthlyBranch[] = [
 // 5. SOLAR TERM & CALENDAR CALCULATION ENGINE
 // ============================================================
 
+/**
+ * Resolve the BaZi solar-month branch from the Sun's tropical longitude.
+ *
+ * The first solar month begins at Li Chun (315°) with Yin/Tiger (branch 2).
+ * Each following 30° interval advances one branch, wrapping after Hai/Pig.
+ * Intervals are start-inclusive and end-exclusive.
+ */
+export function getSolarMonthPosition(sunLongitude: number): {
+  branchIndex: number;
+  monthOrderFromLichun: number;
+} {
+  if (!Number.isFinite(sunLongitude)) {
+    throw new RangeError("Solar longitude must be a finite number.");
+  }
+
+  const longitude = normalizeDegrees(sunLongitude);
+  const monthOrderFromLichun =
+    Math.floor((((longitude - 315 + 360) % 360) + 360) % 360 / 30);
+
+  return {
+    branchIndex: (2 + monthOrderFromLichun) % 12,
+    monthOrderFromLichun,
+  };
+}
+
 export class SolarTermCalculator {
   /**
-   * Get Sun's geocentric tropical longitude for any given Date using Swiss Ephemeris
+   * Get the Sun's apparent geocentric ecliptic longitude through Celestia's
+   * astronomy-engine-backed compatibility facade (not native Swiss Ephemeris).
    */
   public getSunLongitude(date: Date): number {
     const jd = date.getTime() / 86400000.0 + 2440587.5;
@@ -555,51 +621,8 @@ export class SolarTermCalculator {
     // 10. Lidong (225°) = Hai (Pig, index 11)
     // 11. Daxue (255°) = Zi (Rat, index 0)
     // 12. Xiaohan (285°) = Chou (Ox, index 1)
-    let branchIndex: number;
-    let monthOrderFromLichun: number; // 0 for Tiger, 1 for Rabbit... 11 for Ox
-
-    if (sunLon >= 315.0 || sunLon < 345.0) {
-      if (sunLon >= 315.0) {
-        branchIndex = 2; // Tiger
-        monthOrderFromLichun = 0;
-      } else {
-        branchIndex = 1; // Ox
-        monthOrderFromLichun = 11;
-      }
-    } else if (sunLon >= 345.0 || sunLon < 15.0) {
-      branchIndex = 3; // Rabbit
-      monthOrderFromLichun = 1;
-    } else if (sunLon >= 15.0 && sunLon < 45.0) {
-      branchIndex = 4; // Dragon
-      monthOrderFromLichun = 2;
-    } else if (sunLon >= 45.0 && sunLon < 75.0) {
-      branchIndex = 5; // Snake
-      monthOrderFromLichun = 3;
-    } else if (sunLon >= 75.0 && sunLon < 105.0) {
-      branchIndex = 6; // Horse
-      monthOrderFromLichun = 4;
-    } else if (sunLon >= 105.0 && sunLon < 135.0) {
-      branchIndex = 7; // Goat
-      monthOrderFromLichun = 5;
-    } else if (sunLon >= 135.0 && sunLon < 165.0) {
-      branchIndex = 8; // Monkey
-      monthOrderFromLichun = 6;
-    } else if (sunLon >= 165.0 && sunLon < 195.0) {
-      branchIndex = 9; // Rooster
-      monthOrderFromLichun = 7;
-    } else if (sunLon >= 195.0 && sunLon < 225.0) {
-      branchIndex = 10; // Dog
-      monthOrderFromLichun = 8;
-    } else if (sunLon >= 225.0 && sunLon < 255.0) {
-      branchIndex = 11; // Pig
-      monthOrderFromLichun = 9;
-    } else if (sunLon >= 255.0 && sunLon < 285.0) {
-      branchIndex = 0; // Rat
-      monthOrderFromLichun = 10;
-    } else {
-      branchIndex = 1; // Ox
-      monthOrderFromLichun = 11;
-    }
+    const { branchIndex, monthOrderFromLichun } =
+      getSolarMonthPosition(sunLon);
 
     // Classical "Five Tiger Seeking Month Stem" Rule (Wu Hu Dun):
     // Year Stem:
@@ -639,15 +662,32 @@ export class SolarTermCalculator {
    * Calculate Day Pillar based on unbroken 60-day sexagenary cycle
    * Astronomical reference: JD 2451545.0 (Jan 1, 2000 @ 12:00 UTC) was Wu Wu (Stem 4, Branch 6 -> Index 54)
    */
-  public calculateDayPillar(date: Date): Pillar {
-    const jd = calculateJulianDay(
+  public calculateDayPillar(
+    date: Date,
+    dayBoundaryPolicy: BaZiDayBoundaryPolicy = "pure-zi"
+  ): Pillar {
+    if (!(date instanceof Date) || !Number.isFinite(date.getTime())) {
+      throw new RangeError("Day Pillar requires a valid BaZi clock date.");
+    }
+    const dayDate = new Date(Date.UTC(
       date.getUTCFullYear(),
-      date.getUTCMonth() + 1,
+      date.getUTCMonth(),
       date.getUTCDate(),
+      12, 0, 0, 0
+    ));
+    if (dayBoundaryPolicy === "pure-zi" && date.getUTCHours() >= 23) {
+      dayDate.setUTCDate(dayDate.getUTCDate() + 1);
+    }
+    const jd = calculateJulianDay(
+      dayDate.getUTCFullYear(),
+      dayDate.getUTCMonth() + 1,
+      dayDate.getUTCDate(),
       12, 0, 0
     );
 
-    // Reference JD 2451545.0 (2000-01-01) = Wu-Wu (Cycle index 54)
+    // Pure Zi assigns 23:00–23:59 to the following sexagenary day.
+    // Early/Late Zi keeps 23:00–23:59 with the civil day and changes at midnight.
+    // Reference JD 2451545.0 (2000-01-01) = Wu-Wu (Cycle index 54).
     const daysSince2000 = Math.round(jd - 2451545.0);
     const dayCycleIndex = ((54 + daysSince2000) % 60 + 60) % 60;
 
@@ -676,7 +716,14 @@ export class SolarTermCalculator {
    * 23:00 - 00:59 = Zi (Rat, 0), 01:00 - 02:59 = Chou (Ox, 1), etc.
    */
   public calculateHourPillar(date: Date, dayStemIndex: number): Pillar {
-    const hour = date.getUTCHours() + date.getUTCMinutes() / 60.0;
+    if (!(date instanceof Date) || !Number.isFinite(date.getTime())) {
+      throw new RangeError("Hour Pillar requires a valid BaZi clock date.");
+    }
+    const hour =
+      date.getUTCHours() +
+      date.getUTCMinutes() / 60.0 +
+      date.getUTCSeconds() / 3600.0 +
+      date.getUTCMilliseconds() / 3_600_000.0;
 
     // 2-hour branch division
     let branchIndex: number;
@@ -1155,13 +1202,31 @@ export class CompleteBaZiEngine {
   public generateBaZiChart(
     birthDate: Date,
     gender: "Male" | "Female" = "Male",
-    targetDate: Date = new Date()
+    targetDate: Date = new Date(),
+    options?: BaZiCalculationOptions
   ): BaZiChart {
-    // 1. Calculate Four Pillars
+    if (!(birthDate instanceof Date) || !Number.isFinite(birthDate.getTime())) {
+      throw new RangeError("Birth date must be a valid UTC instant.");
+    }
+
+    // Year/Month use the actual UTC instant and tropical solar longitude.
+    // Day/Hour use the explicitly selected civil/mean/apparent local clock.
     const yearPillar = this.solarCalc.calculateYearPillar(birthDate);
-    const monthPillar = this.solarCalc.calculateMonthPillar(birthDate, yearPillar.heavenlyStem.index);
-    const dayPillar = this.solarCalc.calculateDayPillar(birthDate);
-    const hourPillar = this.solarCalc.calculateHourPillar(birthDate, dayPillar.heavenlyStem.index);
+    const monthPillar = this.solarCalc.calculateMonthPillar(
+      birthDate,
+      yearPillar.heavenlyStem.index
+    );
+    const clockResult = options ? createBaZiClock(birthDate, options.clock) : null;
+    const pillarClockDate = clockResult?.clockDate ?? birthDate;
+    const dayBoundaryPolicy = options?.dayBoundaryPolicy ?? "pure-zi";
+    const dayPillar = this.solarCalc.calculateDayPillar(
+      pillarClockDate,
+      dayBoundaryPolicy
+    );
+    const hourPillar = this.solarCalc.calculateHourPillar(
+      pillarClockDate,
+      dayPillar.heavenlyStem.index
+    );
 
     const pillars = [yearPillar, monthPillar, dayPillar, hourPillar];
 
@@ -1215,6 +1280,29 @@ export class CompleteBaZiEngine {
     return {
       birthDate,
       gender,
+      ...(clockResult && options ? {
+        calculationContext: {
+          birthTimeKnown: options.birthTimeKnown ?? true,
+          utcInstantIso: birthDate.toISOString(),
+          timeBasis: clockResult.timeBasis,
+          dayBoundaryPolicy,
+          solarClockIso: clockResult.clockDate.toISOString(),
+          longitudeDegrees: clockResult.longitudeDegrees,
+          longitudeCorrectionSeconds: clockResult.longitudeCorrectionSeconds,
+          equationOfTimeMinutes: clockResult.equationOfTimeMinutes,
+          ...(clockResult.civilUtcOffsetSeconds !== undefined
+            ? { civilUtcOffsetSeconds: clockResult.civilUtcOffsetSeconds }
+            : {}),
+          instantResolution: options.instantResolution ?? "manual-fixed-offset",
+          uncertainPillars: options.uncertainPillars ?? [],
+          warnings: [
+            ...(options.warnings ?? []),
+            "Year/Month boundaries currently use instantaneous Astronomy Engine solar longitude. Independent annual solar-term timestamp fixtures and a shared solved-boundary table remain pending.",
+          ],
+          solarLongitudeMethod: "astronomy-engine-geovector-ecliptic-output" as const,
+          solarTermBoundaryMode: "instantaneous-longitude-snapshot" as const,
+        },
+      } : {}),
       pillars: {
         year: yearPillar,
         month: monthPillar,
