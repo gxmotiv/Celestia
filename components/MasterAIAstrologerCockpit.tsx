@@ -419,7 +419,7 @@ Ask a specific question. Missing chart facts will remain marked as unavailable r
         const providerLabel = typeof data.provider === "string" ? data.provider : selectedModel?.split(":")[0];
         const errorCode = typeof data.code === "string" ? data.code : "";
         const detail = typeof data.error === "string" ? data.error : `AI provider request failed (HTTP ${res.status}).`;
-        throw new Error([detail, providerLabel ? `Provider: ${providerLabel}` : "", errorCode ? `Code: ${errorCode}` : "", `HTTP: ${res.status}`].filter(Boolean).join("\\n"));
+        throw new Error([detail, providerLabel ? `Provider: ${providerLabel}` : "", errorCode ? `Code: ${errorCode}` : "", `HTTP: ${res.status}`].filter(Boolean).join("\n"));
       }
       const reply = typeof data.reply === "string" ? data.reply.trim() : "";
       if (data.success !== true || !reply) {
