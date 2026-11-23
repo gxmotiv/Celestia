@@ -38,21 +38,36 @@ interface LiveNaraRouterModel {
   free: true;
 }
 
-const PROVIDERS: CelestiaAIProviderId[] = ["pollinations", "freemodel", "nararouter", "openrouter"];
+interface LiveFreeModel {
+  id: string;
+  name: string;
+  description: string;
+  contextWindow: number | null;
+  capabilities: string[];
+}
+
+const PROVIDERS: CelestiaAIProviderId[] = ["pollinations", "freemodel", "nararouter", "openrouter", "groq"];
 const PROVIDER_LABELS: Record<CelestiaAIProviderId, string> = {
   pollinations: "Pollinations — zero-priced official + community",
   freemodel: "FreeModel",
   nararouter: "NaraRouter",
-  openrouter: "OpenRouter",
+  openrouter: "OpenRouter — free models only",
+  groq: "Groq — verified Free-plan models",
 };
 
-type ProviderConfiguration = Partial<Record<CelestiaAIProviderId, boolean>>;
+interface ProviderConfiguration extends Partial<Record<CelestiaAIProviderId, boolean>> {
+  groqKeyConfigured?: boolean;
+  groqFreePlanConfirmed?: boolean;
+}
 
 export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPrivacyRiskAcknowledgedChange }: AIModelSelectorProps) {
   const [providerConfiguration, setProviderConfiguration] = useState<ProviderConfiguration | null>(null);
   const [pollinationsModels, setPollinationsModels] = useState<LivePollinationsModel[]>([]);
   const [manualOnlyModels, setManualOnlyModels] = useState<LivePollinationsModel[]>([]);
   const [naraModels, setNaraModels] = useState<LiveNaraRouterModel[]>([]);
+  const [freeModels, setFreeModels] = useState<LiveFreeModel[]>([]);
+  const [freeModelError, setFreeModelError] = useState("");
+  const [freeModelLoaded, setFreeModelLoaded] = useState(false);
   const [naraError, setNaraError] = useState("");
   const [naraLoaded, setNaraLoaded] = useState(false);
   const [catalogueError, setCatalogueError] = useState("");
@@ -92,6 +107,25 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
           setCatalogueLoaded(true);
         }
       });
+    fetch("/api/astrology/freemodel-models", { cache: "no-store" })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data?.error || "FreeModel catalogue unavailable");
+        return data as { models?: LiveFreeModel[]; error?: string };
+      })
+      .then((data) => {
+        if (active) {
+          setFreeModels(Array.isArray(data.models) ? data.models : []);
+          setFreeModelError(data.error || "");
+          setFreeModelLoaded(true);
+        }
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          setFreeModelError(error instanceof Error ? error.message : "FreeModel catalogue unavailable");
+          setFreeModelLoaded(true);
+        }
+      });
     fetch("/api/astrology/nararouter-models", { cache: "no-store" })
       .then(async (response) => {
         const data = await response.json();
@@ -119,13 +153,16 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
   useEffect(() => {
     if (value.startsWith("pollinations:") && !catalogueLoaded) return;
     if (value.startsWith("nararouter:") && !naraLoaded) return;
+    if (value.startsWith("freemodel:") && !freeModelLoaded) return;
     const isKnownStatic = CELESTIA_AI_MODELS.some((model) => model.id === value);
     const isKnownPollinations = value.startsWith("pollinations:") &&
       (value === "pollinations:auto-free" || [...pollinationsModels, ...manualOnlyModels].some((model) => `pollinations:${model.id}` === value));
     const isKnownNaraRouter = value.startsWith("nararouter:") &&
       naraModels.some((model) => `nararouter:${model.id}` === value);
-    if (!isKnownStatic && !isKnownPollinations && !isKnownNaraRouter) onChange("pollinations:auto-free");
-  }, [value, pollinationsModels, manualOnlyModels, catalogueLoaded, naraModels, naraLoaded, onChange]);
+    const isKnownFreeModel = value.startsWith("freemodel:") &&
+      freeModels.some((model) => `freemodel:${model.id}` === value);
+    if (!isKnownStatic && !isKnownPollinations && !isKnownNaraRouter && !isKnownFreeModel) onChange("pollinations:auto-free");
+  }, [value, pollinationsModels, manualOnlyModels, catalogueLoaded, naraModels, naraLoaded, freeModels, freeModelLoaded, onChange]);
 
   const staticSelected = CELESTIA_AI_MODELS.find((model) => model.id === value) ?? CELESTIA_AI_MODELS[0];
   const liveSelected = value.startsWith("pollinations:")
@@ -134,19 +171,34 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
   const naraSelected = value.startsWith("nararouter:")
     ? naraModels.find((model) => `nararouter:${model.id}` === value)
     : undefined;
-  const selectedProviderId = value.startsWith("pollinations:") ? "pollinations" : value.startsWith("nararouter:") ? "nararouter" : staticSelected.providerId;
-  const selectedName = liveSelected?.name ?? naraSelected?.name ?? staticSelected.name;
-  const selectedDescription = liveSelected?.description ?? naraSelected?.description ?? staticSelected.description;
+  const freeSelected = value.startsWith("freemodel:")
+    ? freeModels.find((model) => `freemodel:${model.id}` === value)
+    : undefined;
+  const selectedProviderId = value.startsWith("pollinations:") ? "pollinations"
+    : value.startsWith("nararouter:") ? "nararouter"
+    : value.startsWith("freemodel:") ? "freemodel"
+    : value.startsWith("groq:") ? "groq"
+    : staticSelected.providerId;
+  const selectedName = liveSelected?.name ?? naraSelected?.name ?? freeSelected?.name ?? staticSelected.name;
+  const selectedDescription = liveSelected?.description ?? naraSelected?.description ?? freeSelected?.description ?? staticSelected.description;
   const selectedQuota = liveSelected
     ? `Published input price: 0 · output price: 0 · ${liveSelected.community ? `community publisher: ${liveSelected.publisher ?? "unknown"}` : "official source"} · healthy status`
-    : naraSelected?.description ?? staticSelected.quotaNote;
+    : freeSelected
+      ? `FreeModel Free plan: 1M input + output tokens/month · up to 60 RPM · ${freeSelected.contextWindow ? `${Math.round(freeSelected.contextWindow / 1000)}K context · ` : ""}${freeSelected.capabilities.join(", ")}`
+      : naraSelected?.description ?? staticSelected.quotaNote;
   const selectedProviderConfigured = providerConfiguration?.[selectedProviderId];
-  const selectedSecret = selectedProviderId === "pollinations" ? "POLLINATIONS_API_KEY" : selectedProviderId === "nararouter" ? "NARAROUTER_API_KEY" : staticSelected.secretName;
-  const selectedStatus = selectedProviderConfigured === true
-    ? "Server key configured"
-    : selectedProviderConfigured === false
-      ? `Missing server secret: ${selectedSecret}`
-      : `Requires server secret: ${selectedSecret}`;
+  const selectedSecret = selectedProviderId === "pollinations" ? "POLLINATIONS_API_KEY"
+    : selectedProviderId === "nararouter" ? "NARAROUTER_API_KEY"
+    : selectedProviderId === "freemodel" ? "FREEMODEL_API_KEY"
+    : selectedProviderId === "groq" ? "GROQ_API_KEY"
+    : staticSelected.secretName;
+  const selectedStatus = selectedProviderId === "groq" && !providerConfiguration?.groqFreePlanConfirmed
+    ? providerConfiguration?.groqKeyConfigured ? "API key configured, but Free-plan confirmation is still required" : "Missing GROQ_API_KEY and Free-plan confirmation"
+    : selectedProviderConfigured === true
+      ? "Server key configured; live provider authentication is checked when the request runs"
+      : selectedProviderConfigured === false
+        ? `Missing or ineligible server configuration: ${selectedSecret}`
+        : `Requires server secret: ${selectedSecret}`;
 
   return (
     <section className="rounded-xl border border-amber-500/30 bg-slate-950/90 p-4 space-y-3" aria-label="AI provider and model selection">
@@ -190,6 +242,20 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
                 </optgroup>
               );
             }
+            if (providerId === "freemodel") {
+              return (
+                <optgroup key={providerId} label={PROVIDER_LABELS[providerId] + suffix}>
+                  {freeModels.map((model) => (
+                    <option key={model.id} value={`freemodel:${model.id}`} disabled={configured === false}>
+                      {model.name} — FreeModel monthly allowance
+                    </option>
+                  ))}
+                  {freeModelLoaded && freeModels.length === 0 ? (
+                    <option value="" disabled>No live FreeModel chat models available</option>
+                  ) : null}
+                </optgroup>
+              );
+            }
             if (providerId === "nararouter") {
               return (
                 <optgroup key={providerId} label={PROVIDER_LABELS[providerId] + " — verified Free plan" + suffix}>
@@ -220,6 +286,8 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
       </label>
 
       {catalogueError ? <p className="text-xs text-amber-300">{catalogueError}</p> : null}
+      {freeModelError ? <p className="text-xs text-amber-300">{freeModelError}</p> : null}
+      {freeModelLoaded && !freeModelError && freeModels.length === 0 ? <p className="text-xs text-amber-300">FreeModel returned no selectable chat models. Confirm the key has the models:read scope and that the monthly Free allowance is active.</p> : null}
       {naraError ? <p className="text-xs text-amber-300">{naraError}</p> : null}
       {naraLoaded && !naraError && naraModels.length === 0 ? (
         <p className="text-xs text-amber-300">
@@ -264,7 +332,7 @@ NaraRouter authenticated successfully, but this key has no verified Free-plan mo
         <p className={`text-[10px] ${selectedProviderConfigured === true ? "text-emerald-300" : "text-amber-300"}`}>
           {selectedStatus}
         </p>
-        <p className="text-[10px] text-slate-500">Pollinations automatic mode uses only verified zero-priced models. NaraRouter shows only the model currently listed for its Free plan; paid catalogue models are hidden and blocked server-side. Provider quotas and availability can change. All credentials stay server-side; no paid fallback is performed.</p>
+        <p className="text-[10px] text-slate-500">Pollinations uses only verified zero-priced models. FreeModel options come from the authenticated live chat catalogue and consume its monthly Free allowance. NaraRouter shows only currently verified Free-plan models. Groq is blocked unless the server confirms its $0 Free plan. OpenRouter accepts only current zero-priced :free variants. Provider quotas and availability can change. A configured key does not prove successful authentication; there is no paid fallback.</p>
       </div>
     </section>
   );
