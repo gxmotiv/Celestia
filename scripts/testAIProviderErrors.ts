@@ -16,9 +16,15 @@ assert.equal(auth.body.code, "PROVIDER_AUTH_FAILED");
 
 const missing = toSafeAIProviderError(new Error("Groq is disabled until GROQ_FREE_PLAN_CONFIRMED=true"), "groq");
 const freeModelGuard = toSafeAIProviderError(new Error("FreeModel is disabled until FREEMODEL_FREE_PLAN_CONFIRMED=true"), "freemodel");
+const cloudflareGuard = toSafeAIProviderError(new Error("Cloudflare Workers AI is disabled until CLOUDFLARE_WORKERS_AI_FREE_PLAN_CONFIRMED=true"), "cloudflare-workers-ai");
+const cloudflareQuota = toSafeAIProviderError(Object.assign(new Error("Cloudflare Workers AI daily neuron quota exhausted"), { status: 429 }), "cloudflare-workers-ai");
 assert.equal(missing.status, 503);
 assert.equal(missing.body.code, "PROVIDER_NOT_CONFIGURED");
 assert.equal(freeModelGuard.status, 503);
 assert.equal(freeModelGuard.body.code, "PROVIDER_NOT_CONFIGURED");
+assert.equal(cloudflareGuard.status, 503);
+assert.equal(cloudflareGuard.body.code, "PROVIDER_NOT_CONFIGURED");
+assert.equal(cloudflareQuota.status, 429);
+assert.equal(cloudflareQuota.body.code, "PROVIDER_RATE_LIMITED");
 
-console.log("AI provider error tests: 11 assertions passed");
+console.log("AI provider error tests: 15 assertions passed");
