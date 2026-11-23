@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateCelestiaText } from "@/lib/ai/generateText";
+import { toSafeAIProviderError } from "@/lib/ai/providerErrors";
 import { isCelestiaAIModelId } from "@/lib/ai/modelCatalog";
 
 export async function POST(req: NextRequest) {
@@ -88,32 +89,11 @@ Format a useful, structured response with Markdown headings. Do not repeat the e
         usage: result.usage,
       });
     } catch (aiErr) {
-      console.warn("AI reading provider unavailable; using transparent local fallback:", aiErr);
+      const provider = typeof model === "string" && model.includes(":") ? model.split(":")[0] : "pollinations";
+      const failure = toSafeAIProviderError(aiErr, provider);
+      return NextResponse.json(failure.body, { status: failure.status });
     }
 
-    const reading = `### Celestial Synthesis for ${fullName}
-
-#### I. Western Astrological Blueprint
-Sun: **${western?.sun?.sign ?? "not supplied"}**; Moon: **${western?.moon?.sign ?? "not supplied"}**; Ascendant: **${western?.ascendant ?? "not supplied"}**. The supplied house framework is **${western?.houseSystemUsed ?? western?.houseSystem ?? "not supplied"}**.
-
-#### II. Vedic Jyotish
-Lagna: **${vedic?.lagna ?? "not supplied"}**; Moon Rasi: **${vedic?.moonSign ?? "not supplied"}**; Nakshatra: **${vedic?.nakshatra ?? "not supplied"}**. Current dasha fields: **${vedic?.currentDasha?.planet ?? "not supplied"} / ${vedic?.currentDasha?.subPlanet ?? "not supplied"}**.
-
-#### III. Numerology
-Life Path: **${numerology?.lifePath ?? "not supplied"}**; Expression: **${numerology?.expression ?? "not supplied"}**; Personal Year: **${numerology?.personalYear ?? "not supplied"}**.
-
-#### IV. Chinese BaZi
-Animal: **${chinese?.animal ?? "not supplied"}**; Day Master: **${chinese?.dayMaster ?? "not supplied"}**; Element: **${chinese?.element ?? "not supplied"}**.
-
----
-*AI provider unavailable. This is a limited, data-only local summary, not an AI-generated interpretation.*`;
-
-    return NextResponse.json({
-      success: true,
-      reading,
-      isAiGenerated: false,
-      provider: "local-fallback",
-    });
   } catch (err) {
     console.error("AI reading route error:", err);
     return NextResponse.json({ error: "Failed to generate reading" }, { status: 500 });
