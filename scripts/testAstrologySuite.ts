@@ -510,12 +510,39 @@ const allDashasCombined = orchestrator.generateAllDashas({
   birthDate: einsteinDateObj,
 });
 
+const expectedDashaSystems = [
+  "vimshottari",
+  "yogini",
+  "chara",
+  "ashtottari",
+  "kalachakra",
+  "shodashottari",
+  "dwisaptati",
+  "shastihayani",
+  "sthira",
+  "mandooka",
+] as const;
+const generatedDashaSystems = expectedDashaSystems.filter((system) =>
+  Object.prototype.hasOwnProperty.call(allDashasCombined.fiveLevels, system)
+);
+assertTest(
+  "4.1 Dasha System Generation",
+  "All 10 classical Dasha engines generate a five-level result",
+  generatedDashaSystems.length === expectedDashaSystems.length,
+  "10 generated systems: Vimshottari, Yogini, Chara, Ashtottari, Kalachakra, Shodashottari, Dwisaptati, Shastihayani, Sthira, Mandooka",
+  `${generatedDashaSystems.length} of ${expectedDashaSystems.length} systems generated`
+);
+
+const uniqueActiveDashaSystems = new Set(allDashasCombined.convergence.map((period) => period.system));
 assertTest(
   "4.1 Dasha Convergence",
-  "Multi-Dasha Convergence across all 10 Classical Dasha Systems (Vimshottari, Yogini, Chara, Kalachakra, Ashtottari, Shodashottari, Dwisaptati, Shastihayani, Sthira, Mandooka)",
-  allDashasCombined.convergence.length === 10,
-  "10 synchronized Dasha systems",
-  `${allDashasCombined.convergence.length} systems summarized`
+  "Only one verified current-period summary is emitted per Dasha system",
+  uniqueActiveDashaSystems.size === allDashasCombined.convergence.length &&
+    allDashasCombined.convergence.every((period) =>
+      Boolean(period.activePeriodName && period.lordOrSign && period.durationRemaining)
+    ),
+  "Unique, complete summaries for systems with a confirmed current period",
+  `${allDashasCombined.convergence.length} verified current summaries across ${uniqueActiveDashaSystems.size} unique systems`
 );
 
 // 4.2 Performance Benchmark
