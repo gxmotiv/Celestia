@@ -7,11 +7,11 @@ const ids = parseGroqModelIds({
   data: [
     { id: "openai/gpt-oss-120b" },
     { id: "openai/gpt-oss-20b" },
-    { id: "qwen/qwen3.8-27b" },
+    { id: "llama-3.1-8b-instant" },
     { id: "some/paid-model" },
   ],
 });
-assert.deepEqual(ids, ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b", "some/paid-model"]);
+assert.deepEqual(ids, ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "llama-3.1-8b-instant", "some/paid-model"]);
 assert.equal(GROQ_FREE_MODELS.length, 3);
 assert.deepEqual(GROQ_FREE_MODEL_IDS, ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"]);
 assert.equal(getCelestiaAIModel("groq:openai/gpt-oss-120b")?.providerId, "groq");
