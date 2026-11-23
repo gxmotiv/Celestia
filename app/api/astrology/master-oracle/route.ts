@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateCelestiaText } from "@/lib/ai/generateText";
+import { toSafeAIProviderError } from "@/lib/ai/providerErrors";
 import { isCelestiaAIModelId } from "@/lib/ai/modelCatalog";
 
 export async function POST(req: NextRequest) {
@@ -59,23 +60,11 @@ Keep the answer focused, practical, respectful, and structured. If essential cha
         usage: result.usage,
       });
     } catch (aiErr) {
-      console.warn("Master Oracle provider unavailable; using local fallback:", aiErr);
+      const provider = typeof payload?.model === "string" && payload.model.includes(":") ? payload.model.split(":")[0] : "pollinations";
+      const failure = toSafeAIProviderError(aiErr, provider);
+      return NextResponse.json(failure.body, { status: failure.status });
     }
 
-    const reply = `### Guidance from Acharya Celestia
-
-Your question: *"${question}"*
-
-The supplied chart context lists **${context?.vedic?.activeMahadasha ?? "no Mahadasha data"} Mahadasha** and **${context?.vedic?.activeAntardasha ?? "no Antardasha data"} Antardasha**, with Western Sun **${context?.western?.sunSign ?? "not supplied"}** and Life Path **${context?.numerology?.lifePath ?? "not supplied"}**.
-
-The AI provider is currently unavailable, so this response is a limited data-only fallback rather than a generated consultation. Please try again when an AI provider is configured.`;
-
-    return NextResponse.json({
-      success: true,
-      reply,
-      isAiGenerated: false,
-      provider: "local-fallback",
-    });
   } catch (err) {
     console.error("Master oracle route error:", err);
     return NextResponse.json({ error: "Failed to consult oracle" }, { status: 500 });
