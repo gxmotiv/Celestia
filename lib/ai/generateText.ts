@@ -4,9 +4,11 @@ import { getNaraRouterFreeModels } from "./nararouterCatalog";
 import { getFreeModelChatCatalog } from "./freemodelCatalog";
 import { getGroqAvailableFreeModels } from "./groqCatalog";
 import { getOpenRouterFreeModels, validateOpenRouterFreeResponse } from "./openrouterCatalog";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { getCloudflareWorkersAIModel, parseCloudflareWorkersAIResponse, type CloudflareWorkersAIBinding } from "./cloudflareWorkersAICatalog";
 import { validateRequestedModelResponse } from "./modelResponseValidation";
 
-export type CelestiaAIProvider = "pollinations" | "freemodel" | "nararouter" | "openrouter" | "groq";
+export type CelestiaAIProvider = "pollinations" | "freemodel" | "nararouter" | "openrouter" | "groq" | "cloudflare-workers-ai";
 export type CelestiaAIModelTier = "budget" | "reasoning";
 
 export interface CelestiaAIUsage {
@@ -206,6 +208,59 @@ async function generateWithGroq(
   return { text: validation.answer.trim(), provider: "groq", model, usage: readUsage(body?.usage) };
 }
 
+async function generateWithCloudflareWorkersAI(
+  model: string,
+  options: { systemPrompt: string; userPrompt: string; maxOutputTokens: number; temperature: number },
+): Promise<CelestiaAIResult> {
+  if (process.env.CLOUDFLARE_WORKERS_AI_FREE_PLAN_CONFIRMED?.trim().toLowerCase() !== "true") {
+    throw new Error("Cloudflare Workers AI is disabled until CLOUDFLARE_WORKERS_AI_FREE_PLAN_CONFIRMED=true is set after confirming the account is on Workers Free. Workers Paid can bill usage above the daily free allocation.");
+  }
+  if (!getCloudflareWorkersAIModel(model)) {
+    throw new Error("The selected Cloudflare Workers AI model is not in Celestia's verified Free-plan allowlist.");
+  }
+
+  let binding: CloudflareWorkersAIBinding | undefined;
+  try {
+    const context = getCloudflareContext();
+    binding = (context.env as unknown as { AI?: CloudflareWorkersAIBinding }).AI;
+  } catch {
+    throw new Error("The Cloudflare Workers AI binding is unavailable in this runtime. Confirm the AI binding is present in wrangler.jsonc and deploy the Worker after review.");
+  }
+  if (!binding || typeof binding.run !== "function") {
+    throw new Error("Cloudflare Workers AI binding AI is missing. Check the Worker configuration before selecting this provider.");
+  }
+
+  let output: unknown;
+  try {
+    output = await binding.run(model, {
+      messages: [
+        { role: "system", content: options.systemPrompt },
+        { role: "user", content: options.userPrompt },
+      ],
+      max_tokens: Math.min(Math.max(256, options.maxOutputTokens), 4096),
+      temperature: options.temperature,
+      stream: false,
+    });
+  } catch (caught) {
+    const error = (caught instanceof Error ? caught : new Error("Cloudflare Workers AI request failed.")) as ProviderError;
+    if (!error.status && /rate.?limit|quota|neuron|daily limit|capacity exceeded/i.test(error.message)) {
+      error.status = 429;
+    }
+    throw error;
+  }
+
+  const parsed = parseCloudflareWorkersAIResponse(output);
+  // AI.run is invoked with the exact allowlisted model ID. Its documented
+  // response body returns response/usage, not a model field, so the selected
+  // model attribution is based on the explicit binding invocation.
+  return {
+    text: parsed.text,
+    provider: "cloudflare-workers-ai",
+    model,
+    usage: parsed.usage,
+  };
+}
+
 async function generateWithNaraRouter(
   apiKey: string,
   model: string,
@@ -269,6 +324,9 @@ export async function generateCelestiaText(input: GenerateTextOptions): Promise<
       const key = process.env.GROQ_API_KEY?.trim();
       if (!key) throw new Error("Groq is not configured. Add GROQ_API_KEY as a server-side Cloudflare Worker secret.");
       return generateWithGroq(key, selectedModel.providerModelId, options);
+    }
+    case "cloudflare-workers-ai": {
+      return generateWithCloudflareWorkersAI(selectedModel.providerModelId, options);
     }
     case "nararouter": {
       const key = process.env.NARAROUTER_API_KEY?.trim();
