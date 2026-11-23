@@ -484,7 +484,7 @@ No alternative provider or locally generated astrology advice was substituted. C
                 </span>
                 <span className="text-[11px] text-emerald-400 font-mono flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  {dashaSystems ? "10-Dasha Calculations Available" : "10-Dasha Inputs Incomplete"}
+                  {dashaSystems ? "${dashaSystems.convergence.length}/10 current periods identified" : "10-Dasha Inputs Incomplete"}
                 </span>
               </div>
               <h2 className="text-xl md:text-2xl font-serif-celestial font-bold text-slate-100 mt-1">
@@ -501,13 +501,13 @@ No alternative provider or locally generated astrology advice was substituted. C
             <div className="px-3 py-1.5 rounded-xl bg-slate-950/80 border border-amber-500/30">
               <span className="text-[10px] text-slate-400 block uppercase font-mono">Active Sovereign</span>
               <span className="text-amber-300 font-bold font-serif-celestial">
-                {currentMD?.planet} Mahadasha
+                {currentMD?.planet ?? "Not available"} Mahadasha
               </span>
             </div>
             <div className="px-3 py-1.5 rounded-xl bg-slate-950/80 border border-slate-800">
               <span className="text-[10px] text-slate-400 block uppercase font-mono">Immediate Fruition</span>
               <span className="text-slate-200 font-bold font-serif-celestial">
-                {currentAD?.planet} Antardasha
+                {currentAD?.planet ?? "Not available"} Antardasha
               </span>
             </div>
             <div className="px-3 py-1.5 rounded-xl bg-slate-950/80 border border-emerald-500/30">
@@ -775,7 +775,7 @@ No alternative provider or locally generated astrology advice was substituted. C
                 Classical Vedic Upayas (Planetary Remediation Suite)
               </h3>
               <p className="text-xs text-slate-400">
-                Prescriptions aligned with your active <strong>{currentMD?.planet} Mahadasha</strong> and <strong>{currentAD?.planet} Antardasha</strong> to harmonize malefic influences and magnify benefic grace.
+                Prescriptions aligned with your active <strong>{currentMD?.planet ?? "Not available"} Mahadasha</strong> and <strong>{currentAD?.planet ?? "Not available"} Antardasha</strong> to harmonize malefic influences and magnify benefic grace.
               </p>
             </div>
             <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 text-xs font-mono font-bold">
@@ -801,7 +801,7 @@ No alternative provider or locally generated astrology advice was substituted. C
                 </div>
                 <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800 text-[11px]">
                   <div>
-                    <span className="text-[10px] text-slate-500 block">Auspicious Metal</span>
+                    <span className="text-[10px] text-slate-500 block">Traditional Metal Association</span>
                     <span className="text-amber-200 font-semibold">{activeRemedy.metal}</span>
                   </div>
                   <div>
@@ -924,12 +924,12 @@ No alternative provider or locally generated astrology advice was substituted. C
                 10-Dasha System Simultaneous Synthesis
               </h3>
               <p className="text-xs text-slate-400">
-                Evaluation across all 10 Classical Vedic Dasha traditions running simultaneously for {effectiveName}.
+                Ten traditional Dasha calculation systems are evaluated from the chart inputs. Only periods confirmed active at the current reference time appear below.
               </p>
             </div>
             <div className="flex items-center gap-2">
               <span className="px-2.5 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-mono font-bold">
-                {dashaSystems ? "10 Dasha Systems Calculated" : "Awaiting Verified Inputs"}
+                {dashaSystems ? "${dashaSystems.convergence.length}/10 current periods identified" : "Awaiting Verified Inputs"}
               </span>
             </div>
           </div>
