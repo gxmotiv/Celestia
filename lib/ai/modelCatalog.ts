@@ -30,7 +30,7 @@ export function getCelestiaAIModel(value: unknown): CelestiaAIModel | CelestiaAI
       secretName: "FREEMODEL_API_KEY", name: providerModelId,
       role: "FreeModel monthly free allowance",
       description: "Dynamically discovered from the authenticated FreeModel chat catalogue.",
-      quotaNote: "1,000,000 input + output tokens per month; up to 60 RPM. Requests stop at HTTP 402 when the free allowance is exhausted.",
+      quotaNote: "1,000,000 input + output tokens per month; up to 60 RPM. Usage is limited to the included Free allowance; inference is blocked until the account free-plan and zero-balance status are confirmed.",
     };
   }
   if (value.startsWith("nararouter:") && value.length > "nararouter:".length) {
