@@ -77,18 +77,18 @@ export const WesternBenchmarkPanel: React.FC<WesternBenchmarkPanelProps> = ({
   }, [report.results, selectedCategory]);
 
   const handleCopyReport = () => {
-    const text = `CELESTIA Western Astrology Master Verification Report
+    const text = `CELESTIA Western Astrology Calculation Check Report
 Timestamp: ${report.timestamp}
 Pass Rate: ${report.passRatePercent}% (${report.passedCount}/${report.totalTests} Tests Passed)
 Execution Time: ${report.durationMs}ms
 Engines Tested:
-- Swiss Ephemeris & Placidus/Whole Sign/Equal Houses: 100% Passed
+- Astronomy Engine-based adapter and supported house routines: internal assertions passed
 - Ptolemaic & Minor Harmonic Aspects: 100% Passed
 - Hellenistic Profections & Zodiacal Releasing: 100% Passed
 - Medieval Firdaria (75-Year Master Cycle): 100% Passed
 - Advanced Harmonics & 90° Cosmobiology Dial: 100% Passed
 - Synastry, Composite & Davison Relationship Engines: 100% Passed
-All 27 mathematical & astronomical invariants verified against JPL DE405, VSOP87, Ptolemy, and Kepler.`;
+These results report internal assertions only; they do not establish external ephemeris accuracy or validate astrological predictions.`;
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -105,13 +105,13 @@ All 27 mathematical & astronomical invariants verified against JPL DE405, VSOP87
             </div>
             <div>
               <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-                Western Astrology Master Verification Suite
+                Western Astrology Calculation Checks
                 <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  {report.passRatePercent}% Verified
+                  {report.passRatePercent}% Assertions Passed
                 </span>
               </h2>
               <p className="text-xs text-slate-400">
-                10X Deep Audit · Swiss Ephemeris JPL DE405 · Ptolemaic Spherical Astronomy · Keplerian Harmonics
+                Internal calculation checks · no independent ephemeris accuracy certification
               </p>
             </div>
           </div>
@@ -178,13 +178,13 @@ All 27 mathematical & astronomical invariants verified against JPL DE405, VSOP87
         <div className="p-4 bg-slate-950/60 border border-slate-800/80 rounded-xl space-y-1">
           <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1.5">
             <Compass className="w-3.5 h-3.5 text-blue-400" />
-            House Precision Standard
+            House Calculation Output
           </span>
           <div className="flex items-baseline gap-2">
-            <span className="text-xl font-bold font-mono text-blue-400">0.001°</span>
-            <span className="text-xs text-blue-300/80 font-medium">Placidus Arc</span>
+            <span className="text-xl font-bold font-mono text-blue-400">Not established</span>
+            <span className="text-xs text-blue-300/80 font-medium">Measured error</span>
           </div>
-          <span className="text-[10px] text-slate-400 block">JPL DE405 / VSOP87 ephemeris</span>
+          <span className="text-[10px] text-slate-400 block">No independent angular-error benchmark has been run.</span>
         </div>
 
         <div className="p-4 bg-slate-950/60 border border-slate-800/80 rounded-xl space-y-1">

@@ -1,13 +1,19 @@
 /**
- * Swiss Ephemeris High-Precision Astronomical Engine
- * Computes planetary coordinates with 0.001° accuracy based on JPL DE405 / VSOP87
- * and IAU standards. Provides full compatibility with the Swiss Ephemeris API.
+ * Astronomy Engine-based astronomical adapter.
+ *
+ * This module uses the `astronomy-engine` package for planetary vectors and
+ * ecliptic coordinates, plus local approximations for lunar nodes and other
+ * derived values. It is NOT a native Swiss Ephemeris integration and has not
+ * been certified to a fixed angular-accuracy threshold. Returned decimal places
+ * describe formatting/resolution only, not measured astronomical accuracy.
+ *
+ * The historical Swiss-prefixed exports are retained for source compatibility.
  */
 
 import * as Astronomy from "astronomy-engine";
 
 export interface SwissPlanetPosition {
-  longitude: number;      // Exact position (0.001° accuracy)
+  longitude: number;      // Ecliptic longitude in degrees; accuracy not independently certified
   latitude: number;       // Declination / celestial latitude
   distance: number;       // AU from Earth
   speed: number;          // Degrees per day (retrograde detection)
@@ -50,6 +56,10 @@ export interface SwissAspect {
   strength: number; // 0 to 1
 }
 
+/**
+ * @deprecated Historical name retained for compatibility. This is an
+ * Astronomy Engine-based adapter, not the Swiss Ephemeris library.
+ */
 export class SwissEphemerisEngine {
   // Planet IDs matching standard Swiss Ephemeris constants
   public readonly SUN = 0;
@@ -112,7 +122,7 @@ export class SwissEphemerisEngine {
   }
 
   /**
-   * Calculates the exact Chitra Paksha (Lahiri) Ayanamsa for a given Julian Day
+   * Calculates the module's Chitra Paksha (Lahiri) ayanamsa approximation for a Julian Day
    */
   public getAyanamsa(julianDay: number): number {
     const T = (julianDay - 2451545.0) / 36525.0;
@@ -280,7 +290,7 @@ export class SwissEphemerisEngine {
   }
 
   /**
-   * Calculate EXACT planetary position with 0.001° precision
+   * Calculate a planetary position using the configured Astronomy Engine path.
    */
   public calculatePlanetPosition(
     planet: number,
@@ -326,7 +336,7 @@ export class SwissEphemerisEngine {
       if (diff < -180) diff += 360;
       speed = diff * 24.0;
     } else if (planet === this.MEAN_NODE || planet === this.TRUE_NODE) {
-      // High precision Lunar Nodes based on Swiss Ephemeris / Meeus formulas
+      // Lunar-node approximation; validate independently before making precision claims.
       const T = (julianDay - 2451545.0) / 36525.0;
       let omega = 125.04452 - 1934.136261 * T + 0.0020708 * T * T + (T * T * T) / 450000;
 
@@ -353,7 +363,7 @@ export class SwissEphemerisEngine {
       lon = ((lon - ayanamsa) % 360 + 360) % 360;
     }
 
-    // Rounding to 0.0001° gives true 0.001° accuracy while avoiding float jitter
+    // Round for stable display/output. Decimal places do not establish physical accuracy.
     const round4 = (v: number) => Math.round(v * 10000) / 10000;
 
     return {
