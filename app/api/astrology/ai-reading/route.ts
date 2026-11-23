@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateCelestiaText } from "@/lib/ai/generateText";
 import { toSafeAIProviderError } from "@/lib/ai/providerErrors";
 import { isCelestiaAIModelId } from "@/lib/ai/modelCatalog";
+import { hasExternalChartDataConsent } from "@/lib/ai/oracleDataGuards";
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,6 +22,9 @@ export async function POST(req: NextRequest) {
       allowPrivacyRiskModel,
     } = payload ?? {};
 
+    if (!hasExternalChartDataConsent(payload?.externalDataConsent)) {
+      return NextResponse.json({ error: "Explicit consent is required before chart context is sent to the selected AI provider." }, { status: 400 });
+    }
     if (model !== undefined && !isCelestiaAIModelId(model)) {
       return NextResponse.json({ error: "The selected AI model is not supported." }, { status: 400 });
     }
@@ -32,7 +36,6 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    const fullName = typeof name === "string" && name.trim() ? name.trim() : "Querent";
     const question = typeof userQuestion === "string" ? userQuestion.slice(0, 2000) : "";
     const westernPlanets = western?.planets && typeof western.planets === "object"
       ? Object.entries(western.planets).slice(0, 15).map(([planet, value]) => {
@@ -53,8 +56,7 @@ Respect the named traditions separately: Western Tropical, Vedic Sidereal/Lahiri
 Format a useful, structured response with Markdown headings. Do not repeat the entire raw input.`;
 
     const userPrompt = [
-      `Querent: ${fullName}`,
-      `Birth data: ${birthData?.date ?? "not supplied"} ${birthData?.time ?? ""}; ${birthData?.place ?? "place not supplied"}; coordinates ${birthData?.latitude ?? "?"}, ${birthData?.longitude ?? "?"}; UTC offset ${birthData?.timezoneOffsetHours ?? "?"} hours.`,
+      "Querent: Anonymous",
       `Requested report: ${readingMode}; length: ${readingLength}.`,
       question ? `Specific question: ${question}` : "",
       "",
