@@ -33,19 +33,19 @@ assert.equal(hasExternalChartDataConsent(false), false);
 assert.equal(hasExternalChartDataConsent("true"), false);
 
 const missingDate = getVerifiedDashaInputs({
-  birthDate: "", birthTime: "16:49", ascendantSign: "Aries", moonLongitude: 11.4, nakshatraIndex: 1,
+  birthDate: "", birthTime: "16:49", ascendantSign: "Aries", moonLongitude: 11.4, nakshatraIndex: 1, timezoneOffsetHours: 5.5,
 });
 const invalidDate = getVerifiedDashaInputs({
-  birthDate: "2008-02-30", birthTime: "16:49", ascendantSign: "Aries", moonLongitude: 11.4, nakshatraIndex: 1,
+  birthDate: "2008-02-30", birthTime: "16:49", ascendantSign: "Aries", moonLongitude: 11.4, nakshatraIndex: 1, timezoneOffsetHours: 5.5,
 });
 const invalidTime = getVerifiedDashaInputs({
-  birthDate: "2008-11-05", birthTime: "25:49", ascendantSign: "Aries", moonLongitude: 11.4, nakshatraIndex: 1,
+  birthDate: "2008-11-05", birthTime: "25:49", ascendantSign: "Aries", moonLongitude: 11.4, nakshatraIndex: 1, timezoneOffsetHours: 5.5,
 });
 const missingMoon = getVerifiedDashaInputs({
-  birthDate: "2008-11-05", birthTime: "16:49", ascendantSign: "Aries", moonLongitude: undefined, nakshatraIndex: 1,
+  birthDate: "2008-11-05", birthTime: "16:49", ascendantSign: "Aries", moonLongitude: undefined, nakshatraIndex: 1, timezoneOffsetHours: 5.5,
 });
 const outOfRangeMoon = getVerifiedDashaInputs({
-  birthDate: "2008-11-05", birthTime: "16:49", ascendantSign: "Aries", moonLongitude: 360, nakshatraIndex: 1,
+  birthDate: "2008-11-05", birthTime: "16:49", ascendantSign: "Aries", moonLongitude: 360, nakshatraIndex: 1, timezoneOffsetHours: 5.5,
 });
 assert.equal(missingDate, null);
 assert.equal(invalidDate, null);
@@ -54,11 +54,21 @@ assert.equal(missingMoon, null);
 assert.equal(outOfRangeMoon, null);
 
 const zeroLongitude = getVerifiedDashaInputs({
-  birthDate: "2008-11-05", birthTime: "16:49", ascendantSign: "Aries", moonLongitude: 0, nakshatraIndex: 0,
+  birthDate: "2008-11-05", birthTime: "16:49", ascendantSign: "Aries", moonLongitude: 0, nakshatraIndex: 0, timezoneOffsetHours: 5.5,
 });
 assert.ok(zeroLongitude);
 assert.equal(zeroLongitude.moonLongitude, 0, "zero degrees is valid and must not trigger a fallback");
 assert.equal(zeroLongitude.moonNakshatra1Indexed, 1);
-assert.equal(zeroLongitude.birthDate.toISOString(), "2008-11-05T16:49:00.000Z");
+assert.equal(zeroLongitude.birthDate.toISOString(), "2008-11-05T11:19:00.000Z");
+const missingTimezone = getVerifiedDashaInputs({
+  birthDate: "2008-11-05", birthTime: "16:49", ascendantSign: "Aries", moonLongitude: 0, nakshatraIndex: 0,
+  timezoneOffsetHours: undefined,
+});
+const invalidTimezone = getVerifiedDashaInputs({
+  birthDate: "2008-11-05", birthTime: "16:49", ascendantSign: "Aries", moonLongitude: 0, nakshatraIndex: 0,
+  timezoneOffsetHours: 15,
+});
+assert.equal(missingTimezone, null);
+assert.equal(invalidTimezone, null);
 
 console.log("AI provider and Oracle data-guard tests passed");
