@@ -260,6 +260,9 @@ export async function generateCelestiaText(input: GenerateTextOptions): Promise<
     case "freemodel": {
       const key = process.env.FREEMODEL_API_KEY?.trim();
       if (!key) throw new Error("FreeModel is not configured. Add the FREEMODEL_API_KEY server secret.");
+      if (process.env.FREEMODEL_FREE_PLAN_CONFIRMED?.trim().toLowerCase() !== "true") {
+        throw new Error("FreeModel is disabled until FREEMODEL_FREE_PLAN_CONFIRMED=true is set after confirming the $0 Free plan and zero prepaid/Day Pass balance. This prevents fallback to paid account balance.");
+      }
       return generateWithFreeModel(key, selectedModel.providerModelId, options);
     }
     case "groq": {
