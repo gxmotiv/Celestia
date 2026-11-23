@@ -27,7 +27,7 @@ export async function GET() {
         groq: groqKeyConfigured && groqFreePlanConfirmed,
         groqKeyConfigured,
         groqFreePlanConfirmed,
-        cloudflareWorkersAi: cloudflareWorkersAIFreePlanConfirmed && cloudflareWorkersAIBindingConfigured,
+        "cloudflare-workers-ai": cloudflareWorkersAIFreePlanConfirmed && cloudflareWorkersAIBindingConfigured,
         cloudflareWorkersAiFreePlanConfirmed,
         cloudflareWorkersAiBindingConfigured,
       },
