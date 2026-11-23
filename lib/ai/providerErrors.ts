@@ -35,7 +35,7 @@ export function toSafeAIProviderError(error: unknown, provider: string): {
   }
   if (status === 402) {
     return {
-      status: 429,
+      status: 402,
       body: { success: false, provider, code: "FREE_ALLOWANCE_EXHAUSTED", error: "The provider rejected this request because its free-plan allowance or available balance is exhausted. Wait for the free allowance to reset; do not add credits or enable paid usage." },
     };
   }
