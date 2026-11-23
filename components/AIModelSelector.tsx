@@ -302,7 +302,7 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
               return (
                 <optgroup key={providerId} label={PROVIDER_LABELS[providerId] + suffix}>
                   <option value="openrouter:openrouter/free" disabled={configured === false || (openRouterLoaded && openRouterModels.length === 0)}>
-                    Auto-select eligible $0 text model{openRouterLoaded ? \` (\${openRouterModels.length} available)\` : ""}
+                    Auto-select eligible $0 text model{openRouterLoaded ? " (" + openRouterModels.length + " available)" : ""}
                   </option>
                 </optgroup>
               );
@@ -311,7 +311,7 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
               return (
                 <optgroup key={providerId} label={PROVIDER_LABELS[providerId] + suffix}>
                   {groqModels.map((model) => (
-                    <option key={model.id} value={\`groq:\${model.id}\`} disabled={configured === false}>
+                    <option key={model.id} value={"groq:" + model.id} disabled={configured === false}>
                       {model.name} — {model.quota}
                     </option>
                   ))}
