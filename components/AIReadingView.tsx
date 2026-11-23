@@ -587,7 +587,7 @@ export function AIReadingView({
             <div className="flex items-center gap-2">
               <span className="font-mono text-amber-400/90">
                 {isAiGenerated
-                  ? `Generated via ${aiProvider === "pollinations" ? "Pollinations" : aiProvider === "freemodel" ? "FreeModel" : aiProvider === "nararouter" ? "NaraRouter" : aiProvider === "openrouter" ? "OpenRouter" : aiProvider === "groq" ? "Groq" : aiProvider === "local-fallback" ? "Local fallback" : "Unknown provider"}${aiModel ? ` · ${aiModel}` : ""}`
+                  ? `Generated via ${aiProvider === "pollinations" ? "Pollinations" : aiProvider === "freemodel" ? "FreeModel" : aiProvider === "nararouter" ? "NaraRouter" : aiProvider === "openrouter" ? "OpenRouter" : aiProvider === "groq" ? "Groq" : aiProvider === "cloudflare-workers-ai" ? "Cloudflare Workers AI" : aiProvider === "local-fallback" ? "Local fallback" : "Unknown provider"}${aiModel ? ` · ${aiModel}` : ""}`
                   : "Calculated via Astronomical Synthesizer"}
                 {aiUsageTokens !== null ? ` · ${aiUsageTokens.toLocaleString()} tokens` : ""}
               </span>
