@@ -15,7 +15,10 @@ assert.equal(auth.status, 503);
 assert.equal(auth.body.code, "PROVIDER_AUTH_FAILED");
 
 const missing = toSafeAIProviderError(new Error("Groq is disabled until GROQ_FREE_PLAN_CONFIRMED=true"), "groq");
+const freeModelGuard = toSafeAIProviderError(new Error("FreeModel is disabled until FREEMODEL_FREE_PLAN_CONFIRMED=true"), "freemodel");
 assert.equal(missing.status, 503);
 assert.equal(missing.body.code, "PROVIDER_NOT_CONFIGURED");
+assert.equal(freeModelGuard.status, 503);
+assert.equal(freeModelGuard.body.code, "PROVIDER_NOT_CONFIGURED");
 
-console.log("AI provider error tests: 8 assertions passed");
+console.log("AI provider error tests: 11 assertions passed");
