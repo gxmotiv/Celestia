@@ -270,7 +270,7 @@ export function MasterAIAstrologerCockpit({
     {
       id: "initial-welcome",
       sender: "oracle",
-      text: `Namaste, ${effectiveName}. I am **Acharya Celestia**, your multi-tradition astrology research assistant.
+      text: `Namaste. I am **Acharya Celestia**, your multi-tradition astrology research assistant.
 
 I can interpret the chart values supplied by Celestia. Verified Ascendant: **${vedicData.lagna?.rasiName ?? "not supplied"}**; Nakshatra: **${vedicData.birthNakshatra ?? "not supplied"}**; current Mahadasha: **${currentMD?.planet ?? "not available"}**; Antardasha: **${currentAD?.planet ?? "not available"}**. The 10-Dasha comparison is ${dashaSystems ? "available from validated inputs" : "unavailable because one or more required birth/chart inputs are missing"}.
 
@@ -318,7 +318,7 @@ Ask a specific question. Missing chart facts will remain marked as unavailable r
       const warning: ChatMessage = {
         id: "oracle-privacy-warning-" + Date.now(),
         sender: "oracle",
-        text: "This Pollinations model is published by a community provider or carries a data-handling warning. Review the provider-risk notice and explicitly acknowledge it in the model selector before sending birth details or chart data.",
+        text: "This Pollinations model is published by a community provider or carries a data-handling warning. Review the provider-risk notice and explicitly acknowledge it in the model selector before sending chart data.",
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         isAiGenerated: false,
         provider: "error",
@@ -926,7 +926,7 @@ No alternative provider or locally generated astrology advice was substituted. C
             </div>
             <div className="flex items-center gap-2">
               <span className="px-2.5 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-mono font-bold">
-                10 Engines Synchronized
+                {dashaSystems ? "10 Dasha Systems Calculated" : "Awaiting Verified Inputs"}
               </span>
             </div>
           </div>
