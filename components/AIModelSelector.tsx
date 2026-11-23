@@ -222,7 +222,7 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
         >
           {PROVIDERS.map((providerId) => {
             const configured = providerConfiguration?.[providerId];
-            const suffix = configured === true ? " · key ready" : configured === false ? " · key required" : "";
+            const suffix = providerId === "groq" && !providerConfiguration?.groqFreePlanConfirmed ? " · requires $0 Free-plan confirmation" : configured === true ? " · key configured" : configured === false ? " · key required" : "";
             if (providerId === "pollinations") {
               return (
                 <optgroup key={providerId} label={PROVIDER_LABELS[providerId] + suffix}>
@@ -317,8 +317,8 @@ NaraRouter authenticated successfully, but this key has no verified Free-plan mo
       ) : null}
       <div className="rounded-lg border border-slate-800 bg-slate-900/70 p-3 space-y-1">
         <div className="flex flex-wrap items-center gap-2">
-          <strong className="text-sm text-amber-300">{selectedProviderId === "pollinations" ? "Pollinations" : selectedProviderId === "nararouter" ? "NaraRouter" : staticSelected.providerName} · {selectedName}</strong>
-          <span className="text-[10px] text-slate-300 rounded border border-slate-700 px-1.5 py-0.5">{liveSelected ? "Live catalogue model" : naraSelected ? "Verified Free-plan model" : staticSelected.role}</span>
+          <strong className="text-sm text-amber-300">{selectedProviderId === "pollinations" ? "Pollinations" : selectedProviderId === "nararouter" ? "NaraRouter" : selectedProviderId === "freemodel" ? "FreeModel" : selectedProviderId === "groq" ? "Groq" : staticSelected.providerName} · {selectedName}</strong>
+          <span className="text-[10px] text-slate-300 rounded border border-slate-700 px-1.5 py-0.5">{liveSelected || freeSelected ? "Live catalogue model" : naraSelected ? "Verified Free-plan model" : staticSelected.role}</span>
         </div>
         <p className="text-xs leading-relaxed text-slate-300">{selectedDescription}</p>
         <p className="text-[10px] leading-relaxed text-slate-400">{selectedQuota}</p>
