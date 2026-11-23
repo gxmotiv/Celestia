@@ -21,7 +21,7 @@ export function toSafeAIProviderError(error: unknown, provider: string): {
 } {
   const status = readStatus(error);
   const rawMessage = error instanceof Error ? error.message : "";
-  if (/not configured|server secret|free plan confirmation|GROQ_FREE_PLAN_CONFIRMED|disabled until/i.test(rawMessage)) {
+  if (/not configured|server secret|free plan confirmation|GROQ_FREE_PLAN_CONFIRMED|FREEMODEL_FREE_PLAN_CONFIRMED|disabled until/i.test(rawMessage)) {
     return {
       status: 503,
       body: { success: false, provider, code: "PROVIDER_NOT_CONFIGURED", error: rawMessage },
