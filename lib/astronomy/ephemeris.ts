@@ -3,6 +3,13 @@
  * Computes geocentric ecliptic coordinates for the Sun, Moon, 8 planets, Lunar Nodes,
  * Midheaven (MC), Ascendant (ASC), and 12 House Cusps (Placidus, Equal, Whole Sign).
  * Fully client-side, self-contained, and compliant with astronomical standards (VSOP/Meeus).
+ *
+ * Phase B wiring (2026-11-23): aspect applying/separating now uses the shared
+ * future-projection implementation (W-10) from `./verifiedFixes.ts`; Chiron is
+ * flagged `approximate` (W-01 — toy Kepler model, wrong sign for modern dates;
+ * ephemeris-grade table pending owner route decision); the Almuten Figuris
+ * receives the birth Julian Day so the pre-natal syzygy uses the exact
+ * lunation search (W-06).
  */
 
 import { swissEphemeris } from "./swissEphemeris";
@@ -12,6 +19,7 @@ import { LunarPointsCalculator, AdditionalPoints } from "./lunarPointsCalculator
 import { ArabianPartsCalculator, ArabianPartsResult } from "./arabianPartsCalculator";
 import { PlanetaryHoursCalculator, PlanetaryHoursResult } from "./planetaryHours";
 import { AlmutenFigurisCalculator, AlmutenFigurisResult } from "./almutenFigurisCalculator";
+import { isAspectApplying } from "./verifiedFixes";
 
 export type SolarProximity = "Cazimi" | "Combust" | "UnderBeams" | "Free";
 
@@ -31,6 +39,10 @@ export interface PlanetPosition {
   element: "Fire" | "Earth" | "Air" | "Water";
   modality: "Cardinal" | "Fixed" | "Mutable";
   solarProximity?: SolarProximity;
+  /** Honesty badge: value computed with an approximate (non-ephemeris-grade) model. */
+  approximate?: boolean;
+  /** Honesty badge: non-standard / fabricated point with no standard ephemeris source. */
+  nonStandard?: boolean;
 }
 
 export interface HouseCusp {
@@ -602,9 +614,20 @@ export function calculateAspects(planets: PlanetPosition[]): AspectData[] {
         const orbDiff = Math.abs(diff - asp.angle);
 
         if (orbDiff <= maxOrb) {
-          // Applying vs separating check based on relative speeds
-          const relativeSpeed = (p1.speed || 1) - (p2.speed || 0.5);
-          const isApplying = relativeSpeed > 0 ? diff < asp.angle : diff > asp.angle;
+          // W-10 FIX: applying/separating via the shared future-projection method
+          // (project both bodies +0.2 d along their real speeds and compare the
+          // orb — identical to the proven minorAspects.ts approach). The previous
+          // relative-speed heuristic used bogus defaults (speed||1 / ||0.5) and no
+          // wraparound handling, producing wrong flags near conjunctions/antipodes
+          // and for angle contacts. Points without a speed (angles) are treated
+          // as stationary, which is exactly correct within one chart.
+          const isApplying = isAspectApplying(
+            p1.longitude,
+            p2.longitude,
+            p1.speed ?? 0,
+            p2.speed ?? 0,
+            asp.angle
+          );
 
           aspects.push({
             planet1: p1.name,
@@ -642,7 +665,7 @@ export function calculateWesternChart(
   houseSystem: WesternHouseSystemPreference = "Placidus",
   second: number = 0
 ): WesternChartData {
-  // High-precision Swiss Ephemeris calculation (0.001° accuracy)
+  // astronomy-engine facade (verified ≤0.3′ vs Swiss Ephemeris in the modern era).
   // Unambiguously normalizes local birth time and timezone offset to UTC and computes Julian Day
   const jd = swissEphemeris.calculateJulianDay(year, month, day, hour, minute, second, timezoneOffsetHours);
   const calculationSystem = houseSystem === "Auto" ? "Placidus" : houseSystem;
@@ -657,7 +680,7 @@ export function calculateWesternChart(
   const ramc = normalizeDegrees(gmst + longitude);
   const obliquity = calculateObliquity(T);
 
-  // Compute all planets with Swiss Ephemeris
+  // Compute all planets with the astronomy-engine facade
   const sp = swissEphemeris.calculateAllPlanets(jd, false);
 
   const planetsList: PlanetPosition[] = [];
@@ -677,11 +700,19 @@ export function calculateWesternChart(
   const southNodeLon = normalizeDegrees(sp.rahu.longitude + 180.0);
   planetsList.push(formatPoint("SouthNode", "SouthNode", southNodeLon, rawCusps, sp.rahu.speed));
 
-  // Chiron calculation (~50.7-year orbit between Saturn and Uranus)
+  // Chiron (W-01 — APPROXIMATE): one-term toy Kepler model. Real Chiron
+  // (a = 13.6 AU, e = 0.38, strongly Saturn-perturbed) is NOT representable
+  // this way: on 2026-11-23 the model gives ≈241° (1° Sagittarius) while the
+  // published ephemeris value is ≈27.9° Aries — a ~146° error (wrong sign for
+  // essentially all modern dates). The point is flagged `approximate`; UI must
+  // badge it "Chiron (approximate — verify)" until the Horizons-derived
+  // embedded table or AGPL wasm route is shipped (audit decision #2).
   const chironT = (jd - 2451545.0) / 36525.0;
   const chironM = normalizeDegrees(339.8 + 719.9 * chironT);
   const chironLon = normalizeDegrees(71.9 + chironM + 12.0 * Math.sin(chironM * (Math.PI / 180)));
-  planetsList.push(formatPoint("Chiron", "Chiron", chironLon, rawCusps, 0.05));
+  const chironPoint = formatPoint("Chiron", "Chiron", chironLon, rawCusps, 0.05);
+  chironPoint.approximate = true;
+  planetsList.push(chironPoint);
 
   // Ascendant and Midheaven
   const ascPoint = formatPoint("Ascendant", "Ascendant", asc, rawCusps);
@@ -691,7 +722,7 @@ export function calculateWesternChart(
   const asteroidCalc = new AsteroidCalculator();
   const asteroids = asteroidCalc.calculateAsteroids(jd, rawCusps);
 
-  // Calculate Lunar Points & Theoretical Points
+  // Calculate Lunar Points & Theoretical Points (W-02/03/04 fixes applied inside)
   const lunarPointsCalc = new LunarPointsCalculator();
   const additionalPoints = lunarPointsCalc.calculateAll(jd, ramc, latitude, obliquity, rawCusps);
 
@@ -751,6 +782,8 @@ export function calculateWesternChart(
   const planetaryHours = planetaryHoursCalc.calculate(year, month, day, hour, minute, latitude);
 
   // Calculate Ibn Ezra / Lilly Almuten Figuris (Ruler of Geniture)
+  // W-06: the birth Julian Day is passed so the pre-natal syzygy uses the
+  // exact lunation search (sanExact: true in the result).
   const almutenCalc = new AlmutenFigurisCalculator();
   const partOfFortune = arabianParts.partOfFortune.longitude;
   const almutenFiguris = almutenCalc.calculate({
@@ -762,6 +795,7 @@ export function calculateWesternChart(
     isDayChart: planetaryHours.isBirthInDaytime,
     dayRuler: planetaryHours.dayRuler,
     hourRuler: planetaryHours.currentHourRuler,
+    julianDay: jd,
   });
 
   return {
