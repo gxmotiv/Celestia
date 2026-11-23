@@ -33,6 +33,12 @@ export function toSafeAIProviderError(error: unknown, provider: string): {
       body: { success: false, provider, code: "PROVIDER_AUTH_FAILED", error: "The provider rejected the server-side API key or its permissions. Check this provider's secret and required scopes." },
     };
   }
+  if (status === 402) {
+    return {
+      status: 429,
+      body: { success: false, provider, code: "FREE_ALLOWANCE_EXHAUSTED", error: "The provider rejected this request because its free-plan allowance or available balance is exhausted. Wait for the free allowance to reset; do not add credits or enable paid usage." },
+    };
+  }
   if (status === 429) {
     return {
       status: 429,
