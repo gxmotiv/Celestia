@@ -334,6 +334,7 @@ export function AIReadingView({
           selectedModel={selectedModel}
           privacyRiskAcknowledged={privacyRiskAcknowledged}
           externalDataConsent={externalDataConsent}
+          onExternalDataConsentChange={setExternalDataConsent}
         />
       )}
 
