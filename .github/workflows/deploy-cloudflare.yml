@@ -62,6 +62,8 @@ jobs:
         run: npx tsx scripts/testPollinationsCatalog.ts
       - name: Run NaraRouter free-plan catalogue tests
         run: npx tsx scripts/testNaraRouterCatalog.ts
+      - name: Run provider response identity regression tests
+        run: npx tsx scripts/testPollinationsResponseIdentity.ts
       - name: Check NaraRouter live catalogue (read-only; network diagnostic only)
         # Provider availability must not prevent local regression/build validation.
         # This step only performs GET/list_models metadata calls; it never generates.

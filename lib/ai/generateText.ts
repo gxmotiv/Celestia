@@ -1,6 +1,7 @@
 import { getCelestiaAIModel } from "./modelCatalog";
 import { getPollinationsFreeTextModels, getPollinationsManualOnlyTextModels, isPollinationsFreeTextModel } from "./pollinationsCatalog";
 import { getNaraRouterFreeModels } from "./nararouterCatalog";
+import { validateRequestedModelResponse } from "./modelResponseValidation";
 
 export type CelestiaAIProvider = "pollinations" | "freemodel" | "nararouter" | "openrouter";
 export type CelestiaAIModelTier = "budget" | "reasoning";
@@ -86,9 +87,9 @@ async function generateWithPollinations(
     error.status = response.status;
     throw error;
   }
-  const text = body?.choices?.[0]?.message?.content;
-  if (typeof text !== "string" || !text.trim()) throw new Error("Pollinations returned an empty or unsupported response.");
-  return { text: text.trim(), provider: "pollinations", model: body?.model || model, usage: readUsage(body?.usage) };
+  const validation = validateRequestedModelResponse(model, body);
+  if (!validation.valid) throw new Error(`Pollinations response validation failed: ${validation.reason}`);
+  return { text: validation.answer.trim(), provider: "pollinations", model, usage: readUsage(body?.usage) };
 }
 
 async function generateWithFreeModel(
@@ -117,9 +118,9 @@ async function generateWithFreeModel(
     error.status = response.status;
     throw error;
   }
-  const text = body?.choices?.[0]?.message?.content;
-  if (typeof text !== "string" || !text.trim()) throw new Error("FreeModel returned an empty or unsupported response.");
-  return { text: text.trim(), provider: "freemodel", model: body?.model || model, usage: readUsage(body?.usage) };
+  const validation = validateRequestedModelResponse(model, body);
+  if (!validation.valid) throw new Error(`FreeModel response validation failed: ${validation.reason}`);
+  return { text: validation.answer.trim(), provider: "freemodel", model, usage: readUsage(body?.usage) };
 }
 
 async function generateWithOpenRouter(
@@ -153,9 +154,9 @@ async function generateWithOpenRouter(
     error.status = response.status;
     throw error;
   }
-  const text = body?.choices?.[0]?.message?.content;
-  if (typeof text !== "string" || !text.trim()) throw new Error("OpenRouter returned an empty or unsupported response.");
-  return { text: text.trim(), provider: "openrouter", model: body?.model || model, usage: readUsage(body?.usage) };
+  const validation = validateRequestedModelResponse(model, body);
+  if (!validation.valid) throw new Error(`OpenRouter response validation failed: ${validation.reason}`);
+  return { text: validation.answer.trim(), provider: "openrouter", model, usage: readUsage(body?.usage) };
 }
 
 async function generateWithNaraRouter(
@@ -185,9 +186,9 @@ async function generateWithNaraRouter(
     error.status = response.status;
     throw error;
   }
-  const text = body?.choices?.[0]?.message?.content;
-  if (typeof text !== "string" || !text.trim()) throw new Error("NaraRouter returned an empty or unsupported response.");
-  return { text: text.trim(), provider: "nararouter", model: body?.model || model, usage: readUsage(body?.usage) };
+  const validation = validateRequestedModelResponse(model, body);
+  if (!validation.valid) throw new Error(`NaraRouter response validation failed: ${validation.reason}`);
+  return { text: validation.answer.trim(), provider: "nararouter", model, usage: readUsage(body?.usage) };
 }
 
 /** Explicit model selections are routed only to that provider. No automatic provider fallback is performed. */
