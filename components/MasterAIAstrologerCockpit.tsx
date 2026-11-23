@@ -616,7 +616,7 @@ No alternative provider or locally generated astrology advice was substituted. C
                       {m.error && <span className="px-1 py-0.2 rounded bg-red-500/20 text-red-300 text-[9px]">Provider error</span>}
                       {m.isAiGenerated && (
                         <span className="px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[9px]">
-                          {m.provider === "pollinations" ? "Pollinations" : m.provider === "freemodel" ? "FreeModel" : m.provider === "nararouter" ? "NaraRouter" : m.provider === "openrouter" ? "OpenRouter" : m.provider === "groq" ? "Groq" : "Unknown provider"}
+                          {m.provider === "pollinations" ? "Pollinations" : m.provider === "freemodel" ? "FreeModel" : m.provider === "nararouter" ? "NaraRouter" : m.provider === "openrouter" ? "OpenRouter" : m.provider === "groq" ? "Groq" : m.provider === "cloudflare-workers-ai" ? "Cloudflare Workers AI" : "Unknown provider"}
                           {m.model ? ` · ${m.model}` : ""}
                           {m.usageTokens !== undefined ? ` · ${m.usageTokens.toLocaleString()} tokens` : ""}
                         </span>
