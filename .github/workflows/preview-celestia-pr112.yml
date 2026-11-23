@@ -88,4 +88,31 @@ jobs:
             throw new Error("Cloudflare Workers AI is not enabled in the deployed preview: " + JSON.stringify(payload?.providers ?? {}));
           }
           console.log("PASS AI provider status: Cloudflare Workers AI binding and Free-plan gate are enabled");
+
+          // One tiny, anonymous, non-chart inference proves the real route works.
+          // Workers Free has a shared daily 10,000-Neuron cap; above it Cloudflare
+          // rejects requests with 429 rather than charging the Free account.
+          const inference = await fetch(base + "/api/astrology/ai-reading", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              externalDataConsent: true,
+              model: "cloudflare-workers-ai:@cf/qwen/qwen3.8-27b",
+              readingLength: "concise",
+              userQuestion: "Reply with exactly: CELESTIA_PREVIEW_AI_OK",
+              western: {},
+              vedic: {},
+              numerology: {},
+              chinese: {}
+            })
+          });
+          const result = await inference.json();
+          if (!inference.ok || result?.success !== true || typeof result?.reading !== "string" || !result.reading.trim()) {
+            throw new Error("Live AI inference failed: HTTP " + inference.status + " " + JSON.stringify(result));
+          }
+          if (result.provider !== "cloudflare-workers-ai" || result.model !== "@cf/qwen/qwen3.8-27b") {
+            throw new Error("Live AI inference returned unexpected provider/model: " + JSON.stringify({provider: result.provider, model: result.model}));
+          }
+          console.log("PASS live AI inference: Cloudflare Workers AI / Qwen 3.8 27B returned assistant text; no personal chart data was sent.");
+          console.log("AI smoke response: " + result.reading.slice(0, 180).replace(/\\s+/g, " "));
           NODE
