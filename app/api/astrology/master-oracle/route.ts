@@ -2,15 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateCelestiaText } from "@/lib/ai/generateText";
 import { toSafeAIProviderError } from "@/lib/ai/providerErrors";
 import { isCelestiaAIModelId } from "@/lib/ai/modelCatalog";
+import { hasExternalChartDataConsent } from "@/lib/ai/oracleDataGuards";
 
 export async function POST(req: NextRequest) {
   try {
     const payload = await req.json();
+    if (!hasExternalChartDataConsent(payload?.externalDataConsent)) {
+      return NextResponse.json({ error: "Explicit consent is required before chart context is sent to the selected AI provider." }, { status: 400 });
+    }
     if (payload?.model !== undefined && !isCelestiaAIModelId(payload.model)) {
       return NextResponse.json({ error: "The selected AI model is not supported." }, { status: 400 });
     }
     // Accept the live cockpit contract and legacy field names during migration.
-    const seekerName = payload?.seekerName ?? payload?.name ?? "Querent";
     const question = String(payload?.query ?? payload?.question ?? "").slice(0, 2000);
     const context = payload?.context ?? payload?.profileData ?? {};
     const history = Array.isArray(payload?.conversationHistory)
@@ -28,9 +31,8 @@ Answer the querent's question using only the chart context supplied. Do not inve
 Keep the answer focused, practical, respectful, and structured. If essential chart data is missing, say so explicitly.`;
 
     const userPrompt = [
-      `Querent: ${seekerName}`,
+      "Querent: Anonymous",
       `Question: ${question}`,
-      `Birth details: ${payload?.birthDate ?? "not supplied"} ${payload?.birthTime ?? ""}; ${payload?.location ?? "location not supplied"}.`,
       "",
       "CHART CONTEXT",
       `Western: Sun ${context?.western?.sunSign ?? "?"}; Moon ${context?.western?.moonSign ?? "?"}; Ascendant ${context?.western?.ascendantSign ?? "?"}; Midheaven ${context?.western?.midheavenSign ?? "?"}; major aspects: ${(context?.western?.majorAspects ?? []).join("; ")}.`,
