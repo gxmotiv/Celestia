@@ -150,19 +150,12 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
     };
   }, []);
 
-  useEffect(() => {
-    if (value.startsWith("pollinations:") && !catalogueLoaded) return;
-    if (value.startsWith("nararouter:") && !naraLoaded) return;
-    if (value.startsWith("freemodel:") && !freeModelLoaded) return;
-    const isKnownStatic = CELESTIA_AI_MODELS.some((model) => model.id === value);
-    const isKnownPollinations = value.startsWith("pollinations:") &&
-      (value === "pollinations:auto-free" || [...pollinationsModels, ...manualOnlyModels].some((model) => `pollinations:${model.id}` === value));
-    const isKnownNaraRouter = value.startsWith("nararouter:") &&
-      naraModels.some((model) => `nararouter:${model.id}` === value);
-    const isKnownFreeModel = value.startsWith("freemodel:") &&
-      freeModels.some((model) => `freemodel:${model.id}` === value);
-    if (!isKnownStatic && !isKnownPollinations && !isKnownNaraRouter && !isKnownFreeModel) onChange("pollinations:auto-free");
-  }, [value, pollinationsModels, manualOnlyModels, catalogueLoaded, naraModels, naraLoaded, freeModels, freeModelLoaded, onChange]);
+  const selectedModelIsListed =
+    CELESTIA_AI_MODELS.some((model) => model.id === value) ||
+    (value.startsWith("pollinations:") && (value === "pollinations:auto-free" ||
+      [...pollinationsModels, ...manualOnlyModels].some((model) => `pollinations:${model.id}` === value))) ||
+    (value.startsWith("nararouter:") && naraModels.some((model) => `nararouter:${model.id}` === value)) ||
+    (value.startsWith("freemodel:") && freeModels.some((model) => `freemodel:${model.id}` === value));
 
   const staticSelected = CELESTIA_AI_MODELS.find((model) => model.id === value) ?? CELESTIA_AI_MODELS[0];
   const liveSelected = value.startsWith("pollinations:")
@@ -220,6 +213,7 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
           }}
           className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-3 text-sm text-slate-100 outline-none focus:border-amber-500"
         >
+          {!selectedModelIsListed ? <option value={value} disabled>{value} — unavailable in the current live catalogue; select another model manually</option> : null}
           {PROVIDERS.map((providerId) => {
             const configured = providerConfiguration?.[providerId];
             const suffix = providerId === "groq" && !providerConfiguration?.groqFreePlanConfirmed ? " · requires $0 Free-plan confirmation" : configured === true ? " · key configured" : configured === false ? " · key required" : "";
@@ -285,6 +279,7 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
         </select>
       </label>
 
+      {!selectedModelIsListed ? <p role="alert" className="text-xs text-amber-300">The saved model selection is not present in the current catalogue. Celestia has not switched providers; choose another model manually.</p> : null}
       {catalogueError ? <p className="text-xs text-amber-300">{catalogueError}</p> : null}
       {freeModelError ? <p className="text-xs text-amber-300">{freeModelError}</p> : null}
       {freeModelLoaded && !freeModelError && freeModels.length === 0 ? <p className="text-xs text-amber-300">FreeModel returned no selectable chat models. Confirm the key has the models:read scope and that the monthly Free allowance is active.</p> : null}
