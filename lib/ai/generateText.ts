@@ -243,7 +243,7 @@ async function generateWithCloudflareWorkersAI(
     });
   } catch (caught) {
     const error = (caught instanceof Error ? caught : new Error("Cloudflare Workers AI request failed.")) as ProviderError;
-    if (!error.status && /rate.?limit|quota|neuron|daily limit|capacity exceeded/i.test(error.message)) {
+    if (!error.status && /429|rate.?limit|quota|neuron|daily limit|capacity exceeded/i.test(error.message)) {
       error.status = 429;
     }
     throw error;
