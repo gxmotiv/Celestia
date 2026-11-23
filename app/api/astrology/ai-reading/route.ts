@@ -9,8 +9,6 @@ export async function POST(req: NextRequest) {
     const payload = await req.json();
     // These names match the payload created by components/AIReadingView.tsx.
     const {
-      name,
-      birthData,
       western,
       vedic,
       numerology,
