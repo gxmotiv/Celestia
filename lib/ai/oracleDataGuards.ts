@@ -38,7 +38,7 @@ export function getVerifiedDashaInputs(candidate: DashaInputCandidate): Verified
   const second = Number(timeMatch[3] ?? "0");
   const timezoneOffsetHours = candidate.timezoneOffsetHours;
   if (
-    year < 100 || year > 9999 || month < 1 || month > 12 || day < 1 || day > 31 || hour > 23 ||
+    year < 1 || year > 9999 || month < 1 || month > 12 || day < 1 || day > 31 || hour > 23 ||
     typeof timezoneOffsetHours !== "number" ||
     !Number.isFinite(timezoneOffsetHours) ||
     timezoneOffsetHours < -14 ||
@@ -72,6 +72,9 @@ export function getVerifiedDashaInputs(candidate: DashaInputCandidate): Verified
   ) return null;
 
   const nakshatraSpan = 360 / 27;
+  const longitudeNakshatraIndex = Math.floor(moonLongitude / nakshatraSpan);
+  if (longitudeNakshatraIndex !== nakshatraIndex) return null;
+
   return {
     birthDate,
     moonLongitude,
