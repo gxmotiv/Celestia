@@ -284,7 +284,7 @@ export function MasterAIAstrologerCockpit({
       sender: "oracle",
       text: `Namaste, revered ${effectiveName}. I am **Acharya Celestia**, your Master Esoteric Astrologer and Celestial Synthesizer. 
 
-I am currently reading your **10-System Classical Dasha convergence** synchronized with your **${vedicData.lagna.rasiName} Ascendant**, **${vedicData.birthNakshatra} Nakshatra** (Lord: **${vedicData.birthNakshatraLord}**), and the active **${currentMD?.planet || "Jupiter"} Mahadasha** / **${currentAD?.planet ?? "not supplied"} Antardasha**.
+I am currently reading your **10-System Classical Dasha convergence** synchronized with your **${vedicData.lagna.rasiName} Ascendant**, **${vedicData.birthNakshatra} Nakshatra** (Lord: **${vedicData.birthNakshatraLord}**), and the active **${currentMD?.planet ?? "not supplied"} Mahadasha** / **${currentAD?.planet ?? "not supplied"} Antardasha**.
 
 Ask me any specific inquiry regarding your predictive timing, career milestones, relationship fruition, or sacred Vedic remedies.`,
       timestamp: "Live Oracle Synchronized",
@@ -350,7 +350,7 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
             pada: vedicData.birthPada,
             nakshatraLord: vedicData.birthNakshatraLord,
             activeMahadasha: currentMD?.planet || "Jupiter",
-            activeAntardasha: currentAD?.planet || "Saturn",
+            activeAntardasha: currentAD?.planet ?? "not supplied",
             yogas: vedicData.yogas.map((y) => y.name),
             sadeSatiStatus: "not supplied",
           },
