@@ -36,7 +36,7 @@ interface MasterAIAstrologerCockpitProps {
   baziData?: BaZiProfile;
   birthDate: string;
   birthTime: string;
-  timezoneOffset: number;
+  timezoneOffset?: number;
   cityName?: string;
   country?: string;
   fullName?: string;
@@ -47,6 +47,7 @@ interface MasterAIAstrologerCockpitProps {
   selectedModel?: string;
   privacyRiskAcknowledged?: boolean;
   externalDataConsent?: boolean;
+  onExternalDataConsentChange?: (value: boolean) => void;
 }
 
 interface ChatMessage {
@@ -214,8 +215,11 @@ export function MasterAIAstrologerCockpit({
   selectedModel,
   privacyRiskAcknowledged = false,
   externalDataConsent = false,
+  onExternalDataConsentChange,
 }: MasterAIAstrologerCockpitProps) {
   const effectiveName = fullName || seekerName || "Seeker";
+  const [localExternalDataConsent, setLocalExternalDataConsent] = useState(false);
+  const effectiveExternalDataConsent = onExternalDataConsentChange ? externalDataConsent : localExternalDataConsent;
   // Master Orchestrator for real-time 10-Dasha convergence
   const orchestrator = useMemo(() => new CompleteDashaOrchestrator(), []);
 
@@ -300,7 +304,7 @@ Ask a specific question. Missing chart facts will remain marked as unavailable r
     const textToSend = queryText || inputQuery;
     if (!textToSend.trim() || isConsulting) return;
 
-    if (!externalDataConsent) {
+    if (!effectiveExternalDataConsent) {
       const warning: ChatMessage = {
         id: "oracle-data-consent-" + Date.now(),
         sender: "oracle",
@@ -348,7 +352,7 @@ Ask a specific question. Missing chart facts will remain marked as unavailable r
       const payload = {
         model: selectedModel,
         allowPrivacyRiskModel: privacyRiskAcknowledged,
-        externalDataConsent,
+        externalDataConsent: effectiveExternalDataConsent,
         query: textToSend,
         conversationHistory: messages.slice(-4).map((m) => ({
           sender: m.sender,
@@ -468,6 +472,20 @@ No alternative provider or locally generated astrology advice was substituted. C
 
   return (
     <div className="space-y-5">
+      {!onExternalDataConsentChange ? (
+        <label className="flex items-start gap-2 rounded-xl border border-sky-500/30 bg-sky-500/5 p-3 text-xs text-sky-100">
+          <input
+            type="checkbox"
+            checked={localExternalDataConsent}
+            onChange={(event) => setLocalExternalDataConsent(event.target.checked)}
+            className="mt-0.5 accent-sky-500"
+          />
+          <span>
+            <strong className="block mb-1">Consent to send chart context to the selected AI provider</strong>
+            Your question, selected chart placements/calculated values, and recent chat context are sent to the provider. Celestia does not automatically attach your profile name, birth date/time, birthplace, or coordinates. Anything you type into the chat may still contain personal information. Provider terms and data handling apply. Do not include confidential information.
+          </span>
+        </label>
+      ) : null}
       {/* 1. Grand Master Oracle Banner */}
       <div className="p-5 md:p-6 bg-gradient-to-br from-slate-950 via-slate-900 to-amber-950/30 border border-amber-500/40 rounded-2xl shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
