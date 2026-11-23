@@ -1,9 +1,12 @@
 import { getCelestiaAIModel } from "./modelCatalog";
 import { getPollinationsFreeTextModels, getPollinationsManualOnlyTextModels, isPollinationsFreeTextModel } from "./pollinationsCatalog";
 import { getNaraRouterFreeModels } from "./nararouterCatalog";
+import { getFreeModelChatCatalog } from "./freemodelCatalog";
+import { getGroqAvailableFreeModels } from "./groqCatalog";
+import { getOpenRouterFreeModels, validateOpenRouterFreeResponse } from "./openrouterCatalog";
 import { validateRequestedModelResponse } from "./modelResponseValidation";
 
-export type CelestiaAIProvider = "pollinations" | "freemodel" | "nararouter" | "openrouter";
+export type CelestiaAIProvider = "pollinations" | "freemodel" | "nararouter" | "openrouter" | "groq";
 export type CelestiaAIModelTier = "budget" | "reasoning";
 
 export interface CelestiaAIUsage {
@@ -97,6 +100,10 @@ async function generateWithFreeModel(
   model: string,
   options: { systemPrompt: string; userPrompt: string; maxOutputTokens: number; temperature: number },
 ): Promise<CelestiaAIResult> {
+  const catalogue = await getFreeModelChatCatalog(apiKey);
+  if (!catalogue.some((candidate) => candidate.id === model)) {
+    throw new Error("The selected FreeModel ID is not present in the current authenticated chat catalogue. Refresh the model list; unavailable IDs are blocked.");
+  }
   const response = await fetch("https://freemodel.in/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -154,9 +161,48 @@ async function generateWithOpenRouter(
     error.status = response.status;
     throw error;
   }
+  const catalogue = await getOpenRouterFreeModels(apiKey);
+  const validation = validateOpenRouterFreeResponse(body, catalogue.map((candidate) => candidate.id));
+  if (!validation.valid) throw new Error(`OpenRouter free-router response validation failed: ${validation.reason}`);
+  return { text: validation.answer.trim(), provider: "openrouter", model: validation.model, usage: readUsage(body?.usage) };
+}
+
+async function generateWithGroq(
+  apiKey: string,
+  model: string,
+  options: { systemPrompt: string; userPrompt: string; maxOutputTokens: number; temperature: number },
+): Promise<CelestiaAIResult> {
+  if (process.env.GROQ_FREE_PLAN_CONFIRMED?.trim().toLowerCase() !== "true") {
+    throw new Error("Groq is disabled until GROQ_FREE_PLAN_CONFIRMED=true is set after verifying that the account is on the $0 Free plan. Do not enable the paid Developer plan.");
+  }
+  const available = await getGroqAvailableFreeModels(apiKey);
+  if (!available.some((candidate) => candidate.id === model)) {
+    throw new Error("The selected Groq model is not in the current account catalogue or Celestia verified Free-plan allowlist.");
+  }
+  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: "Bearer " + apiKey, "Content-Type": "application/json" },
+    cache: "no-store",
+    signal: AbortSignal.timeout(45_000),
+    body: JSON.stringify({
+      model,
+      messages: [{ role: "system", content: options.systemPrompt }, { role: "user", content: options.userPrompt }],
+      temperature: options.temperature,
+      max_tokens: options.maxOutputTokens,
+      stream: false,
+    }),
+  });
+  const body = await response.json().catch(() => null) as
+    | { model?: string; choices?: Array<{ message?: { content?: string | null } }>; usage?: unknown; error?: { message?: string } }
+    | null;
+  if (!response.ok) {
+    const error = new Error(body?.error?.message || "Groq request failed with HTTP " + response.status + ".") as ProviderError;
+    error.status = response.status;
+    throw error;
+  }
   const validation = validateRequestedModelResponse(model, body);
-  if (!validation.valid) throw new Error(`OpenRouter response validation failed: ${validation.reason}`);
-  return { text: validation.answer.trim(), provider: "openrouter", model, usage: readUsage(body?.usage) };
+  if (!validation.valid) throw new Error("Groq response validation failed: " + validation.reason);
+  return { text: validation.answer.trim(), provider: "groq", model, usage: readUsage(body?.usage) };
 }
 
 async function generateWithNaraRouter(
@@ -214,6 +260,11 @@ export async function generateCelestiaText(input: GenerateTextOptions): Promise<
       const key = process.env.FREEMODEL_API_KEY?.trim();
       if (!key) throw new Error("FreeModel is not configured. Add the FREEMODEL_API_KEY server secret.");
       return generateWithFreeModel(key, selectedModel.providerModelId, options);
+    }
+    case "groq": {
+      const key = process.env.GROQ_API_KEY?.trim();
+      if (!key) throw new Error("Groq is not configured. Add GROQ_API_KEY as a server-side Cloudflare Worker secret.");
+      return generateWithGroq(key, selectedModel.providerModelId, options);
     }
     case "nararouter": {
       const key = process.env.NARAROUTER_API_KEY?.trim();
