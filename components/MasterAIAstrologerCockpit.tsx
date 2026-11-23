@@ -43,6 +43,7 @@ interface MasterAIAstrologerCockpitProps {
   activeDashas?: any[];
   onClose?: () => void;
   selectedModel?: string;
+  privacyRiskAcknowledged?: boolean;
 }
 
 interface ChatMessage {
@@ -207,6 +208,7 @@ export function MasterAIAstrologerCockpit({
   activeDashas,
   onClose,
   selectedModel,
+  privacyRiskAcknowledged = false,
 }: MasterAIAstrologerCockpitProps) {
   const effectiveName = fullName || seekerName || "Seeker";
   // Master Orchestrator for real-time 10-Dasha convergence
@@ -309,6 +311,23 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
     const textToSend = queryText || inputQuery;
     if (!textToSend.trim() || isConsulting) return;
 
+    const manualOnlyPollinationsModel =
+      selectedModel === "pollinations:stealth/glyph-cluster" ||
+      Boolean(selectedModel?.startsWith("pollinations:community/"));
+    if (manualOnlyPollinationsModel && !privacyRiskAcknowledged) {
+      const warning: ChatMessage = {
+        id: "oracle-privacy-warning-" + Date.now(),
+        sender: "oracle",
+        text: "This Pollinations model is published by a community provider or carries a data-handling warning. Review the provider-risk notice and explicitly acknowledge it in the model selector before sending birth details or chart data.",
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        isAiGenerated: false,
+        provider: "error",
+        error: true,
+      };
+      setMessages((prev) => [...prev, warning]);
+      return;
+    }
+
     const userMsg: ChatMessage = {
       id: "user-" + Date.now(),
       sender: "user",
@@ -334,6 +353,7 @@ Ask me any specific inquiry regarding your predictive timing, career milestones,
 
       const payload = {
         model: selectedModel,
+        allowPrivacyRiskModel: privacyRiskAcknowledged,
         seekerName: effectiveName,
         birthDate,
         birthTime,
