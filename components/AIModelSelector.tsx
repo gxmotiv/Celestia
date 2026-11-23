@@ -56,6 +56,8 @@ const PROVIDER_LABELS: Record<CelestiaAIProviderId, string> = {
 };
 
 interface ProviderConfiguration extends Partial<Record<CelestiaAIProviderId, boolean>> {
+  freemodelKeyConfigured?: boolean;
+  freemodelFreePlanConfirmed?: boolean;
   groqKeyConfigured?: boolean;
   groqFreePlanConfirmed?: boolean;
 }
@@ -185,8 +187,10 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
     : selectedProviderId === "freemodel" ? "FREEMODEL_API_KEY"
     : selectedProviderId === "groq" ? "GROQ_API_KEY"
     : staticSelected.secretName;
-  const selectedStatus = selectedProviderId === "groq" && !providerConfiguration?.groqFreePlanConfirmed
-    ? providerConfiguration?.groqKeyConfigured ? "API key configured, but Free-plan confirmation is still required" : "Missing GROQ_API_KEY and Free-plan confirmation"
+  const selectedStatus = selectedProviderId === "freemodel" && !providerConfiguration?.freemodelFreePlanConfirmed
+    ? providerConfiguration?.freemodelKeyConfigured ? "API key configured, but confirm the $0 Free plan and zero prepaid/Day Pass balance first" : "Missing FREEMODEL_API_KEY and Free-plan confirmation"
+    : selectedProviderId === "groq" && !providerConfiguration?.groqFreePlanConfirmed
+      ? providerConfiguration?.groqKeyConfigured ? "API key configured, but Free-plan confirmation is still required" : "Missing GROQ_API_KEY and Free-plan confirmation"
     : selectedProviderConfigured === true
       ? "Server key configured; live provider authentication is checked when the request runs"
       : selectedProviderConfigured === false
@@ -216,7 +220,7 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
           {!selectedModelIsListed ? <option value={value} disabled>{value} — unavailable in the current live catalogue; select another model manually</option> : null}
           {PROVIDERS.map((providerId) => {
             const configured = providerConfiguration?.[providerId];
-            const suffix = providerId === "groq" && !providerConfiguration?.groqFreePlanConfirmed ? " · requires $0 Free-plan confirmation" : configured === true ? " · key configured" : configured === false ? " · key required" : "";
+            const suffix = providerId === "groq" && !providerConfiguration?.groqFreePlanConfirmed ? " · requires $0 Free-plan confirmation" : providerId === "freemodel" && !providerConfiguration?.freemodelFreePlanConfirmed ? " · requires $0 + zero-balance confirmation" : configured === true ? " · key configured" : configured === false ? " · key required" : "";
             if (providerId === "pollinations") {
               return (
                 <optgroup key={providerId} label={PROVIDER_LABELS[providerId] + suffix}>
