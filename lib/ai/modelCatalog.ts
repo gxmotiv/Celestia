@@ -1,5 +1,5 @@
 export const CELESTIA_AI_MODELS = [
-  { id: "pollinations:auto-free", providerId: "pollinations", providerName: "Pollinations", providerModelId: "auto-free", secretName: "POLLINATIONS_API_KEY", name: "Automatic free model", role: "Recommended default", description: "Automatically selects a currently healthy, official, zero-priced text model from Pollinations. The live catalogue is checked before each generation.", quotaNote: "Only models whose published input and output prices are both zero are eligible." },
+  { id: "pollinations:auto-free", providerId: "pollinations", providerName: "Pollinations", providerModelId: "auto-free", secretName: "POLLINATIONS_API_KEY", name: "Automatic free model", role: "Pollinations zero-priced models", description: "Automatically selects a currently healthy, official, zero-priced text model from Pollinations. The live catalogue is checked before each generation.", quotaNote: "Only models whose published input and output prices are both zero are eligible." },
   { id: "openrouter:openrouter/free", providerId: "openrouter", providerName: "OpenRouter", providerModelId: "openrouter/free", secretName: "OPENROUTER_API_KEY", name: "Auto-select a free model", role: "OpenRouter free router", description: "Uses OpenRouter's free-model router only.", quotaNote: "20 RPM · 50 requests/day on a free account; failed requests count toward the daily cap." },
   { id: "cloudflare-workers-ai:@cf/openai/gpt-oss-20b", providerId: "cloudflare-workers-ai", providerName: "Cloudflare Workers AI", providerModelId: "@cf/openai/gpt-oss-20b", secretName: "", name: "GPT-OSS 20B", role: "Cloudflare Workers Free · reasoning", description: "128K context · reasoning · function calling · zero data retention.", quotaNote: "10,000 shared Neurons/day on Workers Free · resets 00:00 UTC · over-limit requests fail. Never enable on Workers Paid for this $0 project." },
   { id: "cloudflare-workers-ai:@cf/qwen/qwen3.8-27b", providerId: "cloudflare-workers-ai", providerName: "Cloudflare Workers AI", providerModelId: "@cf/qwen/qwen3.8-27b", secretName: "", name: "Qwen 3.8 27B", role: "Cloudflare Workers Free · multilingual reasoning", description: "262K context · reasoning · multilingual · vision · zero data retention.", quotaNote: "10,000 shared Neurons/day on Workers Free · resets 00:00 UTC · over-limit requests fail. Never enable on Workers Paid for this $0 project." },
@@ -12,7 +12,7 @@ type CelestiaAIDynamicModel = { id: string; providerId: CelestiaAIProviderId; pr
 export type CelestiaAIModelId = string;
 export type CelestiaAIProviderId = "pollinations" | "freemodel" | "nararouter" | "openrouter" | "groq" | "cloudflare-workers-ai";
 
-export const DEFAULT_CELESTIA_AI_MODEL: CelestiaAIModelId = "pollinations:auto-free";
+export const DEFAULT_CELESTIA_AI_MODEL: CelestiaAIModelId = "cloudflare-workers-ai:@cf/qwen/qwen3.8-27b";
 
 export function getCelestiaAIModel(value: unknown): CelestiaAIModel | CelestiaAIDynamicModel | undefined {
   if (typeof value !== "string") return undefined;
