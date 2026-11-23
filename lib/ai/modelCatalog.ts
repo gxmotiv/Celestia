@@ -1,16 +1,15 @@
 export const CELESTIA_AI_MODELS = [
   { id: "pollinations:auto-free", providerId: "pollinations", providerName: "Pollinations", providerModelId: "auto-free", secretName: "POLLINATIONS_API_KEY", name: "Automatic free model", role: "Recommended default", description: "Automatically selects a currently healthy, official, zero-priced text model from Pollinations. The live catalogue is checked before each generation.", quotaNote: "Only models whose published input and output prices are both zero are eligible." },
-  { id: "freemodel:deepseek-v4.1-flash", providerId: "freemodel", providerName: "FreeModel", providerModelId: "deepseek-v4.1-flash", secretName: "FREEMODEL_API_KEY", name: "DeepSeek V4.1 Flash", role: "FreeModel free plan", description: "Available in FreeModel's OpenAI-compatible catalogue.", quotaNote: "FreeModel account allowance applies." },
-  { id: "freemodel:glm-5.3-flash", providerId: "freemodel", providerName: "FreeModel", providerModelId: "glm-5.3-flash", secretName: "FREEMODEL_API_KEY", name: "GLM 5.3 Flash", role: "FreeModel free plan", description: "Available in FreeModel's model catalogue.", quotaNote: "FreeModel account allowance applies." },
-  { id: "freemodel:mimo-v2.6-pro", providerId: "freemodel", providerName: "FreeModel", providerModelId: "mimo-v2.6-pro", secretName: "FREEMODEL_API_KEY", name: "MiMo V2.6 Pro", role: "FreeModel free plan", description: "Available in FreeModel's model catalogue.", quotaNote: "FreeModel account allowance applies." },
-  { id: "freemodel:gpt-6-luna", providerId: "freemodel", providerName: "FreeModel", providerModelId: "gpt-6-luna", secretName: "FREEMODEL_API_KEY", name: "GPT-6 Luna", role: "FreeModel free plan", description: "Available in FreeModel's model catalogue.", quotaNote: "FreeModel account allowance applies." },
-  { id: "openrouter:openrouter/free", providerId: "openrouter", providerName: "OpenRouter", providerModelId: "openrouter/free", secretName: "OPENROUTER_API_KEY", name: "Auto-select a free model", role: "OpenRouter free router", description: "Uses OpenRouter's free-model router only.", quotaNote: "OpenRouter free-variant limits apply." },
+  { id: "openrouter:openrouter/free", providerId: "openrouter", providerName: "OpenRouter", providerModelId: "openrouter/free", secretName: "OPENROUTER_API_KEY", name: "Auto-select a free model", role: "OpenRouter free router", description: "Uses OpenRouter's free-model router only.", quotaNote: "20 RPM · 50 requests/day on a free account; failed requests count toward the daily cap." },
+  { id: "groq:openai/gpt-oss-120b", providerId: "groq", providerName: "Groq", providerModelId: "openai/gpt-oss-120b", secretName: "GROQ_API_KEY", name: "GPT-OSS 120B", role: "Groq Free plan · reasoning", description: "High-capability reasoning, coding and tool-use model.", quotaNote: "30 RPM · 1,000 requests/day · 8K TPM · 200K tokens/day. Requires confirmation that the account remains on Groq Free." },
+  { id: "groq:openai/gpt-oss-20b", providerId: "groq", providerName: "Groq", providerModelId: "openai/gpt-oss-20b", secretName: "GROQ_API_KEY", name: "GPT-OSS 20B", role: "Groq Free plan · faster", description: "Smaller GPT-OSS model for routine chat and shorter tasks.", quotaNote: "30 RPM · 1,000 requests/day · 8K TPM · 200K tokens/day. Requires confirmation that the account remains on Groq Free." },
+  { id: "groq:qwen/qwen3.8-27b", providerId: "groq", providerName: "Groq", providerModelId: "qwen/qwen3.8-27b", secretName: "GROQ_API_KEY", name: "Qwen 3.8 27B", role: "Groq Free plan · alternative", description: "Alternative compact reasoning model.", quotaNote: "30 RPM · 1,000 requests/day · 8K TPM · 200K tokens/day. Requires confirmation that the account remains on Groq Free." },
 ] as const;
 
 export type CelestiaAIModel = (typeof CELESTIA_AI_MODELS)[number];
 type CelestiaAIDynamicModel = { id: string; providerId: CelestiaAIProviderId; providerName: string; providerModelId: string; secretName: string; name: string; role: string; description: string; quotaNote: string };
 export type CelestiaAIModelId = string;
-export type CelestiaAIProviderId = "pollinations" | "freemodel" | "nararouter" | "openrouter";
+export type CelestiaAIProviderId = "pollinations" | "freemodel" | "nararouter" | "openrouter" | "groq";
 
 export const DEFAULT_CELESTIA_AI_MODEL: CelestiaAIModelId = "pollinations:auto-free";
 
@@ -23,6 +22,16 @@ export function getCelestiaAIModel(value: unknown): CelestiaAIModel | CelestiaAI
       ...CELESTIA_AI_MODELS[0],
       id: value,
       providerModelId: value.slice("pollinations:".length),
+    };
+  }
+  if (value.startsWith("freemodel:") && value.length > "freemodel:".length) {
+    const providerModelId = value.slice("freemodel:".length);
+    return {
+      id: value, providerId: "freemodel", providerName: "FreeModel", providerModelId,
+      secretName: "FREEMODEL_API_KEY", name: providerModelId,
+      role: "FreeModel monthly free allowance",
+      description: "Dynamically discovered from the authenticated FreeModel chat catalogue.",
+      quotaNote: "1,000,000 input + output tokens per month; up to 60 RPM. Requests stop at HTTP 402 when the free allowance is exhausted.",
     };
   }
   if (value.startsWith("nararouter:") && value.length > "nararouter:".length) {
