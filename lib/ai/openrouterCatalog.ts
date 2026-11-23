@@ -27,7 +27,15 @@ export function parseOpenRouterFreeModels(payload: unknown): OpenRouterFreeModel
     const pricing = entry.pricing && typeof entry.pricing === "object"
       ? entry.pricing as Record<string, unknown>
       : {};
-    if (!id.endsWith(":free") || !zeroPrice(pricing.prompt) || !zeroPrice(pricing.completion)) continue;
+    const architecture = entry.architecture && typeof entry.architecture === "object"
+      ? entry.architecture as Record<string, unknown>
+      : {};
+    const inputModalities = Array.isArray(architecture.input_modalities) ? architecture.input_modalities : [];
+    const outputModalities = Array.isArray(architecture.output_modalities) ? architecture.output_modalities : [];
+    const modality = typeof architecture.modality === "string" ? architecture.modality : "";
+    const acceptsText = inputModalities.length > 0 ? inputModalities.includes("text") : modality.startsWith("text->");
+    const returnsText = outputModalities.length > 0 ? outputModalities.includes("text") : modality.endsWith("->text");
+    if (!id.endsWith(":free") || !acceptsText || !returnsText || !zeroPrice(pricing.prompt) || !zeroPrice(pricing.completion)) continue;
     models.set(id, {
       id,
       name: typeof entry.name === "string" && entry.name.trim() ? entry.name.trim() : id,
@@ -73,7 +81,7 @@ let cachedModels: OpenRouterFreeModel[] = [];
 
 export async function getOpenRouterFreeModels(apiKey: string): Promise<OpenRouterFreeModel[]> {
   if (Date.now() - cachedAt < 30_000 && cachedModels.length > 0) return cachedModels;
-  const response = await fetch("https://openrouter.ai/api/v1/models", {
+  const response = await fetch("https://openrouter.ai/api/v1/models?input_modalities=text&output_modalities=text", {
     method: "GET",
     headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" },
     cache: "no-store",
