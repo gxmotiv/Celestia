@@ -329,6 +329,7 @@ export function AIReadingView({
           country={country}
           fullName={fullName}
           selectedModel={selectedModel}
+          privacyRiskAcknowledged={privacyRiskAcknowledged}
         />
       )}
 
