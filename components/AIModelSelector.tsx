@@ -12,6 +12,8 @@ interface AIModelSelectorProps {
   onChange: (value: CelestiaAIModelId) => void;
   privacyRiskAcknowledged: boolean;
   onPrivacyRiskAcknowledgedChange: (value: boolean) => void;
+  externalDataConsent: boolean;
+  onExternalDataConsentChange: (value: boolean) => void;
 }
 
 interface LivePollinationsModel {
@@ -77,7 +79,7 @@ interface ProviderConfiguration extends Partial<Record<CelestiaAIProviderId, boo
   cloudflareWorkersAiBindingConfigured?: boolean;
 }
 
-export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPrivacyRiskAcknowledgedChange }: AIModelSelectorProps) {
+export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPrivacyRiskAcknowledgedChange, externalDataConsent, onExternalDataConsentChange }: AIModelSelectorProps) {
   const [providerConfiguration, setProviderConfiguration] = useState<ProviderConfiguration | null>(null);
   const [pollinationsModels, setPollinationsModels] = useState<LivePollinationsModel[]>([]);
   const [manualOnlyModels, setManualOnlyModels] = useState<LivePollinationsModel[]>([]);
@@ -372,6 +374,18 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
         </select>
       </label>
 
+      <label className="flex items-start gap-2 rounded-lg border border-sky-500/30 bg-sky-500/5 p-3 text-xs text-sky-100">
+        <input
+          type="checkbox"
+          checked={externalDataConsent}
+          onChange={(event) => onExternalDataConsentChange(event.target.checked)}
+          className="mt-0.5 accent-sky-500"
+        />
+        <span>
+          <strong className="block mb-1">Consent to send chart context to the selected AI provider</strong>
+          Celestia sends the question, selected chart placements/calculated values, and recent chat context to the provider you selected. It does not send your name, birth date, birth time, birthplace, or coordinates in these AI prompts. The provider processes the content under its own terms and data-handling practices. Do not include confidential information. This consent is required before any AI request.
+        </span>
+      </label>
       {!selectedModelIsListed ? <p role="alert" className="text-xs text-amber-300">The saved model selection is not present in the current catalogue. Celestia has not switched providers; choose another model manually.</p> : null}
       {catalogueError ? <p className="text-xs text-amber-300">{catalogueError}</p> : null}
       {freeModelError ? <p className="text-xs text-amber-300">{freeModelError}</p> : null}
@@ -401,7 +415,7 @@ NaraRouter authenticated successfully, but this key has no verified Free-plan mo
             <strong className="block mb-1">Manual provider-risk acknowledgement required</strong>
             {liveSelected?.community ? `This model is published by ${liveSelected.publisher || "a community publisher"} and runs on independent provider infrastructure. Pollinations says community providers control their own storage, sharing, security, and training practices; it does not verify them. ` : ""}
             {liveSelected?.privacyRisk ? "The model listing also warns that prompts and replies may be retained and used for training, and zero-data-retention is unavailable. " : ""}
-            Celestia sends the current birth details, chart data, and question to this provider. I understand and explicitly consent to using this model for this reading. I will not send confidential information.
+            Celestia sends anonymised chart placements, the reading/question, and recent chat context without your name, birth date/time, birthplace, or coordinates. I understand this provider controls its own processing and data handling, and I explicitly accept the additional risk for this model.
           </span>
         </label>
       ) : null}
