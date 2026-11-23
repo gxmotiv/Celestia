@@ -43,6 +43,7 @@ jobs:
       - name: Run provider identity and privacy regression tests
         run: |
           npx tsx scripts/testPollinationsResponseIdentity.ts
+          npx tsx scripts/testCloudflareWorkersAIResponse.ts
           npx tsx scripts/testAIProviderErrors.ts
           npx tsx scripts/testAIConsentRoutes.ts
 
