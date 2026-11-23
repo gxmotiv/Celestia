@@ -26,6 +26,9 @@ jobs:
           node-version: 24
           cache: npm
 
+      - name: Pin npm version compatible with the committed lockfile
+        run: npm install --global npm@10.9.9
+
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
 
