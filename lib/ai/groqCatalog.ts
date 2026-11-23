@@ -1,6 +1,7 @@
 export const GROQ_FREE_MODEL_IDS = [
   "openai/gpt-oss-120b",
   "openai/gpt-oss-20b",
+  "qwen/qwen3.8-27b",
 ] as const;
 
 export interface GroqFreeModel {
@@ -22,6 +23,12 @@ export const GROQ_FREE_MODELS: GroqFreeModel[] = [
     name: "GPT-OSS 20B",
     quota: "30 RPM · 1,000 requests/day · 8K TPM · 200K tokens/day",
     description: "Smaller, faster GPT-OSS option for routine consultation and shorter tasks.",
+  },
+  {
+    id: "qwen/qwen3.8-27b",
+    name: "Qwen 3.8 27B",
+    quota: "30 RPM · 1,000 requests/day · 8K TPM · 200K tokens/day",
+    description: "Strong alternative reasoning model for complex chat; verify the current account model list before selection.",
   },
 ];
 
