@@ -250,9 +250,11 @@ async function generateWithCloudflareWorkersAI(
   }
 
   const parsed = parseCloudflareWorkersAIResponse(output);
-  // AI.run is invoked with the exact allowlisted model ID. Its documented
-  // response body returns response/usage, not a model field, so the selected
-  // model attribution is based on the explicit binding invocation.
+  if (parsed.model && parsed.model !== model) {
+    throw new Error(`Cloudflare Workers AI returned model "${parsed.model}" instead of the requested "${model}".`);
+  }
+  // Some older Workers AI text models omit model metadata. When present,
+  // returned model identity is checked before attribution.
   return {
     text: parsed.text,
     provider: "cloudflare-workers-ai",
