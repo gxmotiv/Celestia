@@ -383,7 +383,7 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
         />
         <span>
           <strong className="block mb-1">Consent to send chart context to the selected AI provider</strong>
-          Celestia sends the question, selected chart placements/calculated values, and recent chat context to the provider you selected. It does not send your name, birth date, birth time, birthplace, or coordinates in these AI prompts. The provider processes the content under its own terms and data-handling practices. Do not include confidential information. This consent is required before any AI request.
+          Celestia sends the question, selected chart placements/calculated values, and recent chat context to the provider you selected. It does not automatically attach your profile name, birth date, birth time, birthplace, or coordinates. Anything you type into the question or chat history may also be sent. The provider processes the content under its own terms and data-handling practices. Do not include confidential information. This consent is required before any AI request.
         </span>
       </label>
       {!selectedModelIsListed ? <p role="alert" className="text-xs text-amber-300">The saved model selection is not present in the current catalogue. Celestia has not switched providers; choose another model manually.</p> : null}
@@ -415,7 +415,7 @@ NaraRouter authenticated successfully, but this key has no verified Free-plan mo
             <strong className="block mb-1">Manual provider-risk acknowledgement required</strong>
             {liveSelected?.community ? `This model is published by ${liveSelected.publisher || "a community publisher"} and runs on independent provider infrastructure. Pollinations says community providers control their own storage, sharing, security, and training practices; it does not verify them. ` : ""}
             {liveSelected?.privacyRisk ? "The model listing also warns that prompts and replies may be retained and used for training, and zero-data-retention is unavailable. " : ""}
-            Celestia sends anonymised chart placements, the reading/question, and recent chat context without your name, birth date/time, birthplace, or coordinates. I understand this provider controls its own processing and data handling, and I explicitly accept the additional risk for this model.
+            Celestia sends chart placements, the reading/question, and recent chat context, but does not automatically attach profile birth details. Free text you enter may still contain personal information. I understand this provider controls its own processing and data handling, and I explicitly accept the additional risk for this model.
           </span>
         </label>
       ) : null}
