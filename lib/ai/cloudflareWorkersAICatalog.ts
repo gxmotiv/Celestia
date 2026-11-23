@@ -95,5 +95,5 @@ export function parseCloudflareWorkersAIResponse(payload: unknown): {
   const usage = promptTokens === undefined && completionTokens === undefined && totalTokens === undefined
     ? undefined
     : { promptTokens, completionTokens, totalTokens };
-  return { text, model, usage };
+  return { text, ...(model ? { model } : {}), ...(usage ? { usage } : {}) };
 }
