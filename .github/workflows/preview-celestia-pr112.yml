@@ -70,3 +70,22 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Smoke-test deployed website and AI provider availability
+        run: |
+          node --input-type=module <<'NODE'
+          const base = "https://celestia-pr112-preview.gagandeep-hwr.workers.dev";
+          const home = await fetch(base, { redirect: "follow" });
+          if (!home.ok) throw new Error(`Homepage failed: HTTP ${home.status}`);
+          const html = await home.text();
+          if (!html.includes("<html") && !html.includes("<!DOCTYPE")) throw new Error("Homepage did not return HTML");
+          console.log(`PASS homepage: HTTP ${home.status}, ${html.length} characters`);
+
+          const response = await fetch(base + "/api/astrology/ai-providers", { cache: "no-store" });
+          if (!response.ok) throw new Error(`AI provider status route failed: HTTP ${response.status}`);
+          const payload = await response.json();
+          if (payload?.providers?.["cloudflare-workers-ai"] !== true) {
+            throw new Error("Cloudflare Workers AI is not enabled in the deployed preview: " + JSON.stringify(payload?.providers ?? {}));
+          }
+          console.log("PASS AI provider status: Cloudflare Workers AI binding and Free-plan gate are enabled");
+          NODE
