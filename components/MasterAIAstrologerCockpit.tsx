@@ -405,14 +405,27 @@ Ask a specific question. Missing chart facts will remain marked as unavailable r
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(75_000),
       });
 
-      const data = await res.json();
+      const responseText = await res.text();
+      let data: Record<string, any> = {};
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        throw new Error(`Celestia returned a non-JSON response (HTTP ${res.status}). The Worker may have timed out or returned an infrastructure error.`);
+      }
       if (!res.ok) {
-        throw new Error(typeof data.error === "string" ? data.error : `AI provider request failed (HTTP ${res.status}).`);
+        const providerLabel = typeof data.provider === "string" ? data.provider : selectedModel?.split(":")[0];
+        const errorCode = typeof data.code === "string" ? data.code : "";
+        const detail = typeof data.error === "string" ? data.error : `AI provider request failed (HTTP ${res.status}).`;
+        throw new Error([detail, providerLabel ? `Provider: ${providerLabel}` : "", errorCode ? `Code: ${errorCode}` : "", `HTTP: ${res.status}`].filter(Boolean).join("\\n"));
       }
       const reply = typeof data.reply === "string" ? data.reply.trim() : "";
-      if (data.success !== true || !reply) throw new Error("The selected AI provider returned no assistant reply.");
+      if (data.success !== true || !reply) {
+        const errorCode = typeof data.code === "string" ? data.code : "EMPTY_ASSISTANT_REPLY";
+        throw new Error(`The selected AI provider returned no assistant reply. Code: ${errorCode}`);
+      }
 
       const oracleMsg: ChatMessage = {
         id: "oracle-" + Date.now(),
