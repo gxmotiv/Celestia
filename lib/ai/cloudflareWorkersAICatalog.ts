@@ -49,6 +49,7 @@ export interface CloudflareWorkersAIBinding {
 
 export function parseCloudflareWorkersAIResponse(payload: unknown): {
   text: string;
+  model?: string;
   usage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number };
 } {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
@@ -65,11 +66,25 @@ export function parseCloudflareWorkersAIResponse(payload: unknown): {
     const safeError = rawError.replace(/(?:Bearer\\s+)[A-Za-z0-9._~-]+/gi, "Bearer [redacted]").slice(0, 240);
     throw new Error(`Cloudflare Workers AI error ${errorCode}: ${safeError}`.trim());
   }
-  const text = typeof result.response === "string" ? result.response.trim() : "";
+  // Cloudflare's newer chat models (including Qwen 3.8) return an
+  // OpenAI-compatible choices[].message.content object. Older Workers AI
+  // text-generation models commonly return { response: string }. Accept
+  // both documented response shapes rather than treating valid chat output
+  // as an empty response.
+  const choices = Array.isArray(result.choices) ? result.choices : [];
+  const firstChoice = choices[0] && typeof choices[0] === "object"
+    ? choices[0] as Record<string, unknown>
+    : undefined;
+  const message = firstChoice?.message && typeof firstChoice.message === "object"
+    ? firstChoice.message as Record<string, unknown>
+    : undefined;
+  const choiceContent = typeof message?.content === "string" ? message.content.trim() : "";
+  const text = (typeof result.response === "string" ? result.response.trim() : "") || choiceContent;
   if (!text) {
     const keys = Object.keys(result).slice(0, 12).join(", ");
     throw new Error(`Cloudflare Workers AI returned no assistant text (response keys: ${keys || "none"}).`);
   }
+  const model = typeof result.model === "string" && result.model.trim() ? result.model.trim() : undefined;
   const usageRaw = result.usage && typeof result.usage === "object"
     ? result.usage as Record<string, unknown>
     : {};
@@ -83,5 +98,5 @@ export function parseCloudflareWorkersAIResponse(payload: unknown): {
   const usage = promptTokens === undefined && completionTokens === undefined && totalTokens === undefined
     ? undefined
     : { promptTokens, completionTokens, totalTokens };
-  return { text, usage };
+  return { text, model, usage };
 }
