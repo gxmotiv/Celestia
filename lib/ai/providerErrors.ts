@@ -45,6 +45,17 @@ export function toSafeAIProviderError(error: unknown, provider: string): {
       body: { success: false, provider, code: "PROVIDER_RATE_LIMITED", error: "The provider's free request or token quota is currently exhausted. Check its rate-limit reset time, then retry. Celestia did not switch providers." },
     };
   }
+  if (/selected NaraRouter model is not currently verified/i.test(rawMessage)) {
+    return {
+      status: 409,
+      body: {
+        success: false,
+        provider: "nararouter",
+        code: "NARAROUTER_MODEL_PREFLIGHT_BLOCKED",
+        error: "Celestia stopped before sending a chat-completion request. Its authenticated GET /v1/models check did not return the selected model as available to this account, so POST /v1/chat/completions was not attempted. This is a Celestia-side safety block, not a NaraRouter chat-completion rejection. Do not bypass this check until NaraRouter confirms the exact Free-plan model ID and account entitlement.",
+      },
+    };
+  }
   if (status === 404 || /not currently listed|not in the .*catalogue|not available/i.test(rawMessage)) {
     return {
       status: 409,
