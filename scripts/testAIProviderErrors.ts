@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { toSafeAIProviderError } from "../lib/ai/providerErrors";
 
 const quota = toSafeAIProviderError(Object.assign(new Error("FreeModel HTTP 402"), { status: 402 }), "freemodel");
-assert.equal(quota.status, 429);
+assert.equal(quota.status, 402);
 assert.equal(quota.body.code, "FREE_ALLOWANCE_EXHAUSTED");
 assert.match(quota.body.error, /do not add credits/i);
 
