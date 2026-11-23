@@ -58,13 +58,14 @@ interface LiveOpenRouterModel {
   name: string;
 }
 
-const PROVIDERS: CelestiaAIProviderId[] = ["pollinations", "freemodel", "nararouter", "openrouter", "groq"];
+const PROVIDERS: CelestiaAIProviderId[] = ["pollinations", "cloudflare-workers-ai", "freemodel", "nararouter", "openrouter", "groq"];
 const PROVIDER_LABELS: Record<CelestiaAIProviderId, string> = {
   pollinations: "Pollinations — zero-priced official + community",
   freemodel: "FreeModel",
   nararouter: "NaraRouter",
   openrouter: "OpenRouter — free models only",
   groq: "Groq — verified Free-plan models",
+  "cloudflare-workers-ai": "Cloudflare Workers AI — Workers Free only",
 };
 
 interface ProviderConfiguration extends Partial<Record<CelestiaAIProviderId, boolean>> {
@@ -72,6 +73,8 @@ interface ProviderConfiguration extends Partial<Record<CelestiaAIProviderId, boo
   freemodelFreePlanConfirmed?: boolean;
   groqKeyConfigured?: boolean;
   groqFreePlanConfirmed?: boolean;
+  cloudflareWorkersAiFreePlanConfirmed?: boolean;
+  cloudflareWorkersAiBindingConfigured?: boolean;
 }
 
 export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPrivacyRiskAcknowledgedChange }: AIModelSelectorProps) {
@@ -240,12 +243,19 @@ export function AIModelSelector({ value, onChange, privacyRiskAcknowledged, onPr
       ? `FreeModel Free plan: 1M input + output tokens/month · up to 60 RPM · ${freeSelected.contextWindow ? `${Math.round(freeSelected.contextWindow / 1000)}K context · ` : ""}${freeSelected.capabilities.join(", ")}`
       : naraSelected?.description ?? staticSelected.quotaNote;
   const selectedProviderConfigured = providerConfiguration?.[selectedProviderId];
-  const selectedSecret = selectedProviderId === "pollinations" ? "POLLINATIONS_API_KEY"
+  const selectedSecret = selectedProviderId === "cloudflare-workers-ai" ? "Cloudflare Worker AI binding (no API key)"
+    : selectedProviderId === "pollinations" ? "POLLINATIONS_API_KEY"
     : selectedProviderId === "nararouter" ? "NARAROUTER_API_KEY"
     : selectedProviderId === "freemodel" ? "FREEMODEL_API_KEY"
     : selectedProviderId === "groq" ? "GROQ_API_KEY"
     : staticSelected.secretName;
-  const selectedStatus = selectedProviderId === "freemodel" && !providerConfiguration?.freemodelFreePlanConfirmed
+  const selectedStatus = selectedProviderId === "cloudflare-workers-ai"
+    ? !providerConfiguration?.cloudflareWorkersAiFreePlanConfirmed
+      ? "Disabled: confirm Cloudflare Workers Free plan only. Workers Paid can bill above the daily allowance."
+      : !providerConfiguration?.cloudflareWorkersAiBindingConfigured
+        ? "Workers Free plan confirmed, but the native AI binding is missing."
+        : "Workers Free plan confirmed; native AI binding ready. Shared 10,000 Neurons/day, resets 00:00 UTC."
+    : selectedProviderId === "freemodel" && !providerConfiguration?.freemodelFreePlanConfirmed
     ? providerConfiguration?.freemodelKeyConfigured ? "API key configured, but confirm the $0 Free plan and zero prepaid/Day Pass balance first" : "Missing FREEMODEL_API_KEY and Free-plan confirmation"
     : selectedProviderId === "groq" && !providerConfiguration?.groqFreePlanConfirmed
       ? providerConfiguration?.groqKeyConfigured ? "API key configured, but Free-plan confirmation is still required" : "Missing GROQ_API_KEY and Free-plan confirmation"
