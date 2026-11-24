@@ -19,7 +19,12 @@ on:
   workflow_dispatch:
     inputs:
       benchmark:
-        description: "Run a small synthetic-prompt benchmark of eligible free official Pollinations models"
+        description: "Run a synthetic-prompt benchmark; zero-priced models only unless allow_paid is enabled"
+        required: true
+        default: false
+        type: boolean
+      allow_paid:
+        description: "Allow Pollen-consuming requests to non-zero-priced models, including GPT-5 Nano. Keep false for a zero-cost benchmark."
         required: true
         default: false
         type: boolean
@@ -55,6 +60,18 @@ jobs:
         run: npm install --no-save --package-lock=false --no-audit --no-fund @opennextjs/cloudflare@latest wrangler@latest tsx
       - name: Run Pollinations catalogue schema regression tests
         run: npx tsx scripts/testPollinationsCatalog.ts
+      - name: Pollinations live zero-price inference smoke test
+        # One synthetic prompt, selected only after the authenticated live catalogue proves zero input/output prices.
+        # Continue the build if the provider is temporarily unavailable; the step result remains visible.
+        continue-on-error: true
+        run: |
+          if [ -z "$POLLINATIONS_API_KEY" ]; then
+            echo "SKIP Pollinations live inference smoke test: POLLINATIONS_API_KEY secret is not configured."
+          else
+            npx tsx scripts/benchmarkPollinationsModels.ts --smoke
+          fi
+        env:
+          POLLINATIONS_API_KEY: ${{ secrets.POLLINATIONS_API_KEY }}
       - name: Run the astrology regression suite
         run: npx tsx scripts/testAstrologySuite.ts
       - name: Build the Next.js application
@@ -67,7 +84,7 @@ jobs:
         run: npx wrangler deploy --dry-run
 
   pollinations-model-benchmark:
-    name: Benchmark eligible free official Pollinations models
+    name: Benchmark eligible official Pollinations models (Pollen usage may apply)
     if: github.event_name == 'workflow_dispatch' && inputs.benchmark == true
     runs-on: ubuntu-latest
     steps:
@@ -93,6 +110,7 @@ jobs:
         run: npx tsx scripts/benchmarkPollinationsModels.ts
         env:
           POLLINATIONS_API_KEY: ${{ secrets.POLLINATIONS_API_KEY }}
+          POLLINATIONS_ALLOW_PAID_BENCHMARK: ${{ inputs.allow_paid }}
       - name: Upload benchmark report
         if: always()
         uses: actions/upload-artifact@v4

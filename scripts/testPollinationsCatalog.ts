@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
-import { parsePollinationsFreeTextModels } from "../lib/ai/pollinationsCatalog";
+import { parsePollinationsAvailableTextModels } from "../lib/ai/pollinationsCatalog";
 
 const base = {
-  name: "sample/free-chat",
+  id: "sample/free-chat",
   title: "Sample Free Chat",
   description: "A general-purpose text assistant.",
   category: "text",
@@ -12,92 +12,107 @@ const base = {
   input_modalities: ["text"],
   output_modalities: ["text"],
   supported_endpoints: ["/v1/chat/completions"],
-  pricing: { currency: "pollen" },
-  health: { status: "healthy", success_rate: 100, requests: 20 },
+  pricing: {
+    currency: "pollen",
+    promptTextTokens: "0",
+    completionTextTokens: "0",
+  },
+  health: { status: "healthy", success_rate: 99.9, requests: 100 },
 };
 
 let passed = 0;
 function check(name: string, payload: unknown, expectedCount: number, options: { includeManualOnly?: boolean } = {}) {
-  const actual = parsePollinationsFreeTextModels(payload, options).length;
+  const actual = parsePollinationsAvailableTextModels(payload, options).length;
   assert.equal(actual, expectedCount, name);
   passed += 1;
   console.log(`PASS ${name}`);
 }
+function parsed(entry: unknown) {
+  return parsePollinationsAvailableTextModels([entry])[0];
+}
 
-check("accepts official free model using legacy name field", [base], 1);
-check("prefers canonical id over legacy name field", [{ ...base, id: "sample/canonical-id" }], 1);
-assert.equal(parsePollinationsFreeTextModels([{ ...base, id: "sample/canonical-id" }])[0]?.id, "sample/canonical-id");
+check("accepts available official model", [base], 1);
+assert.equal(parsed(base)?.zeroPriced, true);
+assert.equal(parsed(base)?.pricingStatus, "free_verified");
 passed += 1;
-console.log("PASS preserves canonical id when both id and name are present");
-check("accepts wrapped OpenAI-style data array", { data: [base] }, 1);
-check("accepts explicit string zero prices", [{
-  ...base,
-  pricing: { currency: "pollen", promptTextTokens: "0", completionTextTokens: "0" },
-}], 1);
-check("rejects non-zero prompt price", [{
-  ...base,
-  pricing: { currency: "pollen", promptTextTokens: "0.000001", completionTextTokens: "0" },
-}], 0);
-check("rejects non-zero completion price", [{
-  ...base,
-  pricing: { currency: "pollen", promptTextTokens: "0", completionTextTokens: "0.000001" },
-}], 0);
-check("rejects non-healthy model", [{ ...base, health: { status: "down" } }], 0);
-check("rejects unknown health", [{ ...base, health: { status: "unknown" } }], 0);
-check("rejects community model", [{ ...base, community: true }], 0);
-check("rejects paid-only model", [{ ...base, paid_only: true }], 0);
-check("rejects specialized classifier", [{ ...base, is_specialized: true }], 0);
-const glyph = {
-  ...base,
-  name: "stealth/glyph-cluster",
-  title: "Glyph Cluster",
-  description: "Prompts and replies may be retained and used for training; zero data retention is unavailable.",
-};
-check("excludes Glyph Cluster from automatic privacy-safe models", [glyph], 0);
-check("exposes Glyph Cluster only when manual privacy-risk models are requested", [glyph], 1, { includeManualOnly: true });
-assert.equal(parsePollinationsFreeTextModels([glyph], { includeManualOnly: true })[0]?.privacyRisk, true);
+console.log("PASS complete explicit zero rates are verified free");
+
+const currencyOnly = { ...base, pricing: { currency: "pollen" } };
+check("keeps currency-only pricing available but unknown-cost", [currencyOnly], 1);
+assert.equal(parsed(currencyOnly)?.zeroPriced, false);
+assert.equal(parsed(currencyOnly)?.pricingStatus, "unknown");
 passed += 1;
-console.log("PASS marks manually exposed Glyph Cluster as privacy-risk");
-const communityModel = {
+console.log("PASS currency-only pricing is never treated as free");
+
+const missingOutput = { ...base, pricing: { currency: "pollen", promptTextTokens: "0" } };
+assert.equal(parsed(missingOutput)?.zeroPriced, false);
+assert.equal(parsed(missingOutput)?.pricingStatus, "unknown");
+passed += 1;
+console.log("PASS missing output rate is unknown");
+
+const paid = { ...base, pricing: { currency: "pollen", promptTextTokens: "0", completionTextTokens: "0.0000003" } };
+assert.equal(parsed(paid)?.zeroPriced, false);
+assert.equal(parsed(paid)?.pricingStatus, "paid");
+passed += 1;
+console.log("PASS any nonzero text rate is paid");
+
+const nanoModel = {
   ...base,
-  name: "community/morriszdweck/glm-5.3-flash-free",
-  title: "GLM 5.3 Flash (free, stable!)",
-  publisher: "OSAII",
-  community: true,
+  id: "openai/gpt-5-nano",
+  title: "GPT-5 Nano",
+  description: "Small text model.",
+  pricing: {
+    currency: "pollen",
+    promptTextTokens: "0.0000000375",
+    promptCachedTokens: "0.00000000375",
+    completionTextTokens: "0.0000003",
+  },
+  health: { status: "healthy", success_rate: 100, requests: 1227 },
   reasoning: true,
   tools: true,
-  context_length: 1000000,
-  health: { status: "healthy", success_rate: 100, requests: 50 },
+  context_length: 400000,
 };
-check("excludes community models from automatic privacy-safe models", [communityModel], 0);
-check("exposes zero-priced healthy community models only for manual consent", [communityModel], 1, { includeManualOnly: true });
-const upstreamTrainingWarning = { ...communityModel, description: "Upstream data may be collected for training." };
-assert.equal(parsePollinationsFreeTextModels([upstreamTrainingWarning], { includeManualOnly: true })[0]?.privacyRisk, true);
+assert.equal(parsed(nanoModel)?.id, "openai/gpt-5-nano");
+assert.equal(parsed(nanoModel)?.zeroPriced, false);
+assert.equal(parsed(nanoModel)?.pricingStatus, "paid");
+assert.equal(parsed(nanoModel)?.inputPrice, 0.0000000375);
+assert.equal(parsed(nanoModel)?.outputPrice, 0.0000003);
 passed += 1;
-console.log("PASS detects upstream collection-for-training warning");
-const parsedCommunity = parsePollinationsFreeTextModels([communityModel], { includeManualOnly: true })[0];
-assert.equal(parsedCommunity?.community, true);
-assert.equal(parsedCommunity?.publisher, "OSAII");
+console.log("PASS GPT-5 Nano is discoverable but not falsely labelled free");
+
+const unknownField = { ...base, pricing: { ...base.pricing, futureTokenPrice: "0" } };
+assert.equal(parsed(unknownField)?.zeroPriced, false);
 passed += 1;
-console.log("PASS preserves community publisher identity for manual selection");
-check("rejects missing pricing currency", [{ ...base, pricing: {} }], 0);
-check("rejects unknown future billing field", [{
-  ...base,
-  pricing: { currency: "pollen", futureTokenPrice: "0" },
-}], 0);
-check("rejects paid pricing variants", [{
-  ...base,
-  pricing_variants: [{ name: "premium", pricing: { currency: "pollen", completionTextTokens: "0.1" } }],
-}], 0);
-check("rejects paid tool/search adjustments", [{
-  ...base,
-  pricing_adjustments: [{ name: "search", price: "1" }],
-}], 0);
-check("rejects models without chat-completions support", [{
-  ...base,
-  supported_endpoints: ["/text"],
-}], 0);
+console.log("PASS unknown future billing dimensions fail closed");
+
+const nonzeroVariant = { ...base, pricing_variants: [{ name: "long_context", pricing: {
+  currency: "pollen", promptTextTokens: "0", completionTextTokens: "0.0000003",
+} }] };
+assert.equal(parsed(nonzeroVariant)?.zeroPriced, false);
+passed += 1;
+console.log("PASS nonzero pricing variants prevent free classification");
+
+const nonzeroAdjustment = { ...base, pricing_adjustments: [{ name: "search", price: "1", currency: "pollen" }] };
+assert.equal(parsed(nonzeroAdjustment)?.zeroPriced, false);
+passed += 1;
+console.log("PASS nonzero pricing adjustments prevent free classification");
+
+check("accepts wrapped data array", { data: [base] }, 1);
+check("excludes agent models", [{ ...base, agent: true, base_model: "openai/gpt-5-nano" }], 0);
+check("rejects paid-only model", [{ ...base, paid_only: true }], 0);
+check("rejects unhealthy model", [{ ...base, health: { status: "down" } }], 0);
+check("rejects degraded model", [{ ...base, health: { status: "degraded" } }], 0);
+check("rejects unknown health", [{ ...base, health: { status: "unknown" } }], 0);
+check("rejects community model from automatic list", [{ ...base, community: true }], 0);
+check("includes community model only in manual list", [{ ...base, community: true }], 1, { includeManualOnly: true });
+check("rejects specialized classifier", [{ ...base, is_specialized: true }], 0);
+const privacyRisk = { ...base, description: "Prompts may be retained and used for training." };
+check("excludes retention-warning model from automatic list", [privacyRisk], 0);
+check("includes retention-warning model only for manual choice", [privacyRisk], 1, { includeManualOnly: true });
+check("rejects missing chat-completions support", [{ ...base, supported_endpoints: ["/text"] }], 0);
 check("rejects non-text category", [{ ...base, category: "image" }], 0);
+check("rejects missing text input", [{ ...base, input_modalities: ["image"] }], 0);
+check("rejects missing text output", [{ ...base, output_modalities: ["image"] }], 0);
 check("rejects malformed payload", { models: [base] }, 0);
 
-console.log(`Pollinations catalogue tests: ${passed}/25 passed`);
+console.log(`Pollinations catalogue tests: ${passed} assertions passed`);

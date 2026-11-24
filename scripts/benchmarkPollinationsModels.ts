@@ -1,27 +1,36 @@
 import { writeFile } from "node:fs/promises";
-import { parsePollinationsFreeTextModels } from "../lib/ai/pollinationsCatalog";
+import { parsePollinationsAvailableTextModels } from "../lib/ai/pollinationsCatalog";
 
 const apiKey = process.env.POLLINATIONS_API_KEY;
 if (!apiKey) throw new Error("POLLINATIONS_API_KEY GitHub secret is not configured.");
 
 const baseUrl = "https://gen.pollinations.ai";
-const candidates = [
-  "z-ai/glm-5.3-flash",
-  "nvidia/nemotron-3.5-lightning",
-];
-
+const MAX_RANKED_MODELS = 8;
+const REQUIRED_BENCHMARK_MODELS = ["openai/gpt-5-nano"];
+const allowPaidBenchmark = process.env.POLLINATIONS_ALLOW_PAID_BENCHMARK === "true";
 const tasks = [
   {
     id: "angular-reasoning",
     prompt: "A planet is at 15 degrees Aries and another is at 15 degrees Libra. Calculate their smallest angular separation, name the major aspect, and explain the calculation briefly. Do not add other assumptions.",
+    validate: (answer: string) => /180/.test(answer) && /opposition/i.test(answer),
   },
   {
     id: "structured-extraction",
     prompt: 'Extract the following facts and return ONLY valid JSON with keys "date", "time", "location", and "unknowns": "Birth date: 14 February 1995. Birth time: 9:30 AM IST. Birthplace: Jaipur, India. Exact house system: not specified."',
+    validate: (answer: string) => {
+      try {
+        const value = JSON.parse(answer);
+        return ["date", "time", "location", "unknowns"].every((key) => key in value);
+      } catch { return false; }
+    },
   },
   {
     id: "astrology-caution",
     prompt: "A fictional chart has Mars in the 10th house. Give a short traditional-astrology interpretation, then list two things that cannot be concluded from this placement alone. Clearly distinguish symbolic interpretation from verified fact.",
+    validate: (answer: string) => {
+      const caveats = (answer.match(/cannot|can't|cannot be concluded|not enough information|does not prove/gi) ?? []).length;
+      return caveats >= 2 && /symbolic|traditional|astrolog/i.test(answer);
+    },
   },
 ];
 
@@ -30,6 +39,8 @@ type Result = {
   task: string;
   attempt: number;
   status: "ok" | "http_error" | "timeout" | "invalid_response";
+  qualityPass?: boolean;
+  qualityReason?: string;
   httpStatus?: number;
   latencyMs: number;
   responseChars?: number;
@@ -38,44 +49,95 @@ type Result = {
 };
 
 async function main() {
-  const catalogResponse = await fetch(
-    `${baseUrl}/text/models?source=official&reliability=all&limit=500`,
-    { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(20_000) },
-  );
-  if (!catalogResponse.ok) {
-    throw new Error(`Official model catalogue request failed: HTTP ${catalogResponse.status}`);
-  }
-  const catalogPayload: unknown = await catalogResponse.json();
-  const eligible = parsePollinationsFreeTextModels(catalogPayload);
-  const results: Result[] = [];
-  const eligibility: Record<string, string> = {};
+  const headers = { Accept: "application/json", Authorization: `Bearer ${apiKey}` };
+  const sources = ["official", "community"] as const;
+  const responses = await Promise.all(sources.map((source) => fetch(
+    `${baseUrl}/text/models?source=${source}&reliability=reliable&agent=false&limit=500`,
+    { headers, signal: AbortSignal.timeout(20_000) },
+  )));
+  const failed = responses.find((response) => !response.ok);
+  if (failed) throw new Error(`Authenticated Pollinations catalogue request failed: HTTP ${failed.status}`);
+  const payloads: unknown[] = await Promise.all(responses.map((response) => response.json()));
 
-  for (const model of candidates) {
-    const match = eligible.find((entry) => entry.id === model);
-    if (!match) {
-      eligibility[model] = "SKIPPED: not currently listed as healthy, official, privacy-safe, zero-priced text model";
-      console.log(`SKIP ${model}: failed live free/official/privacy/health eligibility check`);
-      continue;
+  const official = parsePollinationsAvailableTextModels(payloads[0]);
+  const community = parsePollinationsAvailableTextModels(payloads[1], { includeManualOnly: true })
+    .filter((model) => model.community && !model.privacyRisk);
+  const allAvailable = [...official, ...community];
+
+  // A single synthetic inference request against a catalogue-verified,
+  // official zero-priced model. This is deliberately separate from the
+  // multi-model benchmark and never opts into paid requests.
+  if (process.argv.includes("--smoke")) {
+    const candidates = official.filter((model) => !model.community && !model.privacyRisk && model.zeroPriced);
+    if (candidates.length === 0) {
+      throw new Error("SKIP/FAIL: no official healthy model with explicitly zero input and output prices is currently available.");
     }
-    eligibility[model] = "eligible at live catalogue check (zero Pollinations-listed input/output pricing)";
-    console.log(`ELIGIBLE ${model}`);
+    const model = candidates[0];
+    const started = Date.now();
+    const response = await fetch(`${baseUrl}/v1/chat/completions`, {
+      method: "POST",
+      headers: { ...headers, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: model.id,
+        messages: [{ role: "user", content: "Reply exactly with: CELESTIA_POLLINATIONS_SMOKE_OK" }],
+        temperature: 0,
+        max_tokens: 24,
+        stream: false,
+      }),
+      signal: AbortSignal.timeout(45_000),
+    });
+    const latencyMs = Date.now() - started;
+    const raw = await response.text();
+    if (!response.ok) throw new Error(`Pollinations zero-price smoke request failed: HTTP ${response.status}.`);
+    let result: any;
+    try { result = JSON.parse(raw); } catch { throw new Error("Pollinations smoke request returned invalid JSON."); }
+    const answer = result?.choices?.[0]?.message?.content;
+    if (typeof answer !== "string" || !answer.trim()) throw new Error("Pollinations smoke request returned no assistant text.");
+    console.log(`PASS Pollinations live inference: HTTP ${response.status}; official model=${model.id}; catalogue price=input ${model.inputPrice} / output ${model.outputPrice} Pollen per token; latency=${latencyMs}ms; non-empty response received.`);
+    return;
+  }
+  const nano = official.find((model) => model.id === "openai/gpt-5-nano");
+  if (!nano) {
+    throw new Error("Required benchmark model openai/gpt-5-nano is missing from the authenticated official healthy text catalogue; refusing to silently omit the Nano test.");
   }
 
+  const ranked = [...allAvailable].sort((a, b) =>
+    Number(b.reasoning) - Number(a.reasoning) ||
+    Number(b.tools) - Number(a.tools) ||
+    (b.healthSuccessRate ?? -1) - (a.healthSuccessRate ?? -1) ||
+    b.healthRequests - a.healthRequests ||
+    (b.contextLength ?? 0) - (a.contextLength ?? 0) ||
+    a.name.localeCompare(b.name)
+  );
+  const selected = (allowPaidBenchmark ? ranked : ranked.filter((model) => model.zeroPriced)).slice(0, MAX_RANKED_MODELS);
+  for (const requiredId of REQUIRED_BENCHMARK_MODELS) {
+    const required = allAvailable.find((model) => model.id === requiredId);
+    if (required && !selected.some((model) => model.id === requiredId)) selected.push(required);
+  }
+  const candidates = selected;
+  const runnableCandidates = candidates.filter((model) => model.zeroPriced || allowPaidBenchmark);
+  const skippedPaidModels = candidates.filter((model) => !model.zeroPriced && !allowPaidBenchmark);
+  if (candidates.length === 0) {
+    throw new Error("The live reliable catalogue returned no healthy, non-paid-only text models for this API key.");
+  }
+
+  console.log(`Live catalogue: ${official.length} eligible official + ${community.length} eligible community models.`);
+  console.log(`Benchmarking ${runnableCandidates.length} runnable models. Paid-priced requests are ${allowPaidBenchmark ? "explicitly enabled" : "blocked by the zero-cost guard"}.`);
+  for (const model of candidates) {
+    console.log(`CANDIDATE ${model.id} | ${model.community ? "community" : "official"} | zeroPriced=${model.zeroPriced} | health=${model.healthSuccessRate ?? "n/a"}% over ${model.healthRequests} requests | input=${model.inputPrice ?? "unlisted"} / output=${model.outputPrice ?? "unlisted"} Pollen per token`);
+  }
+
+  const results: Result[] = [];
   for (let attempt = 1; attempt <= 2; attempt += 1) {
-    for (const model of candidates) {
-      if (!eligible.some((entry) => entry.id === model)) continue;
+    for (const model of runnableCandidates) {
       for (const task of tasks) {
         const started = Date.now();
         try {
           const response = await fetch(`${baseUrl}/v1/chat/completions`, {
             method: "POST",
-            headers: {
-              Authorization: `Bearer ${apiKey}`,
-              "Content-Type": "application/json",
-              Accept: "application/json",
-            },
+            headers: { ...headers, "Content-Type": "application/json" },
             body: JSON.stringify({
-              model,
+              model: model.id,
               messages: [{ role: "user", content: task.prompt }],
               temperature: 0.2,
               max_tokens: 500,
@@ -86,83 +148,111 @@ async function main() {
           const latencyMs = Date.now() - started;
           const raw = await response.text();
           if (!response.ok) {
-            results.push({
-              model, task: task.id, attempt, status: "http_error",
-              httpStatus: response.status, latencyMs,
-              error: raw.slice(0, 500),
-            });
-            console.log(`HTTP ${response.status} ${model} / ${task.id} / ${latencyMs}ms`);
+            results.push({ model: model.id, task: task.id, attempt, status: "http_error", httpStatus: response.status, latencyMs, error: raw.slice(0, 500) });
+            console.log(`HTTP ${response.status} ${model.id} / ${task.id} / ${latencyMs}ms`);
             continue;
           }
           let parsed: any;
           try { parsed = JSON.parse(raw); } catch {
-            results.push({
-              model, task: task.id, attempt, status: "invalid_response",
-              latencyMs, responseChars: raw.length, answer: raw.slice(0, 4000),
-            });
+            results.push({ model: model.id, task: task.id, attempt, status: "invalid_response", latencyMs, responseChars: raw.length, answer: raw.slice(0, 4000) });
             continue;
           }
           const answer = parsed?.choices?.[0]?.message?.content;
           if (typeof answer !== "string" || answer.trim().length === 0) {
-            results.push({
-              model, task: task.id, attempt, status: "invalid_response",
-              latencyMs, responseChars: raw.length,
-              error: "Missing choices[0].message.content",
-            });
+            results.push({ model: model.id, task: task.id, attempt, status: "invalid_response", latencyMs, responseChars: raw.length, error: "Missing choices[0].message.content" });
             continue;
           }
+          const qualityPass = task.validate(answer);
           results.push({
-            model, task: task.id, attempt, status: "ok",
-            httpStatus: response.status, latencyMs,
-            responseChars: answer.length, answer: answer.slice(0, 4000),
+            model: model.id, task: task.id, attempt, status: "ok",
+            qualityPass, qualityReason: qualityPass ? "task-specific structural check passed" : "task-specific structural check failed",
+            httpStatus: response.status, latencyMs, responseChars: answer.length, answer: answer.slice(0, 4000),
           });
-          console.log(`OK ${model} / ${task.id} / attempt ${attempt} / ${latencyMs}ms / ${answer.length} chars`);
+          console.log(`${qualityPass ? "QUALITY_PASS" : "QUALITY_FAIL"} ${model.id} / ${task.id} / attempt ${attempt} / ${latencyMs}ms`);
         } catch (error) {
           const latencyMs = Date.now() - started;
           const timedOut = error instanceof Error && error.name === "TimeoutError";
-          results.push({
-            model, task: task.id, attempt,
-            status: timedOut ? "timeout" : "http_error",
-            latencyMs,
-            error: error instanceof Error ? error.message : String(error),
-          });
-          console.log(`FAIL ${model} / ${task.id} / ${latencyMs}ms`);
+          results.push({ model: model.id, task: task.id, attempt, status: timedOut ? "timeout" : "http_error", latencyMs, error: error instanceof Error ? error.message : String(error) });
+          console.log(`FAIL ${model.id} / ${task.id} / ${latencyMs}ms`);
         }
       }
     }
   }
 
   const summary = candidates.map((model) => {
-    const rows = results.filter((row) => row.model === model);
+    const rows = results.filter((row) => row.model === model.id);
     const ok = rows.filter((row) => row.status === "ok");
-    const sorted = ok.map((row) => row.latencyMs).sort((a, b) => a - b);
-    const medianMs = sorted.length
-      ? sorted.length % 2
-        ? sorted[(sorted.length - 1) / 2]
-        : Math.round((sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2)
+    const latencies = ok.map((row) => row.latencyMs).sort((a, b) => a - b);
+    const medianLatencyMs = latencies.length
+      ? latencies.length % 2
+        ? latencies[(latencies.length - 1) / 2]
+        : Math.round((latencies[latencies.length / 2 - 1] + latencies[latencies.length / 2]) / 2)
       : null;
     return {
-      model,
-      eligibility: eligibility[model] ?? "not checked",
+      model: model.id,
+      title: model.name,
+      publisher: model.publisher,
+      source: model.community ? "community" : "official",
+      eligibility: "listed by authenticated reliable catalogue; healthy; paid_only=false; text chat-completions capable",
+      benchmarkStatus: model.zeroPriced || allowPaidBenchmark ? "included" : "skipped_paid_cost_guard",
+      skipReason: !model.zeroPriced && !allowPaidBenchmark ? "Non-zero Pollen price; set workflow input allow_paid=true only if you accept the charge." : null,
+      zeroPriced: model.zeroPriced,
+      pricingStatus: model.pricingStatus,
+      pricingCurrency: model.currency,
+      inputPricePerTokenPollen: model.inputPrice,
+      outputPricePerTokenPollen: model.outputPrice,
+      inputPricePerMillionPollen: model.inputPrice === null ? null : model.inputPrice * 1_000_000,
+      outputPricePerMillionPollen: model.outputPrice === null ? null : model.outputPrice * 1_000_000,
+      catalogueHealth: model.health,
+      catalogueSuccessRate: model.healthSuccessRate,
+      catalogueRequests: model.healthRequests,
+      contextLength: model.contextLength,
+      reasoning: model.reasoning,
+      toolCalling: model.tools,
       successfulRequests: ok.length,
       totalRequests: rows.length,
       successRate: rows.length ? Math.round((ok.length / rows.length) * 100) : null,
-      medianLatencyMs: medianMs,
+      qualityPasses: ok.filter((row) => row.qualityPass === true).length,
+      qualityChecks: ok.length,
+      qualityPassRate: ok.length ? Math.round((ok.filter((row) => row.qualityPass === true).length / ok.length) * 100) : null,
+      medianLatencyMs,
     };
   });
 
   const report = {
     generatedAt: new Date().toISOString(),
-    note: "Synthetic prompts only. No personal birth-chart data used. Latency and availability are a small sample, not a statistical guarantee. Human review of answer quality is still required.",
+    catalogue: {
+      reliabilityFilter: "reliable",
+      eligibleOfficialCount: official.length,
+      eligibleCommunityCount: community.length,
+      eligibleModels: allAvailable.map((model) => ({
+        id: model.id, title: model.name, publisher: model.publisher,
+        source: model.community ? "community" : "official",
+        health: model.health, successRate: model.healthSuccessRate,
+        requests: model.healthRequests, zeroPriced: model.zeroPriced,
+        pricingStatus: model.pricingStatus, agent: model.agent, baseModel: model.baseModel,
+        inputPricePerTokenPollen: model.inputPrice,
+        outputPricePerTokenPollen: model.outputPrice,
+        contextLength: model.contextLength,
+        reasoning: model.reasoning, toolCalling: model.tools,
+      })),
+    },
+    benchmark: {
+      selectedModels: candidates.map((model) => model.id),
+      executedModels: runnableCandidates.map((model) => model.id),
+      skippedPaidModels: skippedPaidModels.map((model) => ({ id: model.id, reason: "non-zero Pollen price; blocked because allow_paid was false" })),
+      requiredModels: REQUIRED_BENCHMARK_MODELS,
+      allowPaidRequests: allowPaidBenchmark,
+      attemptsPerTask: 2,
+      taskCount: tasks.length,
+    },
+    note: "paid_only=false means not restricted to paid-only keys; it does NOT mean zero-cost. The default benchmark skips every non-zero-priced model, including GPT-5 Nano. Set workflow input allow_paid=true only when Pollen charges are explicitly accepted. zeroPriced is true only when every listed price, pricing variant and pricing adjustment is zero. Synthetic prompts only; no personal birth-chart data. Small-sample availability/latency does not prove answer quality.",
     summary,
     results,
   };
   await writeFile("pollinations-model-benchmark.json", JSON.stringify(report, null, 2), "utf8");
   console.log("\nSUMMARY");
   console.log(JSON.stringify(summary, null, 2));
-  if (results.length === 0) {
-    throw new Error("No benchmark requests were run: candidates were not eligible or accessible.");
-  }
 }
 
 main().catch((error: unknown) => {
