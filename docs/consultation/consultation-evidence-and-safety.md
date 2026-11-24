@@ -431,3 +431,42 @@ The main `lib/astronomy/chinese.ts` path implements this mapping with `ratStartS
 - [*Xin Tang Shu*, juan 25, Calendar I](https://zh.wikisource.org/wiki/新唐書/卷025), and [Zhao Youqin, *Ge Xiang Xin Shu*, juan 2](https://zh.wikisource.org/wiki/革象新書_(四庫全書本)/卷2) — historical evidence relevant to the separate Zi-Chu/Zi-Zheng day-boundary dispute; these sources do not alter the Five Rats mapping.
 
 **CI status checked after the Five Rats code/test commit (2026-11-23).** The 120-combination fixture was added in code/test commit `0a70f6525481897624d4b9e45f5d3041ac8f1fc9`. No PR-triggered workflow run and no combined commit status was associated with that commit. Documentation/capability-only follow-ups `a1833c7de62533a37b3f589316356af6c2c4db34` and `d3c5da64aa7bc191aa84981b1219656eb23924bb` also had no workflow runs or combined statuses. Category 31.1 has therefore not been executed by GitHub Actions; no test or build success is claimed. The last inspected successful PR workflow is [#1284](https://github.com/gxmotiv/Celestia/actions/runs/44663425337) on older commit `b19a8d5f2e9dc55e1ec42c562e8bbafb018d700a`: 150/150 astrology regression tests, Next.js build, OpenNext packaging and Wrangler Worker dry-run passed; deployment was skipped. Its logs include duplicate `axisIndex` and duplicate switch-case warnings. That older run does not validate Category 31.1.
+
+
+## BaZi solar-term longitude provenance and time-scale audit (2026-11-24)
+
+**Bounded question.** What longitude and time-scale convention does the current BaZi solar-term engine actually calculate, and what historical/precision claims are justified?
+
+**Calendar definition and lineage distinction.**
+- The Hong Kong Observatory defines the 24 solar terms as 15° divisions of the ecliptic. Its terminology separates 12 major terms (Zhongqi) from 12 minor terms (Jie). The BaZi month-pillar path uses the 12 Jie boundaries (315°, 345°, 15°, 45° … 285°); do not substitute HKO's “major solar terms” list for the month-opening Jie list.
+- Modern *dingqi* determines each term from the Sun's apparent geocentric ecliptic longitude reaching a 15° multiple. The historical *pingqi* system divided the tropical year into 24 equal time intervals; it was replaced by true-solar-position (*dingqi*) calculation in 1645. The current engine implements the modern apparent-Sun/*dingqi* model. It does not reconstruct pre-1645 *pingqi* calendars, so historical chart output must not be described as a period-authentic calendar reconstruction.
+- Solar-term crossings are global instants. The birth location/timezone is needed to convert the user's local clock time to UTC; it does not change the geocentric solar-term instant. Local mean/apparent solar-time corrections are a separate day/hour-pillar policy and remain unresolved in this subsystem.
+
+**Exact current implementation.**
+- `SolarTermCalculator.getSunLongitude(date)` expects a UTC `Date`, converts it to Julian Day, then calls `swissEphemeris.calculateAllPlanets(jd, false)`.
+- Despite the adapter's historical name, the current planetary-position implementation is backed by `astronomy-engine`, not the native Swiss Ephemeris library. For the Sun it calls `Astronomy.GeoVector(Sun, time, true)` (geocentric vector with light-time and aberration correction) and transforms it with `Astronomy.Ecliptic(...)` to true ecliptic-of-date coordinates. The resulting longitude is apparent geocentric, referred to the true equinox/ecliptic of date.
+- `Astronomy.AstroTime` accepts UTC-based input, approximates UT1 and UTC as equal, and derives Terrestrial Time using its Espenak–Meeus ΔT model. This is not the same as computing the full JPL DE ephemeris workflow described by Liu, which uses TDB and an explicit ephemeris/precession-nutation pipeline.
+- The adapter rounds the longitude to 0.0001° before the Jie root search. At the Sun's roughly 1°/day motion this quantization alone corresponds to several seconds; model, time-scale and historical ΔT errors are additional. The current result is suitable for ordinary modern-date boundary classification with stated limits, not a second-level certified ephemeris.
+
+**Subsystem audit.**
+- The main `calculateBaZiProfile` path uses the supplied UTC birth instant for the year/month solar-term calculation; callers that omit it still use the documented legacy date-only approximation.
+- The main day/hour calculation continues to use local integer civil hour and the selected Zi-Chu convention. It does not yet apply local mean/apparent solar-time correction or pass minute precision into the day/hour routine.
+- `CompleteBaZiEngine` in `TransitView` remains a separate UTC-date/UTC-hour path with a date-only noon-UTC fallback. It is not parity-validated against the main path and remains a user-facing limitation; BaZi stays `partial`.
+- Historical IANA timezone/DST resolution, unknown-time uncertainty, pre-1645 *pingqi*, true-solar-time policy, Zi-Zheng selection, and independent multi-epoch reference validation remain open.
+
+**Offline regression fixtures.**
+- Category 32.1 checks the apparent solar longitude against the HKO 2024 vernal-equinox table: 0° on 20 March 2024 at 11:06 HKT (03:06 UTC), with a 0.001° tolerance because the official table publishes time to the minute.
+- Category 32.2 checks that the forward Jie root solver returns the 315° LiChun crossing with a residual no greater than one 0.0001° adapter increment. This is a solver self-consistency check, not independent ephemeris certification.
+- Existing Category 29 fixtures continue to check before/after LiChun and Jingzhe year/month transitions. The new Category 32 assertions are committed regression coverage; execution status is recorded after CI.
+
+**Sources consulted (2026-11-24).**
+- [Hong Kong Observatory, 24 Solar Terms in 2024 (official PDF)](https://www.hko.gov.hk/en/gts/astron2024/files/2024SolarTerms24.pdf) — publishes the 0° vernal equinox at 20 March 11:06 HKT and states the time scale is UTC+8.
+- [Hong Kong Observatory, The 24 Solar Terms](https://www.hko.gov.hk/en/gts/time/24solarterms.htm) — defines 15° ecliptic spacing and distinguishes major Zhongqi from minor terms.
+- [Hong Kong Observatory, Date and Time of the 24 Solar Terms](https://www.hko.gov.hk/en/gts/astronomy/Solar_Term.htm) — states its astronomical data are based on HM Nautical Almanac Office and US Naval Observatory data and that displayed times are HKT (UTC+8).
+- [Yuk Tung Liu, Calculation of Moon Phases and 24 Solar Terms (revised 2025-12-24)](https://ytliu0.github.io/ChineseCalendar/docs/sunMoon.pdf) — reproducible technical derivation of apparent geocentric longitude, JPL ephemerides, TDB, coordinate transformations and root-finding; distinguishes the computation of astronomical instants from their UTC conversion.
+- [Yuk Tung Liu, 24 Solar Terms](https://ytliu0.github.io/ChineseCalendar/solarTerms.html) — defines modern *dingqi* by apparent geocentric ecliptic longitude and describes the pre-1645 *pingqi* equal-time convention.
+- [Helmer Aslaksen, The Mathematics of the Chinese Calendar](https://gwern.net/doc/science/physics/astronomy/2010-aslaksen.pdf) — scholarly exposition of the 24 Jieqi and historical calendar rules.
+- [Astronomy Engine JavaScript/TypeScript reference](https://github.com/cosinekitty/astronomy/blob/master/source/js/README.md) — documents UTC-based `AstroTime`, UT1≈UTC, TT via Espenak–Meeus ΔT, `GeoVector`, and true ecliptic-of-date coordinates.
+- [Astronomy Engine 2.1.19 TypeScript declarations](https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.d.ts) — versioned API reference for `AstroTime`, `GeoVector`, `Ecliptic` and `SunPosition`.
+
+**CI status at commit preparation.** The new Category 32 fixtures have not yet run. The latest completed PR-specific workflow remains [#1284](https://github.com/gxmotiv/Celestia/actions/runs/44663425337) on older commit `b19a8d5f2e9dc55e1ec42c562e8bbafb018d700a`: astrology suite 150/150, Next.js build, OpenNext packaging and Wrangler dry-run passed; Cloudflare deployment was skipped. Its logs contain duplicate `axisIndex` and duplicate switch-case warnings. This older run does not validate Category 32.

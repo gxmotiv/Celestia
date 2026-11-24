@@ -2119,6 +2119,50 @@ assertTest(
   fiveRatsFirstFailure || `${fiveRatsChecked}/120 combinations matched`
 );
 
+// ======================================================================
+// CATEGORY 32: SOLAR-TERM LONGITUDE MODEL AND ROOT-SOLVER REGRESSION
+// ======================================================================
+console.log("Running Category 32: BaZi solar-term longitude and root-solver tests...");
+
+const solarTermReference = new SolarTermCalculator();
+
+// HKO 2024 Almanac: vernal equinox at 0° on 20 March 2024, 11:06 HKT.
+// HKT is UTC+8, so the published minute corresponds to 03:06 UTC.
+const hkoVernalEquinoxLongitude = solarTermReference.getSunLongitude(
+  new Date("2024-03-20T03:06:00.000Z")
+);
+const hkoEquinoxCircularDeviation = Math.min(
+  hkoVernalEquinoxLongitude,
+  360 - hkoVernalEquinoxLongitude
+);
+assertTest(
+  "32.1 HKO Apparent Solar Longitude",
+  "At the HKO-published 2024 vernal equinox (0°; 20 March 11:06 HKT = 03:06 UTC), apparent geocentric true-ecliptic longitude is within 0.001° of 0°",
+  hkoEquinoxCircularDeviation <= 0.001,
+  "0° ±0.001° (HKO publishes minute-rounded HKT; not second-level certification)",
+  `${hkoVernalEquinoxLongitude.toFixed(4)}°; circular deviation ${hkoEquinoxCircularDeviation.toFixed(4)}°`
+);
+
+// This is a solver self-consistency check, not an independent ephemeris
+// certification: the result must land on the selected 315° Jie threshold
+// within one 0.0001° longitude increment returned by the adapter.
+const beforeLiChunForRoot = new Date("2024-02-04T08:00:00.000Z");
+const adjacentLiChun = solarTermReference.getAdjacentJie(beforeLiChunForRoot, "forward");
+const longitudeAtAdjacentLiChun = solarTermReference.getSunLongitude(adjacentLiChun.date);
+const liChunRootResidual = Math.min(
+  Math.abs(longitudeAtAdjacentLiChun - adjacentLiChun.term.longitude),
+  360 - Math.abs(longitudeAtAdjacentLiChun - adjacentLiChun.term.longitude)
+);
+assertTest(
+  "32.2 Adjacent Jie Root Residual",
+  "The forward Jie solver identifies the next 315° LiChun crossing and returns within one adapter longitude increment",
+  adjacentLiChun.term.longitude === 315 &&
+    adjacentLiChun.date.getTime() > beforeLiChunForRoot.getTime() &&
+    liChunRootResidual <= 0.0001,
+  "Next Jie 315°; longitude residual ≤0.0001°",
+  `${adjacentLiChun.term.name} at ${adjacentLiChun.date.toISOString()}; longitude ${longitudeAtAdjacentLiChun.toFixed(4)}°; residual ${liChunRootResidual.toFixed(4)}°`
+);
+
 // SUMMARY OUTPUT — deliberately last so every appended regression fixture is counted.
 console.log("\n=================== TEST RESULTS ===================");
 let passCount = 0;

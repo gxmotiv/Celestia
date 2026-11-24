@@ -440,7 +440,15 @@ export const EARTHLY_BRANCHES: EarthlyBranch[] = [
 
 export class SolarTermCalculator {
   /**
-   * Get Sun's geocentric tropical longitude for any given Date using Swiss Ephemeris
+   * Get the Sun's apparent geocentric longitude on the true ecliptic of date.
+   *
+   * `date` is a UTC instant. The project's `swissEphemeris` adapter currently
+   * delegates planetary positions to astronomy-engine; it is not the native
+   * Swiss Ephemeris library. That path uses GeoVector(Sun, time, true) followed
+   * by Ecliptic(...), including light-time/aberration and the true ecliptic of
+   * date. Astronomy Engine treats UT1≈UTC and derives TT with its Espenak–Meeus
+   * ΔT model. The adapter rounds longitude to 0.0001°, so this is not a
+   * second-level certified solar-term ephemeris.
    */
   public getSunLongitude(date: Date): number {
     const jd = date.getTime() / 86400000.0 + 2440587.5;
