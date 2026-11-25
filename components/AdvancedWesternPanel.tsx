@@ -24,6 +24,7 @@ import {
   FirdariaEngine,
   FirdariaReport,
 } from "@/lib/astronomy/predictiveHellenisticEngine";
+import { calculateCompletedAge } from "@/lib/astronomy/annualProfections";
 import {
   FixedStarsEngine,
   StarContact,
@@ -133,6 +134,12 @@ export function AdvancedWesternPanel({
   }, [birthDateStr, birthTimeStr]);
 
   const nowObj = useMemo(() => new Date(), []);
+  // Annual profections use completed civil-calendar years, not elapsed mean-year
+  // milliseconds or the birth time-of-day. The target date is the browser local
+  // civil date; the helper documents the February 29 -> March 1 non-leap policy.
+  const localToday = new Date();
+  const localTodayDate = `${localToday.getFullYear()}-${String(localToday.getMonth() + 1).padStart(2, "0")}-${String(localToday.getDate()).padStart(2, "0")}`;
+  const currentProfectionAge = calculateCompletedAge(birthDateStr, localTodayDate);
   const currentAgeYears = useMemo(() => {
     const diff = nowObj.getTime() - birthDateObj.getTime();
     return Math.max(0, Math.floor(diff / (365.2422 * 86400000)));
@@ -147,7 +154,7 @@ export function AdvancedWesternPanel({
   // Hellenistic Profections
   const profEngine = useMemo(() => new ProfectionsEngine(), []);
   const profectionReport: ProfectionResult = useMemo(() => {
-    return profEngine.calculateAnnualProfection(chartData, currentAgeYears);
+    return profEngine.calculateAnnualProfection(chartData, currentProfectionAge);
   }, [profEngine, chartData, currentAgeYears]);
 
   // Zodiacal Releasing (from Spirit)

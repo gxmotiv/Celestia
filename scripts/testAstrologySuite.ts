@@ -1098,6 +1098,18 @@ assertTest(
   `Age ${profectionYearTwelveFixture.age} / house ${profectionYearTwelveFixture.profectedHouse} / ${profectionYearTwelveFixture.profectedSign} / ${profectionYearTwelveFixture.timeLord}`
 );
 
+const commonYearBirthdayAge = calculateCompletedAge("2001-03-01", "2002-03-01");
+const oldMeanYearBirthdayAge = Math.floor(
+  (Date.UTC(2002, 2, 1) - Date.UTC(2001, 2, 1)) / (365.2422 * 86400000)
+);
+assertTest(
+  "10.10 Civil Birthday Completion",
+  "A 365-day civil birthday advances completed age without waiting for the mean-year threshold",
+  commonYearBirthdayAge === 1 && oldMeanYearBirthdayAge === 0,
+  "civil birthday age 1; old elapsed-mean-year result 0",
+  `civil birthday age ${commonYearBirthdayAge}; old elapsed-mean-year result ${oldMeanYearBirthdayAge}`
+);
+
 const leapDayAgeBefore = calculateCompletedAge("2000-02-29", "2023-02-28");
 const leapDayAgeOnRollover = calculateCompletedAge("2000-02-29", "2023-03-01");
 assertTest(

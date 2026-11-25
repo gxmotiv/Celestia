@@ -473,3 +473,33 @@ The main `lib/astronomy/chinese.ts` path implements this mapping with `ratStartS
 
 
 **Post-push CI verification (2026-11-24).** Re-read PR #76 after commit `1dc79075ef7f668b09286875399e220e048f765f`. The PR remains open and draft. The commit-specific PR workflow lookup returned no runs, and the combined commit status returned no checks. The repository's latest PR-triggered workflow remains [#1284](https://github.com/gxmotiv/Celestia/actions/runs/44663425337), completed 2026-11-20 on older head `b19a8d5f2e9dc55e1ec42c562e8bbafb018d700a`: 150 tests passed, 0 failed; Next.js build, OpenNext packaging and Wrangler Worker dry-run passed; the deployment job was skipped. Its logs contain a duplicate `axisIndex` key warning, a duplicate switch-case warning and Node.js deprecation warnings. No current-head test/build result is available; Categories 32.1 and 32.2 remain unexecuted by GitHub Actions. The PR workflow file includes `lib/**` in its pull-request path filter, but no run was observed after this branch update. Do not treat the older run as validation of the new fixtures.
+
+## Western annual profections — civil birthday age in the user-facing panel (2026-11-25)
+
+**Bounded research question.** What is the basic Ascendant annual-profection count, what starts each year, and is a civil birthday an exact boundary in every historical source?
+
+**Primary-text and scholarly comparison.**
+- Paulus of Alexandria, *Introduction to Astrology*, ch. 31 (Greenbaum translation cited in the secondary source below), assigns the first year to the Ascendant sign and the second year to the next sign. With completed-age notation, the sign offset is the completed age modulo 12.
+- Dorotheus, *Carmen Astrologicum*, Book IV, ch. 1 (Pingree translation), says the year begins when the Sun returns to the natal solar longitude. This exact solar-return instant may differ from the civil birthday.
+- Valens, *Anthologies*, Book I §1.11 (The House Ruler of the Year) and later books, preserves multiple time-lord/profection procedures, including handovers from more than one starting point. The simple Ascendant-only annual count is not the whole Valens system.
+
+**Exact selected software convention.** For the basic Ascendant/whole-sign method:
+- age = completed civil-calendar years;
+- profectedHouse = (age % 12) + 1;
+- profectedSignIndex = (natalAscendantSignIndex + age) % 12;
+- the time lord is the traditional seven-planet domicile ruler of the profected sign.
+- The date-only helper uses a birthday-to-birthday civil-date convention. February 29 birthdays advance on March 1 in non-leap years. The UI target date is the browser local civil date. This is an explicit implementation convention, not a claim that all ancient authors used midnight/civil-birthday boundaries; Dorotheus's exact solar-return boundary is a distinct option not yet implemented.
+
+**Code audit and improvement.** AdvancedWesternPanel previously supplied its Annual Profections engine with floor(elapsedMilliseconds / 365.2422 days) from a birth timestamp. That can leave the age one year behind on a 365-day civil birthday until the mean-year threshold is crossed, and it makes the profection depend on the birth time-of-day. The panel now obtains the profection age from the existing validated calculateCompletedAge(birthDateStr, localTodayDate) helper. The separate elapsed-time age remains unchanged for the Firdaria path; Firdaria has not been audited here.
+
+**Offline regression fixture.** Category 10.10 checks 2001-03-01 → 2002-03-01: the civil completed age is 1 while the old 365.2422-day floor formula still yields 0. Existing Category 10.9 continues to test the documented February 29 → March 1 policy. These are committed assertions; execution status is reported separately.
+
+**Basic versus advanced capability.** The code computes the Ascendant's 12-year whole-sign activation and traditional domicile time lord. It does not perform the complete annual judgment: natal condition of the time lord, sect, dignity, angularity, planetary testimony to the profected sign, activated natal occupants, solar-return chart, monthly profections, or Valens's multiple handover procedures. The Western traditional specialty remains partial and must not be represented as a complete predictive method.
+
+**Sources consulted (2026-11-25).**
+- [Paulus and Dorotheus source passages with translation references](https://sevenstarsastrology.com/astrological-predictive-techniques-1-profections-intro/) — quotes Paulus, *Introduction to Astrology*, ch. 31 (Greenbaum 2001), and Dorotheus, *Carmen Astrologicum*, Book IV, ch. 1 (Pingree 2005); secondary page used to locate the translated primary passages.
+- [Vettius Valens, *Anthologies*, trans. Mark T. Riley](https://www.skyscript.co.uk/pdf/pubs/texts/valens/griscti/docs/Valens-Anthologies.pdf) — Book I §1.11 The House Ruler of the Year; translation/layout notes identify the underlying Kroll and Pingree editions. Valens's wider handover procedures are not collapsed into the single Ascendant method.
+- [Paulus annual-profection worked example and convention comparison](https://astrologyemporium.com/courses/hellenistic-astrology/lessons/annual-profections/) — modern secondary explanation; its key value here is making the completed-age versus ordinal-year distinction explicit.
+- [Robert Hand, Signs as Houses (Places) in Ancient Astrology, *Culture and Cosmos* (2007)](https://doi.org/10.46472/cc.01211.0215) — scholarly discussion of signs as places/whole-sign houses in ancient practice.
+
+**CI status after this change.** Recorded after the commit and current-head workflow lookup. No test/build result is claimed unless a run on the new head is observed.
