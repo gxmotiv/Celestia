@@ -1193,6 +1193,26 @@ assertTest(
   invalidKPLongitudeRejected ? "Rejected" : "Accepted"
 );
 
+const kpScorpio20 = kp.calculateSubLord(230);
+const kpHoraryRow160 = SubLordCalculator.getHorary249Entry(160);
+assertTest(
+  "11.6 KP Published 249-Row Reference",
+  "Matches the Scorpio 20°00′ reference row: Mars sign lord, Mercury star lord, Venus sub lord, and Mars sub-sub lord at its exact boundary",
+  kpHoraryRow160.seed === 160 &&
+    kpHoraryRow160.signIndex === 7 &&
+    kpHoraryRow160.signLord === "Mars" &&
+    kpHoraryRow160.nakshatraName === "Jyeshtha" &&
+    kpHoraryRow160.starLord === "Mercury" &&
+    kpHoraryRow160.subLord === "Venus" &&
+    Math.abs(kpHoraryRow160.startLongitude - 229.33333333333334) < 1e-10 &&
+    Math.abs(kpHoraryRow160.endLongitude - 231.55555555555554) < 1e-10 &&
+    kpScorpio20.starLord === "Mercury" &&
+    kpScorpio20.subLord === "Venus" &&
+    kpScorpio20.subSubLord === "Mars",
+  "Row 160 / Scorpio 19°20′–21°33′20″ / Mercury-Venus-Mars",
+  `row ${kpHoraryRow160.seed} ${kpHoraryRow160.signName} ${kpHoraryRow160.startLongitude}–${kpHoraryRow160.endLongitude}; star=${kpHoraryRow160.starLord}; sub=${kpHoraryRow160.subLord}; sub-sub=${kpScorpio20.subSubLord}`
+);
+
 // ======================================================================
 // ======================================================================
 console.log("Running Category 12: BaZi Da Yun start-age calculation...");
