@@ -1,6 +1,7 @@
 /**
  * Krishnamurti Padhdhati (KP) Cusps Calculator
- * Calculates Placidus cusps with Krishnamurti Ayanamsa & KP boundary rules.
+ * Calculates Placidus cusps with an explicitly labelled KP-compatible
+ * ayanamsa approximation and KP boundary rules.
  */
 
 import { KPCusp, KPCusps } from "./kpTypes";
@@ -22,13 +23,27 @@ export class KPCuspsCalculator {
   private subLordCalc = new SubLordCalculator();
 
   /**
-   * KP Old table-derived approximation:
-   * 22°21'50" at JD 2415020.0 (1900-01-01 00:00 UT), carried with
-   * Newcomb's mean precession rate of 50.2388475 arcseconds/year.
+   * KP Old-style fixed-rate compatibility approximation; not a transcription
+   * of K.S. Krishnamurti's original 1840–2001 table.
    *
-   * This is not native Swiss Ephemeris and is not KP New / VP291. The
-   * historical KP table itself has documented irregularities, so this
-   * linear model is explicitly labelled as an approximation.
+   * Configured anchor: 22°21′50″ at 1900-01-01 00:00 UT (JD 2415020.5).
+   * The implementation adds a fixed 50.2388475 arcseconds per Gregorian
+   * calendar year, using the fraction of the current Gregorian year.
+   *
+   * Provenance caveat: the accessible OCR of KP Reader I lists an annual
+   * ayanamsa table through 2001 and quotes approximately 50.2388475″ for
+   * subsequent years, but does not establish this code's anchor/interpolation
+   * as the original table method or identify that slope as the B1900 rate.
+   * A later technical analysis identifies 50.2388475″ as Newcomb's rate at
+   * B1821. Newcomb's conventional B1900 general-precession rate is
+   * 50.2564″ per Besselian year (5025.64″ per tropical century), with an
+   * epoch-dependent rate. This fixed-slope Gregorian interpolation is not
+   * a full Newcomb integration, not KP New / VP291, and not an independently
+   * certified reproduction of the original KP table.
+   *
+   * The formula is retained for compatibility until the competing KP
+   * ayanamsa lineages and the original tabulated values are independently
+   * collated. It is not presented as a canonical KP ayanamsa.
    */
   public static calculateKPAyanamsa(year: number, month: number, day: number): number {
     if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
@@ -104,7 +119,7 @@ export class KPCuspsCalculator {
       houseSigns: houseDetails.map((h) => h.signName),
       houseLords: houseDetails.map((h) => h.signLord),
       ayanamsa: kpAyanamsa,
-      ayanamsaName: "KP Old (table-derived linear approximation)",
+      ayanamsaName: "KP Old-style fixed-rate approximation (unverified lineage)",
     };
   }
 }
