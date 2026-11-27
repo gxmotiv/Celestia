@@ -538,3 +538,44 @@ The main `lib/astronomy/chinese.ts` path implements this mapping with `ratStartS
 - [KP Sub-Lord Table: all 249 subs](https://www.livepanditji.com/blog/kp-sub-lord-table/) — modern secondary arithmetic/table cross-check for the six sign-boundary splits and row 160; not treated as primary authority.
 
 **CI status after test commit d9d40f981fedfc24ff12a6004b2d94405e346fa3 (checked 2026-11-26).** The commit-specific PR workflow lookup and combined commit status must be checked on the final head. The latest completed PR-specific workflow inspected for this run is [#1284](https://github.com/gxmotiv/Celestia/actions/runs/44663425337) on older commit `b19a8d5f2e9dc55e1ec42c562e8bbafb018d700a`: 150 astrology assertions passed / 0 failed; Next.js build, OpenNext packaging and Wrangler Worker dry-run passed; Cloudflare deployment was skipped. The logs include duplicate `axisIndex` and duplicate switch-case warnings and Node.js deprecation warnings. That older run does not validate Category 11.6 or the current PR head.
+
+
+## KP ayanamsa provenance and epoch correction (2026-11-27)
+
+**Bounded research question.** Does the fixed 50.2388475″/year slope used by the KP cusp calculator represent Newcomb's B1900 precession rate, and does the current code reproduce K.S. Krishnamurti's original table?
+
+**Primary-source evidence and its limits.**
+- K.S. Krishnamurti, *Krishnamurti Padhdhati*, Vol. I (*Advanced Stellar Astrology*, KP Reader I), in the Internet Archive scan, lists an ayanamsa table for 1840–2001 and the OCR text reports an approximate 50.2388475″ annual rate for later values. This is an OCR transcription, not a critical edition; the relevant page image has not been independently collated in this run.
+- The accessible primary text does not establish that the present code's 22°21′50″ anchor and fixed Gregorian-year interpolation reproduce the original table. It also does not establish a single universal post-KSK KP ayanamsa implementation.
+
+**Astronomical reference and competing KP readings.**
+- Walter Fricke's 1971 review records Newcomb's conventionally adopted general precession as 5025.64″ per tropical century for 1900, i.e. 50.2564″ per tropical/Besselian year at B1900.
+- D. Senthilathiban's 2019 technical study argues that 50.2388475″ is Newcomb's rate at B1821, not B1900: using the Newcomb rate change quoted in that study, 50.2453 + (1821 − 1850) × 0.0002225 = 50.2388475. The same study distinguishes the KSK annual table from later straight-line/refined variants and notes that the original zero point and table construction are not fully documented.
+- V. Subramanian's 2020 explanatory analysis likewise gives 50.2564″ at B1900 and an epoch-dependent increase of about 0.0002225″ per Besselian year. These are later technical interpretations, not proof that every KP lineage accepts one reconstructed formula. The KSK primary text's exact intended interpolation remains unresolved.
+
+**Exact current software convention (formula unchanged in this run).**
+- Anchor: 22°21′50″ at 1900-01-01 00:00 UT. The correct Julian Date for that instant is **2415020.5**; the previous source comment incorrectly stated 2415020.0.
+- For date Y-M-D, the code computes f = (UTC date − UTC Jan 1 of Y) / (UTC Jan 1 of Y+1 − UTC Jan 1 of Y), then A = 22°21′50″ + 50.2388475″ × (Y − 1900 + f).
+- This is a fixed slope per Gregorian calendar year, evaluated at UTC midnight for the supplied date. It is not the epoch-dependent Newcomb rate integrated in Besselian years, not a direct lookup/transcription of KSK's 1840–2001 table, and not KP New / VP291.
+- The selected 2000-01-01 output is approximately 23°45′33.88475″; the existing 23°45′37″ comparison differs by about 3.115″ and is accepted by a 5″ compatibility tolerance. That tolerance is a regression guard, not independent validation of the historical lineage.
+
+**Small user-facing correction.**
+- Corrected the source comment's Julian Date from 2415020.0 to 2415020.5.
+- Replaced the misleading result label “KP Old (table-derived linear approximation)” with “KP Old-style fixed-rate approximation (unverified lineage)”.
+- Kept the numerical formula unchanged because the original table, interpolation rule and competing KP lineages are not sufficiently established to justify replacing it with a guessed formula.
+- Category 15.1 now describes the 1900 value as the configured anchor; 15.2 describes the 2000 value as a compatibility comparison, not a published or independently certified result. New offline assertion Category 15.4 checks that the returned cusp metadata carries the explicit approximation/lineage warning.
+
+**Basic versus advanced capability.**
+- The nine-way Vimshottari-proportional KP sub-lord engine and the 249-row sign-split reference are deterministic foundations once a sidereal longitude is supplied.
+- The cusp pipeline currently takes tropical Placidus cusps and subtracts the selected fixed-rate approximation. It does not establish that the selected ayanamsa is the user's intended KP lineage.
+- KP remains partial. Ayanamsa lineage selection, primary-table collation, native/reference ephemeris comparison, high-latitude Placidus validation, strict horary input validation, complete significator/ruling-planet methods and independently validated interpretation remain separate gates. A heuristic confidence score is not a calibrated probability.
+
+**Sources consulted (2026-11-27).**
+- [K. S. Krishnamurti, *Krishnamurti Padhdhati*, Vol. I (KP Reader I), Internet Archive scan/OCR](https://archive.org/stream/in.ernet.dli.2015.128044/2015.128044.Krishnamurti-Padhdhati-Vol-i_djvu.txt) — primary source for the 1840–2001 table and the OCR-reported approximate rate; OCR must be checked against the page image before treating arc-second text as definitive.
+- [Simon Newcomb, *The Elements of the Four Inner Planets and the Fundamental Constants of Astronomy* (1895)](https://modsys.narod.ru/Library/For_Stat/Neukomb_S_1.pdf) — original astronomical work underlying the historical precession constants.
+- [Walter Fricke, “Determinations of Precession” (1971)](https://doi.org/10.1017/s0252921100028268) — scholarly review recording Newcomb's 1900 general-precession value as 5025.64″ per tropical century.
+- [D. Senthilathiban, *Study of KP Ayanamsa with Modern Precession Theories* (2019)](http://logicastro.com/files/A-Study-of-KP-Ayanamsa-D-Senthilathiban.pdf) — independent KP technical analysis distinguishing B1821/B1900 rates and later straight-line variants; the author's conclusions are not treated as universal KP consensus.
+- [V. Subramanian, *KP Ayanamsa – An Analysis*, Part 1 (2020)](http://logicastro.com/files/Ayanamsa-VSubramanian-Book-English-Part-1.pdf) — secondary technical exposition of Newcomb's B1900 rate, Besselian-year basis and rate variation.
+- [V. Subramanian, *KP Ayanamsa – An Analysis*, Part 2 (2020)](http://logicastro.com/files/Ayanamsa-VSubramanian-Book-English-Part-2.pdf) — discussion of the KSK table, Khare's straight-line method and the differences among later KP variants.
+
+**CI evidence before this correction.** PR #76 head 999583566a214727fe64bbd2c7e409710cb995f8 had no commit-specific PR workflow run or combined status. The branch's latest PR workflow was #1284, run on 2026-11-20 for older commit b19a8d5f2e9dc55e1ec42c562e8bbafb018d700a: the astrology regression step, Next.js build, OpenNext packaging and Wrangler Worker dry-run all reported success; the Cloudflare deployment job was skipped. The job-step summary is available, but downloading the raw job log returned GitHub BlobNotFound, so no raw log contents could be independently reviewed. Category 15.4 is committed regression coverage and has not yet been executed by CI.
