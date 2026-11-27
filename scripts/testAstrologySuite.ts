@@ -1348,14 +1348,14 @@ const kpOldExpected1900 = 22 + 21 / 60 + 50 / 3600;
 const kpOldExpected2000 = 23 + 45 / 60 + 37 / 3600;
 assertTest(
   "15.1 KP Old Reference Epoch",
-  "Matches the declared 22°21'50'' KP Old table-derived epoch at 1900-01-01",
+  "Matches the configured 1900-01-01 anchor of the fixed-rate approximation; this does not validate the original KP table",
   Math.abs(kpOld1900 - kpOldExpected1900) < 1e-10,
   "22°21'50''",
   `${kpOld1900.toFixed(8)}°`
 );
 assertTest(
   "15.2 KP Old Modern Cross-Check",
-  "Tracks the published 1 Jan 2000 KP Old value within five arcseconds under the linear Newcomb approximation",
+  "Stays within the selected 1 Jan 2000 comparison value's five-arcsecond compatibility tolerance; this does not validate a full Newcomb model",
   Math.abs(kpOld2000 - kpOldExpected2000) * 3600 <= 5,
   "23°45'37'' ± 5 arcseconds",
   `${kpOld2000.toFixed(8)}°; difference=${(Math.abs(kpOld2000 - kpOldExpected2000) * 3600).toFixed(2)} arcseconds`
@@ -1372,6 +1372,20 @@ assertTest(
   invalidKPAyanamsaDateRejected,
   "2000-02-30 rejected",
   invalidKPAyanamsaDateRejected ? "Rejected" : "Accepted"
+);
+
+const kpAyanamsaMetadata = kpCuspCalculator.calculateKPCuspsFromWestern(
+  syntheticWesternData,
+  2000,
+  1,
+  1
+);
+assertTest(
+  "15.4 KP Ayanamsa Provenance Disclosure",
+  "Labels the fixed-rate output as an unverified approximation rather than a canonical KP Old or Newcomb model",
+  kpAyanamsaMetadata.ayanamsaName === "KP Old-style fixed-rate approximation (unverified lineage)",
+  "KP Old-style fixed-rate approximation (unverified lineage)",
+  kpAyanamsaMetadata.ayanamsaName
 );
 
 // ======================================================================
