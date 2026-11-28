@@ -16,7 +16,7 @@ export function AlmutenHoursPanel({ chartData }: AlmutenHoursPanelProps) {
   if (!almuten || !hours) {
     return (
       <div className="p-6 bg-slate-900/60 border border-slate-800 rounded-xl text-center text-slate-400">
-        Almuten Figuris and Planetary Hours data are being computed...
+        {chartData.planetaryHoursUnavailableReason ?? "Almuten Figuris and Planetary Hours data are being computed..."}
       </div>
     );
   }
