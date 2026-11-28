@@ -14,6 +14,10 @@ export interface PlanetaryHour {
   isCurrentBirthHour: boolean;
 }
 
+export type SolarHorizonTimes =
+  | { status: "normal"; sunrise: number; sunset: number }
+  | { status: "polar-day" | "polar-night"; sunrise: null; sunset: null };
+
 export interface PlanetaryHoursResult {
   dayRuler: string;
   dayRulerSymbol: string;
@@ -72,7 +76,7 @@ export class PlanetaryHoursCalculator {
     latitude: number,
     longitude: number = 0,
     timezoneOffsetHours: number = 0
-  ): { sunrise: number; sunset: number } {
+  ): SolarHorizonTimes {
     // Day of the year
     const startOfYear = new Date(Date.UTC(year, 0, 1));
     const targetDate = new Date(Date.UTC(year, month - 1, day));
@@ -83,12 +87,16 @@ export class PlanetaryHoursCalculator {
     const latRad = (latitude * Math.PI) / 180.0;
 
     // Hour angle at sunrise/sunset with standard refraction (-0.833 degrees = -0.0145 rad)
-    let cosH = (Math.sin(-0.0145) - Math.sin(latRad) * Math.sin(declination)) /
-               (Math.cos(latRad) * Math.cos(declination));
+    const cosH = (Math.sin(-0.0145) - Math.sin(latRad) * Math.sin(declination)) /
+                  (Math.cos(latRad) * Math.cos(declination));
 
-    // Clamp for extreme latitudes
-    if (cosH > 1) cosH = 1;
-    if (cosH < -1) cosH = -1;
+    // Outside [-1, 1] there is no real sunrise/sunset hour angle.
+    // Do not clamp this into a fabricated 0h or 12h daylight interval.
+    if (Number.isNaN(cosH)) {
+      throw new RangeError("Sunrise/sunset cannot be calculated from the supplied date or latitude.");
+    }
+    if (cosH > 1) return { status: "polar-night", sunrise: null, sunset: null };
+    if (cosH < -1) return { status: "polar-day", sunrise: null, sunset: null };
 
     const H = Math.acos(cosH) * (180.0 / Math.PI) / 15.0; // hours from solar noon
 
@@ -105,7 +113,7 @@ export class PlanetaryHoursCalculator {
     const sunrise = solarNoon - H;
     const sunset = solarNoon + H;
 
-    return { sunrise, sunset };
+    return { status: "normal", sunrise, sunset };
   }
 
   public calculate(
@@ -117,11 +125,13 @@ export class PlanetaryHoursCalculator {
     latitude: number,
     longitude: number = 0,
     timezoneOffsetHours: number = 0
-  ): PlanetaryHoursResult {
+  ): PlanetaryHoursResult | null {
     const birthTimeDecimal = hour + minute / 60.0;
-    const { sunrise, sunset } = this.calculateSunTimes(
+    const sunTimes = this.calculateSunTimes(
       year, month, day, latitude, longitude, timezoneOffsetHours
     );
+    if (sunTimes.status !== "normal") return null;
+    const { sunrise, sunset } = sunTimes;
 
     // Day of the week: 0 = Sun, 1 = Mon, ..., 6 = Sat
     const dateObj = new Date(Date.UTC(year, month - 1, day));
