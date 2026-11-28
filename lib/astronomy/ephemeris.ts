@@ -78,6 +78,7 @@ export interface WesternChartData {
   additionalPoints?: AdditionalPoints;
   arabianParts?: ArabianPartsResult;
   planetaryHours?: PlanetaryHoursResult;
+  planetaryHoursUnavailableReason?: string;
   almutenFiguris?: AlmutenFigurisResult;
 }
 
@@ -748,21 +749,27 @@ export function calculateWesternChart(
 
   // Calculate Traditional Planetary Hours and Day Ruler
   const planetaryHoursCalc = new PlanetaryHoursCalculator();
-  const planetaryHours = planetaryHoursCalc.calculate(year, month, day, hour, minute, latitude, longitude, timezoneOffsetHours);
+  const planetaryHoursResult = planetaryHoursCalc.calculate(year, month, day, hour, minute, latitude, longitude, timezoneOffsetHours);
+  const planetaryHours = planetaryHoursResult ?? undefined;
+  const planetaryHoursUnavailableReason = planetaryHoursResult === null
+    ? "No sunrise or sunset occurs for this date and latitude; seasonal planetary hours and the hour-dependent Almuten cannot be calculated."
+    : undefined;
 
   // Calculate Ibn Ezra / Lilly Almuten Figuris (Ruler of Geniture)
   const almutenCalc = new AlmutenFigurisCalculator();
   const partOfFortune = arabianParts.partOfFortune.longitude;
-  const almutenFiguris = almutenCalc.calculate({
-    ascendant: asc,
-    sun: sunLon,
-    moon: sp.moon.longitude,
-    partOfFortune,
-    planets: planetsList.map((p) => ({ name: p.name, longitude: p.longitude, house: p.house })),
-    isDayChart: planetaryHours.isBirthInDaytime,
-    dayRuler: planetaryHours.dayRuler,
-    hourRuler: planetaryHours.currentHourRuler,
-  });
+  const almutenFiguris = planetaryHours
+    ? almutenCalc.calculate({
+        ascendant: asc,
+        sun: sunLon,
+        moon: sp.moon.longitude,
+        partOfFortune,
+        planets: planetsList.map((p) => ({ name: p.name, longitude: p.longitude, house: p.house })),
+        isDayChart: planetaryHours.isBirthInDaytime,
+        dayRuler: planetaryHours.dayRuler,
+        hourRuler: planetaryHours.currentHourRuler,
+      })
+    : undefined;
 
   return {
     planets: planetsList,
@@ -790,6 +797,7 @@ export function calculateWesternChart(
     additionalPoints,
     arabianParts,
     planetaryHours,
+    planetaryHoursUnavailableReason,
     almutenFiguris,
   };
 }
