@@ -1468,7 +1468,10 @@ const planetaryHourCalc = new PlanetaryHoursCalculator();
 const greenwichTimes = planetaryHourCalc.calculateSunTimes(2024, 4, 8, 0, 0, 0);
 const east15Times = planetaryHourCalc.calculateSunTimes(2024, 4, 8, 0, 15, 0);
 const east15LocalTimes = planetaryHourCalc.calculateSunTimes(2024, 4, 8, 0, 15, 1);
-const solarMidpoint = (times: { sunrise: number; sunset: number }) => (times.sunrise + times.sunset) / 2;
+const solarMidpoint = (times: ReturnType<typeof planetaryHourCalc.calculateSunTimes>) => {
+  if (times.status !== "normal") throw new Error(`Expected normal sunrise/sunset, received ${times.status}`);
+  return (times.sunrise + times.sunset) / 2;
+};
 assertTest(
   "18.1 Longitude Shifts Local Solar Noon",
   "A location 15° east has local solar noon one clock hour earlier at the same UTC offset",
@@ -1482,6 +1485,32 @@ assertTest(
   Math.abs(solarMidpoint(greenwichTimes) - solarMidpoint(east15LocalTimes)) < 1e-8,
   "Same local solar noon",
   `Difference=${(solarMidpoint(greenwichTimes) - solarMidpoint(east15LocalTimes)).toFixed(8)} hours`
+);
+
+const polarDayTimes = planetaryHourCalc.calculateSunTimes(2024, 6, 21, 80, 25, 2);
+const polarDayHours = planetaryHourCalc.calculate(2024, 6, 21, 12, 0, 80, 25, 2);
+assertTest(
+  "18.3 Polar Day Has No Fabricated Sunrise or Seasonal Hours",
+  "At 80°N near the June solstice, no sunrise/sunset crossing exists; the calculator reports polar day and returns no planetary-hour chart",
+  polarDayTimes.status === "polar-day" &&
+    polarDayTimes.sunrise === null &&
+    polarDayTimes.sunset === null &&
+    polarDayHours === null,
+  "polar-day; null sunrise/sunset; no planetary-hour result",
+  `${polarDayTimes.status}; sunrise=${polarDayTimes.sunrise}; sunset=${polarDayTimes.sunset}; hours=${polarDayHours === null ? "unavailable" : "fabricated"}`
+);
+
+const polarNightTimes = planetaryHourCalc.calculateSunTimes(2024, 12, 21, 80, 25, 2);
+const polarNightHours = planetaryHourCalc.calculate(2024, 12, 21, 12, 0, 80, 25, 2);
+assertTest(
+  "18.4 Polar Night Has No Fabricated Sunrise or Seasonal Hours",
+  "At 80°N near the December solstice, the Sun does not rise; the calculator reports polar night and returns no planetary-hour chart",
+  polarNightTimes.status === "polar-night" &&
+    polarNightTimes.sunrise === null &&
+    polarNightTimes.sunset === null &&
+    polarNightHours === null,
+  "polar-night; null sunrise/sunset; no planetary-hour result",
+  `${polarNightTimes.status}; sunrise=${polarNightTimes.sunrise}; sunset=${polarNightTimes.sunset}; hours=${polarNightHours === null ? "unavailable" : "fabricated"}`
 );
 
 // ======================================================================
