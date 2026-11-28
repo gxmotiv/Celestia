@@ -95,8 +95,9 @@ export class PlanetaryHoursCalculator {
     if (Number.isNaN(cosH)) {
       throw new RangeError("Sunrise/sunset cannot be calculated from the supplied date or latitude.");
     }
-    if (cosH > 1) return { status: "polar-night", sunrise: null, sunset: null };
-    if (cosH < -1) return { status: "polar-day", sunrise: null, sunset: null };
+    // Equality is a tangent-only horizon contact, not a finite daylight/night interval.
+    if (cosH >= 1) return { status: "polar-night", sunrise: null, sunset: null };
+    if (cosH <= -1) return { status: "polar-day", sunrise: null, sunset: null };
 
     const H = Math.acos(cosH) * (180.0 / Math.PI) / 15.0; // hours from solar noon
 
